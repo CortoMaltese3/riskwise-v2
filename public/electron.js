@@ -135,7 +135,7 @@ app.whenReady().then(async () => {
 
 const createLoaderWindow = () => {
   try {
-    const iconPath = path.join(basePath, "build", "favicon.ico");
+    const iconPath = path.join(basePath, "build", "icon.ico");
 
     loaderWindow = new BrowserWindow({
       height: 200,
@@ -199,7 +199,7 @@ const waitForPythonProcessReady = (pythonProcess, timeoutMs = 300000) => {
 
 const createMainWindow = () => {
   try {
-    const iconPath = path.join(basePath, "build", "favicon.ico");
+    const iconPath = path.join(basePath, "build", "icon.ico");
 
     mainWindow = new BrowserWindow({
       minHeight: 720,
@@ -310,10 +310,13 @@ const runPythonScript = (mainWindow, scriptName, data) => {
 const createPythonProcess = () => {
   const scriptPath = path.join(basePath, "backend", "app.py");
 
-  // Engine is installed under APPDATA by the NSIS installer:
-  // %APPDATA%\RiskWiseEngine\climada_env\python.exe
-  const engineRoot = app.getPath("appData");
-  const enginePath = path.join(engineRoot, "RiskWiseEngine", "climada_env");
+  // Engine is installed under %LOCALAPPDATA%\RiskWiseEngine\python.exe
+  const engineRoot = process.env.LOCALAPPDATA;
+  if (!engineRoot) {
+    throw new Error("Failed to resolve LOCALAPPDATA environment variable");
+  }
+
+  const enginePath = path.join(engineRoot, "RiskWiseEngine");
   const pythonExecutable = path.join(enginePath, "python.exe");
 
   if (!fs.existsSync(pythonExecutable)) {

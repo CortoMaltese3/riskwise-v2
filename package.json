@@ -64,7 +64,7 @@
   "build": {
     "asar": false,
     "forceCodeSigning": false,
-    "appId": "com.unu.riskwise",
+    "appId": "com.giz.riskwise",
     "productName": "RISK WISE",
     "files": [
       "build/**/*",
@@ -73,7 +73,7 @@
       "data/entities/",
       "data/hazards/"
     ],
-    "icon": "build/favicon.ico",
+    "icon": "build/icon.ico",
     "directories": {
       "output": "dist/${version}",
       "buildResources": "assets"
@@ -97,15 +97,15 @@
           ]
         }
       ],
-      "icon": "build/favicon.ico",
+      "icon": "build/icon.ico",
       "signAndEditExecutable": false,
       "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "build/favicon.ico",
-      "uninstallerIcon": "build/favicon.ico",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
       "allowElevation": true,
       "license": "EULA.txt",
       "createDesktopShortcut": true,
