@@ -40,3 +40,6 @@ changelog_generator.py
 translation_validation.log
 scripts
 notes.txt
+
+#certificates
+certs
