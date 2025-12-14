@@ -14,8 +14,8 @@
     "start:electron": "npm run build && electron .",
     "quickstart": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false WIN_DISABLE_SIGNING=true electron-builder -w",
-    "publish": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false WIN_DISABLE_SIGNING=true electron-builder -w --publish always"
+    "dist": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder -w",
+    "publish": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder -w --publish always"
   },
   "dependencies": {
     "@emotion/react": "11.11.4",
@@ -97,9 +97,7 @@
           ]
         }
       ],
-      "icon": "build/icon.ico",
-      "signAndEditExecutable": false,
-      "verifyUpdateCodeSignature": false
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
