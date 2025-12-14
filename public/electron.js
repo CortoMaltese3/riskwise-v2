@@ -11,6 +11,7 @@ const basePath = app.getAppPath();
 let mainWindow;
 let loaderWindow;
 let userLogDir;
+let userDataDir;
 
 const isDevelopmentEnv = () => {
   return !app.isPackaged;
@@ -49,6 +50,9 @@ if (app.getGPUFeatureStatus().gpu_compositing.includes("disabled")) {
 app.whenReady().then(async () => {
   try {
     userLogDir = path.join(app.getPath("userData"), "logs");
+    userDataDir = app.getPath("userData");
+    log.info("[electron] user data dir:", userDataDir);
+    log.info("[electron] user log dir:", userLogDir);
     fs.mkdirSync(userLogDir, { recursive: true });
     log.transports.file.resolvePathFn = () => path.join(userLogDir, "app.log");
     log.transports.file.maxSize = 1024 * 1024;
@@ -330,7 +334,11 @@ const createPythonProcess = () => {
   try {
     const py = spawn(pythonExecutable, [scriptPath], {
       stdio: ["pipe", "pipe", "pipe", "ipc"],
-      env: { ...process.env, LOG_DIR: userLogDir },
+      env: {
+        ...process.env,
+        LOG_DIR: userLogDir,
+        RISKWISE_USER_DATA: userDataDir,
+      },
     });
 
     py.on("error", (error) => log.error("Python spawn error:", error.message));
@@ -368,13 +376,11 @@ ipcMain.handle("is-development-env", () => {
 });
 
 ipcMain.handle("fetch-temp-dir", () => {
-  const tempFolderPath = path.join(app.getAppPath(), "data", "temp");
-  return tempFolderPath;
+  return path.join(userDataDir, "data", "temp");
 });
 
 ipcMain.handle("fetch-report-dir", () => {
-  const reportFolderPath = path.join(app.getAppPath(), "data", "reports");
-  return reportFolderPath;
+  return path.join(userDataDir, "data", "reports");
 });
 
 ipcMain.handle("fetch-log-dir", () => {

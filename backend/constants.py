@@ -48,23 +48,44 @@ def get_base_dir() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-BASE_DIR = get_base_dir()
+def get_user_data_dir() -> Path:
+    """
+    Get the persistent user data directory.
 
-# DATA
+    This function checks for the "RISKWISE_USER_DATA" environment variable to determine
+    the path for storing persistent user data. If the environment variable is not set,
+    it defaults to a ".user-data" directory located in the parent directory of the current script.
+
+    :return: The user data directory path.
+    :rtype: Path
+    """
+    env_path = os.getenv("RISKWISE_USER_DATA")
+    if env_path:
+        return Path(env_path)
+
+    # dev fallback
+    return Path(__file__).resolve().parent.parent / ".user-data"
+
+
+BASE_DIR = get_base_dir()
+USER_DATA_DIR = get_user_data_dir()  # persistent
+
+# DATA (immutable seed)
 DATA_DIR = BASE_DIR / "data"
 DATA_ENTITIES_DIR = DATA_DIR / "entities"
-DATA_EXPOSURES_DIR = DATA_DIR / "exposures"
 DATA_HAZARDS_DIR = DATA_DIR / "hazards"
-DATA_TEMP_DIR = DATA_DIR / "temp"
 
-# LOGS
-LOG_DIR = Path(os.getenv("LOG_DIR", BASE_DIR / "logs"))
+# DATA (persistent outputs)
+PERSIST_DATA_DIR = USER_DATA_DIR / "data"
+DATA_EXPOSURES_DIR = PERSIST_DATA_DIR / "exposures"
+DATA_TEMP_DIR = PERSIST_DATA_DIR / "temp"
+REPORTS_DIR = PERSIST_DATA_DIR / "reports"
 
-# BACKEND
+# LOGS (persistent)
+LOG_DIR = USER_DATA_DIR / "logs"
+
+# BACKEND (immutable)
 BACKEND_DIR = BASE_DIR / "backend"
 
-# REQUIREMENTS
+# REQUIREMENTS (immutable)
 REQUIREMENTS_DIR = BASE_DIR / "requirements"
-
-# REPORTS
-REPORTS_DIR = DATA_DIR / "reports"
