@@ -128,6 +128,7 @@ app.whenReady().then(async () => {
 
       // Optional updates: do not auto-download
       autoUpdater.autoDownload = false;
+      autoUpdater.autoInstallOnAppQuit = false;
 
       autoUpdater.checkForUpdates().catch((err) => {
         log.error("[electron] updater check failed:", err);
@@ -519,7 +520,7 @@ autoUpdater.on("update-available", async (info) => {
   try {
     const { response } = await dialog.showMessageBox({
       type: "info",
-      title: "Update available",
+      title: "Update Available",
       message: `A new version (${info?.version ?? "unknown"}) is available. Download now?`,
       buttons: ["Download", "Later"],
       defaultId: 0,
@@ -527,34 +528,38 @@ autoUpdater.on("update-available", async (info) => {
     });
 
     if (response === 0) {
+      log.info("[electron] user accepted download");
       autoUpdater.downloadUpdate().catch((err) => {
         log.error("[electron] downloadUpdate failed:", err);
+        dialog.showErrorBox("Update Error", "Failed to download update: " + err.message);
       });
     } else {
-      log.info("[electron] user postponed update download");
+      log.info("[electron] user declined download - will prompt on next start");
     }
   } catch (error) {
     log.error("[electron] failed to show update dialog:", error);
   }
 });
 
-autoUpdater.on("update-downloaded", () => {
-  log.info("[electron] update downloaded");
+autoUpdater.on("update-downloaded", async () => {
+  log.info("[electron] update downloaded successfully");
+
   try {
-    dialog
-      .showMessageBox({
-        type: "info",
-        title: "Update Ready",
-        message: "Update downloaded. Restart now to apply?",
-        buttons: ["Restart", "Later"],
-        defaultId: 0,
-        cancelId: 1,
-      })
-      .then(({ response }) => {
-        if (response === 0) {
-          autoUpdater.quitAndInstall();
-        }
-      });
+    const { response } = await dialog.showMessageBox({
+      type: "info",
+      title: "Update Ready",
+      message: "Update has been downloaded. Restart now to install?",
+      buttons: ["Restart Now", "Later"],
+      defaultId: 0,
+      cancelId: 1,
+    });
+
+    if (response === 0) {
+      log.info("[electron] user accepted installation - restarting");
+      setImmediate(() => autoUpdater.quitAndInstall(false, true));
+    } else {
+      log.info("[electron] user declined installation - will prompt on next start");
+    }
   } catch (error) {
     log.error("[electron] failed to show update ready dialog:", error);
   }
