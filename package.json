@@ -108,7 +108,8 @@
       "license": "EULA.txt",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "include": "installer/installer.nsh"
+      "include": "installer/installer.nsh",
+      "displayLanguageSelector": false
     }
   }
 }

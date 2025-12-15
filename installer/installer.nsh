@@ -1,6 +1,10 @@
 !include "FileFunc.nsh"
 !include "LogicLib.nsh"
 
+; Force immediate detail pane updates
+!define MUI_FINISHPAGE_NOAUTOCLOSE
+!define MUI_UNFINISHPAGE_NOAUTOCLOSE
+
 !macro _DownloadAndInstallEngine
   ; $0 = engine dir, $1 = python dir, $2 = archive in TEMP
   StrCpy $0 "$LOCALAPPDATA\RiskWiseEngine"
@@ -127,6 +131,8 @@ done_engine:
 !macroend
 
 !macro customHeader
+  ; Force detail view to be visible
+  !define MUI_INSTFILESPAGE_COLORS "FFFFFF 000000"
   ShowInstDetails show
 !macroend
 
