@@ -126,7 +126,10 @@ app.whenReady().then(async () => {
         releaseType: "release",
       });
 
-      autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+      // Optional updates: do not auto-download
+      autoUpdater.autoDownload = false;
+
+      autoUpdater.checkForUpdates().catch((err) => {
         log.error("[electron] updater check failed:", err);
       });
     } catch (error) {
@@ -510,14 +513,26 @@ autoUpdater.on("download-progress", (p) => {
   log.info(`[electron] downloading ${p.percent.toFixed(1)}% (${p.transferred}/${p.total})`);
 });
 
-autoUpdater.on("update-available", () => {
-  log.info("[electron] update available");
+autoUpdater.on("update-available", async (info) => {
+  log.info("[electron] update available:", info?.version);
+
   try {
-    dialog.showMessageBox({
+    const { response } = await dialog.showMessageBox({
       type: "info",
       title: "Update available",
-      message: "A new version is available and will be downloaded in the background.",
+      message: `A new version (${info?.version ?? "unknown"}) is available. Download now?`,
+      buttons: ["Download", "Later"],
+      defaultId: 0,
+      cancelId: 1,
     });
+
+    if (response === 0) {
+      autoUpdater.downloadUpdate().catch((err) => {
+        log.error("[electron] downloadUpdate failed:", err);
+      });
+    } else {
+      log.info("[electron] user postponed update download");
+    }
   } catch (error) {
     log.error("[electron] failed to show update dialog:", error);
   }
