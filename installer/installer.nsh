@@ -5,6 +5,14 @@
 !define MUI_FINISHPAGE_NOAUTOCLOSE
 !define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
+!macro customInit
+  SetDetailsPrint both
+!macroend
+
+!macro customHeader
+  ShowInstDetails show
+!macroend
+
 !macro _DownloadAndInstallEngine
   ; $0 = engine dir, $1 = python dir, $2 = archive in TEMP
   StrCpy $0 "$LOCALAPPDATA\RiskWiseEngine"
@@ -128,12 +136,6 @@ done_engine:
   DetailPrint "=========================================="
   DetailPrint ""
   Sleep 500
-!macroend
-
-!macro customHeader
-  ; Force detail view to be visible
-  !define MUI_INSTFILESPAGE_COLORS "FFFFFF 000000"
-  ShowInstDetails show
 !macroend
 
 !macro customInstall
