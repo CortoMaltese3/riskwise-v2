@@ -63,6 +63,34 @@ app.whenReady().then(async () => {
     console.error("Failed to initialize logging:", error);
   }
 
+  // Configure auto-updater BEFORE any other startup logic
+  if (!isDevelopmentEnv()) {
+    try {
+      log.info("[electron] configuring auto-updater...");
+
+      // CRITICAL: Set these flags BEFORE setFeedURL
+      autoUpdater.autoDownload = false;
+      autoUpdater.autoInstallOnAppQuit = false;
+
+      // Additional safety flag
+      autoUpdater.allowDowngrade = false;
+      autoUpdater.allowPrerelease = false;
+
+      autoUpdater.setFeedURL({
+        provider: "github",
+        owner: "gkalomalos",
+        repo: "ERA-Project_RISK-WISE",
+        releaseType: "release",
+      });
+
+      log.info(
+        "[electron] auto-updater configured (autoDownload=false, autoInstallOnAppQuit=false)"
+      );
+    } catch (error) {
+      log.error("[electron] failed to configure auto-updater:", error);
+    }
+  }
+
   createLoaderWindow();
 
   let pythonReady = false;
@@ -77,7 +105,6 @@ app.whenReady().then(async () => {
     log.error("[electron] Failed to start Python process:", error);
     pythonReady = false;
 
-    // Show non-blocking warning to user
     dialog
       .showMessageBox({
         type: "warning",
@@ -97,7 +124,8 @@ app.whenReady().then(async () => {
   if (pythonReady) {
     try {
       log.info("[electron] clearing temp directory...");
-      await runPythonScript(mainWindow, "run_clear_temp_dir.py", {});
+      // Pass null instead of undefined mainWindow
+      await runPythonScript(null, "run_clear_temp_dir.py", {});
     } catch (error) {
       log.error("[electron] error clearing temp directory:", error);
     }
@@ -115,30 +143,19 @@ app.whenReady().then(async () => {
     log.error("[electron] error closing loader window:", error);
   }
 
-  // Check for updates (non-blocking)
+  createMainWindow();
+
+  // Check for updates AFTER main window is created
   if (!isDevelopmentEnv()) {
     try {
       log.info("[electron] checking for updates...");
-      autoUpdater.setFeedURL({
-        provider: "github",
-        owner: "gkalomalos",
-        repo: "ERA-Project_RISK-WISE",
-        releaseType: "release",
-      });
-
-      // Optional updates: do not auto-download
-      autoUpdater.autoDownload = false;
-      autoUpdater.autoInstallOnAppQuit = false;
-
       autoUpdater.checkForUpdates().catch((err) => {
         log.error("[electron] updater check failed:", err);
       });
     } catch (error) {
-      log.error("[electron] failed to initialize auto-updater:", error);
+      log.error("[electron] failed to check for updates:", error);
     }
   }
-
-  createMainWindow();
 });
 
 const createLoaderWindow = () => {
@@ -288,6 +305,7 @@ const runPythonScript = (mainWindow, scriptName, data) => {
           try {
             const response = JSON.parse(rawData);
             if (response.type === "progress") {
+              // Only send progress if mainWindow exists and isn't destroyed
               if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send("progress", response);
               }
@@ -559,20 +577,23 @@ autoUpdater.on("update-downloaded", async () => {
       setImmediate(() => autoUpdater.quitAndInstall(false, true));
     } else {
       log.info("[electron] user declined installation - will prompt on next start");
+      // User chose "Later" - the update stays cached and will be prompted again on next launch
+      // No need to clear cache here - electron-updater handles re-prompting
     }
   } catch (error) {
     log.error("[electron] failed to show update ready dialog:", error);
   }
 });
 
-autoUpdater.on("error", (err) => {
-  log.error("[electron] AutoUpdater error:", err);
-});
-
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createMainWindow();
   }
+});
+
+autoUpdater.on("error", (err) => {
+  // Don't show dialog to user - just log it
+  log.error("[electron] AutoUpdater error:", err);
 });
 
 app.on("before-quit", () => {

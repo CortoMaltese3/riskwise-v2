@@ -7,68 +7,123 @@
   StrCpy $1 "$0"
   StrCpy $2 "$TEMP\RiskWiseEngine.zip"
 
-  DetailPrint "Checking for existing RISK WISE engine in $1"
-  IfFileExists "$1\python.exe" 0 +3
-    DetailPrint "Engine already installed, skipping download and extraction."
+  DetailPrint "=========================================="
+  DetailPrint "RISK WISE Engine Setup"
+  DetailPrint "=========================================="
+  DetailPrint ""
+  DetailPrint "Checking for existing engine at:"
+  DetailPrint "$1"
+  Sleep 500
+  
+  IfFileExists "$1\python.exe" 0 +5
+    DetailPrint ""
+    DetailPrint "✓ Engine already installed"
+    DetailPrint "  Skipping download and extraction"
+    Sleep 800
     Goto done_engine
 
-  ; Ensure engine dir is clean (python missing => safe to wipe)
-  DetailPrint "Preparing engine directory: $0"
+  DetailPrint ""
+  DetailPrint "Engine not found - beginning installation..."
+  Sleep 500
+  
+  ; Ensure engine dir is clean
+  DetailPrint ""
+  DetailPrint "Preparing installation directory..."
   RMDir /r "$0"
   CreateDirectory "$0"
+  Sleep 300
 
-  ; If archive already exists in TEMP, reuse it
+  ; Check for cached archive
   ${If} ${FileExists} "$2"
-    DetailPrint "Found existing engine archive at $2, skipping download."
+    DetailPrint ""
+    DetailPrint "✓ Found cached engine archive"
+    DetailPrint "  Skipping download"
+    Sleep 500
   ${Else}
-    DetailPrint "Engine archive not found, downloading..."
+    DetailPrint ""
+    DetailPrint "Downloading RISK WISE engine..."
+    DetailPrint "  This may take several minutes depending on your connection"
+    DetailPrint "  Archive size: ~500 MB"
+    Sleep 800
+    
     StrCpy $3 "https://github.com/gkalomalos/ERA-Project_RISK-WISE/releases/download/v1.0.6/RiskWiseEngine.zip"
-
+    
     nsExec::ExecToLog 'curl -L "$3" --output "$2"'
     Pop $4
 
     ${If} $4 != 0
-      MessageBox MB_ICONSTOP \
-        "Failed to download engine archive.$\r$\nExit code: $4$\rURL: $3"
+      DetailPrint ""
+      DetailPrint "✗ Download failed (exit code: $4)"
+      DetailPrint ""
+      MessageBox MB_ICONSTOP|MB_TOPMOST \
+        "Failed to download RISK WISE engine.$\r$\n$\r$\nExit code: $4$\r$\n$\r$\nPlease check your internet connection and try again.$\r$\n$\r$\nIf the problem persists, download the engine manually from:$\r$\n$3"
       Goto done_engine
     ${EndIf}
+    
+    DetailPrint ""
+    DetailPrint "✓ Download complete"
+    Sleep 500
   ${EndIf}
 
-  ; Sanity check archive
+  ; Verify archive exists
   ${IfNot} ${FileExists} "$2"
-    MessageBox MB_ICONSTOP \
-      "Engine archive missing after download:$\r$2"
+    DetailPrint ""
+    DetailPrint "✗ Archive verification failed"
+    MessageBox MB_ICONSTOP|MB_TOPMOST \
+      "Engine archive is missing after download.$\r$\n$\r$\nExpected location: $2$\r$\n$\r$\nPlease try running the installer again."
     Goto done_engine
   ${EndIf}
 
-  ; Extract with tar (Win10+ tar supports .zip)
-  DetailPrint "Extracting engine archive to $0..."
+  DetailPrint ""
+  DetailPrint "Extracting engine files..."
+  DetailPrint "  This will take 1-2 minutes"
+  Sleep 500
+  
+  ; Extract with tar
   nsExec::ExecToStack 'tar -xf "$2" -C "$0"'
   Pop $4
   Pop $5
-  DetailPrint "tar output: $5"
 
   ${If} $4 != 0
-    MessageBox MB_ICONSTOP \
-      "Failed to extract engine archive.$\r$\nExit code: $4$\rSource: $2$\rDestination: $0$\rOutput:$\r$5"
+    DetailPrint ""
+    DetailPrint "✗ Extraction failed (exit code: $4)"
+    DetailPrint "  Output: $5"
+    MessageBox MB_ICONSTOP|MB_TOPMOST \
+      "Failed to extract engine archive.$\r$\n$\r$\nExit code: $4$\r$\nSource: $2$\r$\nDestination: $0$\r$\n$\r$\nOutput: $5$\r$\n$\r$\nPlease ensure you have sufficient disk space and permissions."
     Goto done_engine
   ${EndIf}
 
-  ; Only delete archive on successful extract
-  DetailPrint "Cleaning up engine archive..."
+  DetailPrint ""
+  DetailPrint "✓ Extraction complete"
+  Sleep 500
+  
+  DetailPrint ""
+  DetailPrint "Cleaning up temporary files..."
   Delete "$2"
+  Sleep 300
 
-  ; Final sanity check
-  DetailPrint "Verifying engine python at $1\python.exe"
-  IfFileExists "$1\python.exe" 0 +3
-    DetailPrint "RISK WISE engine installed to $1"
+  ; Final verification
+  DetailPrint ""
+  DetailPrint "Verifying installation..."
+  Sleep 500
+  
+  IfFileExists "$1\python.exe" 0 +6
+    DetailPrint ""
+    DetailPrint "✓ RISK WISE engine installed successfully"
+    DetailPrint "  Location: $1"
+    DetailPrint ""
+    Sleep 800
     Goto done_engine
 
-  DetailPrint "Engine extracted but python.exe was not found in $1"
-  MessageBox MB_ICONSTOP \
-    "Engine archive extracted, but python.exe was not found in:$\r$1"
+  DetailPrint ""
+  DetailPrint "✗ Installation verification failed"
+  MessageBox MB_ICONSTOP|MB_TOPMOST \
+    "Engine archive was extracted, but python.exe was not found.$\r$\n$\r$\nExpected location: $1\python.exe$\r$\n$\r$\nThe installation may be corrupted. Please try again."
 
 done_engine:
+  DetailPrint "=========================================="
+  DetailPrint ""
+  Sleep 500
 !macroend
 
 !macro customHeader
@@ -76,5 +131,24 @@ done_engine:
 !macroend
 
 !macro customInstall
+  DetailPrint "=========================================="
+  DetailPrint "Installing RISK WISE Application"
+  DetailPrint "=========================================="
+  DetailPrint ""
+  Sleep 500
+  
   !insertmacro _DownloadAndInstallEngine
+  
+  DetailPrint "Installing application files..."
+  Sleep 500
+  DetailPrint "✓ Application files installed"
+  DetailPrint ""
+  Sleep 300
+  
+  DetailPrint "Finalizing installation..."
+  Sleep 500
+  DetailPrint "✓ Installation complete"
+  DetailPrint ""
+  DetailPrint "=========================================="
+  Sleep 500
 !macroend
