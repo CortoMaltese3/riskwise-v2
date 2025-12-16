@@ -1,5 +1,5 @@
 const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
-const { autoUpdater } = require("electron-updater");
+const { autoUpdater, NsisUpdater } = require("electron-updater");
 const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
@@ -82,6 +82,13 @@ app.whenReady().then(async () => {
         repo: "ERA-Project_RISK-WISE",
         releaseType: "release",
       });
+
+      // TODO: Remove this workaround when electron-updater is updated
+      // to a version that includes the EV certificate.
+      if (NsisUpdater.prototype.verifySignature) {
+        NsisUpdater.prototype.verifySignature = async () => null;
+        log.warn("[electron] Signature verification disabled (self-signed certificate)");
+      }
 
       log.info(
         "[electron] auto-updater configured (autoDownload=false, autoInstallOnAppQuit=false)"
