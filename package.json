@@ -95,6 +95,18 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "7z",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.ico"
