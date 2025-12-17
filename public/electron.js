@@ -47,6 +47,183 @@ if (app.getGPUFeatureStatus().gpu_compositing.includes("disabled")) {
   app.disableHardwareAcceleration();
 }
 
+const updateLoaderMessage = (message) => {
+  if (loaderWindow && !loaderWindow.isDestroyed()) {
+    loaderWindow.webContents.executeJavaScript(`
+      document.body.innerHTML = \`
+        <div style="text-align: center; color: white; font-family: Arial, sans-serif;">
+          <img src="gear-loader.svg" alt="loading..." style="width: 60px; height: 60px; margin-bottom: 12px;">
+          <h3 style="margin: 0 0 6px 0; font-size: 15px;">Starting RISK WISE</h3>
+          <p style="margin: 0; font-size: 12px;">${message}</p>
+        </div>
+      \`;
+    `);
+  }
+};
+
+const downloadAndInstallEngine = async (loaderWindow) => {
+  const engineRoot = process.env.LOCALAPPDATA;
+  if (!engineRoot) {
+    throw new Error("Failed to resolve LOCALAPPDATA environment variable");
+  }
+
+  const enginePath = path.join(engineRoot, "RiskWiseEngine");
+  const pythonExecutable = path.join(enginePath, "python.exe");
+  const archivePath = path.join(engineRoot, "RiskWiseEngine.zip");
+
+  // Check if already installed
+  if (fs.existsSync(pythonExecutable)) {
+    log.info("[electron] Python engine already installed at:", enginePath);
+    return pythonExecutable;
+  }
+
+  log.info("[electron] Python engine not found, downloading...");
+  log.info("[electron] Archive will be downloaded to:", archivePath);
+
+  try {
+    updateLoaderMessage("RISK WISE Engine is missing. Downloading...");
+
+    // Use electron's net module
+    const { net } = require("electron");
+    const engineUrl =
+      "https://github.com/gkalomalos/ERA-Project_RISK-WISE/releases/download/v1.0.6/RiskWiseEngine.zip";
+
+    await new Promise((resolve, reject) => {
+      const request = net.request(engineUrl);
+      const file = fs.createWriteStream(archivePath);
+
+      request.on("response", (response) => {
+        const totalBytes = parseInt(response.headers["content-length"], 10);
+        let downloadedBytes = 0;
+
+        log.info(`[electron] Starting download, size: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
+
+        response.on("data", (chunk) => {
+          downloadedBytes += chunk.length;
+          file.write(chunk);
+
+          const percent = ((downloadedBytes / totalBytes) * 100).toFixed(1);
+
+          // Update UI every 10%
+          if (
+            Math.floor(percent / 10) >
+            Math.floor((((downloadedBytes - chunk.length) / totalBytes) * 100) / 10)
+          ) {
+            updateLoaderMessage(`Downloading engine... ${percent}%`);
+            log.info(`[electron] Downloaded: ${percent}%`);
+          }
+        });
+
+        response.on("end", () => {
+          file.end();
+          file.close();
+          log.info("[electron] Download complete, file size:", fs.statSync(archivePath).size);
+          resolve();
+        });
+
+        response.on("error", (err) => {
+          file.close();
+          if (fs.existsSync(archivePath)) {
+            fs.unlinkSync(archivePath);
+          }
+          reject(err);
+        });
+      });
+
+      request.on("error", (err) => {
+        file.close();
+        if (fs.existsSync(archivePath)) {
+          fs.unlinkSync(archivePath);
+        }
+        reject(err);
+      });
+
+      request.end();
+    });
+
+    // Verify download
+    if (!fs.existsSync(archivePath)) {
+      throw new Error("Archive file not found after download");
+    }
+
+    const archiveSize = fs.statSync(archivePath).size;
+    log.info(`[electron] Archive downloaded: ${(archiveSize / 1024 / 1024).toFixed(2)} MB`);
+
+    if (archiveSize < 10 * 1024 * 1024) {
+      throw new Error(
+        `Archive too small (${(archiveSize / 1024 / 1024).toFixed(2)} MB) - download failed`
+      );
+    }
+
+    updateLoaderMessage("Extracting engine files...");
+    log.info("[electron] Starting extraction...");
+
+    // Extract archive
+    const { execSync } = require("child_process");
+
+    // Clean and create engine directory
+    if (fs.existsSync(enginePath)) {
+      log.info("[electron] Removing existing engine directory");
+      fs.rmSync(enginePath, { recursive: true, force: true });
+    }
+    fs.mkdirSync(enginePath, { recursive: true });
+
+    // Extract using tar
+    log.info("[electron] Extracting to:", enginePath);
+    const extractCmd = `tar -xf "${archivePath}" -C "${enginePath}"`;
+
+    execSync(extractCmd, { stdio: "pipe" });
+
+    // Check extracted contents
+    const extracted = fs.readdirSync(enginePath);
+    log.info("[electron] Extracted top-level items:", extracted);
+
+    // If archive contains a single directory, flatten structure
+    if (extracted.length === 1 && fs.statSync(path.join(enginePath, extracted[0])).isDirectory()) {
+      const subDir = path.join(enginePath, extracted[0]);
+      log.info("[electron] Flattening nested directory:", subDir);
+
+      const items = fs.readdirSync(subDir);
+
+      for (const item of items) {
+        const srcPath = path.join(subDir, item);
+        const destPath = path.join(enginePath, item);
+        fs.renameSync(srcPath, destPath);
+      }
+
+      fs.rmdirSync(subDir);
+      log.info("[electron] Structure flattened");
+    }
+
+    // Clean up archive
+    if (fs.existsSync(archivePath)) {
+      fs.unlinkSync(archivePath);
+      log.info("[electron] Cleaned up archive file");
+    }
+
+    // Verify installation
+    if (!fs.existsSync(pythonExecutable)) {
+      const contents = fs.readdirSync(enginePath).slice(0, 10);
+      log.error("[electron] python.exe not found. Directory contains:", contents);
+      throw new Error(`Installation incomplete - python.exe not found at: ${pythonExecutable}`);
+    }
+
+    updateLoaderMessage("Engine installed successfully!");
+    log.info("[electron] Python engine installed successfully");
+
+    return pythonExecutable;
+  } catch (error) {
+    log.error("[electron] Failed to download/install Python engine:", error);
+
+    dialog.showErrorBox(
+      "Installation Error",
+      `Failed to install RISK WISE engine.\n\nError: ${error.message}\n\nPlease check:\n- Internet connection\n- Available disk space (~2 GB)\n- Antivirus not blocking download\n\nLogs: ${userLogDir}`
+    );
+
+    throw error;
+  }
+};
+
 app.whenReady().then(async () => {
   try {
     userLogDir = path.join(app.getPath("userData"), "logs");
@@ -68,11 +245,8 @@ app.whenReady().then(async () => {
     try {
       log.info("[electron] configuring auto-updater...");
 
-      // CRITICAL: Set these flags BEFORE setFeedURL
       autoUpdater.autoDownload = false;
       autoUpdater.autoInstallOnAppQuit = false;
-
-      // Additional safety flag
       autoUpdater.allowDowngrade = false;
       autoUpdater.allowPrerelease = false;
 
@@ -83,8 +257,6 @@ app.whenReady().then(async () => {
         releaseType: "release",
       });
 
-      // TODO: Remove this workaround when electron-updater is updated
-      // to a version that includes the EV certificate.
       if (NsisUpdater.prototype.verifySignature) {
         NsisUpdater.prototype.verifySignature = async () => null;
         log.warn("[electron] Signature verification disabled (self-signed certificate)");
@@ -100,12 +272,20 @@ app.whenReady().then(async () => {
 
   createLoaderWindow();
 
+  // Give loader window time to render
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  updateLoaderMessage("Initializing application...");
+
   let pythonReady = false;
 
   // Start the Python backend process
   try {
+    updateLoaderMessage("Starting application engine...");
     log.info("[electron] creating Python process...");
-    global.pythonProcess = createPythonProcess();
+    global.pythonProcess = await createPythonProcess();
+
+    updateLoaderMessage("Waiting for engine to be ready...");
     await waitForPythonProcessReady(global.pythonProcess);
     pythonReady = true;
   } catch (error) {
@@ -130,8 +310,8 @@ app.whenReady().then(async () => {
   // Clear temporary directory on startup
   if (pythonReady) {
     try {
+      updateLoaderMessage("Clearing temporary files...");
       log.info("[electron] clearing temp directory...");
-      // Pass null instead of undefined mainWindow
       await runPythonScript(null, "run_clear_temp_dir.py", {});
     } catch (error) {
       log.error("[electron] error clearing temp directory:", error);
@@ -139,6 +319,8 @@ app.whenReady().then(async () => {
   } else {
     log.warn("[electron] skipping temp directory clear - Python not ready");
   }
+
+  updateLoaderMessage("Loading application...");
 
   // Close loader window and open main window
   try {
@@ -340,7 +522,7 @@ const runPythonScript = (mainWindow, scriptName, data) => {
 };
 
 // Create a long-running Python process
-const createPythonProcess = () => {
+const createPythonProcess = async () => {
   const scriptPath = path.join(basePath, "backend", "app.py");
 
   // Engine is installed under %LOCALAPPDATA%\RiskWiseEngine\python.exe
@@ -350,10 +532,12 @@ const createPythonProcess = () => {
   }
 
   const enginePath = path.join(engineRoot, "RiskWiseEngine");
-  const pythonExecutable = path.join(enginePath, "python.exe");
+  let pythonExecutable = path.join(enginePath, "python.exe");
 
+  // Download and install engine if missing
   if (!fs.existsSync(pythonExecutable)) {
-    throw new Error("Python executable not found at: " + pythonExecutable);
+    log.info("[electron] Python engine not found, initiating download...");
+    pythonExecutable = await downloadAndInstallEngine(loaderWindow);
   }
 
   if (!fs.existsSync(scriptPath)) {
