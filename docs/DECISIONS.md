@@ -306,6 +306,25 @@ Track A (CLIMADA + Nuitka) is selected by default if Track B fails any of the ab
 
 ---
 
+## D16 — Loopback HTTP startup handshake: verified, unblocked
+
+**Status**: Accepted (Phase 0 spike complete)
+**Date**: 2026-04-17
+
+**Decision**: The FastAPI + uvicorn loopback HTTP architecture (D02) is confirmed viable on Windows 11 Enterprise. The startup handshake works as designed: uvicorn binds to `127.0.0.1:0`, the OS assigns a port, and the ready event `{"type":"event","name":"ready","port":N}` is emitted after the server is fully listening. Phase 1 Areas 1, 2, and 5 are unblocked.
+
+**Findings**:
+- `127.0.0.1` loopback traffic bypasses Windows Firewall entirely — it never crosses a network interface, so no enterprise GPO rule or Defender profile applies. No firewall prompts observed.
+- Enterprise TLS-inspection proxies (Zscaler, Blue Coat) cannot intercept plain HTTP on loopback. This is an advantage over HTTPS.
+- Port 0 binding gives each app instance its own OS-assigned ephemeral port, eliminating hard-coded port collisions across instances.
+- SSE (`GET /stream/test`) delivers events correctly over loopback. Manual spot-check: `curl -N http://127.0.0.1:{port}/stream/test`.
+
+**Outstanding**: validation on a machine with a third-party endpoint-protection agent (CrowdStrike, Carbon Black) is tracked by issue #24 (deferred).
+
+**Spike code**: `spike/fastapi-poc/` on branch `spike/fastapi-electron-poc`. 7 automated tests covering `/health` and `/stream/test`, all passing.
+
+---
+
 ## D12 — Single ARCHITECTURE.md + DECISIONS.md, not per-decision ADR files
 
 **Status**: Accepted  
