@@ -105,11 +105,15 @@ function verifySse(port) {
   console.log(`[poc] GET ${url}  (SSE)`);
 
   let eventCount = 0;
+  let sseBuf = "";
 
   http
     .get(url, (res) => {
       res.on("data", (chunk) => {
-        for (const line of chunk.toString().split("\n")) {
+        sseBuf += chunk.toString();
+        const lines = sseBuf.split("\n");
+        sseBuf = lines.pop();
+        for (const line of lines) {
           if (!line.startsWith("data:")) continue;
           eventCount += 1;
           console.log(`[poc] SSE event ${eventCount}: ${line.slice(5).trim()}`);
@@ -134,6 +138,7 @@ function verifySse(port) {
 // ── cleanup ───────────────────────────────────────────────────────────────────
 
 function teardown(code) {
+  clearTimeout(readyTimer);
   if (!py.killed) py.kill();
   process.exit(code);
 }

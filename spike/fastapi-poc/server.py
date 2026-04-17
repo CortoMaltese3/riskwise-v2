@@ -62,10 +62,10 @@ if __name__ == "__main__":
     # Pre-bind to port 0 so the OS assigns a free port before we hand it to uvicorn.
     # We keep the socket open (no close) so the port stays reserved until uvicorn
     # calls listen() on it inside startup().
-    _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    _sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    _sock.bind(("127.0.0.1", 0))
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(("127.0.0.1", 0))
 
-    _config = uvicorn.Config(app, log_level="warning")
-    _server = _ReadyNotifyServer(_config)
-    _server.run(sockets=[_sock])
+    config = uvicorn.Config(app, log_level="warning")
+    server = _ReadyNotifyServer(config)
+    server.run(sockets=[sock])

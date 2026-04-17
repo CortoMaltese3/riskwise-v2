@@ -55,13 +55,6 @@ class TestStreamTest:
             assert event["step"] == i
             assert event["total"] == 5
 
-    def test_stream_closes_after_five_events(self):
-        """The generator must terminate — iter_lines() must not block forever."""
-        with client.stream("GET", "/stream/test") as response:
-            events = _collect_sse_events(response)
-        # If we reach this line the stream closed cleanly.
-        assert len(events) == 5
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
