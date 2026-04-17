@@ -141,7 +141,7 @@ All "Enhancement" and "Optional" calls must be behind the offline-mode guard add
               |  JSON over stdin/stdout
      [Python 3.11 Subprocess]               (app.py dispatcher — 125 lines)
               |
-     [CLIMADA 4.0.1 + GeoPandas + NumPy]   (scientific computation)
+     [CLIMADA 4.1.1 + GeoPandas + NumPy]   (scientific computation)
               |
      [File System]                          (.xlsx, .h5, .tif, .geojson, .parquet, .png)
 ```
