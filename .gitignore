@@ -43,3 +43,6 @@ notes.txt
 
 #certificates
 certs
+
+# claude code
+.claude/settings.json
