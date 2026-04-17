@@ -17,7 +17,8 @@
     "dist": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder -w",
     "publish": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder -w --publish always",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

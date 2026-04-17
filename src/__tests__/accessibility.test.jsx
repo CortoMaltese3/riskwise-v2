@@ -37,27 +37,14 @@ describe("Accessibility baseline — NavigateAlert (launch screen)", () => {
     const { container } = render(<NavigateAlert />);
     const violations = await runAxe(container);
 
-    const summary = violations.map((v) => ({
-      id: v.id,
-      impact: v.impact,
-      description: v.description,
-      nodes: v.nodes.length,
-    }));
+    // Log violation table so the baseline is visible in CI output.
+    // Update when violations are intentionally fixed; never suppress without a linked issue.
+    console.table(violations.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.length })));
 
-    // Baseline snapshot — update when violations are intentionally fixed.
-    // Do not suppress individual rules without a linked issue.
-    console.table(summary);
-
-    // Guard: ensure the scan itself ran (even with zero violations)
-    expect(Array.isArray(violations)).toBe(true);
-
-    // Critical violations must be zero. Serious violations are tracked here as a
-    // known baseline; reduce this number as they are fixed (never increase it).
     const critical = violations.filter((v) => v.impact === "critical");
     const serious = violations.filter((v) => v.impact === "serious");
 
     expect(critical).toHaveLength(0);
-    // Baseline: 0 serious violations on launch screen (update if proven otherwise)
-    expect(serious.length).toBeLessThanOrEqual(0);
+    expect(serious).toHaveLength(0);
   });
 });
