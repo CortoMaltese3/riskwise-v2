@@ -3,12 +3,10 @@ import React from "react";
 import IconButton from "@mui/material/IconButton";
 import LogoutIcon from "@mui/icons-material/Logout";
 
-import APIService from "../../APIService";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 
 const onShutdownClick = () => {
-  APIService.Shutdown().catch((error) => {
-    console.log(error);
-  });
+  RiskWiseClient.shutdown();
 };
 
 const ShutdownButton = () => {

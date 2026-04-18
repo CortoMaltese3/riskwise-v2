@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
-import APIService from "../../APIService";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 import useStore from "../../store";
 
 const exposureEconomicDict = {
@@ -103,11 +103,10 @@ const ExposureEconomicCard = () => {
     setSelectedExposureFile("");
     setFetchExposureMessage("");
     setIsValidExposureEconomic(false);
-    const body = {
+    RiskWiseClient.validateData({
       country: selectedCountry,
       dataType: selectedExposureEconomic,
-    };
-    APIService.CheckDataType(body)
+    })
       .then((response) => {
         setAlertMessage(response.result.status.message);
         response.result.status.code === 2000

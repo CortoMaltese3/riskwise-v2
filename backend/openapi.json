@@ -1,0 +1,1230 @@
+{
+  "components": {
+    "schemas": {
+      "ChartDataDataset": {
+        "additionalProperties": true,
+        "properties": {
+          "data": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "title": "ChartDataDataset",
+        "type": "object"
+      },
+      "ChartDataPayload": {
+        "additionalProperties": true,
+        "properties": {
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/ChartDataDataset"
+            },
+            "title": "Datasets",
+            "type": "array"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          },
+          "years": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "title": "Years",
+            "type": "array"
+          }
+        },
+        "title": "ChartDataPayload",
+        "type": "object"
+      },
+      "CountriesResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Country"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "CountriesResponse",
+        "type": "object"
+      },
+      "Country": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "Country",
+        "type": "object"
+      },
+      "DataValidateData": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataValidateData",
+        "type": "object"
+      },
+      "DataValidateRequest": {
+        "properties": {
+          "country": {
+            "minLength": 1,
+            "title": "Country",
+            "type": "string"
+          },
+          "dataType": {
+            "minLength": 1,
+            "title": "Datatype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "country",
+          "dataType"
+        ],
+        "title": "DataValidateRequest",
+        "type": "object"
+      },
+      "DataValidateResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DataValidateData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "DataValidateResponse",
+        "type": "object"
+      },
+      "DeleteReportResponse": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "DeleteReportResponse",
+        "type": "object"
+      },
+      "ExportReportData": {
+        "properties": {
+          "report_path": {
+            "default": "",
+            "title": "Report Path",
+            "type": "string"
+          }
+        },
+        "title": "ExportReportData",
+        "type": "object"
+      },
+      "ExportReportRequest": {
+        "additionalProperties": true,
+        "description": "Body posted to ``POST /api/v1/scenarios/{id}/export``.\n\n``scenarioRunCode`` is overwritten by the FastAPI handler with the path\nparameter, so the field is optional in the body.",
+        "properties": {
+          "exportType": {
+            "minLength": 1,
+            "title": "Exporttype",
+            "type": "string"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report"
+          },
+          "scenarioRunCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenarioruncode"
+          }
+        },
+        "required": [
+          "exportType"
+        ],
+        "title": "ExportReportRequest",
+        "type": "object"
+      },
+      "ExportReportResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ExportReportData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "ExportReportResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "JobAcceptedResponse": {
+        "properties": {
+          "job_id": {
+            "description": "UUID for the long-running scenario job",
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "title": "JobAcceptedResponse",
+        "type": "object"
+      },
+      "MacroChartDataRequest": {
+        "additionalProperties": true,
+        "properties": {
+          "countryName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Countryname"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
+          "variable": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variable"
+          }
+        },
+        "title": "MacroChartDataRequest",
+        "type": "object"
+      },
+      "MacroChartDataResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ChartDataPayload"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "MacroChartDataResponse",
+        "type": "object"
+      },
+      "MacroCredOutputResponse": {
+        "description": "The CRED output is a flat list of dict rows whose keys vary by export.\n\nFrontend code groups and filters them client-side, so we don't pin a row\nschema here.",
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "MacroCredOutputResponse",
+        "type": "object"
+      },
+      "MeasuresData": {
+        "properties": {
+          "adaptationMeasures": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Adaptationmeasures",
+            "type": "array"
+          }
+        },
+        "required": [
+          "adaptationMeasures"
+        ],
+        "title": "MeasuresData",
+        "type": "object"
+      },
+      "MeasuresResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MeasuresData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "MeasuresResponse",
+        "type": "object"
+      },
+      "ReportItem": {
+        "additionalProperties": true,
+        "description": "One persisted report row.\n\nThe legacy storage layer attaches arbitrary metadata to each report; we\naccept any extra keys and only validate the ones the UI actively reads.",
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "ReportItem",
+        "type": "object"
+      },
+      "ReportListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ReportItem"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "ReportListResponse",
+        "type": "object"
+      },
+      "ReportResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ReportItem"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "ReportResponse",
+        "type": "object"
+      },
+      "SaveScenarioResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SaveScenarioResponseData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "SaveScenarioResponse",
+        "type": "object"
+      },
+      "SaveScenarioResponseData": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "SaveScenarioResponseData",
+        "type": "object"
+      },
+      "ScenarioRunRequest": {
+        "additionalProperties": true,
+        "description": "Inputs the renderer collects before kicking off a scenario run.\n\nThe CLIMADA layer reads these as plain strings/ints; we keep the model\npermissive so users can submit only the subset of fields a given hazard or\nexposure flow actually needs.",
+        "properties": {
+          "annualGrowth": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annualgrowth"
+          },
+          "countryName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Countryname"
+          },
+          "exposureEconomic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposureeconomic"
+          },
+          "exposureFile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposurefile"
+          },
+          "exposureNonEconomic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposurenoneconomic"
+          },
+          "hazardFile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hazardfile"
+          },
+          "hazardType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hazardtype"
+          },
+          "isEra": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isera"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario"
+          },
+          "timeHorizon": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timehorizon"
+          }
+        },
+        "title": "ScenarioRunRequest",
+        "type": "object"
+      },
+      "Status": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "integer"
+          },
+          "message": {
+            "default": "",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "Status",
+        "type": "object"
+      },
+      "TempClearResponse": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "title": "TempClearResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "RISK WISE Backend",
+    "version": "2.0.0-dev"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/countries": {
+      "get": {
+        "operationId": "countries_api_v1_countries_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountriesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Countries"
+      }
+    },
+    "/api/v1/data/validate": {
+      "post": {
+        "operationId": "data_validate_api_v1_data_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataValidateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Data Validate"
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/v1/macro/chart-data": {
+      "post": {
+        "operationId": "macro_chart_data_api_v1_macro_chart_data_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MacroChartDataRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroChartDataResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Macro Chart Data"
+      }
+    },
+    "/api/v1/macro/cred-output": {
+      "get": {
+        "operationId": "macro_cred_output_api_v1_macro_cred_output_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroCredOutputResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Macro Cred Output"
+      }
+    },
+    "/api/v1/measures/{country}/{hazard}": {
+      "get": {
+        "operationId": "measures_api_v1_measures__country___hazard__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "country",
+            "required": true,
+            "schema": {
+              "title": "Country",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "hazard",
+            "required": true,
+            "schema": {
+              "title": "Hazard",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasuresResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Measures"
+      }
+    },
+    "/api/v1/scenario/run": {
+      "post": {
+        "operationId": "scenario_run_api_v1_scenario_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobAcceptedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scenario Run"
+      }
+    },
+    "/api/v1/scenario/{job_id}/stream": {
+      "get": {
+        "operationId": "scenario_stream_api_v1_scenario__job_id__stream_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scenario Stream"
+      }
+    },
+    "/api/v1/scenarios": {
+      "get": {
+        "operationId": "list_scenarios_api_v1_scenarios_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Scenarios"
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}": {
+      "delete": {
+        "operationId": "delete_scenario_api_v1_scenarios__scenario_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "report_type",
+            "required": false,
+            "schema": {
+              "default": "output_data",
+              "title": "Report Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "image",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Image"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteReportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Scenario"
+      },
+      "get": {
+        "operationId": "get_scenario_api_v1_scenarios__scenario_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Scenario"
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}/export": {
+      "post": {
+        "operationId": "export_scenario_api_v1_scenarios__scenario_id__export_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportReportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportReportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Scenario"
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}/save": {
+      "post": {
+        "operationId": "save_scenario_api_v1_scenarios__scenario_id__save_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveScenarioResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Scenario"
+      }
+    },
+    "/api/v1/temp/clear": {
+      "post": {
+        "operationId": "temp_clear_api_v1_temp_clear_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TempClearResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Temp Clear"
+      }
+    }
+  }
+}

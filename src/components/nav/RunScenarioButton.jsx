@@ -5,7 +5,7 @@ import { Box, Button } from "@mui/material";
 import LoadingButton from "@mui/lab/LoadingButton";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 
-import APIService from "../../APIService";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 import useStore from "../../store";
 
 const RunScenarioButton = () => {
@@ -84,7 +84,7 @@ const RunScenarioButton = () => {
     setIsRunButtonLoading(true);
     setIsScenarioRunning(true);
     setSelectedReport(null);
-    APIService.Run(body)
+    RiskWiseClient.runScenario(body)
       .then((response) => {
         setAlertMessage(response.result.status.message);
         response.result.status.code === 2000

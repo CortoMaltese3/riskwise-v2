@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import APIService from "../APIService";
+import RiskWiseClient from "../lib/RiskWiseClient";
 import useStore from "../store";
 import { useMapTools } from "../utils/mapTools";
 
@@ -34,7 +34,7 @@ export const useReportTools = () => {
 
   const fetchReports = async () => {
     try {
-      const response = await APIService.FetchReports();
+      const response = await RiskWiseClient.fetchReports();
       const { data, status } = response.result;
 
       if (status.code === 2000) {

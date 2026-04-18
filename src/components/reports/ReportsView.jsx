@@ -5,7 +5,7 @@ import { useReportTools } from "../../utils/reportTools";
 import ReportCard from "./ReportCard";
 import useStore from "../../store";
 
-import APIService from "../../APIService";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 
 const ReportsView = () => {
   const {
@@ -37,10 +37,11 @@ const ReportsView = () => {
   };
 
   const onRemoveReportHandler = async (report) => {
-    const body = { report: report };
-
     try {
-      const response = await APIService.RemoveReport(body);
+      const response = await RiskWiseClient.removeReport(report.id, {
+        reportType: report.type,
+        image: report.image,
+      });
 
       // Ensure that the response and status exist
       const message = response?.result?.status?.message || "Failed to remove report";

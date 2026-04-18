@@ -9,7 +9,8 @@
   "homepage": ".",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run gen:api-types && npm run typecheck && vite build",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "start:electron": "npm run build && electron .",
     "quickstart": "electron .",
@@ -18,7 +19,9 @@
     "publish": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder -w --publish always",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "gen:openapi": "python backend/generate_openapi.py",
+    "gen:api-types": "openapi-typescript backend/openapi.json -o src/lib/api-types.ts"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -62,6 +65,8 @@
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.0.1",
     "jsdom": "^29.0.2",
+    "openapi-typescript": "^7.4.4",
+    "typescript": "^5.6.3",
     "vite": "8.0.8",
     "vitest": "^4.1.4"
   },

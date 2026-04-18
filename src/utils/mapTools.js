@@ -4,7 +4,7 @@ import L from "leaflet";
 import "leaflet-simple-map-screenshoter";
 
 import useStore from "../store";
-import APIService from "../APIService";
+import RiskWiseClient from "../lib/RiskWiseClient";
 
 export const useMapTools = () => {
   const { t } = useTranslation();
@@ -69,7 +69,7 @@ export const useMapTools = () => {
     const isReportExisting = reportExists(selectedReport?.id);
     // New scenario run
     if (isScenarioRunCompleted && !selectedReport) {
-      APIService.AddToOutput(scenarioRunCode)
+      RiskWiseClient.saveScenario(scenarioRunCode)
         .then((response) => {
           setAlertMessage(response.result.status.message);
           if (response.result.status.code === 2000) {
@@ -99,7 +99,7 @@ export const useMapTools = () => {
 
   const handleAddData = () => {
     if (isScenarioRunCompleted) {
-      APIService.AddToOutput(scenarioRunCode);
+      RiskWiseClient.saveScenario(scenarioRunCode);
     }
   };
 
