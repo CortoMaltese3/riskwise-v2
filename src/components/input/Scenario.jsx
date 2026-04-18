@@ -3,19 +3,20 @@ import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardContent, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
+import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const Scenario = () => {
   const { selectedScenario, setSelectedCard, setSelectedTab } = useStore();
   const { t } = useTranslation();
-  const [clicked, setClicked] = useState(false); // State to manage click animation
-  const [bgcolor, setBgcolor] = useState("#CCE1E7"); // State to manage background color
+  const [clicked, setClicked] = useState(false);
+  const [cardState, setCardState] = useState("default");
 
   const handleMouseDown = () => {
-    setClicked(true); // Trigger animation
+    setClicked(true);
   };
 
   const handleMouseUp = () => {
-    setClicked(false); // Reset animation
+    setClicked(false);
   };
 
   const handleClick = () => {
@@ -23,16 +24,8 @@ const Scenario = () => {
     setSelectedTab(0);
   };
 
-  const handleBgColor = () => {
-    if (selectedScenario) {
-      setBgcolor("#C0E7CF"); // green
-    } else {
-      setBgcolor("#CCE1E7"); // default light blue
-    }
-  };
-
   useEffect(() => {
-    handleBgColor();
+    setCardState(selectedScenario ? "valid" : "default");
   }, [selectedScenario]);
 
   return (
@@ -40,20 +33,9 @@ const Scenario = () => {
       variant="outlined"
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp} // Reset animation when the mouse leaves the card
+      onMouseLeave={handleMouseUp}
       onClick={handleClick}
-      sx={{
-        cursor: "pointer",
-        bgcolor: bgcolor,
-        transition: "background-color 0.3s, transform 0.1s", // Added transform to the transition
-        "&:hover": {
-          bgcolor: "#DAE7EA",
-        },
-        ".MuiCardContent-root:last-child": {
-          padding: 2,
-        },
-        transform: clicked ? "scale(0.97)" : "scale(1)", // Apply scale transform when clicked
-      }}
+      sx={getInputCardSx(cardState, { clicked })}
     >
       <CardContent>
         <Box>
@@ -71,13 +53,7 @@ const Scenario = () => {
               InputProps={{
                 readOnly: true,
               }}
-              sx={{
-                ".MuiInputBase-input.Mui-disabled": {
-                  WebkitTextFillColor: "#A6A6A6", // Change the text color for disabled content
-                  bgcolor: "#E6E6E6", // Change background for disabled TextField
-                  padding: 1,
-                },
-              }}
+              sx={disabledFieldSx}
             />
           )}
         </Box>

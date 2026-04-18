@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Box, Card, CardContent, TextField, Typography } from "@mui/material";
 
 import useStore from "../../store";
+import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const TimeHorizon = () => {
   const {
@@ -17,31 +18,24 @@ const TimeHorizon = () => {
     setSelectedTab,
   } = useStore();
   const { t } = useTranslation();
-  const [clicked, setClicked] = useState(false); // State to manage click animation
-  const [bgColor, setBgColor] = useState("#CCE1E7"); // State to manage background color
+  const [clicked, setClicked] = useState(false);
+  const [cardState, setCardState] = useState("default");
+
+  // ERA mode locks the time horizon to 2050; card is not clickable.
+  const isEraLocked = selectedAppOption === "era";
 
   const handleMouseDown = () => {
-    // Deactivate input card click in case of ERA project scenario.
-    // Time horizon is set to 2050
-    if (selectedAppOption === "era") {
-      return;
-    }
-    setClicked(true); // Trigger animation
+    if (isEraLocked) return;
+    setClicked(true);
   };
 
   const handleMouseUp = () => {
-    // Deactivate input card click in case of ERA project scenario.
-    // Time horizon is set to 2050
-    if (selectedAppOption === "era") {
-      return;
-    }
-    setClicked(false); // Reset animation
+    if (isEraLocked) return;
+    setClicked(false);
   };
 
   const handleClick = () => {
-    // Deactivate input card click in case of ERA project scenario.
-    // Time horizon is set to 2050
-    if (selectedAppOption === "era") {
+    if (isEraLocked) {
       setAlertMessage(t("alert_message_time_horizon_fixed_time"));
       setAlertSeverity("info");
       setAlertShowMessage(true);
@@ -51,17 +45,9 @@ const TimeHorizon = () => {
     setSelectedTab(0);
   };
 
-  const handleBgColor = () => {
-    if (selectedAppOption === "era" && selectedCountry) {
-      setBgColor("#C0E7CF"); //green
-    } else {
-      setBgColor("#CCE1E7"); //default light blue
-    }
-  };
-
   useEffect(() => {
-    handleBgColor();
-  }, [selectedAppOption, selectedCountry]);
+    setCardState(isEraLocked && selectedCountry ? "valid" : "default");
+  }, [isEraLocked, selectedCountry]);
 
   return (
     <Box>
@@ -69,20 +55,9 @@ const TimeHorizon = () => {
         variant="outlined"
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp} // Reset animation when the mouse leaves the card
+        onMouseLeave={handleMouseUp}
         onClick={handleClick}
-        sx={{
-          cursor: "pointer",
-          bgcolor: bgColor,
-          transition: "background-color 0.3s, transform 0.1s", // Added transform to the transition
-          "&:hover": {
-            bgcolor: "#DAE7EA",
-          },
-          ".MuiCardContent-root:last-child": {
-            padding: 2,
-          },
-          transform: clicked ? "scale(0.97)" : "scale(1)", // Apply scale transform when clicked
-        }}
+        sx={getInputCardSx(cardState, { clicked })}
       >
         <CardContent>
           <Box>
@@ -99,13 +74,7 @@ const TimeHorizon = () => {
                 InputProps={{
                   readOnly: true,
                 }}
-                sx={{
-                  ".MuiInputBase-input.Mui-disabled": {
-                    WebkitTextFillColor: "#A6A6A6", // Change the text color for disabled content
-                    bgcolor: "#E6E6E6", // Change background for disabled TextField
-                    padding: 1,
-                  },
-                }}
+                sx={disabledFieldSx}
               />
             )}
           </Box>
