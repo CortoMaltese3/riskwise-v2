@@ -20,7 +20,9 @@ contextBridge.exposeInMainWorld("electron", {
 });
 
 contextBridge.exposeInMainWorld("api", {
-  runPythonScript: async ({ scriptName, data }) => {
-    return await ipcRenderer.invoke("runPythonScript", { scriptName, data });
+  http: {
+    request: async (method, path, body) =>
+      await ipcRenderer.invoke("http:request", { method, path, body }),
+    runScenario: async (body) => await ipcRenderer.invoke("http:scenarioRun", body),
   },
 });

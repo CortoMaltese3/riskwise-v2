@@ -12,6 +12,7 @@ let mainWindow;
 let loaderWindow;
 let userLogDir;
 let userDataDir;
+let backendBaseUrl = null;
 
 const isDevelopmentEnv = () => {
   return !app.isPackaged;
@@ -312,7 +313,7 @@ app.whenReady().then(async () => {
     try {
       updateLoaderMessage("Clearing temporary files...");
       log.info("[electron] clearing temp directory...");
-      await runPythonScript(null, "run_clear_temp_dir.py", {});
+      await clearTempDir();
     } catch (error) {
       log.error("[electron] error clearing temp directory:", error);
     }
@@ -378,18 +379,29 @@ const waitForPythonProcessReady = (pythonProcess, timeoutMs = 300000) => {
       return reject(new Error("Application engine process handle is null"));
     }
 
+    let buffer = "";
+
     const handleData = (data) => {
-      const message = data.toString().trim();
-      try {
-        const event = JSON.parse(message);
-        if (event.type === "event" && event.name === "ready") {
-          clearTimeout(timeout);
-          pythonProcess.stdout.off("data", handleData);
-          pythonProcess.off("error", onError);
-          resolve();
+      buffer += data.toString();
+      let newlineIdx;
+      while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+        const line = buffer.substring(0, newlineIdx).trim();
+        buffer = buffer.substring(newlineIdx + 1);
+        if (!line) continue;
+        try {
+          const event = JSON.parse(line);
+          if (event.type === "event" && event.name === "ready" && event.port) {
+            backendBaseUrl = `http://127.0.0.1:${event.port}`;
+            log.info("[electron] backend ready at", backendBaseUrl);
+            clearTimeout(timeout);
+            pythonProcess.stdout.off("data", handleData);
+            pythonProcess.off("error", onError);
+            resolve(backendBaseUrl);
+            return;
+          }
+        } catch {
+          // Ignore non-JSON output from Python
         }
-      } catch {
-        // Ignore non-JSON output from Python
       }
     };
 
@@ -409,6 +421,79 @@ const waitForPythonProcessReady = (pythonProcess, timeoutMs = 300000) => {
     pythonProcess.stdout.on("data", handleData);
     pythonProcess.on("error", onError);
   });
+};
+
+const httpRequest = async (method, path, body) => {
+  if (!backendBaseUrl) {
+    throw new Error("Backend URL not set; Python process not ready");
+  }
+  const options = { method, headers: { "Content-Type": "application/json" } };
+  if (body !== undefined && body !== null) {
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(`${backendBaseUrl}${path}`, options);
+  const text = await response.text();
+  if (!response.ok) {
+    let detail = text;
+    try {
+      const parsed = JSON.parse(text);
+      detail = parsed.detail || parsed.error || text;
+    } catch {
+      // keep raw text
+    }
+    throw new Error(`HTTP ${response.status}: ${detail}`);
+  }
+  return text ? JSON.parse(text) : null;
+};
+
+const runScenarioOverSse = async (window, body) => {
+  const { job_id: jobId } = await httpRequest("POST", "/api/v1/scenario/run", body);
+  const streamResponse = await fetch(`${backendBaseUrl}/api/v1/scenario/${jobId}/stream`);
+  if (!streamResponse.ok || !streamResponse.body) {
+    throw new Error(`Failed to open SSE stream: HTTP ${streamResponse.status}`);
+  }
+
+  const reader = streamResponse.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalResult = null;
+  let errorMessage = null;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let sepIdx;
+    while ((sepIdx = buffer.indexOf("\n\n")) !== -1) {
+      const chunk = buffer.substring(0, sepIdx);
+      buffer = buffer.substring(sepIdx + 2);
+      for (const line of chunk.split("\n")) {
+        if (!line.startsWith("data:")) continue;
+        let payload;
+        try {
+          payload = JSON.parse(line.slice(5).trim());
+        } catch (parseErr) {
+          log.warn("[electron] failed to parse SSE line:", line, parseErr);
+          continue;
+        }
+        if (payload.type === "progress") {
+          if (window && !window.isDestroyed()) {
+            window.webContents.send("progress", payload);
+          }
+        } else if (payload.type === "result") {
+          finalResult = payload.data;
+        } else if (payload.type === "error") {
+          errorMessage = payload.error;
+        }
+      }
+    }
+  }
+
+  if (errorMessage) {
+    throw new Error(errorMessage);
+  }
+  return finalResult;
 };
 
 const createMainWindow = () => {
@@ -467,58 +552,11 @@ const createMainWindow = () => {
   }
 };
 
-const runPythonScript = (mainWindow, scriptName, data) => {
-  return new Promise((resolve, reject) => {
-    if (!global.pythonProcess || global.pythonProcess.killed) {
-      return reject(new Error("Python process is not running"));
-    }
-
-    let buffer = "";
-    const message = { scriptName, data };
-
-    try {
-      global.pythonProcess.stdin.write(JSON.stringify(message) + "\n");
-    } catch (error) {
-      return reject(error);
-    }
-
-    const handleData = (dataChunk) => {
-      buffer += dataChunk.toString();
-      let boundary = buffer.indexOf("\n");
-
-      while (boundary !== -1) {
-        const rawData = buffer.substring(0, boundary);
-        buffer = buffer.substring(boundary + 1);
-
-        if (rawData.trim().startsWith("{") || rawData.trim().startsWith("[")) {
-          try {
-            const response = JSON.parse(rawData);
-            if (response.type === "progress") {
-              // Only send progress if mainWindow exists and isn't destroyed
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send("progress", response);
-              }
-            } else {
-              global.pythonProcess.stdout.off("data", handleData);
-              if (response.success) {
-                resolve(response.result);
-              } else {
-                reject(new Error(response.error));
-              }
-            }
-          } catch (error) {
-            global.pythonProcess.stdout.off("data", handleData);
-            log.error("Error parsing Python stdout:", error.message);
-            reject(error);
-          }
-        }
-
-        boundary = buffer.indexOf("\n");
-      }
-    };
-
-    global.pythonProcess.stdout.on("data", handleData);
-  });
+const clearTempDir = async () => {
+  if (!global.pythonProcess || global.pythonProcess.killed) {
+    throw new Error("Python process is not running");
+  }
+  return await httpRequest("POST", "/api/v1/temp/clear", {});
 };
 
 // Create a long-running Python process
@@ -546,7 +584,7 @@ const createPythonProcess = async () => {
 
   try {
     const py = spawn(pythonExecutable, [scriptPath], {
-      stdio: ["pipe", "pipe", "pipe", "ipc"],
+      stdio: ["pipe", "pipe", "pipe"],
       env: {
         ...process.env,
         LOG_DIR: userLogDir,
@@ -555,7 +593,10 @@ const createPythonProcess = async () => {
     });
 
     py.on("error", (error) => log.error("Python spawn error:", error.message));
-    py.on("exit", (code, signal) => log.warn("Python exited. Code:", code, "Signal:", signal));
+    py.on("exit", (code, signal) => {
+      log.warn("Python exited. Code:", code, "Signal:", signal);
+      backendBaseUrl = null;
+    });
     py.stderr.on("data", (data) => log.error(`[python] ${data.toString().trim()}`));
 
     log.info("[electron] Python process spawned with PID:", py.pid);
@@ -566,20 +607,22 @@ const createPythonProcess = async () => {
   }
 };
 
-ipcMain.handle("runPythonScript", async (_evt, { scriptName, data }) => {
+ipcMain.handle("http:request", async (_evt, { method, path, body }) => {
   try {
-    if (!global.pythonProcess || global.pythonProcess.killed) {
-      log.error("[electron] Python process not available for script:", scriptName);
-      return {
-        success: false,
-        error: "Python backend is not running. Please restart the application.",
-      };
-    }
-
-    const result = await runPythonScript(mainWindow, scriptName, data);
+    const result = await httpRequest(method, path, body);
     return { success: true, result };
   } catch (error) {
-    log.error("[electron] runPythonScript error:", error);
+    log.error("[electron] http:request error:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("http:scenarioRun", async (_evt, body) => {
+  try {
+    const result = await runScenarioOverSse(mainWindow, body);
+    return { success: true, result };
+  } catch (error) {
+    log.error("[electron] http:scenarioRun error:", error);
     return { success: false, error: error.message };
   }
 });
@@ -603,17 +646,7 @@ ipcMain.handle("fetch-log-dir", () => {
 // Handle clear temporary directory request
 ipcMain.handle("clear-temp-dir", async () => {
   try {
-    if (!global.pythonProcess || global.pythonProcess.killed) {
-      log.error("[electron] Python process not available for clearing temp dir");
-      return {
-        success: false,
-        error: "Python backend is not running",
-      };
-    }
-
-    const scriptName = "run_clear_temp_dir.py";
-    const data = {};
-    const result = await runPythonScript(mainWindow, scriptName, data);
+    const result = await clearTempDir();
     log.info("[electron] Temporary directory cleared:", result.message);
     return { success: true, result };
   } catch (error) {
@@ -698,15 +731,11 @@ ipcMain.on("shutdown", () => {
 ipcMain.on("reload", async () => {
   log.info("[electron] reload CLIMADA App...");
 
-  if (global.pythonProcess && !global.pythonProcess.killed) {
-    try {
-      const result = await runPythonScript(mainWindow, "run_clear_temp_dir.py", {});
-      log.info("[electron] Temporary directory cleared:", result.message);
-    } catch (error) {
-      log.error("[electron] failed to clear temporary directory:", error);
-    }
-  } else {
-    log.warn("[electron] skipping temp clear on reload - Python not running");
+  try {
+    const result = await clearTempDir();
+    log.info("[electron] Temporary directory cleared:", result.message);
+  } catch (error) {
+    log.error("[electron] failed to clear temporary directory:", error);
   }
 
   if (mainWindow && !mainWindow.isDestroyed()) {
