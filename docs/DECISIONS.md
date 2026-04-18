@@ -321,23 +321,25 @@ Track A (CLIMADA + Nuitka) is selected by default if Track B fails any of the ab
 
 **Outstanding**: validation on a machine with a third-party endpoint-protection agent (CrowdStrike, Carbon Black) is tracked by issue #24 (deferred).
 
-**Spike code**: `spike/fastapi-poc/` on branch `spike/fastapi-electron-poc`. 7 automated tests covering `/health` and `/stream/test`, all passing.
+**Spike code**: `spike/fastapi-poc/` — 7 automated tests covering `/health` and `/stream/test`, all passing. Full findings in [`docs/architecture-decisions/adr-fastapi-poc.md`](architecture-decisions/adr-fastapi-poc.md).
 
 ---
 
-## D12 — Single ARCHITECTURE.md + DECISIONS.md, not per-decision ADR files
+## D12 — Single ARCHITECTURE.md + DECISIONS.md, with per-spike ADR files in `docs/architecture-decisions/`
 
-**Status**: Accepted  
+**Status**: Amended (2026-04-18)  
 **Date**: 2026-04-16
 
-**Decision**: Use two documents — `ARCHITECTURE.md` (what the system looks like and the implementation roadmap) and `docs/decisions.md` (this file, all key decisions) — rather than individual ADR files per decision.
+**Decision**: Use two documents — `ARCHITECTURE.md` (what the system looks like and the implementation roadmap) and `docs/DECISIONS.md` (this file, all key decisions) — rather than individual ADR files per decision. **Amendment**: Phase 0 spike research docs (detailed findings, measurements, test logs) live in [`docs/architecture-decisions/`](architecture-decisions/); each spike gets one file there. Summary decisions still get a `DECISIONS.md` entry that links to the file where relevant.
 
 **Why**:
 - Project has one primary maintainer. The overhead of separate files per decision is not justified at this scale.
-- A single `decisions.md` with `##` sections is easier to scan and maintain.
-- Formal per-file ADRs (`docs/adr/0001-...md`) pay off with multiple contributors needing to find decisions quickly, or when decisions need explicit `Superseded` status tracking.
+- A single `DECISIONS.md` with `##` sections is easier to scan and maintain.
+- Spike research docs are longer-form (test outputs, measurements, gap analysis) and clutter `DECISIONS.md` if inlined. A separate folder keeps them findable without splitting the decision record itself.
 
-**When to revisit**: if the project gains contributors or if decisions start superseding each other frequently, split into individual files at that point.
+**Amendment rationale**: During Phase 0, spikes #3, #5, and #8 each produced 10–15 kB of findings that were too detailed for a DECISIONS.md entry. `docs/architecture-decisions/` was the natural home. Issue #20 (pre-flight: resolve ADR output location) is closed by this amendment.
+
+**When to revisit**: if the project gains contributors or decisions start superseding each other frequently, promote to full per-decision ADR files at that point.
 
 ---
 
