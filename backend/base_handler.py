@@ -1,9 +1,9 @@
 """
 Module to handle various utility functions and data processing tasks in the backend application.
 
-This module provides a collection of functions to perform tasks such as checking CLIMADA API 
-datasets, sanitizing country names, interpolating data, generating map titles, beautifying 
-hazard types and scenarios, clearing temporary directories, initializing data directories, 
+This module provides a collection of functions to perform tasks such as checking CLIMADA API
+datasets, sanitizing country names, interpolating data, generating map titles, beautifying
+hazard types and scenarios, clearing temporary directories, initializing data directories,
 and updating progress for the frontend.
 """
 
@@ -118,8 +118,7 @@ class BaseHandler:
         except Exception as exc:
             logger.log(
                 "error",
-                f"An error occurred while trying to convert country name to iso3. "
-                f"More info: {exc}",
+                f"An error occurred while trying to convert country name to iso3. More info: {exc}",
             )
             return None
 
@@ -333,14 +332,26 @@ class BaseHandler:
         """
         Update the progress and message for the frontend.
 
+        When a FastAPI scenario job is in flight the HTTP layer installs a
+        per-job callback via :mod:`progress`; this method then routes the
+        event to the job's SSE queue. When no callback is installed (e.g. a
+        ``run_*.py`` script executed standalone) the event is written to
+        stdout so legacy tooling still sees it.
+
         :param progress: An integer representing the progress value.
         :param message: A string containing the progress message.
         :return: None
         """
+        from progress import progress_callback_var
+
         progress_data = {"type": "progress", "progress": progress, "message": message}
-        print(json.dumps(progress_data))
+        callback = progress_callback_var.get()
+        if callback is not None:
+            callback(progress_data)
+        else:
+            print(json.dumps(progress_data))
+            sys.stdout.flush()
         logger.log("info", f"send progress {progress} to frontend.")
-        sys.stdout.flush()
 
     def get_admin_data(self, country_code: str, admin_level) -> gpd.GeoDataFrame:
         """

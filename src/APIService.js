@@ -1,12 +1,13 @@
+const http = () => window.api.http;
+
+const get = (path) => http().request("GET", path, null);
+const post = (path, body) => http().request("POST", path, body ?? {});
+const del = (path) => http().request("DELETE", path, null);
+
 export default class APIService {
   static async Run(body) {
     try {
-      const scriptName = "run_scenario.py";
-      const response = await window.api.runPythonScript({
-        scriptName,
-        data: body,
-      });
-      return response;
+      return await http().runScenario(body);
     } catch (error) {
       console.log(error);
     }
@@ -14,12 +15,7 @@ export default class APIService {
 
   static async CheckDataType(body) {
     try {
-      const scriptName = "run_check_data_type.py";
-      const response = await window.api.runPythonScript({
-        scriptName,
-        data: body,
-      });
-      return response;
+      return await post("/api/v1/data/validate", body);
     } catch (error) {
       console.log(error);
     }
@@ -27,12 +23,9 @@ export default class APIService {
 
   static async FetchAdaptationMeasures(body) {
     try {
-      const scriptName = "run_fetch_measures.py";
-      const response = await window.api.runPythonScript({
-        scriptName,
-        data: body,
-      });
-      return response;
+      const country = encodeURIComponent(body?.countryName ?? "");
+      const hazard = encodeURIComponent(body?.hazardType ?? "");
+      return await get(`/api/v1/measures/${country}/${hazard}`);
     } catch (error) {
       console.log(error);
     }
@@ -40,24 +33,15 @@ export default class APIService {
 
   static async FetchMacroEconomicChartData(body) {
     try {
-      const scriptName = "run_fetch_macro_chart_data.py";
-      const response = await window.api.runPythonScript({
-        scriptName,
-        data: body,
-      });
-      return response;
+      return await post("/api/v1/macro/chart-data", body);
     } catch (error) {
       console.log(error);
     }
   }
 
-  static async FetchCREDOutputData(body) {
+  static async FetchCREDOutputData() {
     try {
-      const scriptName = "run_fetch_cred_output.py";
-      const response = await window.api.runPythonScript({
-        scriptName,
-      });
-      return response;
+      return await get("/api/v1/macro/cred-output");
     } catch (error) {
       console.log(error);
     }
@@ -65,11 +49,7 @@ export default class APIService {
 
   static async FetchReports() {
     try {
-      const scriptName = "run_fetch_reports.py";
-      const response = await window.api.runPythonScript({
-        scriptName,
-      });
-      return response;
+      return await get("/api/v1/scenarios");
     } catch (error) {
       console.log(error);
     }
@@ -77,8 +57,7 @@ export default class APIService {
 
   static async Shutdown() {
     try {
-      const response = await window.electron.send("shutdown");
-      return response;
+      return await window.electron.send("shutdown");
     } catch (error) {
       console.log(error);
     }
@@ -86,8 +65,7 @@ export default class APIService {
 
   static async Minimize() {
     try {
-      const response = await window.electron.send("minimize");
-      return response;
+      return await window.electron.send("minimize");
     } catch (error) {
       console.log(error);
     }
@@ -95,21 +73,16 @@ export default class APIService {
 
   static async Refresh() {
     try {
-      const response = await window.electron.send("reload");
-      return response;
+      return await window.electron.send("reload");
     } catch (error) {
       console.log(error);
     }
   }
 
-  static async AddToOutput(body) {
+  static async AddToOutput(scenarioRunCode) {
     try {
-      const scriptName = "run_add_to_ouput.py";
-      const response = await window.api.runPythonScript({
-        scriptName,
-        data: body,
-      });
-      return response;
+      const id = encodeURIComponent(scenarioRunCode ?? "");
+      return await post(`/api/v1/scenarios/${id}/save`, {});
     } catch (error) {
       console.log(error);
     }
@@ -117,12 +90,8 @@ export default class APIService {
 
   static async ExportReport(body) {
     try {
-      const scriptName = "run_export_report.py";
-      const response = await window.api.runPythonScript({
-        scriptName,
-        data: body,
-      });
-      return response;
+      const id = encodeURIComponent(body?.scenarioRunCode ?? "");
+      return await post(`/api/v1/scenarios/${id}/export`, body);
     } catch (error) {
       console.log(error);
     }
@@ -130,12 +99,13 @@ export default class APIService {
 
   static async RemoveReport(body) {
     try {
-      const scriptName = "run_remove_report.py";
-      const response = await window.api.runPythonScript({
-        scriptName,
-        data: body,
-      });
-      return response;
+      const report = body?.report ?? {};
+      const id = encodeURIComponent(report.id ?? "");
+      const params = new URLSearchParams();
+      if (report.type) params.set("report_type", report.type);
+      if (report.image) params.set("image", report.image);
+      const qs = params.toString();
+      return await del(`/api/v1/scenarios/${id}${qs ? `?${qs}` : ""}`);
     } catch (error) {
       console.log(error);
     }

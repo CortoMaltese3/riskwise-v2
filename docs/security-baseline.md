@@ -98,11 +98,12 @@ Two namespaces are exposed via `contextBridge.exposeInMainWorld`:
 | `onCopyFolderReply(cb)` | `copy-folder-reply` (on) | |
 | `openReport(reportPath)` | `open-report` (invoke) | Renderer controls path passed to `shell.openPath` |
 
-### `window.api` (`preload.js:22–26`)
+### `window.api` (`preload.js`)
 
 | API | IPC channel | Notes |
 |---|---|---|
-| `runPythonScript({ scriptName, data })` | `runPythonScript` (invoke) | `scriptName` is dispatched through a server-side allowlist in `app.py:49–90` |
+| `http.request(method, path, body)` | `http:request` (invoke) | Routes to FastAPI backend over loopback HTTP. Unknown routes return 404 from FastAPI. |
+| `http.runScenario(body)` | `http:scenarioRun` (invoke) | Opens an SSE stream to `/api/v1/scenario/{id}/stream`; progress events are forwarded to the renderer via `webContents.send("progress", ...)`. |
 
 **Findings:**
 
@@ -110,7 +111,7 @@ Two namespaces are exposed via `contextBridge.exposeInMainWorld`:
 |---|---|---|
 | PRE-1 | `on(channel, cb)` and `send(channel, data)` accept arbitrary channel names | **HIGH** — renderer can call `send("shutdown")`, `send("reload")` or subscribe to any main-process event without restriction. These should use an explicit allowlist. |
 | PRE-2 | `copyFile`, `copyFolder`, `saveScreenshot`, `openReport` accept renderer-controlled paths | **HIGH** — see §5 (path traversal). |
-| PRE-3 | `window.api.runPythonScript` dispatches through server-side allowlist | ✓ Mitigated — `app.py` rejects unknown script names. |
+| PRE-3 | `window.api.http.request` path is renderer-supplied | ✓ Mitigated — FastAPI only registers the v1 routes; unknown paths return 404. |
 
 ---
 
