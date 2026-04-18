@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
-import APIService from "../../APIService";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 import useStore from "../../store";
 
 const hazardDict = {
@@ -96,11 +96,10 @@ const HazardCard = () => {
     setSelectedHazardFile("");
     setFetchHazardMessage("");
     setIsValidHazard(false);
-    const body = {
+    RiskWiseClient.validateData({
       country: selectedCountry,
       dataType: selectedHazard,
-    };
-    APIService.CheckDataType(body)
+    })
       .then((response) => {
         setAlertMessage(response.result.status.message);
         response.result.status.code === 2000

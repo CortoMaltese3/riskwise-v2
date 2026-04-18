@@ -3,12 +3,10 @@ import React from "react";
 import IconButton from "@mui/material/IconButton";
 import MinimizeIcon from "@mui/icons-material/Minimize";
 
-import APIService from "../../APIService";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 
 const onMinimizelick = () => {
-  APIService.Minimize().catch((error) => {
-    console.log(error);
-  });
+  RiskWiseClient.minimize();
 };
 
 const ShutdownButton = () => {

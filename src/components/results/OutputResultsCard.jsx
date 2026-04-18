@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Box, Button } from "@mui/material";
 
-import APIService from "../../APIService";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 import useStore from "../../store";
 
 const OutputResultsCard = () => {
@@ -18,17 +18,15 @@ const OutputResultsCard = () => {
   } = useStore();
 
   const handleButtonClick = (type) => {
-    const body = {
-      exportType: type,
-      scenarioRunCode: selectedScenarioRunCode,
-      report: selectedReport,
-    };
     if (type === "gis") {
       setAlertMessage("GeoJSON data generated successfully.");
       setAlertSeverity("success");
       setAlertShowMessage(true);
     } else {
-      APIService.ExportReport(body)
+      RiskWiseClient.exportReport(selectedScenarioRunCode, {
+        exportType: type,
+        report: selectedReport,
+      })
         .then((response) => {
           const { status, data } = response.result;
           const reportPath = data.report_path || "";

@@ -3,12 +3,10 @@ import React from "react";
 import IconButton from "@mui/material/IconButton";
 import RefreshIcon from "@mui/icons-material/Refresh";
 
-import APIService from "../../APIService";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 
 const onRefreshClick = () => {
-  APIService.Refresh().catch((error) => {
-    console.log(error);
-  });
+  RiskWiseClient.reload();
 };
 
 const ReloadButton = () => {

@@ -10,6 +10,10 @@ Electron reads that line to learn the ephemeral port, then calls every
 endpoint over HTTP. Scenario runs stream progress over
 ``text/event-stream`` (SSE) and the final result on the same stream.
 
+Pydantic models live in ``backend/models/`` and are wired here as both
+request bodies and ``response_model`` so that the OpenAPI schema (and the
+TypeScript client generated from it) stays in sync with the runtime.
+
 See ``docs/DECISIONS.md`` D02 and D16 and
 ``docs/architecture-decisions/adr-fastapi-poc.md``.
 """
@@ -26,6 +30,25 @@ from typing import Any
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
+from models import (
+    CountriesResponse,
+    DataValidateRequest,
+    DataValidateResponse,
+    DeleteReportResponse,
+    ExportReportRequest,
+    ExportReportResponse,
+    HealthResponse,
+    JobAcceptedResponse,
+    MacroChartDataRequest,
+    MacroChartDataResponse,
+    MacroCredOutputResponse,
+    MeasuresResponse,
+    ReportListResponse,
+    ReportResponse,
+    SaveScenarioResponse,
+    ScenarioRunRequest,
+    TempClearResponse,
+)
 from progress import ProgressEvent, progress_callback_var
 
 API_PREFIX = "/api/v1"
@@ -120,15 +143,15 @@ async def _dispatch(script_name: str, data: Any) -> dict:
 app = FastAPI(title="RISK WISE Backend", version="2.0.0-dev")
 
 
-@app.get(f"{API_PREFIX}/health")
+@app.get(f"{API_PREFIX}/health", response_model=HealthResponse)
 async def health() -> dict:
     return {"status": "ok"}
 
 
-@app.post(f"{API_PREFIX}/scenario/run")
-async def scenario_run(payload: dict) -> dict:
+@app.post(f"{API_PREFIX}/scenario/run", response_model=JobAcceptedResponse)
+async def scenario_run(payload: ScenarioRunRequest) -> dict:
     job_id, queue = jobs.create()
-    asyncio.create_task(_execute_scenario(job_id, payload, queue))
+    asyncio.create_task(_execute_scenario(job_id, payload.model_dump(exclude_none=False), queue))
     return {"job_id": job_id}
 
 
@@ -172,22 +195,22 @@ async def _execute_scenario(job_id: str, payload: dict, queue: asyncio.Queue) ->
         queue.put_nowait(_STREAM_END)
 
 
-@app.post(f"{API_PREFIX}/data/validate")
-async def data_validate(payload: dict) -> dict:
-    return await _dispatch("run_check_data_type.py", payload)
+@app.post(f"{API_PREFIX}/data/validate", response_model=DataValidateResponse)
+async def data_validate(payload: DataValidateRequest) -> dict:
+    return await _dispatch("run_check_data_type.py", payload.model_dump())
 
 
-@app.get(f"{API_PREFIX}/measures/{{country}}/{{hazard}}")
+@app.get(f"{API_PREFIX}/measures/{{country}}/{{hazard}}", response_model=MeasuresResponse)
 async def measures(country: str, hazard: str) -> dict:
     return await _dispatch("run_fetch_measures.py", {"countryName": country, "hazardType": hazard})
 
 
-@app.get(f"{API_PREFIX}/scenarios")
+@app.get(f"{API_PREFIX}/scenarios", response_model=ReportListResponse)
 async def list_scenarios() -> dict:
     return await _dispatch("run_fetch_reports.py", None)
 
 
-@app.get(f"{API_PREFIX}/scenarios/{{scenario_id}}")
+@app.get(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=ReportResponse)
 async def get_scenario(scenario_id: str) -> dict:
     result = await _dispatch("run_fetch_reports.py", None)
     reports = result.get("data", []) or []
@@ -200,18 +223,18 @@ async def get_scenario(scenario_id: str) -> dict:
     }
 
 
-@app.post(f"{API_PREFIX}/scenarios/{{scenario_id}}/export")
-async def export_scenario(scenario_id: str, payload: dict) -> dict:
-    body = {**payload, "scenarioRunCode": scenario_id}
+@app.post(f"{API_PREFIX}/scenarios/{{scenario_id}}/export", response_model=ExportReportResponse)
+async def export_scenario(scenario_id: str, payload: ExportReportRequest) -> dict:
+    body = {**payload.model_dump(exclude_none=True), "scenarioRunCode": scenario_id}
     return await _dispatch("run_export_report.py", body)
 
 
-@app.post(f"{API_PREFIX}/scenarios/{{scenario_id}}/save")
+@app.post(f"{API_PREFIX}/scenarios/{{scenario_id}}/save", response_model=SaveScenarioResponse)
 async def save_scenario(scenario_id: str) -> dict:
     return await _dispatch("run_add_to_ouput.py", scenario_id)
 
 
-@app.delete(f"{API_PREFIX}/scenarios/{{scenario_id}}")
+@app.delete(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=DeleteReportResponse)
 async def delete_scenario(
     scenario_id: str,
     report_type: str = "output_data",
@@ -223,17 +246,17 @@ async def delete_scenario(
     return await _dispatch("run_remove_report.py", {"report": report})
 
 
-@app.get(f"{API_PREFIX}/macro/cred-output")
+@app.get(f"{API_PREFIX}/macro/cred-output", response_model=MacroCredOutputResponse)
 async def macro_cred_output() -> dict:
     return await _dispatch("run_fetch_cred_output.py", None)
 
 
-@app.post(f"{API_PREFIX}/macro/chart-data")
-async def macro_chart_data(payload: dict) -> dict:
-    return await _dispatch("run_fetch_macro_chart_data.py", payload)
+@app.post(f"{API_PREFIX}/macro/chart-data", response_model=MacroChartDataResponse)
+async def macro_chart_data(payload: MacroChartDataRequest) -> dict:
+    return await _dispatch("run_fetch_macro_chart_data.py", payload.model_dump())
 
 
-@app.get(f"{API_PREFIX}/countries")
+@app.get(f"{API_PREFIX}/countries", response_model=CountriesResponse)
 async def countries() -> dict:
     import pycountry
 
@@ -241,7 +264,7 @@ async def countries() -> dict:
     return {"data": data, "status": {"code": 2000, "message": "ok"}}
 
 
-@app.post(f"{API_PREFIX}/temp/clear")
+@app.post(f"{API_PREFIX}/temp/clear", response_model=TempClearResponse)
 async def temp_clear() -> dict:
     return await _dispatch("run_clear_temp_dir.py", None)
 

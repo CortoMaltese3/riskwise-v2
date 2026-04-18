@@ -40,24 +40,32 @@ class TestHealth:
 
 class TestSynchronousEndpoints:
     def test_data_validate_dispatches_to_check_data_type(self, client: TestClient) -> None:
-        with patch.object(app_module, "_dispatch_sync", return_value={"ok": 1}) as m:
+        envelope = {"data": {"data": {}}, "status": {"code": 2000, "message": "ok"}}
+        with patch.object(app_module, "_dispatch_sync", return_value=envelope) as m:
             response = client.post(
                 "/api/v1/data/validate",
                 json={"country": "Egypt", "dataType": "exposures"},
             )
         assert response.status_code == 200
-        assert response.json() == {"ok": 1}
+        assert response.json() == envelope
         m.assert_called_once()
         args, _ = m.call_args
         assert args[0] == "run_check_data_type.py"
         assert args[1] == {"country": "Egypt", "dataType": "exposures"}
 
+    def test_data_validate_rejects_missing_fields(self, client: TestClient) -> None:
+        response = client.post("/api/v1/data/validate", json={"country": "Egypt"})
+        assert response.status_code == 422
+
     def test_measures_passes_path_params(self, client: TestClient) -> None:
-        expected = {"data": {"adaptationMeasures": []}, "status": {"code": 2000}}
-        with patch.object(app_module, "_dispatch_sync", return_value=expected) as m:
+        envelope = {
+            "data": {"adaptationMeasures": []},
+            "status": {"code": 2000, "message": "ok"},
+        }
+        with patch.object(app_module, "_dispatch_sync", return_value=envelope) as m:
             response = client.get("/api/v1/measures/Egypt/Flood")
         assert response.status_code == 200
-        assert response.json() == expected
+        assert response.json() == envelope
         m.assert_called_once_with(
             "run_fetch_measures.py",
             {"countryName": "Egypt", "hazardType": "Flood"},
@@ -72,13 +80,13 @@ class TestSynchronousEndpoints:
 
     def test_get_scenario_found(self, client: TestClient) -> None:
         reports = [
-            {"scenario_id": "abc", "title": "First"},
-            {"scenario_id": "xyz", "title": "Second"},
+            {"id": "1", "scenario_id": "abc", "title": "First"},
+            {"id": "2", "scenario_id": "xyz", "title": "Second"},
         ]
         with patch.object(
             app_module,
             "_dispatch_sync",
-            return_value={"data": reports, "status": {"code": 2000}},
+            return_value={"data": reports, "status": {"code": 2000, "message": "ok"}},
         ):
             response = client.get("/api/v1/scenarios/xyz")
         assert response.status_code == 200
@@ -115,7 +123,7 @@ class TestSynchronousEndpoints:
         with patch.object(
             app_module,
             "_dispatch_sync",
-            return_value={"data": {}, "status": {"code": 2000}},
+            return_value={"data": {"data": {}}, "status": {"code": 2000, "message": "ok"}},
         ) as m:
             response = client.post("/api/v1/scenarios/abc/save")
         assert response.status_code == 200

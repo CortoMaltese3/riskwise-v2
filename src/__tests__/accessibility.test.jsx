@@ -17,7 +17,7 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: vi.fn() },
 }));
 
-vi.mock("../APIService", () => ({ default: {} }));
+vi.mock("../lib/RiskWiseClient", () => ({ default: {} }));
 
 async function runAxe(container) {
   const results = await axe.run(container, {

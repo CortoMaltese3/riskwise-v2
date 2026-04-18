@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Box, Card, CardContent, Typography } from "@mui/material";
 
 import AdaptationMeasuresViewTitle from "../title/AdaptationMeasuresViewTitle";
-import APIService from "../../APIService";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 import useStore from "../../store";
 
 const AdaptationMeasuresInput = () => {
@@ -14,10 +14,7 @@ const AdaptationMeasuresInput = () => {
   const [adaptationMeasures, setAdaptationMeasures] = useState([]);
 
   const onFetchAdaptationMeasuresHandler = async () => {
-    const body = {
-      hazardType: selectedHazard,
-    };
-    APIService.FetchAdaptationMeasures(body)
+    RiskWiseClient.fetchAdaptationMeasures("", selectedHazard)
       .then((response) => {
         setAdaptationMeasures(response.result.data.adaptationMeasures);
       })

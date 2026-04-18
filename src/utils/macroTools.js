@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import APIService from "../APIService";
+import RiskWiseClient from "../lib/RiskWiseClient";
 
 import useStore from "../store";
 
@@ -16,7 +16,7 @@ export const useMacroTools = () => {
   } = useStore.getState();
 
   const loadCREDOutputData = () => {
-    APIService.FetchCREDOutputData()
+    RiskWiseClient.fetchCREDOutput()
       .then((response) => {
         setAlertMessage(response.result.status.message);
         response.result.status.code === 2000
