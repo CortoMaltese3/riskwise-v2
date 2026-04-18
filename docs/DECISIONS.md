@@ -340,3 +340,69 @@ Track A (CLIMADA + Nuitka) is selected by default if Track B fails any of the ab
 **When to revisit**: if the project gains contributors or if decisions start superseding each other frequently, split into individual files at that point.
 
 ---
+
+## D17 — Code signing provider: Azure Trusted Signing primary, SSL.com EV fallback
+
+**Status**: Accepted (cert not yet procured — extends D07)  
+**Date**: 2026-04-18
+
+**Decision**: When a signing certificate is procured for RISK WISE Windows installers, use **Azure Trusted Signing** as the primary cloud signing service with an EV-equivalent identity. **SSL.com eSigner + EV** is the fallback if Azure is unavailable. USB hardware tokens and OV certificates are rejected.
+
+**Certificate type — EV over OV**:
+
+| Dimension | OV | EV |
+|---|---|---|
+| SmartScreen reputation on first install | None — built over hundreds-to-thousands of installs | Immediate |
+| Issuance time | 1–5 business days | 1–4 weeks |
+| Cost (1-year, USD) | ~$200–$400 | ~$300–$700 |
+| CI compatibility | Cloud HSM available | Cloud HSM available; USB-only EV is incompatible with headless CI |
+
+The user base is small (low hundreds, government officials) and will never accumulate enough installs for OV to build SmartScreen reputation. EV is also a soft requirement for some enterprise allowlisting decisions. OV is the fallback only if EV is impossible to procure.
+
+**Cloud signing provider comparison** (USB tokens excluded — incompatible with GitHub Actions):
+
+| Provider | Cert | First-year cost (USD, est.) | SmartScreen day one | electron-builder | Onboarding |
+|---|---|---|---|---|---|
+| **Azure Trusted Signing** | Microsoft-issued (EV-equivalent, 3-day rotating) | ~$120 (consumption-based, $9.99/mo Basic tier) | Yes | Native via `win.azureSignOptions` | 3–7 business days |
+| SSL.com eSigner + EV | SSL.com EV | ~$400–$700 | Yes | `signtoolOptions` + `CodeSignTool` | 5–10 business days |
+| DigiCert KeyLocker + EV | DigiCert EV | ~$1,100–$1,400 | Yes | `signtoolOptions` + `smctl` | 5–10 business days |
+
+> Prices are public-list estimates as of 2026-04 and must be re-confirmed with a current quote before purchase. Volume / academic / non-profit pricing may apply, especially via GIZ.
+
+**Why Azure Trusted Signing**:
+- Roughly an order of magnitude cheaper than the alternatives at our release volume.
+- EV-equivalent SmartScreen reputation from day one — same outcome as a legacy-CA EV cert.
+- Native `electron-builder` integration (`win.azureSignOptions`, electron-builder ≥ 24.13) — no extra CLI install in CI, just an Azure service principal.
+- Microsoft-issued certs are short-lived (3-day) and rotated automatically — no expiry-day fire drills.
+
+**Rejected**:
+- **DigiCert KeyLocker + EV**: same outcome as SSL.com at 2–3× the cost. Justified only if a stakeholder requires a DigiCert-signed binary (none does).
+- **Self-signed cert**: same SmartScreen behaviour as unsigned — pointless.
+- **Any OV cert**: insufficient install volume for reputation ramp.
+- **USB-token EV** (Sectigo / Comodo / GlobalSign default): cannot run headlessly in GitHub Actions.
+
+**Who pays — preference order**:
+1. **Client (GIZ / UNU-EHS) pays.** Preferred. Frame as "~$120/year operational cost to remove SmartScreen warning and unblock enterprise allowlisting." Raise in next steering call. The cert is operational infrastructure for distributing the tool to government users, which is exactly what GIZ commissioned.
+2. **Maintainer absorbs.** Fallback if client refuses or is slow. Risk: publisher identity becomes the maintainer / their company, which may be objectionable to enterprise IT teams expecting a recognised institution. Recoup later via the eventual commercial deal.
+3. **Defer.** Phase 1 ships infrastructure with `CSC_LINK` unset — unsigned builds match today's behaviour. Acceptable for internal beta only; not acceptable for public or government-distributed releases.
+
+**Activation checklist** (referenced by Phase 1 Area 15 and Phase 4 in ARCHITECTURE.md):
+
+Phase 1 (now, no cert needed):
+- Add commented signing skeleton to `package.json` (done — `build._signingSkeleton`).
+- Document required env vars in `docs/signing.md` when written: `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_CODE_SIGNING_ACCOUNT_NAME`, `AZURE_CERT_PROFILE_NAME`, `AZURE_ENDPOINT`.
+- Add conditional signing step to `.github/workflows/release.yml` guarded by `if: env.AZURE_CLIENT_ID != ''`. Unsigned remains the fallback for forks and dev builds.
+
+Phase 4 (cert procured):
+- Provision Azure Trusted Signing identity, complete identity verification, set `publisherName` from the verified publisher.
+- Service principal scoped to the signing account; credentials stored as GitHub Actions environment secrets with environment protection rules.
+- Cut a release on a test branch and confirm: installer signature valid, SmartScreen does not warn, `electron-updater` validates the update package.
+- Remove the `verifySignature = async () => null` monkey-patch from `public/electron.js:261–262` (UPD-1 from `security-baseline.md`).
+- Migrate engine hosting to v2 release pipeline (D15) — engines must be signed by the same identity.
+- Sign the engine-manifest with an offline minisign/age key (Area 13).
+
+**Consequence**: D07 stands; this entry pins the specific provider and cert type. Action item for the maintainer is to (a) raise Option 1 with GIZ at the next steering call, and (b) verify the Azure Trusted Signing pricing and onboarding process at the point of purchase.
+
+**References**: [Microsoft — Azure Trusted Signing overview](https://learn.microsoft.com/en-us/azure/trusted-signing/overview), [electron-builder — Windows code signing](https://www.electron.build/code-signing-win), [DigiCert KeyLocker](https://www.digicert.com/tls-ssl/code-signing/keylocker), [SSL.com eSigner](https://www.ssl.com/esigner/).
+
+---
