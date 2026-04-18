@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/GIZ-RiskFinance/ERA-Project_RISK-WISE/main/docs/architecture-decisions/engine-manifest-schema.json",
+  "title": "RISKWISE Engine Manifest",
+  "description": "Manifest describing a Python engine release payload consumed by the RISKWISE Electron app. Served as engine-manifest.json from the GitHub Release assets of the engine channel and signed with an offline key (minisign v0.9 / Ed25519). The detached signature lives next to the manifest as engine-manifest.json.minisig.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "channel",
+    "version",
+    "released_at",
+    "sha256",
+    "size_bytes",
+    "download_url",
+    "min_app_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Manifest schema version. Bumped on breaking format changes so older clients can reject unknown layouts."
+    },
+    "channel": {
+      "type": "string",
+      "enum": ["stable", "beta", "internal"],
+      "description": "Release channel this manifest was published on. Must match the channel the client is subscribed to; mismatches are rejected."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-(?:beta|internal)\\.\\d+)?$",
+      "description": "Engine version, independent of app version. SemVer with the same -beta.N / -internal.N suffix conventions used for app tags."
+    },
+    "released_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp of when the engine artifact was published. Used for display only; trust is derived from the signature, not the timestamp."
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "Lowercase hex SHA-256 of the engine archive at download_url. Verified after download; a mismatch deletes the partial file and retries from byte 0."
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Expected size of the engine archive in bytes. Used to pre-allocate disk and drive the download progress bar."
+    },
+    "download_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://",
+      "description": "HTTPS URL to the engine archive. Must support HTTP Range requests so TLS-inspection proxies that corrupt mid-download can resume from the last good byte."
+    },
+    "min_app_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Lowest app version compatible with this engine. An older app refuses to use the engine and prompts the user to update the app first."
+    },
+    "max_app_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Optional inverse binding. A newer app that needs engine features beyond this version must refuse to use the cached engine and trigger a re-download. Absent means no upper bound."
+    },
+    "notes_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://",
+      "description": "Optional HTTPS URL to engine release notes (Markdown). Rendered inside the What's New dialog beneath the app release notes."
+    }
+  },
+  "examples": [
+    {
+      "schema_version": 1,
+      "channel": "stable",
+      "version": "2.0.1",
+      "released_at": "2026-05-04T09:00:00Z",
+      "sha256": "0b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff001",
+      "size_bytes": 312457216,
+      "download_url": "https://github.com/GIZ-RiskFinance/ERA-Project_RISK-WISE/releases/download/engine-v2.0.1/riskwise-engine-2.0.1-win-x64.zip",
+      "min_app_version": "2.0.0",
+      "max_app_version": "2.1.0",
+      "notes_url": "https://github.com/GIZ-RiskFinance/ERA-Project_RISK-WISE/releases/tag/engine-v2.0.1"
+    }
+  ]
+}
