@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardContent, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
+import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const AnnualGrowth = () => {
   const {
@@ -18,32 +19,25 @@ const AnnualGrowth = () => {
     setSelectedTab,
   } = useStore();
   const { t } = useTranslation();
-  const [clicked, setClicked] = useState(false); // State to manage click animation
-  const [bgColor, setBgColor] = useState("#CCE1E7"); // State to manage background color
+  const [clicked, setClicked] = useState(false);
+  const [cardState, setCardState] = useState("default");
   const [growth, setGrowth] = useState(selectedAnnualGrowth);
 
+  // ERA mode pins the annual growth rate per-country; card is not clickable.
+  const isEraLocked = selectedAppOption === "era";
+
   const handleMouseDown = () => {
-    // Deactivate input card click in case of ERA project scenario.
-    // Time horizon is set to 2050
-    if (selectedAppOption === "era") {
-      return;
-    }
-    setClicked(true); // Trigger animation
+    if (isEraLocked) return;
+    setClicked(true);
   };
 
   const handleMouseUp = () => {
-    // Deactivate input card click in case of ERA project scenario.
-    // Time horizon is set to 2050
-    if (selectedAppOption === "era") {
-      return;
-    }
-    setClicked(false); // Reset animation
+    if (isEraLocked) return;
+    setClicked(false);
   };
 
   const handleCardClick = () => {
-    // Deactivate input card click in case of ERA project scenario.
-    // Time horizon is set to 2050
-    if (selectedAppOption === "era") {
+    if (isEraLocked) {
       setAlertMessage(t("alert_message_annual_growth_fixed_growth"));
       setAlertSeverity("info");
       setAlertShowMessage(true);
@@ -53,47 +47,21 @@ const AnnualGrowth = () => {
     setSelectedTab(0);
   };
 
-  const handleBgColor = () => {
-    if (selectedAppOption === "era" && selectedCountry) {
-      setBgColor("#C0E7CF"); //green
-    } else {
-      setBgColor("#CCE1E7"); //default light blue
-    }
-  };
-
   useEffect(() => {
-    handleBgColor();
-    if (selectedAppOption === "era") {
+    setCardState(isEraLocked && selectedCountry ? "valid" : "default");
+    if (isEraLocked) {
       if (selectedCountry === "thailand") {
-        if (selectedExposureEconomic) {
-          // Set static population growth of Thailand to +2.94% if
-          // economic Exposure type is selected
-          setGrowth(2.94);
-        } else {
-          // Set static GDP growth of Thailand to -0.22% if
-          // non-economic Exposure type is selected
-          setGrowth(-0.22);
-        }
+        setGrowth(selectedExposureEconomic ? 2.94 : -0.22);
       } else if (selectedCountry === "egypt") {
-        if (selectedExposureEconomic) {
-          // Set static population growth of Egypt to +4.00%% if
-          // economic Exposure type is selected
-          setGrowth(4);
-        } else {
-          // Set static GDP growth of Egypt to +1.29% if
-          // non-economic Exposure type is selected
-          setGrowth(1.29);
-        }
+        setGrowth(selectedExposureEconomic ? 4 : 1.29);
       } else {
-        // Reset to defaults or handle other countries as needed
         setGrowth(selectedAnnualGrowth);
       }
     } else {
-      // If not "era", use the provided props values
       setGrowth(selectedAnnualGrowth);
     }
   }, [
-    selectedAppOption,
+    isEraLocked,
     selectedCountry,
     selectedAnnualGrowth,
     selectedExposureEconomic,
@@ -105,23 +73,11 @@ const AnnualGrowth = () => {
       variant="outlined"
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp} // Reset animation when the mouse leaves the card
+      onMouseLeave={handleMouseUp}
       onClick={handleCardClick}
-      sx={{
-        cursor: "pointer",
-        bgcolor: bgColor,
-        transition: "background-color 0.3s, transform 0.1s", // Added transform to the transition
-        "&:hover": {
-          bgcolor: "#DAE7EA",
-        },
-        ".MuiCardContent-root:last-child": {
-          padding: 2,
-        },
-        transform: clicked ? "scale(0.97)" : "scale(1)", // Apply scale transform when clicked
-      }}
+      sx={getInputCardSx(cardState, { clicked })}
     >
       <CardContent>
-        {/* Default section if no exposure is selected*/}
         {!selectedExposureEconomic && !selectedExposureNonEconomic && (
           <Box>
             <Typography id="annual-growth-slider" gutterBottom variant="h6" component="div" m={0}>
@@ -130,7 +86,6 @@ const AnnualGrowth = () => {
           </Box>
         )}
 
-        {/* Annual GDP growth section */}
         {selectedExposureEconomic && (
           <Box>
             <Typography
@@ -151,18 +106,11 @@ const AnnualGrowth = () => {
               value={`${growth}%`}
               disabled
               aria-readonly={true}
-              sx={{
-                ".MuiInputBase-input.Mui-disabled": {
-                  WebkitTextFillColor: "#A6A6A6", // Text color for disabled content
-                  bgcolor: "#E6E6E6", // Background for disabled TextField
-                  padding: 1,
-                },
-              }}
+              sx={disabledFieldSx}
             />
           </Box>
         )}
 
-        {/* Annual Population growth section */}
         {selectedExposureNonEconomic && (
           <Box>
             <Typography
@@ -180,13 +128,7 @@ const AnnualGrowth = () => {
               value={`${growth}%`}
               disabled
               aria-readonly={true}
-              sx={{
-                ".MuiInputBase-input.Mui-disabled": {
-                  WebkitTextFillColor: "#A6A6A6", // Text color for disabled content
-                  bgcolor: "#E6E6E6", // Background for disabled TextField
-                  padding: 1,
-                },
-              }}
+              sx={disabledFieldSx}
             />
           </Box>
         )}

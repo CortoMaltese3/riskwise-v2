@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardContent, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
+import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const ExposureNonEconomic = () => {
   const {
@@ -16,21 +17,17 @@ const ExposureNonEconomic = () => {
     setSelectedTab,
   } = useStore();
   const { t } = useTranslation();
-  const [clicked, setClicked] = useState(false); // State to manage click animation
-  const [bgColor, setBgColor] = useState("#CCE1E7"); // State to manage background color
+  const [clicked, setClicked] = useState(false);
+  const [cardState, setCardState] = useState("default");
 
   const handleMouseDown = () => {
-    if (selectedExposureEconomic) {
-      return;
-    }
-    setClicked(true); // Trigger animation
+    if (selectedExposureEconomic) return;
+    setClicked(true);
   };
 
   const handleMouseUp = () => {
-    if (selectedExposureEconomic) {
-      return;
-    }
-    setClicked(false); // Reset animation
+    if (selectedExposureEconomic) return;
+    setClicked(false);
   };
 
   const handleClick = () => {
@@ -44,20 +41,16 @@ const ExposureNonEconomic = () => {
     setSelectedTab(0);
   };
 
-  const handleBgColor = () => {
-    if (selectedExposureNonEconomic && isValidExposureNonEconomic) {
-      setBgColor("#C0E7CF"); //green
-    } else if (selectedExposureNonEconomic && !isValidExposureNonEconomic) {
-      setBgColor("#FFB3B3"); //red
-    } else if (selectedExposureEconomic) {
-      setBgColor("#CFCFCF"); //grey
-    } else {
-      setBgColor("#CCE1E7"); //default light blue
-    }
-  };
-
   useEffect(() => {
-    handleBgColor();
+    if (selectedExposureNonEconomic && isValidExposureNonEconomic) {
+      setCardState("valid");
+    } else if (selectedExposureNonEconomic && !isValidExposureNonEconomic) {
+      setCardState("invalid");
+    } else if (selectedExposureEconomic) {
+      setCardState("neutral");
+    } else {
+      setCardState("default");
+    }
   }, [isValidExposureNonEconomic, selectedExposureEconomic, selectedExposureNonEconomic]);
 
   return (
@@ -65,20 +58,9 @@ const ExposureNonEconomic = () => {
       variant="outlined"
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp} // Reset animation when the mouse leaves the card
+      onMouseLeave={handleMouseUp}
       onClick={handleClick}
-      sx={{
-        cursor: "pointer",
-        bgcolor: bgColor,
-        transition: "background-color 0.3s, transform 0.1s", // Added transform to the transition
-        "&:hover": {
-          bgcolor: "#DAE7EA",
-        },
-        ".MuiCardContent-root:last-child": {
-          padding: 2,
-        },
-        transform: clicked ? "scale(0.97)" : "scale(1)", // Apply scale transform when clicked
-      }}
+      sx={getInputCardSx(cardState, { clicked })}
     >
       <CardContent>
         <Box>
@@ -95,13 +77,7 @@ const ExposureNonEconomic = () => {
               InputProps={{
                 readOnly: true,
               }}
-              sx={{
-                ".MuiInputBase-input.Mui-disabled": {
-                  WebkitTextFillColor: "#A6A6A6", // Change the text color for disabled content
-                  bgcolor: "#E6E6E6", // Change background for disabled TextField
-                  padding: 1,
-                },
-              }}
+              sx={disabledFieldSx}
             />
           )}
         </Box>

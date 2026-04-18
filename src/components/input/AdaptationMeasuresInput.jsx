@@ -40,13 +40,20 @@ const AdaptationMeasuresInput = () => {
     <>
       <AdaptationMeasuresViewTitle />
       {adaptationMeasures.length > 0 ? (
-        <Box sx={{ mt: 2, backgroundColor: "#DDEBEF", padding: 2, borderRadius: "8px" }}>
+        <Box
+          sx={{
+            mt: 2,
+            backgroundColor: (theme) => theme.palette.inputCard.panelBg,
+            padding: 2,
+            borderRadius: "8px",
+          }}
+        >
           {adaptationMeasures.map((measureName, index) => (
             <Card
               key={index}
               variant="outlined"
               sx={{
-                bgcolor: "#CCE1E7",
+                bgcolor: (theme) => theme.palette.inputCard.default,
                 mb: 2,
                 minHeight: "24px",
               }}

@@ -1,5 +1,6 @@
 import React from "react";
-import { Grid, Box } from "@mui/material";
+import { Grid, Box, CssBaseline } from "@mui/material";
+import { ThemeProvider } from "@mui/material/styles";
 
 import AdaptationMeasuresInput from "./components/input/AdaptationMeasuresInput";
 import AlertMessage from "./components/alerts/AlertMessage";
@@ -11,6 +12,7 @@ import MainTabs from "./components/main/MainTabs";
 import MainView from "./components/main/MainView";
 import NavigateAlert from "./components/alerts/NavigateAlert";
 import ResultsView from "./components/results/ResultsView";
+import theme from "./theme/theme";
 import useStore from "./store";
 
 import "./App.css";
@@ -19,7 +21,8 @@ const App = () => {
   const { selectedAppOption, selectedTab } = useStore();
 
   return (
-    <>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
       {selectedAppOption === "" ? (
         <NavigateAlert />
       ) : (
@@ -60,7 +63,7 @@ const App = () => {
           <AlertMessage />
         </Box>
       )}
-    </>
+    </ThemeProvider>
   );
 };
 
