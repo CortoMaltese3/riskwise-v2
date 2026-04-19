@@ -20,8 +20,8 @@ export default defineConfig(({ mode }) => ({
     target: "es2022",
     // Bundle all CSS into one file (avoids multiple requests under file:// in Electron)
     cssCodeSplit: false,
-    // Use esbuild for minification (fast + safe default)
-    minify: "esbuild",
+    // Use rolldown's built-in minifier (Vite 8 default, replaces esbuild)
+    minify: true,
     // Raise chunk size warning threshold
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
