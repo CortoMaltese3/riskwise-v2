@@ -4,11 +4,28 @@
 // through the Electron main process. `window.electron` exposes the legacy
 // IPC surface (window controls, file copy, screenshots, dir lookups).
 
-export type IpcResult<T> = { success: true; result: T } | { success: false; error: string };
+// Mirrors the backend ErrorResponse envelope (pydantic ``ErrorResponse``)
+// plus the IPC fallback (``code: "ipc_error"``). The renderer displays
+// ``message`` and ``error_id``; ``code`` lets call sites branch on error
+// classes without parsing free text.
+export interface IpcError {
+  code: string;
+  message: string;
+  detail: string | null;
+  error_id: string;
+}
+
+export type IpcResult<T> = { success: true; result: T } | { success: false; error: IpcError };
 
 export interface ApiHttpBridge {
   request<T>(method: "GET" | "POST" | "DELETE", path: string, body: unknown): Promise<IpcResult<T>>;
   runScenario<T>(body: unknown): Promise<IpcResult<T>>;
+  cancelScenario<T>(jobId: string): Promise<IpcResult<T>>;
+}
+
+export interface ApiBridge {
+  http: ApiHttpBridge;
+  onBackendError: (callback: (envelope: IpcError) => void) => () => void;
 }
 
 export interface ElectronBridge {
@@ -30,7 +47,7 @@ export interface ElectronBridge {
 
 declare global {
   interface Window {
-    api: { http: ApiHttpBridge };
+    api: ApiBridge;
     electron: ElectronBridge;
   }
 }

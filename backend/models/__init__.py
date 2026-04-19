@@ -7,6 +7,7 @@ Exporting from a single place keeps the OpenAPI schema names stable and lets
 from models.common import Status, StatusEnvelope
 from models.countries import CountriesData, CountriesResponse, Country
 from models.data import DataValidateData, DataValidateRequest, DataValidateResponse
+from models.errors import ErrorResponse
 from models.health import HealthResponse
 from models.macro import (
     ChartDataDataset,
@@ -45,6 +46,7 @@ __all__ = [
     "DataValidateRequest",
     "DataValidateResponse",
     "DeleteReportResponse",
+    "ErrorResponse",
     "ExportReportData",
     "ExportReportRequest",
     "ExportReportResponse",

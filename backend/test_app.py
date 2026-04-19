@@ -1,4 +1,4 @@
-"""Tests for the FastAPI backend (issue #11).
+"""Tests for the FastAPI backend (issues #11 and #12).
 
 All legacy handlers are mocked at ``app._dispatch_sync`` / ``app._run_scenario_sync``
 so the test suite does not require CLIMADA or any of the heavy backend
@@ -10,19 +10,34 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
+import time
 from unittest.mock import AsyncMock, patch
 
 import app as app_module
 import pytest
 import uvicorn
 from app import app
+from cancellation import CancelRequested, cancel_event_var
 from fastapi.testclient import TestClient
 from progress import progress_callback_var
 
 
+@pytest.fixture(autouse=True)
+def _reset_active_job() -> None:
+    """Every test starts with no in-flight scenario recorded."""
+    app_module._active_job_id = None
+    yield
+    app_module._active_job_id = None
+
+
 @pytest.fixture
 def client() -> TestClient:
-    return TestClient(app)
+    # raise_server_exceptions=False lets the registered exception handler
+    # translate unhandled errors into structured 500 responses instead of
+    # having TestClient re-raise them (which would skip the handler and
+    # defeat the whole point of the envelope tests).
+    return TestClient(app, raise_server_exceptions=False)
 
 
 def _collect_sse(response) -> list[dict]:
@@ -254,11 +269,20 @@ class TestScenarioFlow:
 
         error_events = [e for e in events if e["type"] == "error"]
         assert len(error_events) == 1
-        assert "boom" in error_events[0]["error"]
+        event = error_events[0]
+        assert event["status"] == "error"
+        assert event["code"] == "scenario_error"
+        assert event["message"] == "Scenario run failed"
+        assert "boom" in event["detail"]
+        assert event["error_id"]
 
     def test_scenario_stream_unknown_job_id_returns_404(self, client: TestClient) -> None:
         response = client.get("/api/v1/scenario/does-not-exist/stream")
         assert response.status_code == 404
+        body = response.json()
+        assert body["status"] == "error"
+        assert body["code"] == "not_found"
+        assert body["error_id"]
 
     def test_job_registry_cleaned_up_after_stream(self, client: TestClient) -> None:
         def fake_scenario(_payload: dict) -> dict:
@@ -269,7 +293,7 @@ class TestScenarioFlow:
             with client.stream("GET", f"/api/v1/scenario/{job_id}/stream") as stream:
                 _collect_sse(stream)
 
-        assert app_module.jobs.get(job_id) is None
+        assert app_module.jobs.get_queue(job_id) is None
 
 
 class TestReadyNotifyServer:
@@ -326,3 +350,253 @@ class TestDispatchUnknown:
     def test_unknown_script_raises(self) -> None:
         with pytest.raises(ValueError, match="Unknown script"):
             app_module._dispatch_sync("run_does_not_exist.py", None)
+
+
+class TestStructuredErrorEnvelope:
+    def test_http_exception_serialized_as_error_envelope(self, client: TestClient) -> None:
+        # Stub the legacy handler so we exercise the explicit 404 branch in
+        # ``get_scenario`` (no CLIMADA in tests).
+        with patch.object(
+            app_module, "_dispatch_sync", return_value={"data": [], "status": {"code": 2000}}
+        ):
+            response = client.get("/api/v1/scenarios/missing-scenario-id")
+        assert response.status_code == 404
+        body = response.json()
+        assert body["status"] == "error"
+        assert body["code"] == "not_found"
+        assert body["message"]
+        assert body["error_id"]
+
+    def test_validation_error_returns_structured_envelope(self, client: TestClient) -> None:
+        response = client.post("/api/v1/data/validate", json={"country": "Egypt"})
+        assert response.status_code == 422
+        body = response.json()
+        assert body["status"] == "error"
+        assert body["code"] == "validation_error"
+        assert body["error_id"]
+
+    def test_unhandled_exception_is_caught_and_structured(self, client: TestClient) -> None:
+        # Scenario 5: job isolation. An unhandled error in one handler must
+        # produce a structured 500 without tearing down FastAPI itself.
+        with patch.object(app_module, "_dispatch_sync", side_effect=RuntimeError("boom")):
+            response = client.get("/api/v1/macro/cred-output")
+        assert response.status_code == 500
+        body = response.json()
+        assert body["status"] == "error"
+        assert body["code"] == "internal_error"
+        assert "boom" in body["detail"]
+        assert body["error_id"]
+
+        # FastAPI is still alive and serving other endpoints.
+        healthy = client.get("/api/v1/health")
+        assert healthy.status_code == 200
+
+
+class TestSingleJobInvariant:
+    def test_second_run_while_active_returns_409(self, client: TestClient) -> None:
+        # ``TestClient.post`` blocks until the event loop is idle, which hides
+        # a concurrent second POST. We use httpx.AsyncClient against the ASGI
+        # transport so we can fire the second request while the first is
+        # still running its worker thread.
+        from httpx import ASGITransport, AsyncClient
+
+        async def _drain_stream(ac: AsyncClient, job_id: str) -> None:
+            async with ac.stream("GET", f"/api/v1/scenario/{job_id}/stream") as stream:
+                async for _ in stream.aiter_lines():
+                    pass
+
+        async def run() -> None:
+            ready = threading.Event()
+            release = threading.Event()
+
+            def slow_scenario(_payload: dict) -> dict:
+                ready.set()
+                release.wait(timeout=5)
+                return {"data": {"mapTitle": "T"}, "status": {"code": 2000}}
+
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as ac:
+                with patch.object(app_module, "_run_scenario_sync", side_effect=slow_scenario):
+                    first_task = asyncio.create_task(ac.post("/api/v1/scenario/run", json={}))
+                    await asyncio.to_thread(ready.wait, 5)
+                    assert app_module._active_job_id is not None
+
+                    second = await ac.post("/api/v1/scenario/run", json={})
+                    assert second.status_code == 409
+                    body = second.json()
+                    assert body["status"] == "error"
+                    assert body["code"] == "job_conflict"
+                    assert body["error_id"]
+
+                    release.set()
+                    first = await first_task
+                    assert first.status_code == 200
+
+                    # Drain the SSE stream so ``_execute_scenario`` finishes
+                    # its finally block and clears ``_active_job_id`` before
+                    # the follow-up POST below.
+                    await _drain_stream(ac, first.json()["job_id"])
+
+                # After the first job drains, a new run must be accepted again.
+                with patch.object(
+                    app_module,
+                    "_run_scenario_sync",
+                    return_value={"data": {"mapTitle": "T"}, "status": {"code": 2000}},
+                ):
+                    third = await ac.post("/api/v1/scenario/run", json={})
+                    assert third.status_code == 200
+                    await _drain_stream(ac, third.json()["job_id"])
+
+        asyncio.run(run())
+
+
+class TestMemoryPreflight:
+    def test_insufficient_memory_rejects_with_413(self, client: TestClient) -> None:
+        with patch.object(
+            app_module,
+            "_check_memory_preflight",
+            return_value=(False, "Insufficient memory: 500 MB available, 2048 MB required"),
+        ):
+            response = client.post("/api/v1/scenario/run", json={})
+        assert response.status_code == 413
+        body = response.json()
+        assert body["status"] == "error"
+        assert body["code"] == "memory_insufficient"
+        assert "Insufficient memory" in body["message"]
+        assert body["error_id"]
+
+    def test_preflight_helper_skips_gracefully_without_psutil(self) -> None:
+        # Import is resolved at call time; simulate it being absent.
+        with patch.dict("sys.modules", {"psutil": None}):
+            ok, msg = app_module._check_memory_preflight()
+        assert ok is True
+        assert msg == ""
+
+    def test_preflight_helper_rejects_when_available_below_threshold(self) -> None:
+        class _VM:
+            available = 100 * 1024 * 1024  # 100 MB
+            total = 8 * 1024 * 1024 * 1024
+
+        fake_psutil = type("psutil", (), {"virtual_memory": staticmethod(lambda: _VM())})
+        with patch.dict("sys.modules", {"psutil": fake_psutil}):
+            ok, msg = app_module._check_memory_preflight()
+        assert ok is False
+        assert "Insufficient memory" in msg
+
+
+class TestCooperativeCancellation:
+    def test_cancel_endpoint_sets_flag_and_aborts_run(self) -> None:
+        # The sync TestClient serializes requests through the event loop, so
+        # POST /cancel cannot run while POST /run's worker thread is still
+        # blocked. Use httpx.AsyncClient against the ASGI transport so the
+        # cancel request actually reaches the handler mid-run.
+        from httpx import ASGITransport, AsyncClient
+
+        async def run() -> None:
+            worker_started = threading.Event()
+            release = threading.Event()
+
+            def scenario_with_checkpoint(_payload: dict) -> dict:
+                worker_started.set()
+                release.wait(timeout=5)
+                from cancellation import check_cancelled
+
+                check_cancelled()
+                return {"data": {"mapTitle": "done"}, "status": {"code": 2000}}
+
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as ac:
+                with patch.object(
+                    app_module, "_run_scenario_sync", side_effect=scenario_with_checkpoint
+                ):
+                    run_task = asyncio.create_task(ac.post("/api/v1/scenario/run", json={}))
+                    await asyncio.to_thread(worker_started.wait, 5)
+                    assert app_module._active_job_id is not None
+                    job_id = app_module._active_job_id
+
+                    cancel_response = await ac.post(f"/api/v1/scenario/{job_id}/cancel")
+                    assert cancel_response.status_code == 200
+                    assert cancel_response.json()["cancelled"] is True
+
+                    release.set()
+                    await run_task
+
+                    events: list[dict] = []
+                    async with ac.stream("GET", f"/api/v1/scenario/{job_id}/stream") as stream:
+                        async for line in stream.aiter_lines():
+                            if line.startswith("data:"):
+                                events.append(json.loads(line[5:].strip()))
+
+            cancelled = [e for e in events if e["type"] == "cancelled"]
+            errors = [e for e in events if e["type"] == "error"]
+            assert cancelled, f"expected a cancelled event, got {events}"
+            assert errors == []
+            assert cancelled[0]["code"] == "cancelled"
+            assert cancelled[0]["error_id"]
+
+        asyncio.run(run())
+
+    def test_cancel_unknown_job_id_returns_404(self, client: TestClient) -> None:
+        response = client.post("/api/v1/scenario/no-such-job/cancel")
+        assert response.status_code == 404
+        body = response.json()
+        assert body["code"] == "not_found"
+
+    def test_check_cancelled_raises_when_flag_set(self) -> None:
+        event = threading.Event()
+        token = cancel_event_var.set(event)
+        try:
+            event.set()
+            from cancellation import check_cancelled
+
+            with pytest.raises(CancelRequested):
+                check_cancelled()
+        finally:
+            cancel_event_var.reset(token)
+
+    def test_check_cancelled_no_op_when_flag_unset(self) -> None:
+        event = threading.Event()
+        token = cancel_event_var.set(event)
+        try:
+            from cancellation import check_cancelled
+
+            check_cancelled()  # must not raise
+        finally:
+            cancel_event_var.reset(token)
+
+
+class TestClientDisconnectCancellation:
+    def test_stream_cleanup_sets_cancel_flag(self, client: TestClient) -> None:
+        worker_started = threading.Event()
+        worker_released = threading.Event()
+
+        def slow_scenario(_payload: dict) -> dict:
+            worker_started.set()
+            # Wait for the test to close the stream before finishing so the
+            # cancel_event gets captured post-disconnect.
+            worker_released.wait(timeout=5)
+            return {"data": {"mapTitle": "late"}, "status": {"code": 2000}}
+
+        with patch.object(app_module, "_run_scenario_sync", side_effect=slow_scenario):
+            job_id = client.post("/api/v1/scenario/run", json={}).json()["job_id"]
+            assert worker_started.wait(timeout=5)
+
+            cancel_event = app_module.jobs.get_cancel_event(job_id)
+            assert cancel_event is not None and not cancel_event.is_set()
+
+            # Open the stream then abort it immediately. The generator's
+            # ``finally`` block must set the cancel flag.
+            with client.stream("GET", f"/api/v1/scenario/{job_id}/stream"):
+                pass
+
+            # After the stream closes, the flag is set even though the
+            # worker is still running.
+            assert cancel_event.is_set()
+
+            # Let the worker finish so the test exits cleanly.
+            worker_released.set()
+            # Give the event loop time to drain and reset _active_job_id.
+            for _ in range(50):
+                if app_module._active_job_id is None:
+                    break
+                time.sleep(0.05)

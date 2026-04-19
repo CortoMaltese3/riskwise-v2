@@ -11,6 +11,11 @@ const useStore = create((set, get) => ({
   alertSeverity: "info",
   alertShowMessage: false,
   credOutputData: [],
+  // Global error surface (issue #12 scenario 6). ``error`` holds the backend
+  // envelope (code, detail, error_id); ``errorMessage`` is the user-facing
+  // string shown by the toast. Both are cleared together by ``clearError``.
+  error: null,
+  errorMessage: "",
   isPlotMacroChartCompleted: false,
   isPlotMacroChartRunning: false,
   isScenarioRunCompleted: false,
@@ -77,6 +82,12 @@ const useStore = create((set, get) => ({
   setAlertSeverity: (severity) => set({ alertSeverity: severity }),
   setAlertShowMessage: (show) => set({ alertShowMessage: show }),
   setCredOutputData: (data) => set({ credOutputData: data }),
+  setError: (envelope) =>
+    set({
+      error: envelope,
+      errorMessage: envelope ? envelope.message : "",
+    }),
+  clearError: () => set({ error: null, errorMessage: "" }),
   setIsPlotMacroChartCompleted: (data) => set({ isPlotMacroChartCompleted: data }),
   setIsPlotMacroChartRunning: (data) => set({ isPlotMacroChartRunning: data }),
   setIsScenarioRunCompleted: (data) => set({ isScenarioRunCompleted: data }),

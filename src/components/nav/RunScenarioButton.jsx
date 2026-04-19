@@ -29,6 +29,7 @@ const RunScenarioButton = () => {
     setAlertMessage,
     setAlertSeverity,
     setAlertShowMessage,
+    setError,
     setIsScenarioRunCompleted,
     setScenarioRunCode,
     setSelectedReport,
@@ -86,20 +87,32 @@ const RunScenarioButton = () => {
     setSelectedReport(null);
     RiskWiseClient.runScenario(body)
       .then((response) => {
+        setIsRunButtonLoading(false);
+        setIsRunButtonDisabled(false);
+        setIsScenarioRunning(false);
+        if (!response.success) {
+          setError(response.error);
+          return;
+        }
         setAlertMessage(response.result.status.message);
         response.result.status.code === 2000
           ? setAlertSeverity("success")
           : setAlertSeverity("error");
         setAlertShowMessage(true);
-        setIsRunButtonLoading(false);
-        setIsRunButtonDisabled(false);
         setMapTitle(response.result.data.mapTitle);
-        setIsScenarioRunning(false);
         setScenarioRunCode();
         setIsScenarioRunCompleted(true);
       })
       .catch((error) => {
-        console.log(error);
+        setIsRunButtonLoading(false);
+        setIsRunButtonDisabled(false);
+        setIsScenarioRunning(false);
+        setError({
+          code: "renderer_error",
+          message: error?.message || "Unexpected failure in renderer",
+          detail: null,
+          error_id: crypto.randomUUID(),
+        });
       });
   };
 

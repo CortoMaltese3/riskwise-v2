@@ -14,6 +14,16 @@ let userLogDir;
 let userDataDir;
 let backendBaseUrl = null;
 
+// Supervisor state (issue #12, scenario 1). A single-shot poll pings /health
+// every HEALTH_POLL_INTERVAL_MS. On failure we attempt up to
+// MAX_RESTART_ATTEMPTS restarts with exponential-backoff delays of
+// 1 s → 2 s → 4 s before giving up and surfacing a structured
+// ``backend-error`` IPC to the renderer.
+const HEALTH_POLL_INTERVAL_MS = 10000;
+const MAX_RESTART_ATTEMPTS = 3;
+let healthPollTimer = null;
+let supervisorBusy = false;
+
 const isDevelopmentEnv = () => {
   return !app.isPackaged;
 };
@@ -335,6 +345,12 @@ app.whenReady().then(async () => {
 
   createMainWindow();
 
+  // Start the backend supervisor once the renderer is up so it can receive
+  // ``backend-error`` IPC events if/when restarts are exhausted.
+  if (pythonReady) {
+    startHealthSupervisor();
+  }
+
   // Check for updates AFTER main window is created
   if (!isDevelopmentEnv()) {
     try {
@@ -423,9 +439,51 @@ const waitForPythonProcessReady = (pythonProcess, timeoutMs = 300000) => {
   });
 };
 
+const randomErrorId = () => {
+  const { randomUUID } = require("crypto");
+  return randomUUID();
+};
+
+// Parse the backend's structured error envelope into the shape the renderer
+// consumes. Falls back to a synthetic envelope when the response isn't JSON
+// or when we're reporting a client-side failure (e.g., backend down).
+const parseErrorEnvelope = (text, status) => {
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && parsed.status === "error" && parsed.error_id) {
+      return {
+        code: parsed.code || "http_error",
+        message: parsed.message || `HTTP ${status}`,
+        detail: parsed.detail || null,
+        error_id: parsed.error_id,
+      };
+    }
+  } catch {
+    // fall through
+  }
+  return {
+    code: "http_error",
+    message: `HTTP ${status}`,
+    detail: text || null,
+    error_id: randomErrorId(),
+  };
+};
+
+class BackendError extends Error {
+  constructor(envelope) {
+    super(envelope.message);
+    this.envelope = envelope;
+  }
+}
+
 const httpRequest = async (method, path, body) => {
   if (!backendBaseUrl) {
-    throw new Error("Backend URL not set; Python process not ready");
+    throw new BackendError({
+      code: "backend_unavailable",
+      message: "Backend is not ready",
+      detail: "Python process has not signalled ready",
+      error_id: randomErrorId(),
+    });
   }
   const options = { method, headers: { "Content-Type": "application/json" } };
   if (body !== undefined && body !== null) {
@@ -434,14 +492,7 @@ const httpRequest = async (method, path, body) => {
   const response = await fetch(`${backendBaseUrl}${path}`, options);
   const text = await response.text();
   if (!response.ok) {
-    let detail = text;
-    try {
-      const parsed = JSON.parse(text);
-      detail = parsed.detail || parsed.error || text;
-    } catch {
-      // keep raw text
-    }
-    throw new Error(`HTTP ${response.status}: ${detail}`);
+    throw new BackendError(parseErrorEnvelope(text, response.status));
   }
   return text ? JSON.parse(text) : null;
 };
@@ -450,14 +501,19 @@ const runScenarioOverSse = async (window, body) => {
   const { job_id: jobId } = await httpRequest("POST", "/api/v1/scenario/run", body);
   const streamResponse = await fetch(`${backendBaseUrl}/api/v1/scenario/${jobId}/stream`);
   if (!streamResponse.ok || !streamResponse.body) {
-    throw new Error(`Failed to open SSE stream: HTTP ${streamResponse.status}`);
+    throw new BackendError({
+      code: "stream_open_failed",
+      message: `Failed to open SSE stream`,
+      detail: `HTTP ${streamResponse.status}`,
+      error_id: randomErrorId(),
+    });
   }
 
   const reader = streamResponse.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let finalResult = null;
-  let errorMessage = null;
+  let errorEnvelope = null;
 
   while (true) {
     const { value, done } = await reader.read();
@@ -483,15 +539,20 @@ const runScenarioOverSse = async (window, body) => {
           }
         } else if (payload.type === "result") {
           finalResult = payload.data;
-        } else if (payload.type === "error") {
-          errorMessage = payload.error;
+        } else if (payload.type === "error" || payload.type === "cancelled") {
+          errorEnvelope = {
+            code: payload.code,
+            message: payload.message,
+            detail: payload.detail || null,
+            error_id: payload.error_id,
+          };
         }
       }
     }
   }
 
-  if (errorMessage) {
-    throw new Error(errorMessage);
+  if (errorEnvelope) {
+    throw new BackendError(errorEnvelope);
   }
   return finalResult;
 };
@@ -559,6 +620,76 @@ const clearTempDir = async () => {
   return await httpRequest("POST", "/api/v1/temp/clear", {});
 };
 
+// Pause poll until the in-flight restart resolves so we don't pile up
+// overlapping restart attempts.
+const startHealthSupervisor = () => {
+  stopHealthSupervisor();
+  healthPollTimer = setInterval(() => {
+    if (supervisorBusy || !backendBaseUrl) return;
+    runHealthCheck().catch((err) => log.error("[electron] supervisor loop error:", err));
+  }, HEALTH_POLL_INTERVAL_MS);
+};
+
+const stopHealthSupervisor = () => {
+  if (healthPollTimer) {
+    clearInterval(healthPollTimer);
+    healthPollTimer = null;
+  }
+};
+
+const runHealthCheck = async () => {
+  try {
+    const response = await fetch(`${backendBaseUrl}/api/v1/health`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return;
+  } catch (err) {
+    log.warn("[electron] health check failed:", err.message);
+  }
+  supervisorBusy = true;
+  try {
+    await restartBackendWithBackoff();
+  } finally {
+    supervisorBusy = false;
+  }
+};
+
+const restartBackendWithBackoff = async () => {
+  cleanupPython();
+  backendBaseUrl = null;
+
+  for (let attempt = 1; attempt <= MAX_RESTART_ATTEMPTS; attempt++) {
+    const delay = Math.pow(2, attempt - 1) * 1000;
+    log.info(
+      `[electron] backend restart attempt ${attempt}/${MAX_RESTART_ATTEMPTS} after ${delay}ms`
+    );
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    try {
+      global.pythonProcess = await createPythonProcess();
+      await waitForPythonProcessReady(global.pythonProcess);
+      log.info(`[electron] backend recovered on attempt ${attempt}`);
+      return;
+    } catch (err) {
+      log.error(`[electron] restart attempt ${attempt} failed:`, err.message);
+      cleanupPython();
+      backendBaseUrl = null;
+    }
+  }
+
+  const envelope = {
+    code: "backend_unavailable",
+    message: `Backend failed to recover after ${MAX_RESTART_ATTEMPTS} restart attempts`,
+    detail: null,
+    error_id: randomErrorId(),
+  };
+  log.error("[electron] backend permanently unavailable:", envelope.error_id);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("backend-error", envelope);
+  }
+  stopHealthSupervisor();
+};
+
 // Create a long-running Python process
 const createPythonProcess = async () => {
   const scriptPath = path.join(basePath, "backend", "app.py");
@@ -607,13 +738,25 @@ const createPythonProcess = async () => {
   }
 };
 
+const toIpcError = (error) => {
+  if (error instanceof BackendError) {
+    return error.envelope;
+  }
+  return {
+    code: "ipc_error",
+    message: error && error.message ? error.message : "Unknown error",
+    detail: null,
+    error_id: randomErrorId(),
+  };
+};
+
 ipcMain.handle("http:request", async (_evt, { method, path, body }) => {
   try {
     const result = await httpRequest(method, path, body);
     return { success: true, result };
   } catch (error) {
     log.error("[electron] http:request error:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: toIpcError(error) };
   }
 });
 
@@ -623,7 +766,17 @@ ipcMain.handle("http:scenarioRun", async (_evt, body) => {
     return { success: true, result };
   } catch (error) {
     log.error("[electron] http:scenarioRun error:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: toIpcError(error) };
+  }
+});
+
+ipcMain.handle("http:cancelScenario", async (_evt, jobId) => {
+  try {
+    const result = await httpRequest("POST", `/api/v1/scenario/${jobId}/cancel`, {});
+    return { success: true, result };
+  } catch (error) {
+    log.error("[electron] http:cancelScenario error:", error);
+    return { success: false, error: toIpcError(error) };
   }
 });
 
@@ -818,6 +971,7 @@ autoUpdater.on("error", (err) => {
 
 app.on("before-quit", () => {
   log.info("[electron] terminating Python process before app quits...");
+  stopHealthSupervisor();
   cleanupPython();
 });
 

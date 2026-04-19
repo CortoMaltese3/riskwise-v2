@@ -24,5 +24,11 @@ contextBridge.exposeInMainWorld("api", {
     request: async (method, path, body) =>
       await ipcRenderer.invoke("http:request", { method, path, body }),
     runScenario: async (body) => await ipcRenderer.invoke("http:scenarioRun", body),
+    cancelScenario: async (jobId) => await ipcRenderer.invoke("http:cancelScenario", jobId),
+  },
+  onBackendError: (callback) => {
+    const listener = (_event, envelope) => callback(envelope);
+    ipcRenderer.on("backend-error", listener);
+    return () => ipcRenderer.removeListener("backend-error", listener);
   },
 });
