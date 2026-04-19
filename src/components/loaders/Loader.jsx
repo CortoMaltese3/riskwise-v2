@@ -6,8 +6,6 @@ import LinearProgress from "@mui/material/LinearProgress";
 import Typography from "@mui/material/Typography";
 import useStore from "../../store";
 
-const { electron } = window;
-
 const LinearProgressWithLabel = (props) => {
   return (
     <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -40,18 +38,14 @@ const Loader = () => {
   const { progress, setProgress } = useStore();
 
   useEffect(() => {
-    const handleProgress = (event, json) => {
-      setProgress(json.progress);
-    };
-    try {
-      electron.on("progress", handleProgress);
-      return () => {
-        electron.remove("progress", handleProgress);
-      };
-    } catch (e) {
-      console.log("Not running in electron");
+    if (!window.electron?.onProgress) {
+      return undefined;
     }
-  }, []);
+    const unsubscribe = window.electron.onProgress((json) => {
+      setProgress(json.progress);
+    });
+    return unsubscribe;
+  }, [setProgress]);
 
   return (
     progress > 0 &&

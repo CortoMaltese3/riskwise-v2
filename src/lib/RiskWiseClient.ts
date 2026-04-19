@@ -100,15 +100,15 @@ const RiskWiseClient = {
   clearTempDir: () => post<TempClearResponse>("/api/v1/temp/clear", {}),
 
   shutdown: () => {
-    window.electron.send("shutdown");
+    window.electron.shutdown();
   },
 
   minimize: () => {
-    window.electron.send("minimize");
+    window.electron.minimize();
   },
 
   reload: () => {
-    window.electron.send("reload");
+    window.electron.reload();
   },
 };
 

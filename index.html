@@ -8,17 +8,25 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="RISK WISE desktop application" />
+    <!--
+      Defense-in-depth CSP. The authoritative policy is injected at the
+      network layer in public/electron.js (see CSP_DIRECTIVES) so a stripped
+      meta tag still leaves the renderer locked down. Keep the two in sync
+      when adding allowed sources.
+    -->
     <meta
       http-equiv="Content-Security-Policy"
       content="
         default-src 'self';
         base-uri 'self';
         object-src 'none';
+        frame-ancestors 'none';
+        form-action 'none';
         script-src 'self';
         style-src 'self' 'unsafe-inline';
-        img-src 'self' data: blob: file: https:;
+        img-src 'self' data: blob: file:;
         font-src 'self' data:;
-        connect-src 'self' blob: https:;
+        connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*;
         worker-src 'self' blob:;
       "
     />

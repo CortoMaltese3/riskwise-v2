@@ -1,23 +1,36 @@
 version: 2
 updates:
-  # 1. NPM dependencies (package.json)
+  # NPM dependencies (root package.json) — weekly per project security policy
+  # so CVEs in the renderer stack get a PR within ~7 days of disclosure.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
     open-pull-requests-limit: 5
     groups:
       everything:
         patterns:
-          - "*" # group ALL npm updates into a single PR
+          - "*"
 
-  # 2. GitHub Actions (workflows)
+  # Python dependencies (pyproject.toml + requirements/) — weekly so CLIMADA
+  # transitive CVEs reach a PR before the next release cut.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      python-everything:
+        patterns:
+          - "*"
+
+  # GitHub Actions — weekly to keep CI runners and pinned action SHAs current.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
     open-pull-requests-limit: 5
     groups:
       workflow-updates:
         patterns:
-          - "*" # group all action updates into one PR
+          - "*"
