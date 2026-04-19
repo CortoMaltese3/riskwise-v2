@@ -19,18 +19,14 @@ const LoadModal = () => {
   const { isScenarioRunning, modalMessage, setModalMessage } = useStore();
 
   useEffect(() => {
-    const progressListener = (event, data) => {
-      setModalMessage(data.message);
-    };
-    try {
-      window.electron.on("progress", progressListener);
-      return () => {
-        window.electron.remove("progress", progressListener);
-      };
-    } catch (e) {
-      console.log("Not running in electron");
+    if (!window.electron?.onProgress) {
+      return undefined;
     }
-  }, []);
+    const unsubscribe = window.electron.onProgress((data) => {
+      setModalMessage(data.message);
+    });
+    return unsubscribe;
+  }, [setModalMessage]);
 
   return (
     <>

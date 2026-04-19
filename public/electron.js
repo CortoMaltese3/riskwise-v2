@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, session, shell, dialog } = require("electron");
 const { autoUpdater, NsisUpdater } = require("electron-updater");
 const { spawn } = require("child_process");
 const path = require("path");
@@ -6,6 +6,37 @@ const fs = require("fs");
 const log = require("electron-log");
 
 global.pythonProcess = null;
+
+// `connect-src` is locked to loopback (any port — supervisor picks an
+// ephemeral one) so a renderer XSS cannot exfiltrate to arbitrary hosts.
+// `style-src 'unsafe-inline'` is required by MUI/Emotion's runtime style
+// injection; `script-src 'self'` is the actual XSS-to-RCE gate. Keep in
+// sync with the meta tag in `index.html`.
+const CSP_DIRECTIVES = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'none'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: file:",
+  "font-src 'self' data:",
+  "connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*",
+  "worker-src 'self' blob:",
+].join("; ");
+const CSP_HEADER = [CSP_DIRECTIVES];
+
+// Baseline `webPreferences` for every BrowserWindow. `nodeIntegration` is
+// false so renderer libs run in a real browser environment (Vite/ESM
+// otherwise breaks on use-sync-external-store's CommonJS require of React).
+const HARDENED_WEB_PREFERENCES = Object.freeze({
+  contextIsolation: true,
+  sandbox: true,
+  nodeIntegration: false,
+  webSecurity: true,
+  webviewTag: false,
+});
 
 // 7-day retention for the daily-rotated Electron main log. Older files are
 // purged when rotation promotes the active file.
@@ -288,7 +319,50 @@ const downloadAndInstallEngine = async (loaderWindow) => {
   }
 };
 
+// Renderer security defense-in-depth: refuse the renderer's webContents the
+// ability to spawn new windows, navigate off-app, or attach <webview> tags.
+// `webPreferences` already locks down each new BrowserWindow we create, but
+// this layer catches anything Electron auto-instantiates.
+app.on("web-contents-created", (_event, contents) => {
+  contents.setWindowOpenHandler(({ url }) => {
+    if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
+      shell.openExternal(url).catch((err) =>
+        log.error("[electron] shell.openExternal failed:", err.message),
+      );
+    }
+    return { action: "deny" };
+  });
+
+  contents.on("will-navigate", (event, url) => {
+    if (!url.startsWith("file://")) {
+      event.preventDefault();
+      log.warn("[electron] blocked navigation to:", url);
+    }
+  });
+
+  contents.on("will-attach-webview", (event) => {
+    event.preventDefault();
+    log.warn("[electron] blocked <webview> attach attempt");
+  });
+});
+
 app.whenReady().then(async () => {
+  // Inject CSP at the network layer for every response served to the
+  // default session (loader + main window). Done before the first
+  // BrowserWindow loads so no early request escapes the policy.
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        "Content-Security-Policy": CSP_HEADER,
+      },
+    });
+  });
+
+  // Block permission requests (camera, microphone, geolocation, etc.) — the
+  // app does not need any of them, so deny by default.
+  session.defaultSession.setPermissionRequestHandler((_wc, _permission, deny) => deny(false));
+
   try {
     userLogDir = path.join(app.getPath("userData"), "logs");
     userDataDir = app.getPath("userData");
@@ -429,9 +503,7 @@ const createLoaderWindow = () => {
       resizable: false,
       autoHideMenuBar: true,
       icon: iconPath,
-      webPreferences: {
-        nodeIntegration: false,
-      },
+      webPreferences: { ...HARDENED_WEB_PREFERENCES },
     });
 
     const loaderPath = path.join(basePath, "build", "loader.html");
@@ -646,17 +718,8 @@ const createMainWindow = () => {
       icon: iconPath,
       show: false,
       webPreferences: {
-        contextIsolation: true,
-        sandbox: true,
-        enableRemoteModule: false,
+        ...HARDENED_WEB_PREFERENCES,
         preload: path.join(basePath, "build", "preload.js"),
-        webSecurity: true,
-        // Disable Node integration in the renderer process for security and compatibility.
-        // With nodeIntegration: true, libraries like use-sync-external-store may try to
-        // resolve React via CommonJS require(), which breaks in a Vite/ESM build.
-        // Setting this to false ensures React (and other frontend libs) run in a proper
-        // browser-like environment and forces all backend access through preload.js.
-        nodeIntegration: false,
       },
     });
 

@@ -38,7 +38,9 @@ test
 test.ipynb
 changelog_generator.py
 translation_validation.log
-scripts
+scripts/*
+# Tracked build/packaging hooks (electron-builder afterPack, etc.).
+!scripts/apply-electron-fuses.js
 notes.txt
 
 #certificates

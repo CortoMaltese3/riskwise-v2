@@ -104,4 +104,14 @@ export default [
       globals: { ...globals.node },
     },
   },
+  {
+    // Build/packaging scripts run under Node directly (e.g. electron-builder
+    // afterPack hooks). They aren't part of the renderer source tree but
+    // need Node globals like `require`, `module`, and `console`.
+    files: ["scripts/**/*.{js,mjs,cjs}"],
+    languageOptions: {
+      sourceType: "commonjs",
+      globals: { ...globals.node },
+    },
+  },
 ];

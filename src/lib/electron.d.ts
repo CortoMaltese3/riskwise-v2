@@ -34,21 +34,25 @@ export interface ApiBridge {
   onBackendError: (callback: (envelope: IpcError) => void) => () => void;
 }
 
+// Mirrors the allowlisted bridge in `public/preload.js`. There is no
+// generic `on`/`send` escape hatch — adding a channel requires updating
+// preload, the main-process handler, and `src/__tests__/preload.test.js`.
 export interface ElectronBridge {
+  shutdown: () => void;
+  minimize: () => void;
+  reload: () => void;
   clearTempDir: () => Promise<unknown>;
   fetchTempDir: () => Promise<string>;
   fetchReportDir: () => Promise<string>;
   isDevelopmentEnv: () => Promise<boolean>;
-  on: (channel: string, callback: (...args: unknown[]) => void) => void;
-  remove: (channel: string, callback: (...args: unknown[]) => void) => void;
-  send: (channel: string, data?: unknown) => void;
   saveScreenshot: (blob: string, filePath: string) => Promise<unknown>;
-  onSaveScreenshotReply: (callback: (...args: unknown[]) => void) => void;
+  onSaveScreenshotReply: (callback: (payload: unknown) => void) => () => void;
   copyFile: (sourcePath: string, destinationPath: string) => Promise<unknown>;
-  onCopyFileReply: (callback: (...args: unknown[]) => void) => void;
+  onCopyFileReply: (callback: (payload: unknown) => void) => () => void;
   copyFolder: (sourceFolder: string, destinationFolder: string) => Promise<unknown>;
-  onCopyFolderReply: (callback: (...args: unknown[]) => void) => void;
+  onCopyFolderReply: (callback: (payload: unknown) => void) => () => void;
   openReport: (reportPath: string) => Promise<unknown>;
+  onProgress: (callback: (payload: { message?: string; progress?: number }) => void) => () => void;
 }
 
 declare global {
