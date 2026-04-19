@@ -7,6 +7,11 @@ const log = require("electron-log");
 
 global.pythonProcess = null;
 
+// 7-day retention for the daily-rotated Electron main log. Older files are
+// purged when rotation promotes the active file.
+const LOG_RETENTION_DAYS = 7;
+const LOG_FILENAME_PREFIX = "app";
+
 const basePath = app.getAppPath();
 let mainWindow;
 let loaderWindow;
@@ -26,6 +31,54 @@ let supervisorBusy = false;
 
 const isDevelopmentEnv = () => {
   return !app.isPackaged;
+};
+
+// electron-log's `archiveLogFn` runs whenever `maxSize` is exceeded; we
+// also call `pruneOldLogs` directly at startup so files left behind from a
+// previous run can't accumulate past the retention window if the user
+// never rolls a large enough log mid-session.
+const configureLogRotation = (logInstance, logDir) => {
+  const dateStamp = () => new Date().toISOString().slice(0, 10);
+  logInstance.transports.file.resolvePathFn = () =>
+    path.join(logDir, `${LOG_FILENAME_PREFIX}-${dateStamp()}.log`);
+  // Keep per-file size bounded so a single day can't swallow the window;
+  // electron-log calls archiveLogFn when a file crosses this threshold.
+  logInstance.transports.file.maxSize = 5 * 1024 * 1024;
+  logInstance.transports.file.archiveLogFn = (oldLog) => {
+    try {
+      const archiveName = path.join(
+        logDir,
+        `${LOG_FILENAME_PREFIX}-${dateStamp()}-${Date.now()}.log`,
+      );
+      fs.renameSync(oldLog.toString(), archiveName);
+    } catch (err) {
+      logInstance.warn("[electron] failed to archive old log:", err.message);
+    }
+    pruneOldLogs(logDir);
+  };
+  pruneOldLogs(logDir);
+};
+
+const pruneOldLogs = (logDir) => {
+  const cutoff = Date.now() - LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  try {
+    const entries = fs.readdirSync(logDir);
+    for (const entry of entries) {
+      if (!entry.startsWith(`${LOG_FILENAME_PREFIX}-`) || !entry.endsWith(".log")) continue;
+      const full = path.join(logDir, entry);
+      try {
+        const stat = fs.statSync(full);
+        if (stat.mtimeMs < cutoff) {
+          fs.unlinkSync(full);
+        }
+      } catch {
+        // Skip files we can't stat/unlink (e.g., actively-open current log
+        // on Windows); next startup will retry.
+      }
+    }
+  } catch {
+    // Directory might not exist yet on very first run.
+  }
 };
 
 const cleanupPython = () => {
@@ -242,8 +295,7 @@ app.whenReady().then(async () => {
     log.info("[electron] user data dir:", userDataDir);
     log.info("[electron] user log dir:", userLogDir);
     fs.mkdirSync(userLogDir, { recursive: true });
-    log.transports.file.resolvePathFn = () => path.join(userLogDir, "app.log");
-    log.transports.file.maxSize = 1024 * 1024;
+    configureLogRotation(log, userLogDir);
     log.initialize();
     autoUpdater.logger = log;
     log.info(`Starting RISKWISE ${app.getVersion()}. Packaged: ${app.isPackaged}`);
@@ -447,7 +499,7 @@ const randomErrorId = () => {
 // Parse the backend's structured error envelope into the shape the renderer
 // consumes. Falls back to a synthetic envelope when the response isn't JSON
 // or when we're reporting a client-side failure (e.g., backend down).
-const parseErrorEnvelope = (text, status) => {
+const parseErrorEnvelope = (text, status, requestId) => {
   try {
     const parsed = JSON.parse(text);
     if (parsed && parsed.status === "error" && parsed.error_id) {
@@ -456,6 +508,7 @@ const parseErrorEnvelope = (text, status) => {
         message: parsed.message || `HTTP ${status}`,
         detail: parsed.detail || null,
         error_id: parsed.error_id,
+        request_id: parsed.request_id || requestId || null,
       };
     }
   } catch {
@@ -466,6 +519,7 @@ const parseErrorEnvelope = (text, status) => {
     message: `HTTP ${status}`,
     detail: text || null,
     error_id: randomErrorId(),
+    request_id: requestId || null,
   };
 };
 
@@ -476,36 +530,56 @@ class BackendError extends Error {
   }
 }
 
-const httpRequest = async (method, path, body) => {
+const httpRequest = async (method, path, body, requestId) => {
   if (!backendBaseUrl) {
     throw new BackendError({
       code: "backend_unavailable",
       message: "Backend is not ready",
       detail: "Python process has not signalled ready",
       error_id: randomErrorId(),
+      request_id: requestId || null,
     });
   }
-  const options = { method, headers: { "Content-Type": "application/json" } };
+  const effectiveRequestId = requestId || randomErrorId();
+  const headers = { "Content-Type": "application/json", "X-Request-ID": effectiveRequestId };
+  const options = { method, headers };
   if (body !== undefined && body !== null) {
     options.body = JSON.stringify(body);
   }
+  log.info(`[electron] http ${method} ${path} request_id=${effectiveRequestId}`);
   const response = await fetch(`${backendBaseUrl}${path}`, options);
   const text = await response.text();
   if (!response.ok) {
-    throw new BackendError(parseErrorEnvelope(text, response.status));
+    const envelope = parseErrorEnvelope(text, response.status, effectiveRequestId);
+    log.warn(
+      `[electron] http ${method} ${path} failed status=${response.status} request_id=${effectiveRequestId} error_id=${envelope.error_id}`,
+    );
+    throw new BackendError(envelope);
   }
+  log.info(
+    `[electron] http ${method} ${path} ok status=${response.status} request_id=${effectiveRequestId}`,
+  );
   return text ? JSON.parse(text) : null;
 };
 
-const runScenarioOverSse = async (window, body) => {
-  const { job_id: jobId } = await httpRequest("POST", "/api/v1/scenario/run", body);
-  const streamResponse = await fetch(`${backendBaseUrl}/api/v1/scenario/${jobId}/stream`);
+const runScenarioOverSse = async (window, body, requestId) => {
+  const effectiveRequestId = requestId || randomErrorId();
+  const { job_id: jobId } = await httpRequest(
+    "POST",
+    "/api/v1/scenario/run",
+    body,
+    effectiveRequestId,
+  );
+  const streamResponse = await fetch(`${backendBaseUrl}/api/v1/scenario/${jobId}/stream`, {
+    headers: { "X-Request-ID": effectiveRequestId },
+  });
   if (!streamResponse.ok || !streamResponse.body) {
     throw new BackendError({
       code: "stream_open_failed",
       message: `Failed to open SSE stream`,
       detail: `HTTP ${streamResponse.status}`,
       error_id: randomErrorId(),
+      request_id: effectiveRequestId,
     });
   }
 
@@ -545,6 +619,7 @@ const runScenarioOverSse = async (window, body) => {
             message: payload.message,
             detail: payload.detail || null,
             error_id: payload.error_id,
+            request_id: payload.request_id || effectiveRequestId,
           };
         }
       }
@@ -738,46 +813,52 @@ const createPythonProcess = async () => {
   }
 };
 
-const toIpcError = (error) => {
-  if (error instanceof BackendError) {
-    return error.envelope;
-  }
+const toIpcError = (error, requestId) => {
+  if (error instanceof BackendError) return error.envelope;
   return {
     code: "ipc_error",
     message: error && error.message ? error.message : "Unknown error",
     detail: null,
     error_id: randomErrorId(),
+    request_id: requestId || null,
   };
 };
 
-ipcMain.handle("http:request", async (_evt, { method, path, body }) => {
-  try {
-    const result = await httpRequest(method, path, body);
-    return { success: true, result };
-  } catch (error) {
-    log.error("[electron] http:request error:", error);
-    return { success: false, error: toIpcError(error) };
-  }
+const withRequestIdHandling = (channel, runner) => {
+  ipcMain.handle(channel, async (_evt, payload) => {
+    const requestId = payload && payload.requestId;
+    try {
+      const result = await runner(payload, requestId);
+      return { success: true, result };
+    } catch (error) {
+      log.error(`[electron] ${channel} error request_id=${requestId || "-"}:`, error);
+      return { success: false, error: toIpcError(error, requestId) };
+    }
+  });
+};
+
+withRequestIdHandling("http:request", ({ method, path, body }, requestId) =>
+  httpRequest(method, path, body, requestId),
+);
+
+withRequestIdHandling("http:scenarioRun", (payload, requestId) => {
+  const body = payload && payload.body !== undefined ? payload.body : payload;
+  return runScenarioOverSse(mainWindow, body, requestId);
 });
 
-ipcMain.handle("http:scenarioRun", async (_evt, body) => {
-  try {
-    const result = await runScenarioOverSse(mainWindow, body);
-    return { success: true, result };
-  } catch (error) {
-    log.error("[electron] http:scenarioRun error:", error);
-    return { success: false, error: toIpcError(error) };
-  }
+withRequestIdHandling("http:cancelScenario", (payload, requestId) => {
+  const jobId = payload && payload.jobId !== undefined ? payload.jobId : payload;
+  return httpRequest("POST", `/api/v1/scenario/${jobId}/cancel`, {}, requestId);
 });
 
-ipcMain.handle("http:cancelScenario", async (_evt, jobId) => {
-  try {
-    const result = await httpRequest("POST", `/api/v1/scenario/${jobId}/cancel`, {});
-    return { success: true, result };
-  } catch (error) {
-    log.error("[electron] http:cancelScenario error:", error);
-    return { success: false, error: toIpcError(error) };
-  }
+// Renderer logger bridge: the frontend ``logger.ts`` wrapper sends records
+// here; we fan them out into electron-log so one ``app.log`` has entries
+// from every layer, correlated by request_id.
+ipcMain.on("log:renderer", (_evt, record) => {
+  if (!record || typeof record.message !== "string") return;
+  const level = ["debug", "info", "warn", "error"].includes(record.level) ? record.level : "info";
+  const suffix = record.context ? ` ${JSON.stringify(record.context)}` : "";
+  log[level](`[renderer] ${record.message}${suffix}`);
 });
 
 ipcMain.handle("is-development-env", () => {

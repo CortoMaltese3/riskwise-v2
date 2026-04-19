@@ -21,14 +21,23 @@ contextBridge.exposeInMainWorld("electron", {
 
 contextBridge.exposeInMainWorld("api", {
   http: {
-    request: async (method, path, body) =>
-      await ipcRenderer.invoke("http:request", { method, path, body }),
-    runScenario: async (body) => await ipcRenderer.invoke("http:scenarioRun", body),
-    cancelScenario: async (jobId) => await ipcRenderer.invoke("http:cancelScenario", jobId),
+    request: async (method, path, body, requestId) =>
+      await ipcRenderer.invoke("http:request", { method, path, body, requestId }),
+    runScenario: async (body, requestId) =>
+      await ipcRenderer.invoke("http:scenarioRun", { body, requestId }),
+    cancelScenario: async (jobId, requestId) =>
+      await ipcRenderer.invoke("http:cancelScenario", { jobId, requestId }),
   },
   onBackendError: (callback) => {
     const listener = (_event, envelope) => callback(envelope);
     ipcRenderer.on("backend-error", listener);
     return () => ipcRenderer.removeListener("backend-error", listener);
   },
+});
+
+// Renderer-side logger bridge: forwards frontend log records to
+// electron-log in the main process so a single ``app.log`` has every
+// layer's output, keyed by the same request_id.
+contextBridge.exposeInMainWorld("logger", {
+  log: (record) => ipcRenderer.send("log:renderer", record),
 });

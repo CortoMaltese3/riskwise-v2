@@ -13,6 +13,7 @@
   },
   "plugins": ["react", "react-hooks"],
   "rules": {
-    "react-hooks/exhaustive-deps": "off" // Disable the exhaustive-deps rule
+    "react-hooks/exhaustive-deps": "off",
+    "no-console": ["warn", { "allow": ["warn", "error"] }]
   }
 }

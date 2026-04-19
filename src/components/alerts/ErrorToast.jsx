@@ -41,6 +41,11 @@ const ErrorToast = () => {
           <Typography variant="caption" sx={{ display: "block", fontFamily: "monospace" }}>
             Error ID: {error.error_id}
           </Typography>
+          {error.request_id && (
+            <Typography variant="caption" sx={{ display: "block", fontFamily: "monospace" }}>
+              Request ID: {error.request_id}
+            </Typography>
+          )}
         </Alert>
       </Snackbar>
     </Stack>

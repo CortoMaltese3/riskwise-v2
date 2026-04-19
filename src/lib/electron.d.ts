@@ -13,14 +13,20 @@ export interface IpcError {
   message: string;
   detail: string | null;
   error_id: string;
+  request_id?: string | null;
 }
 
 export type IpcResult<T> = { success: true; result: T } | { success: false; error: IpcError };
 
 export interface ApiHttpBridge {
-  request<T>(method: "GET" | "POST" | "DELETE", path: string, body: unknown): Promise<IpcResult<T>>;
-  runScenario<T>(body: unknown): Promise<IpcResult<T>>;
-  cancelScenario<T>(jobId: string): Promise<IpcResult<T>>;
+  request<T>(
+    method: "GET" | "POST" | "DELETE",
+    path: string,
+    body: unknown,
+    requestId?: string,
+  ): Promise<IpcResult<T>>;
+  runScenario<T>(body: unknown, requestId?: string): Promise<IpcResult<T>>;
+  cancelScenario<T>(jobId: string, requestId?: string): Promise<IpcResult<T>>;
 }
 
 export interface ApiBridge {

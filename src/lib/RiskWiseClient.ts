@@ -11,6 +11,7 @@
 
 import type { components } from "./api-types";
 import type { IpcResult } from "./electron";
+import { newRequestId } from "./logger";
 
 type Schema<K extends keyof components["schemas"]> = components["schemas"][K];
 
@@ -41,12 +42,17 @@ export type DeleteReportQuery = {
 
 const http = () => window.api.http;
 
-const get = <T>(path: string): Promise<IpcResult<T>> => http().request<T>("GET", path, null);
+// Every call mints a fresh UUID and passes it through preload → main →
+// HTTP ``X-Request-ID`` so the backend logs and the main-process log share
+// one correlation ID with the renderer-side log record for this call.
+const get = <T>(path: string): Promise<IpcResult<T>> =>
+  http().request<T>("GET", path, null, newRequestId());
 
 const post = <T>(path: string, body: unknown): Promise<IpcResult<T>> =>
-  http().request<T>("POST", path, body ?? {});
+  http().request<T>("POST", path, body ?? {}, newRequestId());
 
-const del = <T>(path: string): Promise<IpcResult<T>> => http().request<T>("DELETE", path, null);
+const del = <T>(path: string): Promise<IpcResult<T>> =>
+  http().request<T>("DELETE", path, null, newRequestId());
 
 const buildDeleteScenarioPath = (id: string, query: DeleteReportQuery = {}): string => {
   const params = new URLSearchParams();
@@ -59,9 +65,9 @@ const buildDeleteScenarioPath = (id: string, query: DeleteReportQuery = {}): str
 const RiskWiseClient = {
   health: () => get<HealthResponse>("/api/v1/health"),
 
-  runScenario: (body: ScenarioRunRequest) => http().runScenario<unknown>(body),
+  runScenario: (body: ScenarioRunRequest) => http().runScenario<unknown>(body, newRequestId()),
 
-  cancelScenario: (jobId: string) => http().cancelScenario<unknown>(jobId),
+  cancelScenario: (jobId: string) => http().cancelScenario<unknown>(jobId, newRequestId()),
 
   validateData: (body: DataValidateRequest) =>
     post<DataValidateResponse>("/api/v1/data/validate", body),
