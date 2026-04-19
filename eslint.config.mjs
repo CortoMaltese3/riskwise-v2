@@ -73,6 +73,31 @@ export default [
       },
     },
   },
+  // theme-tokens-enforced: component files listed here must consume colours
+  // via the MUI theme (e.g. `bgcolor: "header.main"`). Raw hex or rgb() in
+  // source literals is an error. Issue #15 migrates Header first; add files
+  // to this glob list as each component is converted to tokens.
+  {
+    files: ["src/components/nav/Header.jsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Literal[value=/^\\s*#[0-9a-fA-F]{3,8}\\s*$/]",
+          message: "Use a theme token (palette path or CSS variable) instead of a raw hex colour.",
+        },
+        {
+          selector: "Literal[value=/rgba?\\(/]",
+          message: "Use a theme token instead of a raw rgb()/rgba() colour.",
+        },
+        {
+          selector: "TemplateElement[value.raw=/#[0-9a-fA-F]{3,8}|rgba?\\(/]",
+          message:
+            "Use a theme token (palette path or CSS variable) instead of a raw hex/rgb colour in template strings.",
+        },
+      ],
+    },
+  },
   {
     files: ["*.config.{js,mjs,cjs}", "*.config.*.{js,mjs,cjs}"],
     languageOptions: {

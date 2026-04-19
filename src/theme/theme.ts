@@ -1,11 +1,9 @@
 import { createTheme } from "@mui/material/styles";
 
-/**
- * Phase 0 spike theme (issue #6). Scope is intentionally small: Inter font,
- * CSS variables, primary palette, shape radius, and a custom `inputCard`
- * palette carrying the legacy hex colours used by the scenario-configuration
- * panel. Phase 1 (Area 12.1) expands this into the full design-token system.
- */
+// Phase 1 design-token surface (issue #15). Hex literals live here; component
+// code consumes these tokens via `sx={{ bgcolor: "header.main", ... }}` or
+// `theme.palette.*`. Raw hex/rgb in component files is banned by ESLint for
+// files listed under the `theme-tokens-enforced` block in eslint.config.mjs.
 
 const inputCardColors = {
   default: "#CCE1E7",
@@ -19,12 +17,19 @@ const inputCardColors = {
   disabledText: "#A6A6A6",
 };
 
+const headerColors = {
+  main: "#8fc3d1",
+  contrastText: "#0F172A",
+};
+
 declare module "@mui/material/styles" {
   interface Palette {
     inputCard: typeof inputCardColors;
+    header: typeof headerColors;
   }
   interface PaletteOptions {
     inputCard?: typeof inputCardColors;
+    header?: typeof headerColors;
   }
 }
 
@@ -38,8 +43,13 @@ export const theme = createTheme({
       light: "#8AC8D0",
       contrastText: "#ffffff",
     },
+    text: {
+      primary: "#0F172A",
+      secondary: "#334155",
+    },
     background: { default: "#f8fafc", paper: "#ffffff" },
     inputCard: inputCardColors,
+    header: headerColors,
   },
   typography: {
     fontFamily: '"Inter", "Segoe UI", sans-serif',
