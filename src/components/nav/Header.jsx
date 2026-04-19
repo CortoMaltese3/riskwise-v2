@@ -18,7 +18,12 @@ const Header = () => {
   return (
     <AppBar
       position="fixed"
-      sx={{ bgcolor: "#8fc3d1", top: 0, zIndex: (theme) => theme.zIndex.drawer + 1 }}
+      sx={{
+        bgcolor: "header.main",
+        color: "header.contrastText",
+        top: 0,
+        zIndex: (theme) => theme.zIndex.drawer + 1,
+      }}
     >
       <Toolbar
         disableGutters
