@@ -53,6 +53,11 @@ jobs:
           node-version: "20"
           cache: npm
 
-      - run: npm ci
+      # --legacy-peer-deps: `eslint@10` and `eslint-plugin-react@7.37.5` have
+      # a peer-range conflict (plugin caps at eslint ^9.7). The lint setup is
+      # untouched by #14; resolving that conflict is its own task. Vitest
+      # itself does not depend on either, so running the test step this way
+      # is safe.
+      - run: npm ci --legacy-peer-deps
 
       - run: npm test
