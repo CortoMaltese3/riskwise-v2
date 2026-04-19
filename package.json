@@ -148,7 +148,12 @@
           ]
         }
       ],
-      "icon": "build/icon.ico"
+      "icon": "build/icon.ico",
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
+      "signAndEditExecutable": true,
+      "publisherName": "<org name when cert available>"
     },
     "nsis": {
       "oneClick": false,
@@ -161,16 +166,6 @@
       "createStartMenuShortcut": true,
       "include": "installer/installer.nsh",
       "displayLanguageSelector": false
-    },
-    "_signingSkeleton": {
-      "_note": "Inactive — see DECISIONS.md D17. Merge into `win` when a cert is provisioned and CSC_LINK or AZURE_* env vars are set in CI.",
-      "win": {
-        "signingHashAlgorithms": [
-          "sha256"
-        ],
-        "signAndEditExecutable": true,
-        "publisherName": "<org name when cert available>"
-      }
     }
   }
 }
