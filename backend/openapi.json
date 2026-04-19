@@ -963,6 +963,47 @@
         "summary": "Scenario Run"
       }
     },
+    "/api/v1/scenario/{job_id}/cancel": {
+      "post": {
+        "operationId": "scenario_cancel_api_v1_scenario__job_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Scenario Cancel Api V1 Scenario  Job Id  Cancel Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scenario Cancel"
+      }
+    },
     "/api/v1/scenario/{job_id}/stream": {
       "get": {
         "operationId": "scenario_stream_api_v1_scenario__job_id__stream_get",

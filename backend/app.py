@@ -34,10 +34,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import socket
 import sys
 import threading
 import uuid
+from pathlib import Path
 from typing import Any
 
 import uvicorn
@@ -45,6 +47,13 @@ from cancellation import CancelRequested, cancel_event_var
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
+from logging_config import (
+    bind_request_id,
+    configure_logging,
+    get_logger,
+    request_id_var,
+    reset_request_id,
+)
 from models import (
     CountriesResponse,
     DataValidateRequest,
@@ -68,6 +77,11 @@ from models import (
 from progress import ProgressEvent, progress_callback_var
 
 API_PREFIX = "/api/v1"
+
+# Header used by the Electron main process to propagate the correlation UUID
+# generated in the renderer. When absent (e.g., a direct curl) the middleware
+# fabricates one so every log line still has a non-empty ``request_id``.
+REQUEST_ID_HEADER = "X-Request-ID"
 
 # Sentinel posted to a job queue to close the SSE stream.
 _STREAM_END = object()
@@ -117,11 +131,13 @@ _active_job_id: str | None = None
 def _make_error(
     code: str, message: str, detail: str | None = None, error_id: str | None = None
 ) -> dict:
+    current_request_id = request_id_var.get()
     return ErrorResponse(
         code=code,
         message=message,
         detail=detail,
         error_id=error_id or str(uuid.uuid4()),
+        request_id=current_request_id if current_request_id != "-" else None,
     ).model_dump()
 
 
@@ -200,6 +216,41 @@ async def _dispatch(script_name: str, data: Any) -> dict:
 
 
 app = FastAPI(title="RISK WISE Backend", version="2.0.0-dev")
+
+
+@app.middleware("http")
+async def _request_id_middleware(request: Request, call_next):
+    """Bind the request-ID contextvar for the lifetime of the request.
+
+    The header is the contract the Electron main process uses to propagate
+    the renderer-generated UUID. If the header is missing we fabricate one
+    so every log line has a usable value, and we echo it back on the
+    response so a caller can always retrieve what was logged.
+
+    The logger is resolved per-call (rather than bound at module import) so
+    ``configure_logging`` can rewire the output stream in tests without the
+    middleware keeping a proxy bound to the stale ``structlog`` default.
+    """
+    request_id = request.headers.get(REQUEST_ID_HEADER) or str(uuid.uuid4())
+    token = bind_request_id(request_id)
+    api_log = get_logger("api")
+    try:
+        api_log.info(
+            "request.start",
+            method=request.method,
+            path=request.url.path,
+        )
+        response = await call_next(request)
+        response.headers[REQUEST_ID_HEADER] = request_id
+        api_log.info(
+            "request.end",
+            method=request.method,
+            path=request.url.path,
+            status=response.status_code,
+        )
+        return response
+    finally:
+        reset_request_id(token)
 
 
 _HTTP_CODE_TO_ERROR_CODE = {
@@ -439,6 +490,13 @@ class _ReadyNotifyServer(uvicorn.Server):
 
 def run() -> None:
     """Entrypoint for the bundled engine: bind a free port and serve."""
+    log_dir_env = os.getenv("LOG_DIR")
+    # Honour the LOG_DIR the Electron main sets to ``app.getPath('userData')/logs``
+    # so Python logs land next to electron-log's files, giving support a
+    # single directory to zip when collecting diagnostics.
+    log_dir = Path(log_dir_env) if log_dir_env else None
+    configure_logging(log_dir=log_dir)
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(("127.0.0.1", 0))

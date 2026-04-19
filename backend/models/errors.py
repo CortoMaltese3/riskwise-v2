@@ -22,3 +22,11 @@ class ErrorResponse(BaseModel):
         description="Additional diagnostic context; never shown as the primary message.",
     )
     error_id: str = Field(..., description="UUID for log correlation.")
+    request_id: str | None = Field(
+        default=None,
+        description=(
+            "End-to-end request correlation ID copied from the ``X-Request-ID`` "
+            "header. Echoed on the toast so users can quote a single UUID that "
+            "matches entries in the Electron main log and the Python backend log."
+        ),
+    )
