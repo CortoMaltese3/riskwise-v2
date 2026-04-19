@@ -4,6 +4,8 @@ import { ThemeProvider } from "@mui/material/styles";
 
 import AdaptationMeasuresInput from "./components/input/AdaptationMeasuresInput";
 import AlertMessage from "./components/alerts/AlertMessage";
+import ErrorBoundary from "./components/errors/ErrorBoundary";
+import ErrorToast from "./components/alerts/ErrorToast";
 import MacroEconomicInput from "./components/inputMacro/MacroEconomicInput";
 import DataInput from "./components/input/DataInput";
 import Header from "./components/nav/Header";
@@ -21,49 +23,54 @@ const App = () => {
   const { selectedAppOption, selectedTab } = useStore();
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {selectedAppOption === "" ? (
-        <NavigateAlert />
-      ) : (
-        <Box display="flex" flexDirection="column" minHeight="100vh">
-          <Header />
-          <MainTabs />
-          <Box
-            display="flex"
-            flexDirection="column"
-            flexGrow={1}
-            overflow="auto"
-            className="main-content"
-          >
-            <Grid
-              container
-              spacing={2}
-              sx={{
-                padding: 2,
-                flexGrow: 1,
-              }}
+    <ErrorBoundary>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {selectedAppOption === "" ? (
+          <NavigateAlert />
+        ) : (
+          <Box display="flex" flexDirection="column" minHeight="100vh">
+            <Header />
+            <MainTabs />
+            <Box
+              display="flex"
+              flexDirection="column"
+              flexGrow={1}
+              overflow="auto"
+              className="main-content"
             >
-              <Grid item xs={12} md={2}>
-                <DataInput />
-                <MacroEconomicInput />
-                <AdaptationMeasuresInput />
+              <Grid
+                container
+                spacing={2}
+                sx={{
+                  padding: 2,
+                  flexGrow: 1,
+                }}
+              >
+                <Grid item xs={12} md={2}>
+                  <DataInput />
+                  <MacroEconomicInput />
+                  <AdaptationMeasuresInput />
+                </Grid>
+                <Grid item xs={12} md={selectedTab !== 0 ? 8 : 10}>
+                  <MainView />
+                </Grid>
+                <Grid item xs={12} md={2}>
+                  <ResultsView />
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={selectedTab !== 0 ? 8 : 10}>
-                <MainView />
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <ResultsView />
-              </Grid>
-            </Grid>
-          </Box>
-          <LoadModal />
+            </Box>
+            <LoadModal />
 
-          {/* Alert message section */}
-          <AlertMessage />
-        </Box>
-      )}
-    </ThemeProvider>
+            {/* Alert message section */}
+            <AlertMessage />
+          </Box>
+        )}
+        {/* Error toast is mounted unconditionally so the backend-error IPC
+            listener can fire even before the user picks an app option. */}
+        <ErrorToast />
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 };
 

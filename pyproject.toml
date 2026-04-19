@@ -31,6 +31,7 @@ dependencies = [
     "duckdb>=1.0,<2",
     "fastapi>=0.110,<1",
     "uvicorn[standard]>=0.27,<1",
+    "psutil>=5.9,<7",
 ]
 
 [project.optional-dependencies]

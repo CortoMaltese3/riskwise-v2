@@ -14,6 +14,18 @@ Pydantic models live in ``backend/models/`` and are wired here as both
 request bodies and ``response_model`` so that the OpenAPI schema (and the
 TypeScript client generated from it) stays in sync with the runtime.
 
+Error handling (issue #12):
+    - Every non-2xx response is a structured :class:`ErrorResponse` with a
+      UUID ``error_id`` the renderer surfaces to the user.
+    - A single-job invariant is enforced up front: a second ``POST
+      /scenario/run`` while one is in flight fails fast with ``409`` rather
+      than queueing behind the lock.
+    - Cancellation is cooperative via :mod:`cancellation`: the SSE stream's
+      cleanup (or an explicit ``POST /scenario/{id}/cancel``) sets a
+      ``threading.Event`` that CLIMADA step boundaries poll.
+    - A pre-flight memory check rejects the run before CLIMADA allocates
+      anything so the OS does not OOM-kill the worker mid-run.
+
 See ``docs/DECISIONS.md`` D02 and D16 and
 ``docs/architecture-decisions/adr-fastapi-poc.md``.
 """
@@ -24,17 +36,21 @@ import asyncio
 import json
 import socket
 import sys
+import threading
 import uuid
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from cancellation import CancelRequested, cancel_event_var
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, StreamingResponse
 from models import (
     CountriesResponse,
     DataValidateRequest,
     DataValidateResponse,
     DeleteReportResponse,
+    ErrorResponse,
     ExportReportRequest,
     ExportReportResponse,
     HealthResponse,
@@ -56,21 +72,34 @@ API_PREFIX = "/api/v1"
 # Sentinel posted to a job queue to close the SSE stream.
 _STREAM_END = object()
 
+# Pre-flight memory gate: refuse to start a scenario if the OS is likely to
+# OOM-kill the worker. The minimum is intentionally conservative (2 GB) —
+# CLIMADA's hazard and exposure loads commonly peak above 1.5 GB, and holding
+# an explicit constant here lets us tune the threshold without hunting for
+# magic numbers.
+MEMORY_PREFLIGHT_MIN_AVAILABLE_BYTES = 2 * 1024 * 1024 * 1024
+
 
 class _JobRegistry:
-    """Tracks in-flight scenario jobs and their SSE event queues."""
+    """Tracks in-flight scenario jobs, their SSE queues, and cancel events."""
 
     def __init__(self) -> None:
-        self._jobs: dict[str, asyncio.Queue] = {}
+        self._jobs: dict[str, tuple[asyncio.Queue, threading.Event]] = {}
 
-    def create(self) -> tuple[str, asyncio.Queue]:
+    def create(self) -> tuple[str, asyncio.Queue, threading.Event]:
         job_id = str(uuid.uuid4())
         queue: asyncio.Queue = asyncio.Queue()
-        self._jobs[job_id] = queue
-        return job_id, queue
+        cancel_event = threading.Event()
+        self._jobs[job_id] = (queue, cancel_event)
+        return job_id, queue, cancel_event
 
-    def get(self, job_id: str) -> asyncio.Queue | None:
-        return self._jobs.get(job_id)
+    def get_queue(self, job_id: str) -> asyncio.Queue | None:
+        entry = self._jobs.get(job_id)
+        return entry[0] if entry else None
+
+    def get_cancel_event(self, job_id: str) -> threading.Event | None:
+        entry = self._jobs.get(job_id)
+        return entry[1] if entry else None
 
     def remove(self, job_id: str) -> None:
         self._jobs.pop(job_id, None)
@@ -78,10 +107,40 @@ class _JobRegistry:
 
 jobs = _JobRegistry()
 
-# CLIMADA clears the shared temp directory at the start of each scenario run,
-# so only one run may execute at a time. Cancellation is out of scope here
-# and tracked by issue #12.
-_scenario_lock = asyncio.Lock()
+# Tracks the single in-flight scenario job, if any. FastAPI runs on one event
+# loop so a plain attribute is race-free: the check-then-set in
+# ``scenario_run`` happens without an intervening ``await`` where another
+# coroutine could slip through.
+_active_job_id: str | None = None
+
+
+def _make_error(
+    code: str, message: str, detail: str | None = None, error_id: str | None = None
+) -> dict:
+    return ErrorResponse(
+        code=code,
+        message=message,
+        detail=detail,
+        error_id=error_id or str(uuid.uuid4()),
+    ).model_dump()
+
+
+def _check_memory_preflight() -> tuple[bool, str]:
+    """Return ``(ok, message)`` based on currently-available system memory."""
+    try:
+        import psutil
+    except ImportError:
+        # psutil is a hard runtime dep in the bundled engine; in dev
+        # environments without it we skip the check rather than refuse
+        # every run.
+        return True, ""
+    vm = psutil.virtual_memory()
+    if vm.available < MEMORY_PREFLIGHT_MIN_AVAILABLE_BYTES:
+        return False, (
+            f"Insufficient memory: {vm.available // (1024 * 1024)} MB available, "
+            f"{MEMORY_PREFLIGHT_MIN_AVAILABLE_BYTES // (1024 * 1024)} MB required"
+        )
+    return True, ""
 
 
 def _run_scenario_sync(payload: dict) -> dict:
@@ -143,6 +202,43 @@ async def _dispatch(script_name: str, data: Any) -> dict:
 app = FastAPI(title="RISK WISE Backend", version="2.0.0-dev")
 
 
+_HTTP_CODE_TO_ERROR_CODE = {
+    404: "not_found",
+    409: "job_conflict",
+    413: "memory_insufficient",
+    422: "validation_error",
+    503: "backend_unavailable",
+}
+
+
+@app.exception_handler(HTTPException)
+async def _http_exception_handler(_request: Request, exc: HTTPException) -> JSONResponse:
+    code = _HTTP_CODE_TO_ERROR_CODE.get(exc.status_code, "http_error")
+    detail = exc.detail if isinstance(exc.detail, str) else None
+    message = detail or f"HTTP {exc.status_code}"
+    return JSONResponse(status_code=exc.status_code, content=_make_error(code, message, detail))
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_exception_handler(
+    _request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content=_make_error("validation_error", "Invalid request body", str(exc.errors())),
+    )
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+    # Scenario 5 (job isolation): any unhandled exception from a handler
+    # becomes a structured response so FastAPI itself stays alive.
+    return JSONResponse(
+        status_code=500,
+        content=_make_error("internal_error", "Internal server error", str(exc)),
+    )
+
+
 @app.get(f"{API_PREFIX}/health", response_model=HealthResponse)
 async def health() -> dict:
     return {"status": "ok"}
@@ -150,16 +246,41 @@ async def health() -> dict:
 
 @app.post(f"{API_PREFIX}/scenario/run", response_model=JobAcceptedResponse)
 async def scenario_run(payload: ScenarioRunRequest) -> dict:
-    job_id, queue = jobs.create()
-    asyncio.create_task(_execute_scenario(job_id, payload.model_dump(exclude_none=False), queue))
+    global _active_job_id
+    if _active_job_id is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Another scenario is already running",
+        )
+
+    ok, msg = _check_memory_preflight()
+    if not ok:
+        raise HTTPException(status_code=413, detail=msg)
+
+    job_id, queue, cancel_event = jobs.create()
+    _active_job_id = job_id
+    asyncio.create_task(
+        _execute_scenario(job_id, payload.model_dump(exclude_none=False), queue, cancel_event)
+    )
     return {"job_id": job_id}
+
+
+@app.post(f"{API_PREFIX}/scenario/{{job_id}}/cancel")
+async def scenario_cancel(job_id: str) -> dict:
+    cancel_event = jobs.get_cancel_event(job_id)
+    if cancel_event is None:
+        raise HTTPException(status_code=404, detail="Unknown job_id")
+    cancel_event.set()
+    return {"status": "ok", "cancelled": True, "job_id": job_id}
 
 
 @app.get(f"{API_PREFIX}/scenario/{{job_id}}/stream")
 async def scenario_stream(job_id: str) -> StreamingResponse:
-    queue = jobs.get(job_id)
+    queue = jobs.get_queue(job_id)
     if queue is None:
         raise HTTPException(status_code=404, detail="Unknown job_id")
+
+    cancel_event = jobs.get_cancel_event(job_id)
 
     async def _gen():
         try:
@@ -169,12 +290,25 @@ async def scenario_stream(job_id: str) -> StreamingResponse:
                     break
                 yield f"data: {json.dumps(event)}\n\n"
         finally:
+            # If the client disconnects mid-run, set the cancel flag so the
+            # worker aborts at its next checkpoint instead of finishing a
+            # computation whose result nobody is listening for. Setting it
+            # after a clean completion is harmless because the worker has
+            # already exited the cancel-checking region.
+            if cancel_event is not None:
+                cancel_event.set()
             jobs.remove(job_id)
 
     return StreamingResponse(_gen(), media_type="text/event-stream")
 
 
-async def _execute_scenario(job_id: str, payload: dict, queue: asyncio.Queue) -> None:
+async def _execute_scenario(
+    job_id: str,
+    payload: dict,
+    queue: asyncio.Queue,
+    cancel_event: threading.Event,
+) -> None:
+    global _active_job_id
     loop = asyncio.get_running_loop()
 
     def publish(event: ProgressEvent) -> None:
@@ -182,17 +316,34 @@ async def _execute_scenario(job_id: str, payload: dict, queue: asyncio.Queue) ->
         # asyncio.Queue is not thread-safe, so marshal back to the loop.
         loop.call_soon_threadsafe(queue.put_nowait, event)
 
-    token = progress_callback_var.set(publish)
+    progress_token = progress_callback_var.set(publish)
+    cancel_token = cancel_event_var.set(cancel_event)
     try:
-        async with _scenario_lock:
-            try:
-                result = await asyncio.to_thread(_run_scenario_sync, payload)
-                queue.put_nowait({"type": "result", "data": result})
-            except Exception as exc:
-                queue.put_nowait({"type": "error", "error": str(exc)})
+        try:
+            result = await asyncio.to_thread(_run_scenario_sync, payload)
+            queue.put_nowait({"type": "result", "data": result})
+        except CancelRequested:
+            queue.put_nowait(
+                {
+                    "type": "cancelled",
+                    **_make_error("cancelled", "Scenario run was cancelled"),
+                }
+            )
+        except Exception as exc:
+            # Scenario 5: CLIMADA blew up but FastAPI must stay alive. The
+            # structured error goes out on the SSE stream; no other job is
+            # affected because we never share state across jobs.
+            queue.put_nowait(
+                {
+                    "type": "error",
+                    **_make_error("scenario_error", "Scenario run failed", str(exc)),
+                }
+            )
     finally:
-        progress_callback_var.reset(token)
+        progress_callback_var.reset(progress_token)
+        cancel_event_var.reset(cancel_token)
         queue.put_nowait(_STREAM_END)
+        _active_job_id = None
 
 
 @app.post(f"{API_PREFIX}/data/validate", response_model=DataValidateResponse)

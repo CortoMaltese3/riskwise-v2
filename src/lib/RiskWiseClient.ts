@@ -5,7 +5,9 @@
 // to callers always matches the legacy `APIService` envelope —
 // `{ success: true, result: <body> }` on 2xx, `{ success: false, error }` on
 // failure — so call sites can be migrated piecemeal without rewriting the
-// downstream consumers.
+// downstream consumers. ``error`` is the structured :class:`IpcError`
+// envelope (``code``, ``message``, ``detail``, ``error_id``) coming from
+// the backend's :class:`ErrorResponse` via the IPC bridge.
 
 import type { components } from "./api-types";
 import type { IpcResult } from "./electron";
@@ -58,6 +60,8 @@ const RiskWiseClient = {
   health: () => get<HealthResponse>("/api/v1/health"),
 
   runScenario: (body: ScenarioRunRequest) => http().runScenario<unknown>(body),
+
+  cancelScenario: (jobId: string) => http().cancelScenario<unknown>(jobId),
 
   validateData: (body: DataValidateRequest) =>
     post<DataValidateResponse>("/api/v1/data/validate", body),

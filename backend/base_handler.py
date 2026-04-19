@@ -338,11 +338,20 @@ class BaseHandler:
         ``run_*.py`` script executed standalone) the event is written to
         stdout so legacy tooling still sees it.
 
+        Each call is also a cancellation checkpoint: if the caller has
+        installed a cancel event (via :mod:`cancellation`) and it has been
+        set, this method raises :class:`CancelRequested` so the scenario
+        aborts at the next stage boundary rather than finishing a
+        computation the user asked us to stop.
+
         :param progress: An integer representing the progress value.
         :param message: A string containing the progress message.
         :return: None
         """
+        from cancellation import check_cancelled
         from progress import progress_callback_var
+
+        check_cancelled()
 
         progress_data = {"type": "progress", "progress": progress, "message": message}
         callback = progress_callback_var.get()
