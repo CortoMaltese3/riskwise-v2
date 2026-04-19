@@ -23,7 +23,7 @@ export interface ApiHttpBridge {
     method: "GET" | "POST" | "DELETE",
     path: string,
     body: unknown,
-    requestId?: string,
+    requestId?: string
   ): Promise<IpcResult<T>>;
   runScenario<T>(body: unknown, requestId?: string): Promise<IpcResult<T>>;
   cancelScenario<T>(jobId: string, requestId?: string): Promise<IpcResult<T>>;

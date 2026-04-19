@@ -74,7 +74,7 @@ const RiskWiseClient = {
 
   fetchAdaptationMeasures: (countryName: string, hazardType: string) =>
     get<MeasuresResponse>(
-      `/api/v1/measures/${encodeURIComponent(countryName)}/${encodeURIComponent(hazardType)}`,
+      `/api/v1/measures/${encodeURIComponent(countryName)}/${encodeURIComponent(hazardType)}`
     ),
 
   fetchReports: () => get<ReportListResponse>("/api/v1/scenarios"),

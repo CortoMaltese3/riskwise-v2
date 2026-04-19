@@ -1,0 +1,24 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: release-please
+    runs-on: ubuntu-latest
+    steps:
+      # Tracks version in package.json and updates CHANGELOG.md on every
+      # Conventional Commit that lands on main. Opens (or refreshes) a
+      # single "release PR" that, once merged, cuts the tag and GitHub
+      # Release. See release-please-config.json for the full config and
+      # .release-please-manifest.json for the current tracked version.
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

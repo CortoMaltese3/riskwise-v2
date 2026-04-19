@@ -1,0 +1,21 @@
+node_modules
+build
+dist
+public
+data
+docs
+backend
+translations
+spike
+requirements
+installer
+src/locales
+src/lib/api-types.ts
+package-lock.json
+CHANGELOG.md
+# Vendored verbatim from https://www.contributor-covenant.org — do not reflow.
+CODE_OF_CONDUCT.md
+# Third-party / cache directories.
+.claude
+.pytest_cache
+.ruff_cache

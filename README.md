@@ -199,12 +199,14 @@ If you're contributing to RISK WISE, it’s recommended to fork the repository a
 
 1. Copy the URL of your forked repository (e.g., `https://github.com/username/climada-unu.git`).
 2. Clone it to your local machine:
+
    ```bash
    git clone <your-fork-url>
    cd climada-unu
    ```
 
 3. Add the original repository as the `upstream` remote:
+
    ```bash
    git remote add upstream git@github.com:original-organization/climada-unu.git
    ```
@@ -226,6 +228,7 @@ If you're contributing to RISK WISE, it’s recommended to fork the repository a
 ## 3. Keep Your Fork Updated
 
 Before starting any work, ensure your fork is up-to-date with the original repository:
+
 ```bash
 git fetch upstream
 git checkout main
@@ -294,6 +297,7 @@ git merge upstream/main
 ## 9. Delete Your Branch After Merging
 
 Once your pull request is merged:
+
 1. Delete your local branch:
    ```bash
    git branch -d feature/my-new-feature
@@ -310,6 +314,7 @@ Once your pull request is merged:
 ### Scenario: Adding a New Feature to Enhance the Hazard Map Functionality
 
 1. Fork the repository and clone your fork:
+
    ```bash
    git clone https://github.com/username/climada-unu.git
    cd climada-unu
@@ -317,6 +322,7 @@ Once your pull request is merged:
    ```
 
 2. Ensure your fork is up-to-date:
+
    ```bash
    git fetch upstream
    git checkout main
@@ -324,11 +330,13 @@ Once your pull request is merged:
    ```
 
 3. Create a new branch:
+
    ```bash
    git checkout -b feature/enhance-hazard-map
    ```
 
 4. Make your changes, test them, and commit:
+
    ```bash
    # After making changes...
    git add .
@@ -336,6 +344,7 @@ Once your pull request is merged:
    ```
 
 5. Push your branch to your fork:
+
    ```bash
    git push origin feature/enhance-hazard-map
    ```
@@ -343,6 +352,7 @@ Once your pull request is merged:
 6. Open a pull request on GitHub, targeting the `main` branch of the original repository.
 
 7. Respond to any review comments, make changes, and push updates:
+
    ```bash
    git add .
    git commit -m "Fix issue as per review comments"
@@ -379,6 +389,6 @@ Publications:
 
 - **GloFAS River Flood Module**: Riedel, L. et al. (2024): Fluvial flood inundation and socio-economic impact model based on open data, Geosci. Model Dev., 17, 5291–5308, [https://doi.org/10.5194/gmd-17-5291-2024](https://doi.org/10.5194/gmd-17-5291-2024).
 
-For a comprehensive list of CLIMADA-related publications, refer to the [Zotero library](https://www.zotero.org/groups/2523345/climada_publications). You can also download the complete BibTeX file: [climada_publications.bib](https://www.zotero.org/groups/2523345/climada_publications/items/collectionKey/9K5I3X3I/items/top?format=bibtex&limit=1000). 
+For a comprehensive list of CLIMADA-related publications, refer to the [Zotero library](https://www.zotero.org/groups/2523345/climada_publications). You can also download the complete BibTeX file: [climada_publications.bib](https://www.zotero.org/groups/2523345/climada_publications/items/collectionKey/9K5I3X3I/items/top?format=bibtex&limit=1000).
 
 More information on [CLIMADA](https://wcr.ethz.ch/research/climada.html)

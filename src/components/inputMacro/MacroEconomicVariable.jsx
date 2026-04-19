@@ -20,7 +20,7 @@ const MacroEconomicVariable = () => {
 
   const handleClick = () => {
     setSelectedMacroCard("macroVariable");
-    setActiveViewControl("display_macro_parameters")
+    setActiveViewControl("display_macro_parameters");
   };
 
   const handleBgColor = () => {

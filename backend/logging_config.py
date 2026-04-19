@@ -76,7 +76,7 @@ def configure_logging(
         _owned_files.append(handle)
         targets.append(handle)
 
-    processors = [
+    processors: list[Any] = [
         _add_request_id,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
@@ -88,7 +88,9 @@ def configure_logging(
     structlog.configure(
         processors=processors,
         wrapper_class=structlog.make_filtering_bound_logger(level_no),
-        logger_factory=structlog.WriteLoggerFactory(file=_MultiStream(targets)),
+        # _MultiStream satisfies the write/flush protocol structlog needs
+        # but is not a TextIO subclass, hence the cast.
+        logger_factory=structlog.WriteLoggerFactory(file=_MultiStream(targets)),  # type: ignore[arg-type]
         cache_logger_on_first_use=False,
     )
 

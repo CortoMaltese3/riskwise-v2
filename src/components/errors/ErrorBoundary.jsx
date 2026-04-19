@@ -14,9 +14,7 @@ class ErrorBoundary extends React.Component {
 
   static getDerivedStateFromError(error) {
     const errorId =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : String(Date.now());
+      typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
     return { error, errorId };
   }
 
@@ -52,9 +50,8 @@ class ErrorBoundary extends React.Component {
           Something went wrong.
         </Typography>
         <Typography variant="body2" sx={{ mb: 2 }}>
-          The application encountered an unexpected error. You can try to
-          reload; if the problem persists, please share the error ID below
-          with support.
+          The application encountered an unexpected error. You can try to reload; if the problem
+          persists, please share the error ID below with support.
         </Typography>
         <Typography variant="caption" sx={{ mb: 3, fontFamily: "monospace" }}>
           Error ID: {this.state.errorId}

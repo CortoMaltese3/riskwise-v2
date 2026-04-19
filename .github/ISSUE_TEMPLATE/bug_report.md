@@ -1,14 +1,14 @@
 ---
 name: Bug
 about: Report something that is broken or behaving incorrectly
-title: 'fix: [brief description]'
-labels: 'bug'
-assignees: ''
+title: "fix: [brief description]"
+labels: "bug"
+assignees: ""
 ---
 
 ## Summary
 
-*One sentence: what is broken and where.*
+_One sentence: what is broken and where._
 
 ---
 
@@ -40,9 +40,9 @@ paste stack trace or relevant log lines here
 
 ---
 
-## Possible Cause *(optional)*
+## Possible Cause _(optional)_
 
-*If you have a hypothesis about the root cause, note it here.*
+_If you have a hypothesis about the root cause, note it here._
 
 ---
 

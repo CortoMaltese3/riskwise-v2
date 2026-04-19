@@ -43,8 +43,8 @@ const bidiIsolatePostProcessor = {
     const dir = i18n.dir
       ? i18n.dir(lng)
       : ["ar", "he", "fa", "ur"].some((l) => lng.startsWith(l))
-      ? "rtl"
-      : "ltr";
+        ? "rtl"
+        : "ltr";
 
     if (dir === "rtl") {
       // Wrap LTR (ASCII) segments inside RTL text

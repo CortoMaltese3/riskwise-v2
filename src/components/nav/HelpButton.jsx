@@ -4,7 +4,7 @@ import IconButton from "@mui/material/IconButton";
 import HelpIcon from "@mui/icons-material/Help";
 
 const onHelplick = () => {
-  console.log('helpClick');
+  console.log("helpClick");
 };
 
 const HelpButton = () => {

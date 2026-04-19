@@ -1,9 +1,9 @@
 ---
 name: Feature
 about: Propose a new feature or enhancement
-title: 'feat: [brief description]'
-labels: 'enhancement'
-assignees: ''
+title: "feat: [brief description]"
+labels: "enhancement"
+assignees: ""
 ---
 
 ## User Story
@@ -16,7 +16,7 @@ so that **[reason, benefit, or value derived]**.
 
 ## Acceptance Criteria
 
-*What needs to be true for this story to be considered "Done"?*
+_What needs to be true for this story to be considered "Done"?_
 
 - [ ] **Scenario 1:** [Brief description]
   - **Given** [some precondition or context]
@@ -46,9 +46,9 @@ so that **[reason, benefit, or value derived]**.
 
 ---
 
-## Technical Notes *(optional)*
+## Technical Notes _(optional)_
 
-*API endpoints, schema changes, architectural considerations, security constraints, relevant ADRs.*
+_API endpoints, schema changes, architectural considerations, security constraints, relevant ADRs._
 
 ---
 

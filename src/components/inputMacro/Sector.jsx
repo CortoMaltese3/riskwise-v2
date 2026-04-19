@@ -20,7 +20,7 @@ const Sector = () => {
 
   const handleClick = () => {
     setSelectedMacroCard("sector");
-    setActiveViewControl("display_macro_parameters")
+    setActiveViewControl("display_macro_parameters");
   };
 
   const handleBgColor = () => {

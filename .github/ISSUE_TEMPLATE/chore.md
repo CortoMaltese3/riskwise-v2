@@ -1,20 +1,20 @@
 ---
 name: Chore
 about: Tech debt, refactoring, dependency update, tooling, CI/CD, or infrastructure
-title: 'chore: [brief description]'
-labels: 'chore'
-assignees: ''
+title: "chore: [brief description]"
+labels: "chore"
+assignees: ""
 ---
 
 ## What needs to be done
 
-*Clear description of the task. No user story format needed — this is internal work.*
+_Clear description of the task. No user story format needed — this is internal work._
 
 ---
 
 ## Why
 
-*What problem does this solve? Why now? (tech debt accumulated, dependency CVE, blocks a feature, etc.)*
+_What problem does this solve? Why now? (tech debt accumulated, dependency CVE, blocks a feature, etc.)_
 
 ---
 

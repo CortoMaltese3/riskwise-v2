@@ -10,7 +10,7 @@ import MainViewTitle from "../title/MainViewTitle";
 import MapLayout from "../map/MapLayout";
 import ViewCard from "../cards/ViewCard";
 import ReportsView from "../reports/ReportsView";
-import ViewMacroCard from "../cards/ViewMacroCard"
+import ViewMacroCard from "../cards/ViewMacroCard";
 import useStore from "../../store";
 
 const MainView = () => {

@@ -26,8 +26,7 @@ const CircleLayer = ({ data, colorScale, radius, activeRPLayer }) => {
         radius: radius,
       })
         .bindPopup(
-          `${t("country")}: ${country}<br>${t("admin")} 2: ${name}<br>` + 
-          `${t("level")}: ${level}`
+          `${t("country")}: ${country}<br>${t("admin")} 2: ${name}<br>` + `${t("level")}: ${level}`
         )
         .addTo(layerGroup);
     });

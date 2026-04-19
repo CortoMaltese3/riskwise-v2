@@ -23,9 +23,9 @@ Functions:
     Function to determine the base directory path depending on the environment.
 """
 
-from pathlib import Path
-import sys
 import os
+import sys
+from pathlib import Path
 
 
 def get_base_dir() -> Path:

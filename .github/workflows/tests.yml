@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend (pytest)
+    name: Backend (ruff + mypy + pytest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,29 +37,43 @@ jobs:
             "structlog>=24,<26" \
             "psutil>=5.9,<7" \
             "pytest>=8" \
-            "httpx>=0.27"
+            "httpx>=0.27" \
+            "ruff>=0.5" \
+            "mypy>=1.10"
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: mypy
+        run: mypy
 
       - name: Run pytest
         run: pytest -q
 
   frontend:
-    name: Frontend (vitest)
+    name: Frontend (eslint + prettier + vitest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version-file: ".nvmrc"
           cache: npm
 
       # Pre-existing issues the test-infra PR intentionally does not fix:
-      #   1. eslint@10 vs eslint-plugin-react@7.37.5 peer-range conflict
-      #      → requires --legacy-peer-deps.
-      #   2. package-lock.json is out of sync with package.json (added
+      #   1. package-lock.json is out of sync with package.json (added
       #      deps like openapi-typescript never hit the lockfile), so
       #      `npm ci` rejects the tree. Using `npm install` instead.
-      # Both belong in dedicated cleanup issues; vitest itself is unaffected.
+      # Electron's postinstall fails on UNC paths when invoked from WSL,
+      # but works on Linux CI — so we don't pass --ignore-scripts here.
       - run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - run: npm run lint
+
+      - run: npm run format:check
 
       - run: npm test

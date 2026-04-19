@@ -41,6 +41,7 @@ dev = [
     "pytest-asyncio>=0.23",
     "httpx>=0.27",
     "ruff>=0.5",
+    "mypy>=1.10",
 ]
 bundle = [
     # Pinned ranges validated against Python 3.11 + CLIMADA 4.1.1.
@@ -50,15 +51,88 @@ bundle = [
     "pyinstaller>=6.6,<7",
 ]
 
-[tool.black]
-line-length = 100
-
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# v1 handler code is slated for rewrite in v2 (see pytest ignore below).
+# Excluding it here keeps ruff a pass on the maintained v2 surface without
+# masking regressions in the code we actually care about.
+extend-exclude = [
+    "backend/base_handler.py",
+    "backend/logger_config.py",
+    "backend/dev.ipynb",
+    "backend/costben",
+    "backend/entity",
+    "backend/exposure",
+    "backend/hazard",
+    "backend/impact",
+    "backend/macroeconomic",
+    "backend/report",
+    "backend/run_add_to_ouput.py",
+    "backend/run_check_data_type.py",
+    "backend/run_clear_temp_dir.py",
+    "backend/run_export_report.py",
+    "backend/run_fetch_cred_output.py",
+    "backend/run_fetch_macro_chart_data.py",
+    "backend/run_fetch_measures.py",
+    "backend/run_fetch_reports.py",
+    "backend/run_remove_report.py",
+    "backend/run_scenario.py",
+    # Sphinx config, the FastAPI proof-of-concept under spike/, and the v1
+    # translations utility script live outside the v2 backend surface and are
+    # not part of the lint baseline.
+    "docs/conf.py",
+    "spike",
+    "translations",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["backend", "tests"]
+namespace_packages = true
+explicit_package_bases = true
+ignore_missing_imports = true
+# Start permissive: this is the baseline for a codebase that has never
+# been type-checked. Tighten (disallow_untyped_defs, strict) once the v2
+# handlers land and the legacy surface below shrinks.
+check_untyped_defs = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+# Legacy v1 handlers, runner scripts, and pre-v2 backend entry points are
+# skipped pending rewrite; same scope as the ruff exclude list above.
+# `ignore_errors` is used instead of `exclude` because mypy ignores
+# `exclude` when paths are passed on the CLI, which is what the pre-commit
+# and CI invocations do.
+[[tool.mypy.overrides]]
+module = [
+    "backend.app",
+    "backend.base_handler",
+    "backend.logger_config",
+    "backend.test_app",
+    "backend.test_logging_config",
+    "backend.costben.*",
+    "backend.entity.*",
+    "backend.exposure.*",
+    "backend.hazard.*",
+    "backend.impact.*",
+    "backend.macroeconomic.*",
+    "backend.report.*",
+    "backend.run_add_to_ouput",
+    "backend.run_check_data_type",
+    "backend.run_clear_temp_dir",
+    "backend.run_export_report",
+    "backend.run_fetch_cred_output",
+    "backend.run_fetch_macro_chart_data",
+    "backend.run_fetch_measures",
+    "backend.run_fetch_reports",
+    "backend.run_remove_report",
+    "backend.run_scenario",
+]
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "backend"]
