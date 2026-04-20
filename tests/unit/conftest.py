@@ -40,8 +40,21 @@ def _stub_module(name: str, **attrs: object) -> None:
 _stub_module("climada")
 _stub_module("climada.util")
 _stub_module("climada.util.api_client", Client=_Stub)
-_stub_module("climada.entity", Entity=_Stub, Exposures=_Stub, ImpactFuncSet=_Stub)
+_stub_module(
+    "climada.entity",
+    DiscRates=_Stub,
+    Entity=_Stub,
+    Exposures=_Stub,
+    ImpactFuncSet=_Stub,
+)
+_stub_module("climada.entity.measures", MeasureSet=_Stub)
+_stub_module("climada.entity.impact_funcs", ImpactFunc=_Stub, ImpactFuncSet=_Stub)
+_stub_module("climada.engine", CostBenefit=_Stub, Impact=_Stub, ImpactCalc=_Stub)
+_stub_module("climada.engine.cost_benefit", risk_aai_agg=lambda *_, **__: None)
 _stub_module("climada.hazard", Hazard=_Stub)
 _stub_module("geopandas", GeoDataFrame=_Stub, read_file=lambda *_, **__: None)
 _stub_module("shapely")
 _stub_module("shapely.geometry", Point=_Stub)
+_stub_module("pycountry")
+_stub_module("matplotlib")
+_stub_module("matplotlib.pyplot", Axes=_Stub, Figure=_Stub)

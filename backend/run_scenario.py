@@ -8,32 +8,32 @@ conduct cost-benefit analysis, calculate impacts, generate map data files, and p
 
 Classes:
 
-- `RunScenario`: 
+- `RunScenario`:
     Orchestrates the execution of scenarios based on provided parameters.
 
 Methods:
 
-- `run_scenario`: 
+- `run_scenario`:
     Entry point to run a scenario based on provided request parameters.
 """
 
-from dataclasses import dataclass, field
 import json
 import sys
+from dataclasses import dataclass, field
 from time import time
-from typing import Any, List, Tuple
+from typing import Any
 
-from climada.entity import DiscRates
 import numpy as np
-
 from base_handler import BaseHandler
+from climada.entity import DiscRates
+from constants import DATA_TEMP_DIR
 from costben.costben_handler import CostBenefitHandler
+from countries.loader import CountryConfigError, load_country_config
 from entity.entity_handler import EntityHandler
 from exposure.exposure_handler import ExposureHandler
 from hazard.hazard_handler import HazardHandler
 from impact.impact_handler import ImpactHandler
 from logger_config import LoggerConfig
-from constants import DATA_TEMP_DIR
 
 
 @dataclass
@@ -46,7 +46,7 @@ class RequestData:
     initialization operations to ensure the parameters are cleansed and processed appropriately.
     """
 
-    adaptation_measures: List[str]
+    adaptation_measures: list[str]
     annual_growth: float
     country_name: str
     entity_filename: str
@@ -56,7 +56,7 @@ class RequestData:
     hazard_type: str
     is_era: bool
     scenario: str
-    time_horizon: Tuple[int, int]
+    time_horizon: tuple[int, int]
     asset_type: str = field(init=False)
     exposure_type: str = field(init=False)
     country_code: str = field(init=False)
@@ -180,28 +180,20 @@ class RunScenario:
 
     def _get_era_discount_rate(self) -> DiscRates:
         """
-        Get the ERA project discount rate based on the request parameters.
+        Get the ERA project discount rate from the country config.
 
-        Calculates the ERA project discount rate based on the country name and reference year.
-        Era project discount is statically calculated:
-        - For Egypt, the average discount rate is 6.89%.
-        - For Thailand, the average discount rate is 0.90%.
-        - For other countries, the average discount rate is 0.0.
+        Reads the country's ``discount_rate`` from ``countries/<ISO3>/config.json``
+        and builds a CLIMADA ``DiscRates`` covering the requested time horizon.
 
-        :return: The ERA discount rates.
+        :return: The ERA discount rates, or ``None`` on failure (the failure is
+            recorded on ``self.status``).
         :rtype: DiscRates
         """
         try:
-            if self.request_data.country_name == "Egypt":
-                average_disc_rate = 0.0689
-            elif self.request_data.country_name == "Thailand":
-                average_disc_rate = 0.0090
-            else:
-                average_disc_rate = 0.0
-
+            config = load_country_config(self.request_data.country_code)
             year_range = np.arange(self.request_data.ref_year, self.request_data.future_year + 1)
             n_years = self.request_data.future_year - self.request_data.ref_year + 1
-            annual_discount = np.ones(n_years) * average_disc_rate
+            annual_discount = np.ones(n_years) * config.discount_rate
             discount_rates = DiscRates(year_range, annual_discount)
             discount_rates.check()
             return discount_rates
@@ -219,62 +211,55 @@ class RunScenario:
         """
         Get the average annual growth rate based on the request parameters.
 
-        Calculates the average annual growth rate based on the country name, exposure type,
-        and whether it's an ERA project calculation.
-        - If it's an ERA calculation:
-            - For economic exposure assets in Egypt:
-                - average annual growth: 4.00%
-            - For non-economic exposure assets in Egupt:
-                - average annual growth: 1.29%
-            - For economic exposure assets in Thailand:
-                - average annual growth: 2.94%
-            - For non-economic exposure assets in Thailand:
-                - average annual growth: -0.22%
-
-        - If it's not an ERA calculation, the method returns the provided annual growth rate.
+        For ERA runs, the rate is read from the country config keyed by the
+        current ``exposure_type`` (returns 0.0 for unmapped sectors). For
+        custom runs, the user-supplied ``annual_growth`` is used.
 
         :return: The average annual growth rate.
         :rtype: float
         """
-        try:
-            growth_rates = {
-                "Egypt": {
-                    "crops": 0.04,
-                    "livestock": 0.04,
-                    "power_plants": 0.04,
-                    "hotels": 0.04,
-                    "hospitalised_people": 0.0129,
-                    "students": 0.0129,
-                    "diarrhea_patients": 0.0129,
-                    "roads": 0.0129,
-                },
-                "Thailand": {
-                    "tree_crops": 0.0294,
-                    "grass_crops": 0.0294,
-                    "wet_markets": 0.0294,
-                    "grass_crops_farmers": -0.0022,
-                    "tree_crops_farmers": -0.0022,
-                    "buddhist_monks": -0.0022,
-                    "diarrhea_patients": -0.0022,
-                    "students": -0.0022,
-                    "roads": -0.0022,
-                },
-            }
-            if self.request_data.is_era:
-                default_growth_rate = 0
-                country_growth_rates = growth_rates.get(self.request_data.country_name, {})
-                growth = country_growth_rates.get(
-                    self.request_data.exposure_type, default_growth_rate
-                )
-            else:
-                growth = self.request_data.annual_growth
+        if not self.request_data.is_era:
+            return self.request_data.annual_growth
 
-            return growth
-        except Exception as e:
+        try:
+            config = load_country_config(self.request_data.country_code)
+        except CountryConfigError as exc:
             self.logger.log(
-                "error", f"An error occurred while setting average annual growth: More info: {e}"
+                "error",
+                f"Country config unavailable for {self.request_data.country_code}; "
+                f"defaulting growth rate to 0. More info: {exc}",
             )
-            return default_growth_rate  # Default growth rate
+            return 0.0
+        return config.annual_growth_rate.get(self.request_data.exposure_type, 0.0)
+
+    def _resolve_return_periods(self) -> tuple:
+        """
+        Resolve hazard return periods from the country config.
+
+        Falls back to the generic hazard-handler defaults when no country
+        config exists or the hazard code is not enumerated for that country.
+        """
+        hazard_code = self.request_data.hazard_code
+        default = self.hazard_handler.get_custom_rp_per_hazard(hazard_code)
+        try:
+            config = load_country_config(self.request_data.country_code)
+        except CountryConfigError:
+            return default
+        return config.return_periods.get(hazard_code, default)
+
+    def _resolve_hazard_intensity_unit(self, entity) -> str:
+        """
+        Look up the impact-function intensity unit for an entity, returning
+        an empty string when no entity is loaded.
+
+        The empty-string default matches ``HazardHandler.get_hazard_intensity_
+        units_from_entity``'s own ``impf.intensity_unit or ""`` fallback, so
+        downstream ``hazard.units = ...`` assignments behave identically on
+        both branches.
+        """
+        if entity is None:
+            return ""
+        return self.hazard_handler.get_hazard_intensity_units_from_entity(entity)
 
     def _run_era_scenario(self):
         """
@@ -300,14 +285,10 @@ class RunScenario:
             )
             entity_present = self.entity_handler.get_entity_from_xlsx(entity_filename)
 
-            hazard_intensity_unit = self.hazard_handler.get_hazard_intensity_units_from_entity(
-                entity_present
-            )
+            hazard_intensity_unit = self._resolve_hazard_intensity_unit(entity_present)
 
-            # Calculate ERA scenario return periods per hazard type
-            return_periods = self.hazard_handler.get_custom_rp_per_hazard(
-                self.request_data.hazard_code
-            )
+            # Resolve scenario return periods per hazard from the country config
+            return_periods = self._resolve_return_periods()
 
             # Set static present year to 2024
             entity_present.exposures.ref_year = self.request_data.ref_year
@@ -478,9 +459,7 @@ class RunScenario:
 
         except Exception as exception:
             status_code = 3000
-            status_message = (
-                "An error occurred while running ERA scenario. " f"More info: {exception}"
-            )
+            status_message = f"An error occurred while running ERA scenario. More info: {exception}"
             self.status.set_error(status_code, status_message)
             self.logger.log("error", status_message)
 
@@ -507,21 +486,17 @@ class RunScenario:
                     self.request_data.entity_filename
                 )
                 exposure_present = entity_present.exposures
-                hazard_intensity_unit = self.hazard_handler.get_hazard_intensity_units_from_entity(
-                    entity_present
-                )
             # Case 2: User fetches exposure datasets from the CLIMADA API
             else:
+                entity_present = None
                 exposure_present = self.exposure_handler.get_exposure_from_api(
                     self.request_data.country_name
                 )
 
-            # Calculate custom scenario return periods per hazard type
-            # This option should be different for custom scenario runs, but there is
-            # no option at the moment for the user to select custom return periods
-            return_periods = self.hazard_handler.get_custom_rp_per_hazard(
-                self.request_data.hazard_code
-            )
+            hazard_intensity_unit = self._resolve_hazard_intensity_unit(entity_present)
+
+            # Resolve scenario return periods per hazard from the country config
+            return_periods = self._resolve_return_periods()
 
             # Set present year for custom scenario from user time horizon selection
             exposure_present.ref_year = self.request_data.ref_year

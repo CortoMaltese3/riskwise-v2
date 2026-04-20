@@ -1,0 +1,28 @@
+{
+  "config_version": 1,
+  "country_code": "EGY",
+  "country_name": "Egypt",
+  "discount_rate": 0.0689,
+  "annual_growth_rate": {
+    "crops": 0.04,
+    "livestock": 0.04,
+    "power_plants": 0.04,
+    "hotels": 0.04,
+    "hospitalised_people": 0.0129,
+    "students": 0.0129,
+    "diarrhea_patients": 0.0129,
+    "roads": 0.0129
+  },
+  "return_periods": {
+    "FL": [2, 5, 10, 25],
+    "D": [10, 25, 50, 75, 100],
+    "HW": [10, 25, 50, 75, 100]
+  },
+  "source_references": [
+    "discount_rate 6.89% — World Bank average lending rate, Egypt, 2023 (UNU-EHS ERA project default; see DECISIONS.md D14)",
+    "annual_growth_rate (economic exposures crops/livestock/power_plants/hotels) 4.00% — UNU-EHS ERA project default for Egypt economic exposures",
+    "annual_growth_rate (non-economic exposures hospitalised_people/students/diarrhea_patients/roads) 1.29% — UNU-EHS ERA project default for Egypt non-economic exposures",
+    "return_periods.FL [2, 5, 10, 25] — UNU-EHS ERA project tailored hazard set for Egypt floods",
+    "return_periods.D / return_periods.HW [10, 25, 50, 75, 100] — CLIMADA default event-set return periods for drought and heatwave hazards"
+  ]
+}

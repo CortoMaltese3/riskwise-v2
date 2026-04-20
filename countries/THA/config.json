@@ -1,0 +1,29 @@
+{
+  "config_version": 1,
+  "country_code": "THA",
+  "country_name": "Thailand",
+  "discount_rate": 0.009,
+  "annual_growth_rate": {
+    "tree_crops": 0.0294,
+    "grass_crops": 0.0294,
+    "wet_markets": 0.0294,
+    "grass_crops_farmers": -0.0022,
+    "tree_crops_farmers": -0.0022,
+    "buddhist_monks": -0.0022,
+    "diarrhea_patients": -0.0022,
+    "students": -0.0022,
+    "roads": -0.0022
+  },
+  "return_periods": {
+    "FL": [2, 5, 10, 25],
+    "D": [10, 25, 50, 75, 100],
+    "HW": [10, 25, 50, 75, 100]
+  },
+  "source_references": [
+    "discount_rate 0.90% — Bank of Thailand policy rate proxy, 2023 (UNU-EHS ERA project default; see DECISIONS.md D14)",
+    "annual_growth_rate (economic exposures tree_crops/grass_crops/wet_markets) 2.94% — UNU-EHS ERA project default for Thailand economic exposures",
+    "annual_growth_rate (non-economic exposures grass_crops_farmers/tree_crops_farmers/buddhist_monks/diarrhea_patients/students/roads) -0.22% — UNU-EHS ERA project default for Thailand non-economic exposures",
+    "return_periods.FL [2, 5, 10, 25] — UNU-EHS ERA project tailored hazard set for Thailand floods",
+    "return_periods.D / return_periods.HW [10, 25, 50, 75, 100] — CLIMADA default event-set return periods for drought and heatwave hazards"
+  ]
+}
