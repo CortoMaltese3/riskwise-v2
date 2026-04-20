@@ -13,14 +13,34 @@ from db.migrations import (
     run_migrations,
     run_startup_migrations,
 )
+from db.scenario_store import (
+    RESULT_TYPES,
+    ScenarioDetail,
+    ScenarioRow,
+    delete_scenario,
+    get_scenario,
+    insert_scenario,
+    list_scenarios,
+    read_result_blobs,
+    update_scenario_metadata,
+)
 
 __all__ = [
     "DB_FILE_NAME",
     "DB_PATH_ENV_VAR",
     "MIGRATIONS_DIR",
     "MigrationError",
+    "RESULT_TYPES",
+    "ScenarioDetail",
+    "ScenarioRow",
+    "delete_scenario",
     "get_connection",
+    "get_scenario",
+    "insert_scenario",
+    "list_scenarios",
+    "read_result_blobs",
     "resolve_db_path",
     "run_migrations",
     "run_startup_migrations",
+    "update_scenario_metadata",
 ]

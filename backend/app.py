@@ -61,7 +61,7 @@ from models import (
     CountriesResponse,
     DataValidateRequest,
     DataValidateResponse,
-    DeleteReportResponse,
+    DeleteScenarioResponse,
     ErrorResponse,
     ExportReportRequest,
     ExportReportResponse,
@@ -71,9 +71,10 @@ from models import (
     MacroChartDataResponse,
     MacroCredOutputResponse,
     MeasuresResponse,
-    ReportListResponse,
-    ReportResponse,
+    SaveScenarioRequest,
     SaveScenarioResponse,
+    ScenarioDetailResponse,
+    ScenarioListResponse,
     ScenarioRunRequest,
     TempClearResponse,
     WaterfallResponse,
@@ -188,18 +189,6 @@ def _dispatch_sync(script_name: str, data: Any) -> dict:
         from run_clear_temp_dir import RunClearTempDir
 
         return RunClearTempDir().run_clear_temp_dir()
-    if script_name == "run_add_to_ouput.py":
-        from run_add_to_ouput import RunAddToOutput
-
-        return RunAddToOutput(data).run_add_to_output()
-    if script_name == "run_remove_report.py":
-        from run_remove_report import RunRemoveReport
-
-        return RunRemoveReport(data).run_remove_report()
-    if script_name == "run_fetch_reports.py":
-        from run_fetch_reports import RunFetchReports
-
-        return RunFetchReports().run_fetch_reports()
     if script_name == "run_export_report.py":
         from run_export_report import RunExportReport
 
@@ -427,21 +416,37 @@ async def measures(country: str, hazard: str) -> dict:
     return await _dispatch("run_fetch_measures.py", {"countryName": country, "hazardType": hazard})
 
 
-@app.get(f"{API_PREFIX}/scenarios", response_model=ReportListResponse)
-async def list_scenarios() -> dict:
-    return await _dispatch("run_fetch_reports.py", None)
+def _status_ok() -> dict:
+    return {"code": 2000, "message": "ok"}
 
 
-@app.get(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=ReportResponse)
-async def get_scenario(scenario_id: str) -> dict:
-    result = await _dispatch("run_fetch_reports.py", None)
-    reports = result.get("data", []) or []
-    match = next((r for r in reports if r.get("scenario_id") == scenario_id), None)
-    if match is None:
+def _scenario_row_to_dict(row: Any) -> dict:
+    from dataclasses import asdict
+
+    return asdict(row)
+
+
+@app.get(f"{API_PREFIX}/scenarios", response_model=ScenarioListResponse)
+async def list_scenarios_endpoint() -> dict:
+    from db import list_scenarios
+
+    rows = await asyncio.to_thread(list_scenarios)
+    return {"data": [_scenario_row_to_dict(r) for r in rows], "status": _status_ok()}
+
+
+@app.get(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=ScenarioDetailResponse)
+async def get_scenario_endpoint(scenario_id: str) -> dict:
+    from db import get_scenario
+
+    detail = await asyncio.to_thread(get_scenario, scenario_id)
+    if detail is None:
         raise HTTPException(status_code=404, detail="Scenario not found")
     return {
-        "data": match,
-        "status": result.get("status", {"code": 2000, "message": "ok"}),
+        "data": {
+            "scenario": _scenario_row_to_dict(detail.scenario),
+            "results": detail.results,
+        },
+        "status": _status_ok(),
     }
 
 
@@ -452,20 +457,29 @@ async def export_scenario(scenario_id: str, payload: ExportReportRequest) -> dic
 
 
 @app.post(f"{API_PREFIX}/scenarios/{{scenario_id}}/save", response_model=SaveScenarioResponse)
-async def save_scenario(scenario_id: str) -> dict:
-    return await _dispatch("run_add_to_ouput.py", scenario_id)
+async def save_scenario_endpoint(scenario_id: str, payload: SaveScenarioRequest) -> dict:
+    from db import update_scenario_metadata
+
+    row = await asyncio.to_thread(
+        update_scenario_metadata,
+        scenario_id,
+        name=payload.name,
+        tags=payload.tags,
+        notes=payload.notes,
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    return {"data": _scenario_row_to_dict(row), "status": _status_ok()}
 
 
-@app.delete(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=DeleteReportResponse)
-async def delete_scenario(
-    scenario_id: str,
-    report_type: str = "output_data",
-    image: str | None = None,
-) -> dict:
-    report: dict = {"id": scenario_id, "type": report_type}
-    if image:
-        report["image"] = image
-    return await _dispatch("run_remove_report.py", {"report": report})
+@app.delete(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=DeleteScenarioResponse)
+async def delete_scenario_endpoint(scenario_id: str) -> dict:
+    from db import delete_scenario
+
+    removed = await asyncio.to_thread(delete_scenario, scenario_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    return {"data": {"id": scenario_id}, "status": _status_ok()}
 
 
 @app.get(f"{API_PREFIX}/macro/cred-output", response_model=MacroCredOutputResponse)

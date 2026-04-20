@@ -87,34 +87,70 @@ class TestSynchronousEndpoints:
         )
 
     def test_list_scenarios(self, client: TestClient) -> None:
-        expected = {"data": [], "status": {"code": 2000, "message": "ok"}}
-        with patch.object(app_module, "_dispatch_sync", return_value=expected):
+        import db
+        from db.scenario_store import ScenarioRow
+
+        row = ScenarioRow(
+            id="abc",
+            name="My run",
+            tags="flood",
+            notes=None,
+            country="Egypt",
+            hazard_type="flood",
+            scenario="rcp85",
+            exposure_economic="crops",
+            exposure_non_economic="",
+            ref_year=2024,
+            future_year=2050,
+            annual_growth=2.0,
+            is_era=True,
+            app_option="era",
+            status="completed",
+            created_at=None,
+        )
+        with patch.object(db, "list_scenarios", return_value=[row]):
             response = client.get("/api/v1/scenarios")
         assert response.status_code == 200
-        assert response.json() == expected
+        body = response.json()
+        assert body["status"]["code"] == 2000
+        assert body["data"][0]["id"] == "abc"
+        assert body["data"][0]["name"] == "My run"
 
     def test_get_scenario_found(self, client: TestClient) -> None:
-        reports = [
-            {"id": "1", "scenario_id": "abc", "title": "First"},
-            {"id": "2", "scenario_id": "xyz", "title": "Second"},
-        ]
-        with patch.object(
-            app_module,
-            "_dispatch_sync",
-            return_value={"data": reports, "status": {"code": 2000, "message": "ok"}},
-        ):
+        import db
+        from db.scenario_store import ScenarioDetail, ScenarioRow
+
+        row = ScenarioRow(
+            id="xyz",
+            name="Second",
+            tags=None,
+            notes=None,
+            country="Thailand",
+            hazard_type="heatwaves",
+            scenario="rcp45",
+            exposure_economic=None,
+            exposure_non_economic="students",
+            ref_year=2024,
+            future_year=2050,
+            annual_growth=0.0,
+            is_era=False,
+            app_option="explore",
+            status="completed",
+            created_at=None,
+        )
+        detail = ScenarioDetail(scenario=row, results={"impact_summary": "{}"})
+        with patch.object(db, "get_scenario", return_value=detail):
             response = client.get("/api/v1/scenarios/xyz")
         assert response.status_code == 200
         body = response.json()
-        assert body["data"]["scenario_id"] == "xyz"
+        assert body["data"]["scenario"]["id"] == "xyz"
+        assert body["data"]["results"] == {"impact_summary": "{}"}
         assert body["status"]["code"] == 2000
 
     def test_get_scenario_not_found(self, client: TestClient) -> None:
-        with patch.object(
-            app_module,
-            "_dispatch_sync",
-            return_value={"data": [], "status": {"code": 2000}},
-        ):
+        import db
+
+        with patch.object(db, "get_scenario", return_value=None):
             response = client.get("/api/v1/scenarios/missing")
         assert response.status_code == 404
 
@@ -134,42 +170,65 @@ class TestSynchronousEndpoints:
         assert args[1]["scenarioRunCode"] == "abc"
         assert args[1]["exportType"] == "excel"
 
-    def test_save_scenario(self, client: TestClient) -> None:
-        with patch.object(
-            app_module,
-            "_dispatch_sync",
-            return_value={"data": {"data": {}}, "status": {"code": 2000, "message": "ok"}},
-        ) as m:
-            response = client.post("/api/v1/scenarios/abc/save")
-        assert response.status_code == 200
-        m.assert_called_once_with("run_add_to_ouput.py", "abc")
+    def test_save_scenario_updates_metadata(self, client: TestClient) -> None:
+        import db
+        from db.scenario_store import ScenarioRow
 
-    def test_delete_scenario_output_data(self, client: TestClient) -> None:
-        with patch.object(
-            app_module,
-            "_dispatch_sync",
-            return_value={"data": {}, "status": {"code": 2000}},
-        ) as m:
-            response = client.delete("/api/v1/scenarios/abc", params={"report_type": "output_data"})
-        assert response.status_code == 200
-        args, _ = m.call_args
-        assert args[0] == "run_remove_report.py"
-        assert args[1] == {"report": {"id": "abc", "type": "output_data"}}
-
-    def test_delete_scenario_image(self, client: TestClient) -> None:
-        with patch.object(
-            app_module,
-            "_dispatch_sync",
-            return_value={"data": {}, "status": {"code": 2000}},
-        ) as m:
-            response = client.delete(
-                "/api/v1/scenarios/abc",
-                params={"report_type": "exposure_map_data", "image": "/path/to/img.png"},
+        updated = ScenarioRow(
+            id="abc",
+            name="My scenario",
+            tags="flood, egypt",
+            notes="first save",
+            country="Egypt",
+            hazard_type="flood",
+            scenario="rcp85",
+            exposure_economic="crops",
+            exposure_non_economic=None,
+            ref_year=2024,
+            future_year=2050,
+            annual_growth=1.5,
+            is_era=True,
+            app_option="era",
+            status="completed",
+            created_at=None,
+        )
+        with patch.object(db, "update_scenario_metadata", return_value=updated) as upd:
+            response = client.post(
+                "/api/v1/scenarios/abc/save",
+                json={"name": "My scenario", "tags": "flood, egypt", "notes": "first save"},
             )
         assert response.status_code == 200
-        args, _ = m.call_args
-        assert args[1]["report"]["image"] == "/path/to/img.png"
-        assert args[1]["report"]["type"] == "exposure_map_data"
+        body = response.json()
+        assert body["data"]["name"] == "My scenario"
+        assert body["data"]["tags"] == "flood, egypt"
+        upd.assert_called_once()
+
+    def test_save_scenario_missing_name_returns_422(self, client: TestClient) -> None:
+        response = client.post("/api/v1/scenarios/abc/save", json={})
+        assert response.status_code == 422
+
+    def test_save_scenario_unknown_id_returns_404(self, client: TestClient) -> None:
+        import db
+
+        with patch.object(db, "update_scenario_metadata", return_value=None):
+            response = client.post("/api/v1/scenarios/ghost/save", json={"name": "X"})
+        assert response.status_code == 404
+
+    def test_delete_scenario(self, client: TestClient) -> None:
+        import db
+
+        with patch.object(db, "delete_scenario", return_value=True) as m:
+            response = client.delete("/api/v1/scenarios/abc")
+        assert response.status_code == 200
+        assert response.json()["data"] == {"id": "abc"}
+        m.assert_called_once_with("abc")
+
+    def test_delete_scenario_unknown_id_returns_404(self, client: TestClient) -> None:
+        import db
+
+        with patch.object(db, "delete_scenario", return_value=False):
+            response = client.delete("/api/v1/scenarios/ghost")
+        assert response.status_code == 404
 
     def test_macro_cred_output(self, client: TestClient) -> None:
         with patch.object(
@@ -354,11 +413,12 @@ class TestDispatchUnknown:
 
 class TestStructuredErrorEnvelope:
     def test_http_exception_serialized_as_error_envelope(self, client: TestClient) -> None:
-        # Stub the legacy handler so we exercise the explicit 404 branch in
-        # ``get_scenario`` (no CLIMADA in tests).
-        with patch.object(
-            app_module, "_dispatch_sync", return_value={"data": [], "status": {"code": 2000}}
-        ):
+        # Exercise the 404 branch in ``get_scenario_endpoint`` — the DB lookup
+        # returns None and the handler must raise, translating into the
+        # structured error envelope.
+        import db
+
+        with patch.object(db, "get_scenario", return_value=None):
             response = client.get("/api/v1/scenarios/missing-scenario-id")
         assert response.status_code == 404
         body = response.json()

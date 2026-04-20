@@ -128,7 +128,6 @@ module = [
     "backend.impact.test_impact_handler",
     "backend.macroeconomic.*",
     "backend.report.*",
-    "backend.run_add_to_ouput",
     "backend.run_check_data_type",
     "backend.run_clear_temp_dir",
     "backend.run_export_report",
@@ -136,9 +135,7 @@ module = [
     "backend.run_fetch_costbenefit",
     "backend.run_fetch_macro_chart_data",
     "backend.run_fetch_measures",
-    "backend.run_fetch_reports",
     "backend.run_fetch_waterfall",
-    "backend.run_remove_report",
     "backend.run_scenario",
 ]
 ignore_errors = true

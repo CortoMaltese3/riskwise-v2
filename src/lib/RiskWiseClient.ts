@@ -23,13 +23,15 @@ export type DataValidateResponse = Schema<"DataValidateResponse">;
 export type MeasuresResponse = Schema<"MeasuresResponse">;
 export type ScenarioRunRequest = Schema<"ScenarioRunRequest">;
 export type JobAcceptedResponse = Schema<"JobAcceptedResponse">;
-export type ReportListResponse = Schema<"ReportListResponse">;
-export type ReportResponse = Schema<"ReportResponse">;
-export type ReportItem = Schema<"ReportItem">;
+export type ScenarioWorkspaceItem = Schema<"ScenarioWorkspaceItem">;
+export type ScenarioListResponse = Schema<"ScenarioListResponse">;
+export type ScenarioDetailResponse = Schema<"ScenarioDetailResponse">;
+export type ScenarioDetailPayload = Schema<"ScenarioDetailPayload">;
 export type ExportReportRequest = Schema<"ExportReportRequest">;
 export type ExportReportResponse = Schema<"ExportReportResponse">;
+export type SaveScenarioRequest = Schema<"SaveScenarioRequest">;
 export type SaveScenarioResponse = Schema<"SaveScenarioResponse">;
-export type DeleteReportResponse = Schema<"DeleteReportResponse">;
+export type DeleteScenarioResponse = Schema<"DeleteScenarioResponse">;
 export type MacroChartDataRequest = Schema<"MacroChartDataRequest">;
 export type MacroChartDataResponse = Schema<"MacroChartDataResponse">;
 export type MacroCredOutputResponse = Schema<"MacroCredOutputResponse">;
@@ -40,11 +42,6 @@ export type WaterfallCategory = Schema<"WaterfallCategory">;
 export type CostBenefitResponse = Schema<"CostBenefitResponse">;
 export type CostBenefitPayload = Schema<"CostBenefitPayload">;
 export type CostBenefitMeasure = Schema<"CostBenefitMeasure">;
-
-export type DeleteReportQuery = {
-  reportType?: string;
-  image?: string | null;
-};
 
 const http = () => window.api.http;
 
@@ -59,14 +56,6 @@ const post = <T>(path: string, body: unknown): Promise<IpcResult<T>> =>
 
 const del = <T>(path: string): Promise<IpcResult<T>> =>
   http().request<T>("DELETE", path, null, newRequestId());
-
-const buildDeleteScenarioPath = (id: string, query: DeleteReportQuery = {}): string => {
-  const params = new URLSearchParams();
-  if (query.reportType) params.set("report_type", query.reportType);
-  if (query.image) params.set("image", query.image);
-  const qs = params.toString();
-  return `/api/v1/scenarios/${encodeURIComponent(id)}${qs ? `?${qs}` : ""}`;
-};
 
 const RiskWiseClient = {
   health: () => get<HealthResponse>("/api/v1/health"),
@@ -83,18 +72,19 @@ const RiskWiseClient = {
       `/api/v1/measures/${encodeURIComponent(countryName)}/${encodeURIComponent(hazardType)}`
     ),
 
-  fetchReports: () => get<ReportListResponse>("/api/v1/scenarios"),
+  listScenarios: () => get<ScenarioListResponse>("/api/v1/scenarios"),
 
-  getReport: (id: string) => get<ReportResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}`),
+  getScenario: (id: string) =>
+    get<ScenarioDetailResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}`),
 
   exportReport: (id: string, body: ExportReportRequest) =>
     post<ExportReportResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}/export`, body),
 
-  saveScenario: (id: string) =>
-    post<SaveScenarioResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}/save`, {}),
+  saveScenario: (id: string, body: SaveScenarioRequest) =>
+    post<SaveScenarioResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}/save`, body),
 
-  removeReport: (id: string, query: DeleteReportQuery = {}) =>
-    del<DeleteReportResponse>(buildDeleteScenarioPath(id, query)),
+  deleteScenario: (id: string) =>
+    del<DeleteScenarioResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}`),
 
   fetchCREDOutput: () => get<MacroCredOutputResponse>("/api/v1/macro/cred-output"),
 

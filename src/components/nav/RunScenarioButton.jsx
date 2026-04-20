@@ -6,6 +6,8 @@ import LoadingButton from "@mui/lab/LoadingButton";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
+import SaveScenarioDialog from "../workspace/SaveScenarioDialog";
+import { useReportTools } from "../../utils/reportTools";
 import useStore from "../../store";
 
 const RunScenarioButton = () => {
@@ -37,6 +39,8 @@ const RunScenarioButton = () => {
 
   const [isRunButtonLoading, setIsRunButtonLoading] = useState(false);
   const [isRunButtonDisabled, setIsRunButtonDisabled] = useState(true);
+  const [saveDialog, setSaveDialog] = useState({ open: false, id: null, name: "" });
+  const { fetchReports } = useReportTools();
 
   const handleRunButton = () => {
     if (
@@ -100,8 +104,15 @@ const RunScenarioButton = () => {
           : setAlertSeverity("error");
         setAlertShowMessage(true);
         setMapTitle(response.result.data.mapTitle);
-        setScenarioRunCode();
+        setScenarioRunCode(response.result.data.scenarioId);
         setIsScenarioRunCompleted(true);
+        if (response.result.data.scenarioId) {
+          setSaveDialog({
+            open: true,
+            id: response.result.data.scenarioId,
+            name: response.result.data.mapTitle || "",
+          });
+        }
       })
       .catch((error) => {
         setIsRunButtonLoading(false);
@@ -118,6 +129,13 @@ const RunScenarioButton = () => {
 
   return (
     <Box sx={{ textAlign: "center", mt: 2 }}>
+      <SaveScenarioDialog
+        open={saveDialog.open}
+        scenarioId={saveDialog.id}
+        defaultName={saveDialog.name}
+        onClose={() => setSaveDialog((s) => ({ ...s, open: false }))}
+        onSaved={() => fetchReports()}
+      />
       {!isRunButtonLoading ? (
         <Button
           key="runButton"

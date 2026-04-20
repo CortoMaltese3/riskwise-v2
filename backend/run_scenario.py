@@ -17,6 +17,7 @@ Classes:
 
 import json
 import sys
+import uuid
 from dataclasses import dataclass, field
 from time import time
 from typing import Any
@@ -27,6 +28,7 @@ from climada.entity import DiscRates
 from constants import DATA_TEMP_DIR
 from costben.costben_handler import CostBenefitHandler
 from countries.loader import CountryConfigError, load_country_config
+from db import insert_scenario, read_result_blobs
 from entity.entity_handler import EntityHandler
 from exposure.exposure_handler import ExposureHandler
 from hazard.hazard_handler import HazardHandler
@@ -403,12 +405,61 @@ class RunScenario:
         }
         self.base_handler.create_results_metadata_file(metadata)
 
+        scenario_id: str | None = None
+        if self.status.code == 2000:
+            scenario_id = self._persist_to_db(map_title, metadata)
+
         response = {
-            "data": {"mapTitle": map_title},
+            "data": {
+                "mapTitle": map_title,
+                "scenarioId": scenario_id,
+            },
             "status": self.status.get_status(),
         }
         self.logger.log("info", f"Finished running scenario in {time() - initial_time}sec.")
         return response
+
+    def _persist_to_db(self, map_title: str, metadata: dict) -> str | None:
+        """Write the run to DuckDB: one ``scenarios`` row + N result blobs.
+
+        Failures are logged but do not flip ``self.status`` — the in-memory
+        response is still useful to the UI, and the next save-as attempt
+        can always re-insert by UUID.
+        """
+        try:
+            scenario_id = str(uuid.uuid4())
+            params = {
+                "country": self.request_data.country_name,
+                "hazard_type": self.request_data.hazard_type,
+                "scenario": self.request_data.scenario,
+                "exposure_economic": self.request_data.exposure_economic,
+                "exposure_non_economic": self.request_data.exposure_non_economic,
+                "ref_year": self.request_data.ref_year,
+                "future_year": self.request_data.future_year,
+                "annual_growth": self.request_data.annual_growth,
+                "is_era": self.request_data.is_era,
+                "app_option": metadata["app_option"],
+            }
+            results = read_result_blobs(DATA_TEMP_DIR)
+            # ``impact_summary`` is the run metadata + the derived map title;
+            # it exists so the workspace list can repopulate without having
+            # to inflate the geojson blobs.
+            summary = {**metadata, "map_title": map_title}
+            results["impact_summary"] = json.dumps(summary).encode("utf-8")
+
+            insert_scenario(
+                scenario_id,
+                params,
+                results,
+                name=map_title,
+            )
+            return scenario_id
+        except Exception as exc:
+            self.logger.log(
+                "error",
+                f"Failed to persist scenario to DuckDB. More info: {exc}",
+            )
+            return None
 
 
 if __name__ == "__main__":

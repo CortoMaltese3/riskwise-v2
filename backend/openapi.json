@@ -232,7 +232,7 @@
         "title": "DataValidateResponse",
         "type": "object"
       },
-      "DeleteReportResponse": {
+      "DeleteScenarioResponse": {
         "properties": {
           "data": {
             "additionalProperties": true,
@@ -247,7 +247,7 @@
           "data",
           "status"
         ],
-        "title": "DeleteReportResponse",
+        "title": "DeleteScenarioResponse",
         "type": "object"
       },
       "ExportReportData": {
@@ -478,27 +478,16 @@
         "title": "MeasuresResponse",
         "type": "object"
       },
-      "ReportItem": {
-        "additionalProperties": true,
-        "description": "One persisted report row.\n\nThe legacy storage layer attaches arbitrary metadata to each report; we\naccept any extra keys and only validate the ones the UI actively reads.",
+      "SaveScenarioRequest": {
+        "additionalProperties": false,
+        "description": "Body for ``POST /api/v1/scenarios/{id}/save`` \u2014 the save-as dialog.",
         "properties": {
-          "data": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Data"
-          },
-          "id": {
-            "title": "Id",
+          "name": {
+            "minLength": 1,
+            "title": "Name",
             "type": "string"
           },
-          "image": {
+          "notes": {
             "anyOf": [
               {
                 "type": "string"
@@ -507,9 +496,9 @@
                 "type": "null"
               }
             ],
-            "title": "Image"
+            "title": "Notes"
           },
-          "scenario_id": {
+          "tags": {
             "anyOf": [
               {
                 "type": "string"
@@ -518,66 +507,19 @@
                 "type": "null"
               }
             ],
-            "title": "Scenario Id"
-          },
-          "type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Type"
+            "title": "Tags"
           }
         },
         "required": [
-          "id"
+          "name"
         ],
-        "title": "ReportItem",
-        "type": "object"
-      },
-      "ReportListResponse": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/ReportItem"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "status": {
-            "$ref": "#/components/schemas/Status"
-          }
-        },
-        "required": [
-          "data",
-          "status"
-        ],
-        "title": "ReportListResponse",
-        "type": "object"
-      },
-      "ReportResponse": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ReportItem"
-          },
-          "status": {
-            "$ref": "#/components/schemas/Status"
-          }
-        },
-        "required": [
-          "data",
-          "status"
-        ],
-        "title": "ReportResponse",
+        "title": "SaveScenarioRequest",
         "type": "object"
       },
       "SaveScenarioResponse": {
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/SaveScenarioResponseData"
+            "$ref": "#/components/schemas/ScenarioWorkspaceItem"
           },
           "status": {
             "$ref": "#/components/schemas/Status"
@@ -590,18 +532,60 @@
         "title": "SaveScenarioResponse",
         "type": "object"
       },
-      "SaveScenarioResponseData": {
+      "ScenarioDetailPayload": {
+        "description": "Full scenario: metadata row plus the result blobs keyed by type.\n\nResult values are pre-decoded JSON strings \u2014 the frontend parses them\nas needed. Storing raw strings keeps the payload auditable at the\nnetwork boundary without adding a per-type Pydantic schema here.",
         "properties": {
-          "data": {
-            "additionalProperties": true,
-            "title": "Data",
+          "results": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Results",
             "type": "object"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/ScenarioWorkspaceItem"
           }
         },
         "required": [
-          "data"
+          "scenario"
         ],
-        "title": "SaveScenarioResponseData",
+        "title": "ScenarioDetailPayload",
+        "type": "object"
+      },
+      "ScenarioDetailResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ScenarioDetailPayload"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "ScenarioDetailResponse",
+        "type": "object"
+      },
+      "ScenarioListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioWorkspaceItem"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "ScenarioListResponse",
         "type": "object"
       },
       "ScenarioRunRequest": {
@@ -726,6 +710,186 @@
           }
         },
         "title": "ScenarioRunRequest",
+        "type": "object"
+      },
+      "ScenarioWorkspaceItem": {
+        "description": "A saved-scenario row as it appears in the workspace list.",
+        "properties": {
+          "annual_growth": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annual Growth"
+          },
+          "app_option": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Option"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "exposure_economic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Economic"
+          },
+          "exposure_non_economic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Non Economic"
+          },
+          "future_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Future Year"
+          },
+          "hazard_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hazard Type"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_era": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Era"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "ref_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref Year"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "ScenarioWorkspaceItem",
         "type": "object"
       },
       "Status": {
@@ -1240,25 +1404,25 @@
     },
     "/api/v1/scenarios": {
       "get": {
-        "operationId": "list_scenarios_api_v1_scenarios_get",
+        "operationId": "list_scenarios_endpoint_api_v1_scenarios_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReportListResponse"
+                  "$ref": "#/components/schemas/ScenarioListResponse"
                 }
               }
             },
             "description": "Successful Response"
           }
         },
-        "summary": "List Scenarios"
+        "summary": "List Scenarios Endpoint"
       }
     },
     "/api/v1/scenarios/{scenario_id}": {
       "delete": {
-        "operationId": "delete_scenario_api_v1_scenarios__scenario_id__delete",
+        "operationId": "delete_scenario_endpoint_api_v1_scenarios__scenario_id__delete",
         "parameters": [
           {
             "in": "path",
@@ -1268,32 +1432,6 @@
               "title": "Scenario Id",
               "type": "string"
             }
-          },
-          {
-            "in": "query",
-            "name": "report_type",
-            "required": false,
-            "schema": {
-              "default": "output_data",
-              "title": "Report Type",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "image",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Image"
-            }
           }
         ],
         "responses": {
@@ -1301,7 +1439,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeleteReportResponse"
+                  "$ref": "#/components/schemas/DeleteScenarioResponse"
                 }
               }
             },
@@ -1318,10 +1456,10 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Delete Scenario"
+        "summary": "Delete Scenario Endpoint"
       },
       "get": {
-        "operationId": "get_scenario_api_v1_scenarios__scenario_id__get",
+        "operationId": "get_scenario_endpoint_api_v1_scenarios__scenario_id__get",
         "parameters": [
           {
             "in": "path",
@@ -1338,7 +1476,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReportResponse"
+                  "$ref": "#/components/schemas/ScenarioDetailResponse"
                 }
               }
             },
@@ -1355,7 +1493,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Scenario"
+        "summary": "Get Scenario Endpoint"
       }
     },
     "/api/v1/scenarios/{scenario_id}/export": {
@@ -1409,7 +1547,7 @@
     },
     "/api/v1/scenarios/{scenario_id}/save": {
       "post": {
-        "operationId": "save_scenario_api_v1_scenarios__scenario_id__save_post",
+        "operationId": "save_scenario_endpoint_api_v1_scenarios__scenario_id__save_post",
         "parameters": [
           {
             "in": "path",
@@ -1421,6 +1559,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveScenarioRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
@@ -1443,7 +1591,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Save Scenario"
+        "summary": "Save Scenario Endpoint"
       }
     },
     "/api/v1/temp/clear": {
