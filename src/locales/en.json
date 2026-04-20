@@ -142,6 +142,8 @@
     "card_country_title": "Country",
     "card_country_egypt": "Egypt",
     "card_country_thailand": "Thailand",
+    "card_country_source_builtin": "Built-in",
+    "card_country_source_custom": "Custom",
     "card_country_remarks": "Remarks: The selected country will be the country of analysis. Beware that a change of country requires all data to be selected anew.",
     "card_country_macro_remarks": "Remarks: The selected country will be the country of analysis. Beware that a change of country requires all data to be selected anew.",
     "card_hazard_title": "Hazard",

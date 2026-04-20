@@ -267,7 +267,12 @@ class TestSynchronousEndpoints:
         assert body["status"]["code"] == 2000
         assert isinstance(body["data"], list)
         assert body["data"]
-        assert all("code" in c and "name" in c for c in body["data"])
+        assert all("code" in c and "name" in c and "source" in c for c in body["data"])
+        # Issue #56 Scenario 2: each entry labels its origin so the
+        # frontend can distinguish built-in from custom drop-ins.
+        assert {c["source"] for c in body["data"]} <= {"builtin", "custom"}
+        codes = {c["code"] for c in body["data"]}
+        assert "EGY" in codes and "THA" in codes
 
     def test_temp_clear(self, client: TestClient) -> None:
         with patch.object(

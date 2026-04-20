@@ -346,6 +346,11 @@ export interface components {
             code: string;
             /** Name */
             name: string;
+            /**
+             * Source
+             * @default builtin
+             */
+            source?: "builtin" | "custom";
         };
         /** DataValidateData */
         DataValidateData: {

@@ -239,11 +239,39 @@ def _verify_shipped_data_manifest() -> None:
         raise
 
 
+def _scan_user_data_countries() -> None:
+    """Build the custom-country registry once at startup.
+
+    Namespace collisions (a custom drop-in that shadows a built-in ISO3)
+    raise :class:`extensibility.ExtensibilityError` and abort the process
+    — this is the structured error Scenario 2 of issue #56 requires. Per-
+    entry schema errors are non-fatal: they are logged as warnings and
+    the rest of the registry still loads.
+    """
+    from extensibility.registry import CountrySource
+    from extensibility.registry import get_registry as get_country_registry
+
+    api_log = get_logger("api")
+    registry = get_country_registry()
+    for iso3, message in registry.errors:
+        api_log.warning("extensibility.custom_country_skipped", iso3=iso3, error=message)
+    api_log.info(
+        "extensibility.registry_loaded",
+        builtin=sum(1 for c in registry.countries if c.source is CountrySource.BUILTIN),
+        custom=sum(1 for c in registry.countries if c.source is CountrySource.CUSTOM),
+        skipped=len(registry.errors),
+    )
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
     # Manifest verification runs before migrations so a tampered build
     # aborts the process before it touches the user's scenario DB.
     _verify_shipped_data_manifest()
+    # Scan user-data early so a namespace collision (custom country that
+    # shadows a built-in ISO3) aborts startup with a clear error instead
+    # of surfacing lazily on the first /api/v1/countries request.
+    _scan_user_data_countries()
     # DuckDB migrations must complete before any endpoint is served;
     # otherwise the first request could hit a half-built schema.
     run_startup_migrations()
@@ -530,9 +558,20 @@ async def scenario_cost_benefit() -> dict:
 
 @app.get(f"{API_PREFIX}/countries", response_model=CountriesResponse)
 async def countries() -> dict:
-    import pycountry
+    """Return the countries RISK WISE can run — built-in plus custom drop-ins.
 
-    data = [{"code": c.alpha_3, "name": c.name} for c in pycountry.countries]
+    Each entry carries a ``source`` field (``"builtin"`` or ``"custom"``)
+    so the frontend can label them distinctly (issue #56, Scenario 2).
+    Invalid custom drop-ins are skipped at startup (see
+    :func:`_scan_user_data_countries`) and do not appear here.
+    """
+    from extensibility.registry import get_registry as get_country_registry
+
+    registry = get_country_registry()
+    data = [
+        {"code": entry.code, "name": entry.name, "source": entry.source.value}
+        for entry in registry.countries
+    ]
     return {"data": data, "status": {"code": 2000, "message": "ok"}}
 
 

@@ -45,6 +45,25 @@ _DATA_HAZARDS_DIR = Path(__file__).resolve().parent.parent / "data" / "hazards"
 _COUNTRIES_DIR = Path(__file__).resolve().parent.parent / "countries"
 
 
+def _resolve_country_config_path(country_code: str) -> Path:
+    """Return the ``config.json`` path for ``country_code`` (built-in or custom).
+
+    The extensibility registry owns the mapping from ISO3 → directory, so
+    custom drop-ins under ``<user-data>/countries/<ISO3>`` return the
+    user-data path here and the provenance SHA points at the same file
+    the loader actually read. Unknown codes fall through to the built-in
+    tree so the empty-path branch in provenance collection behaves exactly
+    as before.
+    """
+    from extensibility.registry import get_registry as get_country_registry
+
+    iso3 = country_code.upper()
+    entry = get_country_registry().get(iso3)
+    if entry is not None:
+        return entry.config_path
+    return _COUNTRIES_DIR / iso3 / "config.json"
+
+
 @dataclass
 class RequestData:
     """Plain data container for a scenario request.
@@ -439,11 +458,17 @@ class RunScenario:
         loaded (hashed by SHA-256) and the country config (hashed likewise).
         ``config_version`` is the integer version from the country config,
         stringified so DuckDB stores it verbatim.
+
+        For custom countries (drop-ins under ``<user-data>/countries/<ISO3>``)
+        the extensibility registry resolves the correct ``config.json`` path
+        — so Scenario 5 of issue #56 gets the custom ``config_version`` and
+        ``country_config_sha256`` recorded on the scenarios row, not the
+        built-in ones.
         """
         entity_path = _DATA_ENTITIES_DIR / self.request_data.entity_filename
         hazard_path = _DATA_HAZARDS_DIR / self.request_data.hazard_filename
-        country_config_path = (
-            _COUNTRIES_DIR / self.request_data.country_code / "config.json"
+        country_config_path = _resolve_country_config_path(
+            self.request_data.country_code
         )
         config_version_value = ""
         try:

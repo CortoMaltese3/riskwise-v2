@@ -1,26 +1,58 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardActionArea, Typography, CardContent } from "@mui/material";
+import { Box, Card, CardActionArea, Chip, Typography, CardContent } from "@mui/material";
 import useStore from "../../store";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 
-const countries = ["egypt", "thailand"];
+// Mirror CountryCard — macro screen picks from the same registry-backed
+// list so a custom country (user-data drop-in) appears on both pages
+// with the same Built-in / Custom labeling.
+const BUILTIN_LABEL_KEYS = {
+  EGY: "card_country_egypt",
+  THA: "card_country_thailand",
+};
+
+const countryKey = (country) => country.name.toLowerCase();
 
 const CountryMacroCard = () => {
   const { t } = useTranslation();
   const { selectedMacroCountry, setSelectedMacroCountry } = useStore();
+  const [countries, setCountries] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    RiskWiseClient.fetchCountries()
+      .then((res) => {
+        if (cancelled) return;
+        if (res && res.success && res.result && Array.isArray(res.result.data)) {
+          setCountries(res.result.data);
+        }
+      })
+      .catch(() => {
+        // Backend unavailable: empty list is fine — nothing selectable.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSelect = async (country) => {
-    if (selectedMacroCountry === country) {
+    const key = countryKey(country);
+    if (selectedMacroCountry === key) {
       setSelectedMacroCountry(""); // Deselect if already selected
     } else {
-      setSelectedMacroCountry(country);
+      setSelectedMacroCountry(key);
     }
-    // Clear the temp directory to reset maps
     await window.electron.clearTempDir();
   };
 
-  const isButtonSelected = (country) => selectedMacroCountry === country;
+  const isButtonSelected = (country) => selectedMacroCountry === countryKey(country);
+
+  const labelFor = (country) => {
+    const tkey = BUILTIN_LABEL_KEYS[country.code];
+    return tkey ? t(tkey) : country.name;
+  };
 
   return (
     <Card
@@ -49,36 +81,45 @@ const CountryMacroCard = () => {
         >
           {t("card_country_title")}
         </Typography>
-        {/* Flex container for buttons, make sure it's not wrapping and it's filling the width */}
-        <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "row",
+            flexWrap: "wrap",
+            justifyContent: "center",
+          }}
+        >
           {countries.map((country) => (
             <CardActionArea
-              key={country}
+              key={country.code}
               onClick={() => handleSelect(country)}
               sx={{
                 backgroundColor: isButtonSelected(country) ? "#F79191" : "#FFCCCC",
                 flexGrow: 1,
                 borderRadius: "8px",
-                marginLeft: 0,
-                marginRight: 0,
                 textAlign: "center",
                 padding: "8px 0",
-                margin: "8px", // Keep some space between the buttons
-                "&:first-of-type": {
-                  marginLeft: 0, // Remove left margin for the first button
-                },
-                "&:last-of-type": {
-                  marginRight: 0, // Remove right margin for the last button
-                },
-                transition: "transform 0.1s ease-in-out", // Add transition for transform
+                margin: "8px",
+                transition: "transform 0.1s ease-in-out",
                 "&:active": {
-                  transform: "scale(0.96)", // Slightly scale down when clicked
+                  transform: "scale(0.96)",
                 },
               }}
             >
               <Typography variant="body1" color="text.primary">
-                {t(`card_country_${country}`)}
+                {labelFor(country)}
               </Typography>
+              <Chip
+                label={
+                  country.source === "custom"
+                    ? t("card_country_source_custom")
+                    : t("card_country_source_builtin")
+                }
+                size="small"
+                color={country.source === "custom" ? "secondary" : "primary"}
+                variant="outlined"
+                sx={{ marginTop: "4px" }}
+              />
             </CardActionArea>
           ))}
         </Box>

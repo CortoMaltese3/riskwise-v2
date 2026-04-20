@@ -60,3 +60,17 @@ _stub_module("geopandas", GeoDataFrame=_Stub, read_file=lambda *_, **__: None)
 _stub_module("shapely")
 _stub_module("shapely.geometry", Point=_Stub)
 _stub_module("pycountry")
+
+
+import os as _os  # noqa: E402
+
+
+def pytest_configure(config) -> None:  # noqa: ARG001
+    """Force an isolated user-data scan root for the tests suite.
+
+    Without this, a developer's local ``%APPDATA%/RISK WISE/user-data``
+    drop-in would leak into tests that instantiate the extensibility
+    registry via its default path. Tests that want a specific scan root
+    pass ``user_data_countries_dir=`` explicitly.
+    """
+    _os.environ.setdefault("RISKWISE_USER_DATA_DIR", "")
