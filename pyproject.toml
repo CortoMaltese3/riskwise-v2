@@ -93,7 +93,11 @@ extend-exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W", "B", "UP"]
+# ``NPY002`` enforces the scientific-reproducibility rule from issue #55:
+# no ``np.random.<global>`` calls. Analysts must derive a Generator via
+# ``np.random.default_rng(seed)`` so every stochastic step inherits the
+# scenario's stored seed.
+select = ["E", "F", "I", "W", "B", "UP", "NPY002"]
 
 [tool.mypy]
 python_version = "3.11"

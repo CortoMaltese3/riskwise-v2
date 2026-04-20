@@ -54,11 +54,25 @@ def _params() -> dict:
     }
 
 
+def _provenance() -> dict:
+    return {
+        "app_version": "2.0.0-dev",
+        "engine_version": "2.0.0-dev",
+        "climada_version": "4.1.1",
+        "entity_data_sha256": "a" * 64,
+        "hazard_data_sha256": "b" * 64,
+        "country_config_sha256": "c" * 64,
+        "config_version": "1",
+        "random_seed": 42,
+    }
+
+
 def test_insert_and_list_scenarios(tmp_db: Path) -> None:
     insert_scenario(
         "s-1",
         _params(),
         results={"impact_summary": b"{}"},
+        provenance=_provenance(),
         name="Egypt flood run",
         tags="flood,egypt",
         notes="first save",
@@ -83,6 +97,7 @@ def test_insert_and_get_returns_results(tmp_db: Path) -> None:
             "impact_summary": b'{"country_name":"egypt"}',
             "waterfall_data": b'{"rows":[]}',
         },
+        provenance=_provenance(),
     )
 
     detail = get_scenario("s-2")
@@ -94,11 +109,21 @@ def test_insert_and_get_returns_results(tmp_db: Path) -> None:
 
 def test_unknown_result_type_is_rejected(tmp_db: Path) -> None:
     with pytest.raises(ValueError, match="Unknown result_type"):
-        insert_scenario("s-bad", _params(), results={"not_a_real_type": b"{}"})
+        insert_scenario(
+            "s-bad",
+            _params(),
+            results={"not_a_real_type": b"{}"},
+            provenance=_provenance(),
+        )
 
 
 def test_update_scenario_metadata_roundtrip(tmp_db: Path) -> None:
-    insert_scenario("s-3", _params(), results={"impact_summary": b"{}"})
+    insert_scenario(
+        "s-3",
+        _params(),
+        results={"impact_summary": b"{}"},
+        provenance=_provenance(),
+    )
 
     updated = update_scenario_metadata("s-3", name="renamed", tags="a,b", notes="new")
     assert updated is not None
@@ -120,6 +145,7 @@ def test_delete_scenario_removes_child_rows(tmp_db: Path) -> None:
         "s-4",
         _params(),
         results={"impact_summary": b"{}", "hazard_geojson": b"{}"},
+        provenance=_provenance(),
     )
 
     # Seed a snapshot row so we can verify cascading deletes exercise both
