@@ -431,46 +431,6 @@ class ImpactHandler:
 
         return 2000
 
-    def assign_levels(self, impact_gdf, percentile_values):
-        for rp, levels in percentile_values.items():
-            # Determine if the levels are ascending or descending
-            is_ascending = levels[0] < levels[-1]
-
-            # Initialize an empty list to store the levels
-            level_column = []
-
-            # Iterate through each row in the DataFrame
-            for index, row in impact_gdf.iterrows():
-                value = row[rp]
-
-                # Determine the level based on the value
-                if is_ascending:
-                    if value < levels[0]:
-                        level_column.append(1)
-                    elif value >= levels[-1]:
-                        level_column.append(len(levels))
-                    else:
-                        for i in range(1, len(levels)):
-                            if levels[i - 1] <= value < levels[i]:
-                                level_column.append(i)
-                                break
-                else:
-                    if value > levels[0]:
-                        level_column.append(1)
-                    elif value <= levels[-1]:
-                        level_column.append(len(levels))
-                    else:
-                        for i in range(1, len(levels)):
-                            # Adjusted comparison to ensure correct level assignment
-                            if levels[i - 1] >= value > levels[i]:
-                                level_column.append(i)
-                                break
-
-            # Add the level column to the DataFrame
-            impact_gdf[rp + "_level"] = level_column
-
-        return impact_gdf
-
     def generate_impact_geojson(
         self,
         impact: Impact,
@@ -533,7 +493,7 @@ class ImpactHandler:
                 percentile_values[f"rp{rp}"].insert(0, 0)
 
             # Assign levels based on the percentile values
-            impact_gdf = self.assign_levels(impact_gdf, percentile_values)
+            impact_gdf = self.base_handler.assign_levels(impact_gdf, percentile_values)
 
             # Spatial join with administrative areas
             joined_gdf = gpd.sjoin(impact_gdf, admin_gdf, how="left", predicate="within")
