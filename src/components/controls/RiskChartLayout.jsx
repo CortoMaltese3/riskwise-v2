@@ -1,31 +1,43 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Paper, Typography, Box } from "@mui/material";
+import { Box, Paper, Typography } from "@mui/material";
+
+import RiskWiseClient from "../../lib/RiskWiseClient";
+import WaterfallChart from "../charts/WaterfallChart";
+import useStore from "../../store";
+
+const STATUS_OK = 2000;
 
 const RiskChartLayout = () => {
   const { t } = useTranslation();
-  const [riskChartUrl, setRiskChartUrl] = useState(null);
-
-  const fetchRiskChart = async () => {
-    try {
-      const tempPath = await window.electron.fetchTempDir();
-      const response = await fetch(`${tempPath}/risks_waterfall_plot.png`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      // Assuming the image is accessible via URL directly after fetching
-      setRiskChartUrl(`${tempPath}/risks_waterfall_plot.png`);
-    } catch (error) {
-      console.error("Error fetching risk chart data:", error);
-      setRiskChartUrl(null);
-    }
-  };
+  const setWaterfallChartRef = useStore((state) => state.setWaterfallChartRef);
+  const [waterfallData, setWaterfallData] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    fetchRiskChart();
-  }, []); // Fetch the risk chart when the component mounts
+    let cancelled = false;
+    (async () => {
+      const response = await RiskWiseClient.fetchWaterfallData();
+      if (cancelled) return;
+      if (!response.success) {
+        setErrorMessage(response.error.message);
+        setWaterfallData(null);
+        return;
+      }
+      const { data, status } = response.result;
+      if (status.code !== STATUS_OK) {
+        setErrorMessage(status.message);
+        setWaterfallData(null);
+        return;
+      }
+      setErrorMessage("");
+      setWaterfallData(data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div style={{ height: "80%", display: "flex", flexDirection: "column" }}>
@@ -42,21 +54,21 @@ const RiskChartLayout = () => {
           overflow: "hidden",
         }}
       >
-        <Box textAlign="center" p={3} style={{ width: "100%", height: "100%" }}>
-          {riskChartUrl ? (
-            <img
-              src={riskChartUrl}
-              alt="Risk Chart"
-              style={{
-                maxWidth: "80%",
-                maxHeight: "80%",
-                objectFit: "contain",
-                objectPosition: "center center",
-              }}
+        <Box
+          textAlign="center"
+          p={3}
+          style={{ width: "100%", height: "100%" }}
+          aria-label={t("economic_non_economic_risk_display_chart_title")}
+        >
+          {waterfallData ? (
+            <WaterfallChart
+              ref={setWaterfallChartRef}
+              data={waterfallData}
+              errorMessage={errorMessage}
             />
           ) : (
             <Typography variant="body1">
-              {t("economic_non_economic_risk_display_chart_loading_error")}
+              {errorMessage || t("economic_non_economic_risk_display_chart_loading_error")}
             </Typography>
           )}
         </Box>

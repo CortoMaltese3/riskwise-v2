@@ -708,6 +708,13 @@
       },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
@@ -737,6 +744,85 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WaterfallCategory": {
+        "properties": {
+          "base": {
+            "title": "Base",
+            "type": "number"
+          },
+          "key": {
+            "minLength": 1,
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value",
+          "base"
+        ],
+        "title": "WaterfallCategory",
+        "type": "object"
+      },
+      "WaterfallPayload": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/WaterfallCategory"
+            },
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Categories",
+            "type": "array"
+          },
+          "future_year": {
+            "title": "Future Year",
+            "type": "integer"
+          },
+          "measurement_unit": {
+            "default": "",
+            "title": "Measurement Unit",
+            "type": "string"
+          },
+          "present_year": {
+            "title": "Present Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "present_year",
+          "future_year",
+          "categories"
+        ],
+        "title": "WaterfallPayload",
+        "type": "object"
+      },
+      "WaterfallResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WaterfallPayload"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "WaterfallResponse",
         "type": "object"
       }
     }
@@ -961,6 +1047,24 @@
           }
         },
         "summary": "Scenario Run"
+      }
+    },
+    "/api/v1/scenario/waterfall": {
+      "get": {
+        "operationId": "scenario_waterfall_api_v1_scenario_waterfall_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaterfallResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Scenario Waterfall"
       }
     },
     "/api/v1/scenario/{job_id}/cancel": {

@@ -28,26 +28,12 @@ export const useMapTools = () => {
     selectedScenario,
     selectedSubTab,
     selectedTimeHorizon,
+    waterfallChartRef,
   } = useStore();
 
-  const takeScreenshot = (map, filePath) => {
+  const saveBase64Screenshot = (base64data, filePath) => {
     return new Promise((resolve, reject) => {
-      const screenshoter = L.simpleMapScreenshoter().addTo(map);
-      screenshoter
-        .takeScreen("blob")
-        .then((blob) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64data = reader.result.split(",")[1];
-            window.electron.saveScreenshot(base64data, filePath);
-          };
-          reader.readAsDataURL(blob);
-        })
-        .catch((e) => {
-          console.error(e);
-          reject(e); // Reject the promise if an error occurs
-        });
-
+      window.electron.saveScreenshot(base64data, filePath);
       // Listen for the save screenshot response
       window.electron.onSaveScreenshotReply((event, { success, error, filePath }) => {
         if (success) {
@@ -63,6 +49,35 @@ export const useMapTools = () => {
         }
       });
     });
+  };
+
+  const takeScreenshot = (map, filePath) => {
+    return new Promise((resolve, reject) => {
+      const screenshoter = L.simpleMapScreenshoter().addTo(map);
+      screenshoter
+        .takeScreen("blob")
+        .then((blob) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64data = reader.result.split(",")[1];
+            saveBase64Screenshot(base64data, filePath).then(resolve).catch(reject);
+          };
+          reader.readAsDataURL(blob);
+        })
+        .catch((e) => {
+          console.error(e);
+          reject(e); // Reject the promise if an error occurs
+        });
+    });
+  };
+
+  const takeChartScreenshot = (chartInstance, filePath) => {
+    if (!chartInstance || typeof chartInstance.toBase64Image !== "function") {
+      return Promise.reject(new Error("Chart instance not ready for snapshot."));
+    }
+    const dataUrl = chartInstance.toBase64Image("image/png", 1);
+    const base64data = dataUrl.split(",")[1];
+    return saveBase64Screenshot(base64data, filePath);
   };
 
   const handleAddToOutput = () => {
@@ -238,10 +253,9 @@ export const useMapTools = () => {
       selectedSubTab === 0
     ) {
       const id = new Date().getTime().toString();
-      const sourceFile = `${tempPath}\\risks_waterfall_plot.png`;
       const destinationFile = `${reportPath}\\${scenarioRunCode}\\snapshot_risk_plot_data_${id}.png`;
 
-      copyFileToReports(sourceFile, destinationFile)
+      takeChartScreenshot(waterfallChartRef, destinationFile)
         .then(() => {
           handleAddData();
         })

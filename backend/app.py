@@ -75,6 +75,7 @@ from models import (
     SaveScenarioResponse,
     ScenarioRunRequest,
     TempClearResponse,
+    WaterfallResponse,
 )
 from progress import ProgressEvent, progress_callback_var
 
@@ -210,6 +211,10 @@ def _dispatch_sync(script_name: str, data: Any) -> dict:
         from run_fetch_cred_output import RunFetchCredOutput
 
         return RunFetchCredOutput().run_fetch_cred_output()
+    if script_name == "run_fetch_waterfall.py":
+        from run_fetch_waterfall import RunFetchWaterfall
+
+        return RunFetchWaterfall().run_fetch_waterfall()
     raise ValueError(f"Unknown script: {script_name}")
 
 
@@ -466,6 +471,11 @@ async def macro_cred_output() -> dict:
 @app.post(f"{API_PREFIX}/macro/chart-data", response_model=MacroChartDataResponse)
 async def macro_chart_data(payload: MacroChartDataRequest) -> dict:
     return await _dispatch("run_fetch_macro_chart_data.py", payload.model_dump())
+
+
+@app.get(f"{API_PREFIX}/scenario/waterfall", response_model=WaterfallResponse)
+async def scenario_waterfall() -> dict:
+    return await _dispatch("run_fetch_waterfall.py", None)
 
 
 @app.get(f"{API_PREFIX}/countries", response_model=CountriesResponse)

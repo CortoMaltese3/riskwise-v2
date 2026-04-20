@@ -18,14 +18,16 @@ Methods:
     Load discount rates from an Excel file.
 - `calculate_cost_benefit`:
     Calculate cost-benefit analysis based on current and future hazard and entity data.
-- `plot_waterfall`:
-    Plot a waterfall chart for the cost-benefit analysis.
+- `compute_waterfall_data`:
+    Compute the structured waterfall payload for the frontend.
 - `plot_cost_benefit`:
     Plot the cost-benefit chart for the cost-benefit analysis.
 """
 
-from climada.engine import CostBenefit
-from climada.engine.cost_benefit import risk_aai_agg
+import json
+
+from climada.engine import CostBenefit, ImpactCalc
+from climada.engine.cost_benefit import NO_MEASURE, risk_aai_agg
 from climada.entity import DiscRates, Entity
 from climada.entity.measures import MeasureSet
 from climada.hazard import Hazard
@@ -35,6 +37,8 @@ import numpy as np
 from constants import DATA_TEMP_DIR, REQUIREMENTS_DIR
 from hazard.hazard_handler import HazardHandler
 from logger_config import LoggerConfig
+
+WATERFALL_DATA_FILENAME = "risks_waterfall_data.json"
 
 hazard_handler = HazardHandler()
 logger = LoggerConfig(logger_types=["file"])
@@ -175,38 +179,81 @@ class CostBenefitHandler:
         except Exception as e:
             raise Exception(f"Failed to calculate cost-benefit: {e}") from e
 
-    def plot_waterfall(
+    def compute_waterfall_data(
         self,
         cost_benefit: CostBenefit,
         hazard_present: Hazard,
         entity_present: Entity,
         hazard_future: Hazard,
         entity_future: Entity,
-    ) -> plt.Axes:
+    ) -> dict:
         """
-        Plots the waterfall chart for the cost-benefit analysis.
+        Compute the structured waterfall payload for the frontend.
 
-        :param cost_benefit: The cost-benefit analysis object.
-        :type cost_benefit: CostBenefit
-        :return: The waterfall plot axis.
-        :rtype: matplotlib.axes._subplots.AxesSubplot
+        Reads the present-day and future no-measure risks straight off
+        ``cost_benefit`` (populated by ``calc()`` regardless of
+        ``save_imp``) and only recomputes the middle ``risk_dev`` term
+        (future entity against present hazard), which CLIMADA does not
+        retain. The result is persisted as JSON in ``DATA_TEMP_DIR`` so
+        ``run_fetch_waterfall.py`` can serve it through the FastAPI
+        endpoint after the scenario run completes.
         """
         try:
-            axis = cost_benefit.plot_waterfall(
-                hazard_present,
-                entity_present,
-                hazard_future,
-                entity_future,
-                risk_func=risk_aai_agg,
-            )
+            present_year = entity_present.exposures.ref_year
+            future_year = entity_future.exposures.ref_year
 
-            filename = DATA_TEMP_DIR / "risks_waterfall_plot.png"
-            plt.savefig(filename, dpi=300, bbox_inches="tight")
-            plt.close()
-            return axis
+            risk_present = float(cost_benefit.imp_meas_present[NO_MEASURE]["risk"])
+            risk_future = float(cost_benefit.imp_meas_future[NO_MEASURE]["risk"])
+
+            imp_dev = ImpactCalc(
+                entity_future.exposures, entity_future.impact_funcs, hazard_present
+            ).impact(assign_centroids=False)
+            risk_dev = float(risk_aai_agg(imp_dev))
+
+            economic_development = risk_dev - risk_present
+            climate_change = risk_future - risk_dev
+
+            categories = [
+                {
+                    "key": "risk_present",
+                    "label": f"Risk {present_year}",
+                    "value": risk_present,
+                    "base": 0.0,
+                },
+                {
+                    "key": "economic_development",
+                    "label": "Economic development",
+                    "value": economic_development,
+                    "base": risk_present,
+                },
+                {
+                    "key": "climate_change",
+                    "label": "Climate change",
+                    "value": climate_change,
+                    "base": risk_dev,
+                },
+                {
+                    "key": "risk_future",
+                    "label": f"Risk {future_year}",
+                    "value": risk_future,
+                    "base": 0.0,
+                },
+            ]
+
+            payload = {
+                "present_year": int(present_year),
+                "future_year": int(future_year),
+                "measurement_unit": str(entity_present.exposures.value_unit or ""),
+                "categories": categories,
+            }
+
+            filename = DATA_TEMP_DIR / WATERFALL_DATA_FILENAME
+            with open(filename, "w", encoding="utf-8") as fh:
+                json.dump(payload, fh)
+            return payload
         except Exception as e:
-            logger.log("error", f"Failed to plot waterfall chart. More info: {e}")
-            raise Exception(f"Failed to plot waterfall chart: {e}") from e
+            logger.log("error", f"Failed to compute waterfall data. More info: {e}")
+            raise Exception(f"Failed to compute waterfall data: {e}") from e
 
     def get_scaling_factor(self, values: dict) -> tuple:
         """

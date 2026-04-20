@@ -34,6 +34,9 @@ export type MacroChartDataRequest = Schema<"MacroChartDataRequest">;
 export type MacroChartDataResponse = Schema<"MacroChartDataResponse">;
 export type MacroCredOutputResponse = Schema<"MacroCredOutputResponse">;
 export type TempClearResponse = Schema<"TempClearResponse">;
+export type WaterfallResponse = Schema<"WaterfallResponse">;
+export type WaterfallPayload = Schema<"WaterfallPayload">;
+export type WaterfallCategory = Schema<"WaterfallCategory">;
 
 export type DeleteReportQuery = {
   reportType?: string;
@@ -96,6 +99,8 @@ const RiskWiseClient = {
     post<MacroChartDataResponse>("/api/v1/macro/chart-data", body),
 
   fetchCountries: () => get<CountriesResponse>("/api/v1/countries"),
+
+  fetchWaterfallData: () => get<WaterfallResponse>("/api/v1/scenario/waterfall"),
 
   clearTempDir: () => post<TempClearResponse>("/api/v1/temp/clear", {}),
 

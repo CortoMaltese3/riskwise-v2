@@ -35,6 +35,7 @@ from models.scenarios import (
     SaveScenarioResponse,
 )
 from models.temp import TempClearResponse
+from models.waterfall import WaterfallCategory, WaterfallPayload, WaterfallResponse
 
 __all__ = [
     "ChartDataDataset",
@@ -68,4 +69,7 @@ __all__ = [
     "Status",
     "StatusEnvelope",
     "TempClearResponse",
+    "WaterfallCategory",
+    "WaterfallPayload",
+    "WaterfallResponse",
 ]
