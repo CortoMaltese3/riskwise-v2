@@ -15,6 +15,7 @@ import InboxIcon from "@mui/icons-material/Inbox";
 
 import useStore from "../../store";
 import useWorkspaceStore from "../../store/workspaceSlice";
+import { enqueueToast } from "../../hooks/useToast";
 import ScenarioTable from "./ScenarioTable";
 
 const uniqueNonEmpty = (values) => [...new Set(values.filter(Boolean))].sort();
@@ -110,8 +111,15 @@ const WorkspaceView = ({ initialScenarios }) => {
   const handleAction = async (action, row) => {
     if (action === "delete") {
       await deleteScenario(row.id);
+    } else if (action === "export-pdf") {
+      const result = await window.electron.exportPdf(row.id);
+      if (result.success) {
+        enqueueToast({ severity: "success", message: "PDF saved successfully." });
+      } else if (result.reason !== "cancelled") {
+        enqueueToast({ severity: "error", message: `PDF export failed: ${result.reason}` });
+      }
     }
-    // Restore and export actions are wired via Issue #79/#80 exports; no-op here.
+    // Restore action wired via Issue #79; no-op here.
   };
 
   const toggleAll = (checked) => {

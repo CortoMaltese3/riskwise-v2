@@ -535,8 +535,10 @@ async def get_scenario_endpoint(scenario_id: str) -> dict:
 
 @app.post(f"{API_PREFIX}/scenarios/{{scenario_id}}/export", response_model=ExportReportResponse)
 async def export_scenario(scenario_id: str, payload: ExportReportRequest) -> dict:
-    body = {**payload.model_dump(exclude_none=True), "scenarioRunCode": scenario_id}
-    return await _dispatch("run_export_report.py", body)
+    if payload.exportType == "excel":
+        body = {**payload.model_dump(exclude_none=True), "scenarioRunCode": scenario_id}
+        return await _dispatch("run_export_report.py", body)
+    return {"data": {"status": "delegated_to_electron"}, "status": _status_ok()}
 
 
 @app.patch(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=SaveScenarioResponse)

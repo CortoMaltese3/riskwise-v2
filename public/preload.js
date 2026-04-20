@@ -46,6 +46,8 @@ contextBridge.exposeInMainWorld("electron", {
 
   openReport: (reportPath) => ipcRenderer.invoke("open-report", reportPath),
 
+  exportPdf: (scenarioId) => ipcRenderer.invoke("export-pdf", { scenarioId }),
+
   // Long-running scenario progress events streamed from the SSE bridge.
   onProgress: (callback) => subscribe("progress", callback),
 });

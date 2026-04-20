@@ -53,6 +53,9 @@ export interface ElectronBridge {
   onCopyFolderReply: (callback: (payload: unknown) => void) => () => void;
   openReport: (reportPath: string) => Promise<unknown>;
   onProgress: (callback: (payload: { message?: string; progress?: number }) => void) => () => void;
+  exportPdf: (
+    scenarioId: string
+  ) => Promise<{ success: boolean; filePath?: string; reason?: string }>;
 }
 
 declare global {
