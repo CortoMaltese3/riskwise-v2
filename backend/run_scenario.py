@@ -30,6 +30,7 @@ from constants import DATA_TEMP_DIR
 from costben.costben_handler import CostBenefitHandler
 from countries.loader import CountryConfigError, load_country_config
 from db import insert_scenario, read_result_blobs
+from db import cache_store
 from entity.entity_handler import EntityHandler
 from exposure.exposure_handler import ExposureHandler
 from hazard.hazard_handler import HazardHandler
@@ -404,8 +405,13 @@ class RunScenario:
         )
 
         strategy = make_strategy(self.request_data.is_era)
+        cache_key = self._derive_computation_cache_key()
+        cache_hit = False
+        if cache_key is not None:
+            cache_hit = self._restore_from_computation_cache(cache_key)
         try:
-            self._execute(strategy)
+            if not cache_hit:
+                self._execute(strategy)
         except Exception as exception:
             mode = "ERA" if self.request_data.is_era else "custom"
             status_code = 3000
@@ -440,6 +446,8 @@ class RunScenario:
         scenario_id: str | None = None
         if self.status.code == 2000:
             scenario_id = self._persist_to_db(map_title, metadata)
+            if cache_key is not None and not cache_hit:
+                self._store_in_computation_cache(cache_key)
 
         response = {
             "data": {
@@ -450,6 +458,90 @@ class RunScenario:
         }
         self.logger.log("info", f"Finished running scenario in {time() - initial_time}sec.")
         return response
+
+    # Source file names mirror ``db.scenario_store.read_result_blobs`` so a
+    # cache restore can hydrate the temp directory back to the exact shape
+    # the downstream ``_persist_to_db`` / report steps expect.
+    _CACHE_TEMP_FILES = {
+        "hazard_geojson": "hazards_geodata.json",
+        "exposure_geojson": "exposures_geodata.json",
+        "impact_geojson": "risks_geodata.json",
+        "waterfall_data": "risks_waterfall_data.json",
+        "costben_data": "cost_benefit_data.json",
+    }
+
+    def _derive_computation_cache_key(self) -> str | None:
+        """Hash the scenario-identity tuple for the computation cache.
+
+        Returns ``None`` when either input file is absent on disk — we
+        cannot key a cache entry on content we cannot hash, and a missing
+        file means the run is about to fail anyway.
+        """
+        entity_path = _DATA_ENTITIES_DIR / self.request_data.entity_filename
+        hazard_path = _DATA_HAZARDS_DIR / self.request_data.hazard_filename
+        if not entity_path.is_file() or not hazard_path.is_file():
+            return None
+        from provenance import sha256_file
+
+        try:
+            entity_sha = sha256_file(entity_path)
+            hazard_sha = sha256_file(hazard_path)
+        except OSError:
+            return None
+        return cache_store.derive_cache_key(
+            country=self.request_data.country_name,
+            hazard_type=self.request_data.hazard_type,
+            scenario=self.request_data.scenario,
+            exposure_economic=self.request_data.exposure_economic,
+            exposure_non_economic=self.request_data.exposure_non_economic,
+            ref_year=self.request_data.ref_year,
+            future_year=self.request_data.future_year,
+            annual_growth=self.request_data.annual_growth,
+            entity_sha256=entity_sha,
+            hazard_sha256=hazard_sha,
+        )
+
+    def _restore_from_computation_cache(self, cache_key: str) -> bool:
+        """Hydrate the temp dir from a cached bundle. Returns ``True`` on hit."""
+        try:
+            raw = cache_store.get(cache_key)
+        except Exception as exc:
+            self.logger.log("warning", f"Computation-cache lookup failed: {exc}")
+            return False
+        if not raw:
+            return False
+        try:
+            bundle = cache_store.decode_bundle(raw)
+        except Exception as exc:
+            self.logger.log("warning", f"Computation-cache decode failed: {exc}")
+            return False
+        DATA_TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        wrote_any = False
+        for result_type, filename in self._CACHE_TEMP_FILES.items():
+            blob = bundle.get(result_type)
+            if blob is None:
+                continue
+            (DATA_TEMP_DIR / filename).write_bytes(blob)
+            wrote_any = True
+        if not wrote_any:
+            return False
+        self.base_handler.update_progress(100, "Scenario run successfully (cache hit).")
+        self.logger.log("info", f"Computation-cache hit for key {cache_key[:12]}...")
+        return True
+
+    def _store_in_computation_cache(self, cache_key: str) -> None:
+        """Persist the just-produced temp-dir blobs under ``cache_key``."""
+        bundle: dict[str, bytes] = {}
+        for result_type, filename in self._CACHE_TEMP_FILES.items():
+            path = DATA_TEMP_DIR / filename
+            if path.is_file():
+                bundle[result_type] = path.read_bytes()
+        if not bundle:
+            return
+        try:
+            cache_store.put(cache_key, "scenario_bundle", cache_store.encode_bundle(bundle))
+        except Exception as exc:
+            self.logger.log("warning", f"Computation-cache write failed: {exc}")
 
     def _collect_provenance(self):
         """Return a :class:`provenance.ProvenanceRecord` for the current run.
