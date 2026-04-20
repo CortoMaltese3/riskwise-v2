@@ -69,6 +69,81 @@
         "title": "ChartDataPayload",
         "type": "object"
       },
+      "CostBenefitMeasure": {
+        "properties": {
+          "benefit": {
+            "title": "Benefit",
+            "type": "number"
+          },
+          "benefit_cost_ratio": {
+            "title": "Benefit Cost Ratio",
+            "type": "number"
+          },
+          "cost": {
+            "title": "Cost",
+            "type": "number"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "cost",
+          "benefit",
+          "benefit_cost_ratio"
+        ],
+        "title": "CostBenefitMeasure",
+        "type": "object"
+      },
+      "CostBenefitPayload": {
+        "properties": {
+          "currency_unit": {
+            "default": "",
+            "title": "Currency Unit",
+            "type": "string"
+          },
+          "future_year": {
+            "title": "Future Year",
+            "type": "integer"
+          },
+          "measures": {
+            "items": {
+              "$ref": "#/components/schemas/CostBenefitMeasure"
+            },
+            "title": "Measures",
+            "type": "array"
+          },
+          "present_year": {
+            "title": "Present Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "present_year",
+          "future_year"
+        ],
+        "title": "CostBenefitPayload",
+        "type": "object"
+      },
+      "CostBenefitResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CostBenefitPayload"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "CostBenefitResponse",
+        "type": "object"
+      },
       "CountriesResponse": {
         "properties": {
           "data": {
@@ -1009,6 +1084,24 @@
           }
         },
         "summary": "Measures"
+      }
+    },
+    "/api/v1/scenario/cost-benefit": {
+      "get": {
+        "operationId": "scenario_cost_benefit_api_v1_scenario_cost_benefit_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostBenefitResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Scenario Cost Benefit"
       }
     },
     "/api/v1/scenario/run": {

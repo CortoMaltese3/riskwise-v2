@@ -3,7 +3,7 @@ Module for handling cost-benefit analysis operations.
 
 This module contains the `CostBenefitHandler` class, which manages cost-benefit analysis
 operations such as retrieving measures from Excel files, loading discount rates, calculating
-cost-benefit, and plotting results.
+cost-benefit, and producing structured JSON payloads consumed by the frontend charts.
 
 Classes:
 
@@ -20,8 +20,8 @@ Methods:
     Calculate cost-benefit analysis based on current and future hazard and entity data.
 - `compute_waterfall_data`:
     Compute the structured waterfall payload for the frontend.
-- `plot_cost_benefit`:
-    Plot the cost-benefit chart for the cost-benefit analysis.
+- `compute_cost_benefit_data`:
+    Compute the structured cost-benefit payload for the frontend (Chart.js).
 """
 
 import json
@@ -31,14 +31,13 @@ from climada.engine.cost_benefit import NO_MEASURE, risk_aai_agg
 from climada.entity import DiscRates, Entity
 from climada.entity.measures import MeasureSet
 from climada.hazard import Hazard
-import matplotlib.pyplot as plt
-import numpy as np
 
 from constants import DATA_TEMP_DIR, REQUIREMENTS_DIR
 from hazard.hazard_handler import HazardHandler
 from logger_config import LoggerConfig
 
 WATERFALL_DATA_FILENAME = "risks_waterfall_data.json"
+COSTBEN_DATA_FILENAME = "cost_benefit_data.json"
 
 hazard_handler = HazardHandler()
 logger = LoggerConfig(logger_types=["file"])
@@ -255,83 +254,54 @@ class CostBenefitHandler:
             logger.log("error", f"Failed to compute waterfall data. More info: {e}")
             raise Exception(f"Failed to compute waterfall data: {e}") from e
 
-    def get_scaling_factor(self, values: dict) -> tuple:
+    def compute_cost_benefit_data(
+        self,
+        cost_benefit: CostBenefit,
+        entity_present: Entity,
+        entity_future: Entity,
+    ) -> dict:
         """
-        Determines the appropriate scaling factor (thousands, millions, or billions)
-        based on the values in the cost-benefit ratio.
+        Compute the structured cost-benefit payload for the frontend.
 
-        :param values: A dictionary of cost-benefit values.
-        :type values: dict
-        :return: The scaling factor and its string representation.
-        :rtype: tuple
-        """
-        scaling_factors = {1_000_000_000: "billions", 1_000_000: "millions", 1_000: "thousands"}
-
-        # Find the min value from the ratio
-        max_value = max(abs(1 / value) for value in values.values())
-
-        # Determine the appropriate scaling factor
-        for factor, label in scaling_factors.items():
-            if max_value >= factor:
-                return factor, label
-
-        # Default to 1000 (thousands) if no larger factor applies
-        return 1000, "thousands"
-
-    def plot_cost_benefit(self, cost_benefit: CostBenefit, asset_type: str = "economic"):
-        """
-        Plots the cost-benefit chart for the cost-benefit analysis, adjusting for scaling.
-
-        :param cost_benefit: The cost-benefit analysis object.
-        :type cost_benefit: CostBenefit
-        :param asset_type: Type of asset ("economic" or "non_economic") to determine if scaling should be applied.
-        :type asset_type: str
-        :return: The cost-benefit plot axis.
-        :rtype: matplotlib.axes._subplots.AxesSubplot
+        Reads per-measure cost, benefit and benefit/cost ratio off the
+        CLIMADA ``CostBenefit`` object: ``benefit[m]`` is the monetary
+        averted damage, ``imp_meas_future[m]['cost'][0]`` is the measure
+        cost, and ``cost_ben_ratio[m]`` is ``cost / benefit`` — inverted
+        here so the frontend can rank measures by benefit per currency
+        unit. The result is persisted as JSON in ``DATA_TEMP_DIR`` so
+        ``run_fetch_costbenefit.py`` can serve it through the FastAPI
+        endpoint after the scenario run completes.
         """
         try:
-            # Define a threshold for very small values that are too close to zero
-            # to resolve infinite values in plot.
-            threshold = 1e-6
+            measures = []
+            for meas_name, ratio in cost_benefit.cost_ben_ratio.items():
+                benefit = float(cost_benefit.benefit.get(meas_name, 0.0))
+                cost_tuple = cost_benefit.imp_meas_future.get(meas_name, {}).get("cost", (0.0, 0.0))
+                cost = float(cost_tuple[0])
+                # cost_ben_ratio is cost/benefit; invert so the chart shows
+                # benefit per currency spent. Guard against the ratio being
+                # zero (no benefit) by falling back to 0.0.
+                benefit_cost_ratio = float(1 / ratio) if ratio else 0.0
+                measures.append(
+                    {
+                        "name": str(meas_name),
+                        "cost": cost,
+                        "benefit": benefit,
+                        "benefit_cost_ratio": benefit_cost_ratio,
+                    }
+                )
 
-            # Validate the cost-benefit ratio to check for invalid, negative, or very small values
-            invalid_values = [
-                (key, val)
-                for key, val in cost_benefit.cost_ben_ratio.items()
-                if np.isnan(val) or np.isinf(val) or val < threshold
-            ]
-            if invalid_values:
-                raise ValueError(f"Invalid values in cost-benefit ratio: {invalid_values}")
+            payload = {
+                "currency_unit": str(getattr(cost_benefit, "unit", "") or ""),
+                "present_year": int(entity_present.exposures.ref_year),
+                "future_year": int(entity_future.exposures.ref_year),
+                "measures": measures,
+            }
 
-            # Get the scaling factor and update the cost_benefit ratio accordingly
-            factor, label = self.get_scaling_factor(cost_benefit.cost_ben_ratio)
-
-            # Scale the cost-benefit values
-            for key, value in cost_benefit.cost_ben_ratio.items():
-                cost_benefit.cost_ben_ratio[key] = value / factor
-
-            # Plot the cost-benefit chart
-            axis = cost_benefit.plot_cost_benefit()
-            axis.set_title("Cost-Benefit Analysis")
-
-            # Set the y-axis label with/without the scaling factor
-            if asset_type == "non_economic":
-                axis.set_ylabel(f"Benefit/Cost ratio ({cost_benefit.unit} per {factor} USD)")
-            else:
-                axis.set_ylabel("Benefit/Cost ratio")
-
-            # Get the min and max values for proper scaling
-            y_min, y_max = axis.get_ylim()
-
-            # Set y-axis limits, with a 10% gap above the max value
-            axis.set_ylim(y_min, y_max * 1.1)
-
-            # Save the plot
-            filename = DATA_TEMP_DIR / "cost_benefit_plot.png"
-            plt.savefig(filename, dpi=300, bbox_inches="tight")
-            plt.close()
-            return axis
-
+            filename = DATA_TEMP_DIR / COSTBEN_DATA_FILENAME
+            with open(filename, "w", encoding="utf-8") as fh:
+                json.dump(payload, fh)
+            return payload
         except Exception as e:
-            logger.log("error", f"Failed to plot cost-benefit chart. More info: {e}")
-            return None
+            logger.log("error", f"Failed to compute cost-benefit data. More info: {e}")
+            raise Exception(f"Failed to compute cost-benefit data: {e}") from e

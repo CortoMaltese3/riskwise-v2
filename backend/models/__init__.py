@@ -5,6 +5,7 @@ Exporting from a single place keeps the OpenAPI schema names stable and lets
 """
 
 from models.common import Status, StatusEnvelope
+from models.costbenefit import CostBenefitMeasure, CostBenefitPayload, CostBenefitResponse
 from models.countries import CountriesData, CountriesResponse, Country
 from models.data import DataValidateData, DataValidateRequest, DataValidateResponse
 from models.errors import ErrorResponse
@@ -40,6 +41,9 @@ from models.waterfall import WaterfallCategory, WaterfallPayload, WaterfallRespo
 __all__ = [
     "ChartDataDataset",
     "ChartDataPayload",
+    "CostBenefitMeasure",
+    "CostBenefitPayload",
+    "CostBenefitResponse",
     "CountriesData",
     "CountriesResponse",
     "Country",

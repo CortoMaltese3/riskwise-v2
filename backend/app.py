@@ -57,6 +57,7 @@ from logging_config import (
     reset_request_id,
 )
 from models import (
+    CostBenefitResponse,
     CountriesResponse,
     DataValidateRequest,
     DataValidateResponse,
@@ -215,6 +216,10 @@ def _dispatch_sync(script_name: str, data: Any) -> dict:
         from run_fetch_waterfall import RunFetchWaterfall
 
         return RunFetchWaterfall().run_fetch_waterfall()
+    if script_name == "run_fetch_costbenefit.py":
+        from run_fetch_costbenefit import RunFetchCostBenefit
+
+        return RunFetchCostBenefit().run_fetch_costbenefit()
     raise ValueError(f"Unknown script: {script_name}")
 
 
@@ -476,6 +481,11 @@ async def macro_chart_data(payload: MacroChartDataRequest) -> dict:
 @app.get(f"{API_PREFIX}/scenario/waterfall", response_model=WaterfallResponse)
 async def scenario_waterfall() -> dict:
     return await _dispatch("run_fetch_waterfall.py", None)
+
+
+@app.get(f"{API_PREFIX}/scenario/cost-benefit", response_model=CostBenefitResponse)
+async def scenario_cost_benefit() -> dict:
+    return await _dispatch("run_fetch_costbenefit.py", None)
 
 
 @app.get(f"{API_PREFIX}/countries", response_model=CountriesResponse)
