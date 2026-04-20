@@ -45,8 +45,10 @@ def test_measures_endpoint_explicit_measure_set_id(api_client, seeded_db) -> Non
     import duckdb
 
     conn = duckdb.connect(str(seeded_db))
-    set_id = conn.execute("SELECT id FROM measure_sets WHERE is_builtin = TRUE").fetchone()[0]
+    row = conn.execute("SELECT id FROM measure_sets WHERE is_builtin = TRUE").fetchone()
     conn.close()
+    assert row is not None
+    set_id = row[0]
 
     resp = api_client.get(f"/api/v1/measures/egy/heatwaves?measure_set_id={set_id}")
     assert resp.status_code == 200

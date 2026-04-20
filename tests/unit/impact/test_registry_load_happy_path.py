@@ -136,4 +136,4 @@ class TestSpecDataclass:
         # Frozen dataclass: assignment must raise rather than silently mutate
         # state that the registry's caching depends on.
         with pytest.raises(Exception):  # noqa: B017 - dataclasses raises FrozenInstanceError, but we want to be tolerant
-            spec.id = 999  # type: ignore[misc]
+            spec.id = 999
