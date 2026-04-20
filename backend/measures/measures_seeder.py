@@ -38,6 +38,8 @@ class MeasureSeedError(RuntimeError):
 def _validate_row(row: dict[str, Any], row_index: int, seen: set[tuple]) -> None:
     cost = row.get("cost")
     try:
+        if cost is None:
+            raise ValueError("None")
         cf = float(cost)
         if math.isnan(cf):
             raise ValueError("NaN")
@@ -48,6 +50,8 @@ def _validate_row(row: dict[str, Any], row_index: int, seen: set[tuple]) -> None
 
     mdd = row.get("MDD impact a")
     try:
+        if mdd is None:
+            raise ValueError("None")
         mdd_f = float(mdd)
         if math.isnan(mdd_f):
             raise ValueError("NaN")
