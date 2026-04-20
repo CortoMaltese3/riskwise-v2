@@ -252,7 +252,7 @@ def _scan_custom_countries(
         from countries.loader import CountryConfigError, load_country_config
 
         try:
-            config = load_country_config(iso3, base_dir=user_countries_dir)
+            config = load_country_config(iso3, config_path=config_path)
         except CountryConfigError as exc:
             errors.append((iso3, str(exc)))
             continue

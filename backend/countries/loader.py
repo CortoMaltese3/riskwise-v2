@@ -71,13 +71,22 @@ def _resolve_config_path(iso3: str, base_dir: Path | None) -> Path:
     return _default_root() / iso3 / "config.json"
 
 
-def load_country_config(country_code: str, base_dir: Path | None = None) -> CountryConfig:
+def load_country_config(
+    country_code: str,
+    base_dir: Path | None = None,
+    *,
+    config_path: Path | None = None,
+) -> CountryConfig:
     """Load and validate the country config for the given ISO3 code.
 
     :param country_code: ISO3 country code (case-insensitive).
     :param base_dir: Override the ``countries/`` root (used in tests). When
         omitted, the extensibility registry resolves built-in vs custom
         country locations automatically.
+    :param config_path: Use this exact path instead of deriving one from
+        ``base_dir``. Callers that already have the resolved path (e.g. the
+        custom-country scanner) pass this to avoid case-sensitivity issues on
+        Linux where the directory name may differ in case from the ISO3 code.
     :raises CountryConfigError: when the file is missing, unreadable,
         invalid JSON, or fails schema validation.
     """
@@ -85,7 +94,7 @@ def load_country_config(country_code: str, base_dir: Path | None = None) -> Coun
         raise CountryConfigError("country_code must be a non-empty ISO3 string.")
     iso3 = country_code.upper()
 
-    path = _resolve_config_path(iso3, base_dir)
+    path = config_path if config_path is not None else _resolve_config_path(iso3, base_dir)
 
     if not path.is_file():
         raise CountryConfigError(
