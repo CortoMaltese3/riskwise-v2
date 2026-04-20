@@ -106,6 +106,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/scenario/cost-benefit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scenario Cost Benefit */
+        get: operations["scenario_cost_benefit_api_v1_scenario_cost_benefit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/scenario/run": {
         parameters: {
             query?: never;
@@ -286,6 +303,36 @@ export interface components {
             years?: (number | string)[];
         } & {
             [key: string]: unknown;
+        };
+        /** CostBenefitMeasure */
+        CostBenefitMeasure: {
+            /** Benefit */
+            benefit: number;
+            /** Benefit Cost Ratio */
+            benefit_cost_ratio: number;
+            /** Cost */
+            cost: number;
+            /** Name */
+            name: string;
+        };
+        /** CostBenefitPayload */
+        CostBenefitPayload: {
+            /**
+             * Currency Unit
+             * @default
+             */
+            currency_unit: string;
+            /** Future Year */
+            future_year: number;
+            /** Measures */
+            measures?: components["schemas"]["CostBenefitMeasure"][];
+            /** Present Year */
+            present_year: number;
+        };
+        /** CostBenefitResponse */
+        CostBenefitResponse: {
+            data: components["schemas"]["CostBenefitPayload"];
+            status: components["schemas"]["Status"];
         };
         /** CountriesResponse */
         CountriesResponse: {
@@ -725,6 +772,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scenario_cost_benefit_api_v1_scenario_cost_benefit_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostBenefitResponse"];
                 };
             };
         };

@@ -268,9 +268,11 @@ class RunScenario:
             self.request_data.future_year,
         )
 
-        self.base_handler.update_progress(50, "Plotting cost-benefit graph...")
-        self.costben_handler.plot_cost_benefit(cost_benefit, self.request_data.asset_type)
         if is_future:
+            self.base_handler.update_progress(50, "Computing cost-benefit chart data...")
+            self.costben_handler.compute_cost_benefit_data(
+                cost_benefit, entity_present, entity_future
+            )
             self.base_handler.update_progress(
                 55, "Computing waterfall chart data..."
             )

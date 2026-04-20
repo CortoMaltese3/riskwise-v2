@@ -37,6 +37,9 @@ export type TempClearResponse = Schema<"TempClearResponse">;
 export type WaterfallResponse = Schema<"WaterfallResponse">;
 export type WaterfallPayload = Schema<"WaterfallPayload">;
 export type WaterfallCategory = Schema<"WaterfallCategory">;
+export type CostBenefitResponse = Schema<"CostBenefitResponse">;
+export type CostBenefitPayload = Schema<"CostBenefitPayload">;
+export type CostBenefitMeasure = Schema<"CostBenefitMeasure">;
 
 export type DeleteReportQuery = {
   reportType?: string;
@@ -101,6 +104,8 @@ const RiskWiseClient = {
   fetchCountries: () => get<CountriesResponse>("/api/v1/countries"),
 
   fetchWaterfallData: () => get<WaterfallResponse>("/api/v1/scenario/waterfall"),
+
+  fetchCostBenefitData: () => get<CostBenefitResponse>("/api/v1/scenario/cost-benefit"),
 
   clearTempDir: () => post<TempClearResponse>("/api/v1/temp/clear", {}),
 

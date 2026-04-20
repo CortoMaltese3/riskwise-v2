@@ -13,7 +13,6 @@ dependencies:
   - folium=0.14.0
   - geocoder=1.38.1
   - ipykernel=6.19.2
-  - matplotlib-base=3.5.2 # Downgrade to avoid issues presented in cartopy 0.20.2 and geopandas
   - openpyxl=3.0.9
   - pandas=1.4.1
   - pip

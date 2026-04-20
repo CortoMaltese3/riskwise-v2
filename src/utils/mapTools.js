@@ -29,6 +29,7 @@ export const useMapTools = () => {
     selectedSubTab,
     selectedTimeHorizon,
     waterfallChartRef,
+    costBenefitChartRef,
   } = useStore();
 
   const saveBase64Screenshot = (base64data, filePath) => {
@@ -210,33 +211,11 @@ export const useMapTools = () => {
     });
   };
 
-  const copyFileToReports = (sourcePath, destinationPath) => {
-    return new Promise((resolve, reject) => {
-      window.electron.copyFile(sourcePath, destinationPath);
-
-      // Listen for the copy file response
-      window.electron.onCopyFileReply((event, { success, error, destinationPath }) => {
-        if (success) {
-          setAlertMessage(t("alert_message_successful_copy_file"));
-          setAlertSeverity("success");
-          setAlertShowMessage(true);
-          resolve(destinationPath); // Resolve the promise with the destination path on success
-        } else {
-          setAlertMessage(`${t("alert_message_error_copy_file")}: ${error}`);
-          setAlertSeverity("error");
-          setAlertShowMessage(true);
-          reject(new Error(error)); // Reject the promise on error
-        }
-      });
-    });
-  };
-
   const reportExists = (reportId) => {
     return reports.some((r) => r && r.id === reportId);
   };
 
   const handleSaveImage = async () => {
-    const tempPath = await window.electron.fetchTempDir();
     const reportPath = await window.electron.fetchReportDir();
 
     if (!selectedReport) {
@@ -291,10 +270,12 @@ export const useMapTools = () => {
       selectedSubTab === 1
     ) {
       const id = new Date().getTime().toString();
-      const sourceFile = `${tempPath}\\cost_benefit_plot.png`;
       const destinationFile = `${reportPath}\\${scenarioRunCode}\\snapshot_adaptation_plot_data_${id}.png`;
 
-      copyFileToReports(sourceFile, destinationFile)
+      takeChartScreenshot(costBenefitChartRef, destinationFile)
+        .then(() => {
+          handleAddData();
+        })
         .then(() => {
           const outputData = {
             id: id,
