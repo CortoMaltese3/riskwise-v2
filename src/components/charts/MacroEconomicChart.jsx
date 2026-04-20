@@ -157,8 +157,8 @@ const MacroEconomicChart = () => {
     <Box
       sx={{
         margin: "auto",
-        bgcolor: "#DCEFF2",
-        border: "2px solid #3B919D",
+        bgcolor: "card.bg",
+        border: "2px solid var(--mui-palette-primary-dark)",
         borderRadius: "16px",
         padding: "16px",
         marginBottom: "16px",

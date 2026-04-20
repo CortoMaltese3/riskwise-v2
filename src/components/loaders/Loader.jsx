@@ -13,9 +13,9 @@ const LinearProgressWithLabel = (props) => {
         <LinearProgress
           variant="determinate"
           sx={{
-            backgroundColor: "5C87B1",
+            backgroundColor: "mapControl.light",
             "& .MuiLinearProgress-bar": {
-              backgroundColor: "#2A4D69",
+              backgroundColor: "mapControl.main",
             },
           }}
           {...props}

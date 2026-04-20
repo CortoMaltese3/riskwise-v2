@@ -13,7 +13,7 @@ const ShutdownButton = () => {
   return (
     <>
       <IconButton onClick={onShutdownClick} color="inherit" aria-label="Shutdown">
-        <LogoutIcon style={{ color: "#ba000d" }} />
+        <LogoutIcon style={{ color: "var(--mui-palette-error-dark)" }} />
       </IconButton>
     </>
   );

@@ -28,8 +28,8 @@ const ScenarioCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "#DCEFF2",
-        border: "2px solid #3B919D",
+        bgcolor: "card.bg",
+        border: "2px solid var(--mui-palette-primary-dark)",
         borderRadius: "16px",
       }}
     >
@@ -42,7 +42,7 @@ const ScenarioCard = () => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            backgroundColor: "#F79191",
+            backgroundColor: "accent.main",
             borderRadius: "8px",
             padding: "8px",
             marginBottom: "24px",
@@ -55,7 +55,7 @@ const ScenarioCard = () => {
             key={scenario}
             onClick={() => handleCardSelect(scenario)}
             sx={{
-              backgroundColor: isButtonSelected(scenario) ? "#F79191" : "#FFCCCC",
+              backgroundColor: isButtonSelected(scenario) ? "accent.main" : "accent.light",
               borderRadius: "8px",
               margin: "16px", // Space around buttons
               marginLeft: 0,
@@ -72,7 +72,7 @@ const ScenarioCard = () => {
             </Typography>
           </CardActionArea>
         ))}
-        <Box sx={{ padding: 2, backgroundColor: "#F2F2F2", borderRadius: "8px" }}>
+        <Box sx={{ padding: 2, backgroundColor: "surface.muted", borderRadius: "8px" }}>
           <Typography variant="body2" color="text.primary">
             {t("card_scenario_remarks")}
           </Typography>

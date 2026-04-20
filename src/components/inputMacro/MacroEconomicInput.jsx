@@ -23,7 +23,7 @@ const MacroEconomicInput = () => {
       <MacroEconomicViewTitle />
 
       {/* DataInput parameters section */}
-      <Box sx={{ backgroundColor: "#DDEBEF", padding: 2 }}>
+      <Box sx={{ backgroundColor: "inputCard.panelBg", padding: 2 }}>
         <Grid container spacing={2}>
           <Grid item xs={12}>
             <Country />

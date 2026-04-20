@@ -88,7 +88,7 @@ const SaveScenarioDialog = ({ open, scenarioId, defaultName, onClose, onSaved })
             inputProps={{ "aria-label": "scenario-notes" }}
           />
           {error ? (
-            <div role="alert" style={{ color: "#b00020" }}>
+            <div role="alert" style={{ color: "var(--mui-palette-error-main)" }}>
               {error}
             </div>
           ) : null}

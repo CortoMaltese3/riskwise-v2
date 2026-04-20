@@ -21,8 +21,8 @@ const TimeHorizonCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "#DCEFF2",
-        border: "2px solid #3B919D",
+        bgcolor: "card.bg",
+        border: "2px solid var(--mui-palette-primary-dark)",
         borderRadius: "16px",
       }}
     >
@@ -35,7 +35,7 @@ const TimeHorizonCard = () => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            backgroundColor: "#F79191",
+            backgroundColor: "accent.main",
             borderRadius: "8px",
             padding: "8px",
             marginBottom: "16px",
@@ -49,7 +49,7 @@ const TimeHorizonCard = () => {
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "center", // Center children horizontally
-            backgroundColor: "#FFCCCC",
+            backgroundColor: "accent.light",
             borderRadius: "8px",
             padding: "20px 0",
             marginBottom: "16px",
@@ -79,13 +79,13 @@ const TimeHorizonCard = () => {
               { value: 2075, label: "2075" },
             ]}
             sx={{
-              color: "#F79191", // Slider track and thumb color
+              color: "accent.main", // Slider track and thumb color
               marginTop: "48px",
               width: "90%", // Adjust width to be less than container to center properly
               "& .MuiSlider-thumb": {
                 height: 24,
                 width: 24,
-                backgroundColor: "#fff",
+                backgroundColor: "common.white",
                 border: "2px solid currentColor",
                 "&:focus, &:hover, &.Mui-active": {
                   boxShadow: "inherit",
@@ -97,14 +97,14 @@ const TimeHorizonCard = () => {
                 fontWeight: "bold",
                 borderRadius: "16px",
                 borderColor: "black",
-                backgroundColor: "#F79191",
+                backgroundColor: "accent.main",
               },
               "& .MuiSlider-track": {
                 height: 16,
                 borderRadius: 4,
               },
               "& .MuiSlider-rail": {
-                color: "#d8d8d8",
+                color: "slider.disabledRail",
                 opacity: 1,
                 height: 8,
                 borderRadius: 4,
@@ -112,7 +112,7 @@ const TimeHorizonCard = () => {
             }}
           />
         </Box>
-        <Box sx={{ padding: 2, backgroundColor: "#F2F2F2", borderRadius: "8px" }}>
+        <Box sx={{ padding: 2, backgroundColor: "surface.muted", borderRadius: "8px" }}>
           <Typography variant="body2" color="text.primary">
             {t("card_timehorison_remarks")}
           </Typography>

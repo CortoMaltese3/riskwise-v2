@@ -62,7 +62,7 @@ const MainSubTabs = () => {
         top: "128px",
         zIndex: (theme) => theme.zIndex.drawer + 1,
         width: "100%",
-        bgcolor: "#8AC8D0",
+        bgcolor: "primary.light",
       }}
     >
       <Tabs
@@ -75,9 +75,9 @@ const MainSubTabs = () => {
         centered
         sx={{
           minHeight: 24,
-          ".Mui-selected": { bgcolor: "#45ABB9", color: "#fff" },
+          ".Mui-selected": { bgcolor: "primary.main", color: "common.white" },
           ".MuiTab-root": {
-            color: "#fff",
+            color: "common.white",
             fontSize: "0.875rem", // Smaller text
             minHeight: 24, // Reduce the height of the tabs
             padding: "6px 12px", // Reduce the padding around the text
@@ -85,7 +85,7 @@ const MainSubTabs = () => {
           ".MuiTabs-indicator": {
             height: 2, // Smaller indicator height
           },
-          ".MuiTab-root:not(.Mui-selected)": { bgcolor: "#8AC8D0" },
+          ".MuiTab-root:not(.Mui-selected)": { bgcolor: "primary.light" },
         }}
       >
         {subTabs.map((label, index) =>
@@ -99,12 +99,12 @@ const MainSubTabs = () => {
                 variant="contained"
                 size="small"
                 sx={{
-                  bgcolor: "#FFCCCC",
+                  bgcolor: "accent.light",
                   transition: "transform 0.1s ease-in-out",
                   "&:active": {
                     transform: "scale(0.96)",
                   },
-                  "&:hover": { bgcolor: "#F79191" },
+                  "&:hover": { bgcolor: "accent.main" },
                   textTransform: "none",
                 }}
                 onClick={() => handleButtonClick(index)}

@@ -63,8 +63,8 @@ const CountryCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "#DCEFF2",
-        border: "2px solid #3B919D",
+        bgcolor: "card.bg",
+        border: "2px solid var(--mui-palette-primary-dark)",
         borderRadius: "16px",
       }}
     >
@@ -77,7 +77,7 @@ const CountryCard = () => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            backgroundColor: "#F79191",
+            backgroundColor: "accent.main",
             borderRadius: "8px",
             padding: "8px",
           }}
@@ -97,7 +97,7 @@ const CountryCard = () => {
               key={country.code}
               onClick={() => handleSelect(country)}
               sx={{
-                backgroundColor: isButtonSelected(country) ? "#F79191" : "#FFCCCC",
+                backgroundColor: isButtonSelected(country) ? "accent.main" : "accent.light",
                 flexGrow: 1,
                 borderRadius: "8px",
                 textAlign: "center",
@@ -126,7 +126,7 @@ const CountryCard = () => {
             </CardActionArea>
           ))}
         </Box>
-        <Box sx={{ padding: 2, backgroundColor: "#F2F2F2", borderRadius: "8px" }}>
+        <Box sx={{ padding: 2, backgroundColor: "surface.muted", borderRadius: "8px" }}>
           <Typography variant="body2" color="text.primary">
             {t("card_country_remarks")}
           </Typography>

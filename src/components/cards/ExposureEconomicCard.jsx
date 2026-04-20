@@ -126,8 +126,8 @@ const ExposureEconomicCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "#DCEFF2",
-        border: "2px solid #3B919D",
+        bgcolor: "card.bg",
+        border: "2px solid var(--mui-palette-primary-dark)",
         borderRadius: "16px",
       }}
     >
@@ -140,7 +140,7 @@ const ExposureEconomicCard = () => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            backgroundColor: "#F79191",
+            backgroundColor: "accent.main",
             borderRadius: "8px",
             padding: "8px",
             marginBottom: "24px",
@@ -156,7 +156,7 @@ const ExposureEconomicCard = () => {
               key={exposure}
               onClick={() => handleCardSelect(exposure)}
               sx={{
-                backgroundColor: isButtonSelected(exposure) ? "#F79191" : "#FFCCCC",
+                backgroundColor: isButtonSelected(exposure) ? "accent.main" : "accent.light",
                 borderRadius: "8px",
                 margin: "8px 0", // Adjust spacing for vertical alignment
                 textAlign: "center",
@@ -181,11 +181,11 @@ const ExposureEconomicCard = () => {
               component="span"
               onClick={handleLoadButtonClick}
               sx={{
-                bgcolor: "#FFEBEB",
-                color: "#000000",
+                bgcolor: "accent.paleBg",
+                color: "common.black",
                 fontWeight: "bold",
                 margin: 2,
-                "&:hover": { bgcolor: "#FFCCCC" },
+                "&:hover": { bgcolor: "accent.light" },
                 transition: "transform 0.1s ease-in-out", // Add transition for transform
                 "&:active": {
                   transform: "scale(0.96)", // Slightly scale down when clicked
@@ -213,11 +213,11 @@ const ExposureEconomicCard = () => {
             <Button
               component="span"
               sx={{
-                bgcolor: "#FFEBEB",
-                color: "#000000",
+                bgcolor: "accent.paleBg",
+                color: "common.black",
                 fontWeight: "bold",
                 margin: 2,
-                "&:hover": { bgcolor: "#FFCCCC" },
+                "&:hover": { bgcolor: "accent.light" },
                 transition: "transform 0.1s ease-in-out", // Add transition for transform
                 "&:active": {
                   transform: "scale(0.96)", // Slightly scale down when clicked
@@ -245,7 +245,7 @@ const ExposureEconomicCard = () => {
             <Typography variant="body2" color="text.primary" sx={{ textAlign: "center" }}>
               {t("card_exposure_economic_upload_file")}: {selectedExposureFile}
             </Typography>
-            <IconButton onClick={clearUploadedFile} size="small" sx={{ color: "#F35A5A" }}>
+            <IconButton onClick={clearUploadedFile} size="small" sx={{ color: "accent.dark" }}>
               <CloseIcon />
             </IconButton>
           </Box>
@@ -264,14 +264,14 @@ const ExposureEconomicCard = () => {
             <Typography variant="body2" color="text.primary" sx={{ textAlign: "center" }}>
               {t("card_exposure_economic_fetch_exposure")}: {fetchExposureMessage}
             </Typography>
-            <IconButton onClick={clearFetchedData} size="small" sx={{ color: "#F35A5A" }}>
+            <IconButton onClick={clearFetchedData} size="small" sx={{ color: "accent.dark" }}>
               <CloseIcon />
             </IconButton>
           </Box>
         )}
 
         {/* Remarks section */}
-        <Box sx={{ padding: 2, backgroundColor: "#F2F2F2", borderRadius: "8px" }}>
+        <Box sx={{ padding: 2, backgroundColor: "surface.muted", borderRadius: "8px" }}>
           <Typography variant="body2" color="text.primary">
             {t("card_exposure_economic_remarks")}
           </Typography>
