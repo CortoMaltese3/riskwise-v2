@@ -17,14 +17,14 @@ license = { file = "LICENSE" }
 # docs/architecture-decisions/adr-bundling.md for the rationale and for
 # the removed-package list.
 dependencies = [
-    "climada==4.1.1",
+    "climada==6.1.0",
     "geopandas>=0.14,<2",
-    "numpy>=1.24,<2",
+    "numpy>=1.24,<3",
     "pandas>=2.0,<3",
     "shapely>=2.0,<3",
     "pycountry>=24.6",
     "openpyxl>=3.1,<4",
-    "pyarrow>=15,<22",
+    "pyarrow>=15,<25",
     "h5py>=3.10,<4",
     "rasterio>=1.3,<2",
     "xlsxwriter>=3.2,<4",
@@ -44,7 +44,7 @@ dev = [
     "mypy>=1.10",
 ]
 bundle = [
-    # Pinned ranges validated against Python 3.11 + CLIMADA 4.1.1.
+    # Pinned ranges validated against Python 3.12 + CLIMADA 6.1.0.
     # Bumping either side requires re-running the build matrix in
     # docs/architecture-decisions/adr-bundling.md §5.
     "nuitka>=2.4,<3",

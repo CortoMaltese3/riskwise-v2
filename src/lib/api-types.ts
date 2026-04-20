@@ -11,7 +11,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Countries */
+        /**
+         * Countries
+         * @description Return the countries RISK WISE can run — built-in plus custom drop-ins.
+         *
+         *     Each entry carries a ``source`` field (``"builtin"`` or ``"custom"``)
+         *     so the frontend can label them distinctly (issue #56, Scenario 2).
+         *     Invalid custom drop-ins are skipped and logged via the extensibility
+         *     registry's ``errors`` list; they do not appear here.
+         */
         get: operations["countries_api_v1_countries_get"];
         put?: never;
         post?: never;
@@ -349,8 +357,9 @@ export interface components {
             /**
              * Source
              * @default builtin
+             * @enum {string}
              */
-            source?: "builtin" | "custom";
+            source: "builtin" | "custom";
         };
         /** DataValidateData */
         DataValidateData: {
