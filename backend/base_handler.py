@@ -651,6 +651,53 @@ class BaseHandler:
 
         return None
 
+    def assign_levels(self, gdf: pd.DataFrame, percentile_values: Dict[str, list]) -> pd.DataFrame:
+        """
+        Bucket per-return-period values in ``gdf`` into ordinal level indices.
+
+        For each return-period column named as the key of ``percentile_values``,
+        this method appends a ``<rp>_level`` column whose integer value is the
+        1-based bucket index of the row's value against the ascending or
+        descending threshold list. Ascending thresholds produce the hazard
+        layer's "higher value → higher level" semantics; descending thresholds
+        produce the impact layer's "lower residual → higher level" semantics.
+
+        :param gdf: DataFrame containing the return-period columns.
+        :type gdf: pd.DataFrame
+        :param percentile_values: Mapping of return-period column name to the
+            ordered list of thresholds.
+        :type percentile_values: Dict[str, list]
+        :return: The same DataFrame with the new ``<rp>_level`` columns added.
+        :rtype: pd.DataFrame
+        """
+        for rp, levels in percentile_values.items():
+            is_ascending = levels[0] < levels[-1]
+            level_column = []
+            for _, row in gdf.iterrows():
+                value = row[rp]
+                if is_ascending:
+                    if value < levels[0]:
+                        level_column.append(1)
+                    elif value >= levels[-1]:
+                        level_column.append(len(levels))
+                    else:
+                        for i in range(1, len(levels)):
+                            if levels[i - 1] <= value < levels[i]:
+                                level_column.append(i)
+                                break
+                else:
+                    if value > levels[0]:
+                        level_column.append(1)
+                    elif value <= levels[-1]:
+                        level_column.append(len(levels))
+                    else:
+                        for i in range(1, len(levels)):
+                            if levels[i - 1] >= value > levels[i]:
+                                level_column.append(i)
+                                break
+            gdf[rp + "_level"] = level_column
+        return gdf
+
     def save_parquet_file(self, df: pd.DataFrame, file_path: str) -> Optional[Path]:
         """
         Save a pandas DataFrame to a Parquet file in the DATA_TEMP_DIR directory.

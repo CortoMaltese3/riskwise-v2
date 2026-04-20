@@ -37,8 +37,8 @@
       "prettier --write"
     ],
     "*.py": [
-      "ruff check --fix",
-      "ruff format"
+      "ruff check --fix --force-exclude",
+      "ruff format --force-exclude"
     ]
   },
   "dependencies": {
