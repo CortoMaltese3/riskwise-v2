@@ -1,0 +1,12 @@
+[
+  {
+    "haz_type": "FL",
+    "exp_type": "diarrhea_patients",
+    "id": 105,
+    "name": "Diarrhoea patients",
+    "intensity_unit": "m",
+    "intensity": [0.01, 0.08, 0.44, 2.0],
+    "mdd": [0.0001, 0.0002, 0.0004, 0.0009],
+    "paa": [1.0, 1.0, 1.0, 1.0]
+  }
+]

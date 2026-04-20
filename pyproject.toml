@@ -65,7 +65,11 @@ extend-exclude = [
     "backend/entity",
     "backend/exposure",
     "backend/hazard",
-    "backend/impact",
+    # ``backend/impact/registry.py`` is the v2 data-driven impact-function
+    # loader (issue #51) and is in scope for lint; only the legacy handler
+    # and its untouched test stub stay out.
+    "backend/impact/impact_handler.py",
+    "backend/impact/test_impact_handler.py",
     "backend/macroeconomic",
     "backend/report",
     "backend/run_add_to_ouput.py",
@@ -118,7 +122,8 @@ module = [
     "backend.entity.*",
     "backend.exposure.*",
     "backend.hazard.*",
-    "backend.impact.*",
+    "backend.impact.impact_handler",
+    "backend.impact.test_impact_handler",
     "backend.macroeconomic.*",
     "backend.report.*",
     "backend.run_add_to_ouput",
