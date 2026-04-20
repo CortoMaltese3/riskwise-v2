@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from models.common import Status
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -43,4 +45,18 @@ class MacroCredOutputResponse(BaseModel):
     """
 
     data: list[dict]
+    status: Status
+
+
+class CredDataset(BaseModel):
+    id: str
+    name: str
+    source: str | None = None
+    uploaded_at: datetime
+    is_builtin: bool
+    sha256: str | None = None
+
+
+class CredDatasetsResponse(BaseModel):
+    data: list[CredDataset]
     status: Status

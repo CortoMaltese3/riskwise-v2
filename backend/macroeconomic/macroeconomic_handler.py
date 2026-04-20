@@ -1,66 +1,128 @@
-"""
-Module for handling macroeconomic data extraction and processing.
+"""Macroeconomic data handler — reads CRED timeseries from DuckDB."""
 
-This module reads and processes data from Excel files, filters it based on provided
-parameters, and prepares it for use in other parts of the application.
-"""
+from __future__ import annotations
 
-import pandas as pd
+import duckdb
 
-from constants import REQUIREMENTS_DIR
-from logger_config import LoggerConfig
+from logging_config import get_logger
+
+_log = get_logger("macroeconomic.handler")
 
 
 class MacroeconomicHandler:
-    def __init__(self):
-        self.logger = LoggerConfig(logger_types=["file"])
+    def __init__(self, conn: duckdb.DuckDBPyConnection | None = None) -> None:
+        self._conn = conn
 
-    def get_cred_data_from_excel(
-        self,
-        file_path: str = None,
-    ) -> dict:
-        """
-        Reads data from an Excel file and returns it in a structured format
-        for the frontend chart.
+    def _get_conn(self) -> duckdb.DuckDBPyConnection:
+        if self._conn is not None:
+            return self._conn
+        from db.connection import get_connection
 
-        :param file_path: The path to the Excel file.
+        return get_connection()
+
+    def _get_builtin_dataset_id(self, conn: duckdb.DuckDBPyConnection) -> str | None:
+        row = conn.execute(
+            "SELECT id FROM cred_datasets WHERE is_builtin = TRUE LIMIT 1"
+        ).fetchone()
+        if row is None:
+            _log.warning("cred_handler.no_builtin_dataset")
+            return None
+        return row[0]
+
+    def get_cred_data_from_db(self, dataset_id: str | None = None) -> list[dict]:
+        """Return all CRED rows for *dataset_id* (default: built-in dataset).
+
+        The returned dicts preserve the original xlsx column names so that
+        the frontend's client-side filtering logic is unchanged.
         """
+        conn = self._get_conn()
         try:
-            if not file_path:
-                file_path = REQUIREMENTS_DIR / "cred_output.xlsx"
+            if dataset_id is None:
+                dataset_id = self._get_builtin_dataset_id(conn)
+                if dataset_id is None:
+                    return []
 
-            df = pd.read_excel(file_path, sheet_name="cred_output")
+            rows = conn.execute(
+                """
+                SELECT country, scenario, adpatation, variable AS economic_indicator,
+                       sector AS economic_sector, year, value AS proportion_change_from_baseline
+                FROM cred_data
+                WHERE dataset_id = ?
+                ORDER BY country, scenario, adpatation, variable, sector, year
+                """,
+                [dataset_id],
+            ).fetchall()
 
-            # Return early if no data matches the filters
-            if df.empty:
-                self.logger.log("warning", "No data found for the given filters.")
-                raise ValueError("No data found for the given filters")
+            cols = [
+                "country",
+                "scenario",
+                "adpatation",
+                "economic_indicator",
+                "economic_sector",
+                "year",
+                "proportion_change_from_baseline",
+            ]
+            return [dict(zip(cols, r)) for r in rows]
+        finally:
+            if self._conn is None:
+                conn.close()
 
-            data = df.to_dict(orient="records")
+    def get_chart_data(
+        self,
+        country: str,
+        scenario: str,
+        sector: str,
+        variable: str,
+        dataset_id: str | None = None,
+    ) -> dict:
+        """Return chart-ready timeseries for a single country/scenario/sector/variable.
 
-            return data
+        Response shape::
 
-        except ValueError as e:
-            self.logger.log("error", str(e))
-            raise
+            {
+              "years": [2024, 2025, ...],
+              "datasets": [{"label": "0% Adaptation", "data": [...]}, ...],
+            }
+        """
+        conn = self._get_conn()
+        try:
+            if dataset_id is None:
+                dataset_id = self._get_builtin_dataset_id(conn)
+                if dataset_id is None:
+                    return {"years": [], "datasets": []}
 
-        except FileNotFoundError:
-            self.logger.log("error", f"Macroeconomic CRED excel file not found: {file_path}")
-            return {}
+            rows = conn.execute(
+                """
+                SELECT year, adpatation, value
+                FROM cred_data
+                WHERE dataset_id = ?
+                  AND country    = ?
+                  AND scenario   = ?
+                  AND sector     = ?
+                  AND variable   = ?
+                ORDER BY adpatation, year
+                """,
+                [dataset_id, country, scenario, sector, variable],
+            ).fetchall()
 
-        except pd.errors.EmptyDataError:
-            self.logger.log(
-                "error", "Macroeconomic CRED excel file is empty or contains no valid data."
-            )
-            return {}
+            if not rows:
+                return {"years": [], "datasets": []}
 
-        except KeyError as e:
-            self.logger.log(
-                "error",
-                f"Missing required column in the Macroeconomic CRED excel file. More info: {e}",
-            )
-            return {}
+            years = sorted({r[0] for r in rows})
+            year_idx = {y: i for i, y in enumerate(years)}
+            groups: dict[str, list[float | None]] = {}
+            for year, adp, value in rows:
+                label = (
+                    "Without adaptation"
+                    if adp is None or adp == 0
+                    else f"{adp * 100:.0f}% Adaptation"
+                )
+                if label not in groups:
+                    groups[label] = [None] * len(years)
+                groups[label][year_idx[year]] = value
 
-        except Exception as e:
-            self.logger.log("error", f"Unexpected error occurred. More info: {str(e)}")
-            return {}
+            datasets = [{"label": lbl, "data": vals} for lbl, vals in groups.items()]
+            return {"years": years, "datasets": datasets}
+        finally:
+            if self._conn is None:
+                conn.close()
