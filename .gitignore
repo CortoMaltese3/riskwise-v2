@@ -13,6 +13,8 @@ dist
 
 # backend
 __pycache__
+backend_diff.txt
+src/*.egg-info/
 
 # logs
 logs/
