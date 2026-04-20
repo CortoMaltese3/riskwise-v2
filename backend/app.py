@@ -39,11 +39,13 @@ import socket
 import sys
 import threading
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
 import uvicorn
 from cancellation import CancelRequested, cancel_event_var
+from db import run_startup_migrations
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -215,7 +217,15 @@ async def _dispatch(script_name: str, data: Any) -> dict:
     return await asyncio.to_thread(_dispatch_sync, script_name, data)
 
 
-app = FastAPI(title="RISK WISE Backend", version="2.0.0-dev")
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    # DuckDB migrations must complete before any endpoint is served;
+    # otherwise the first request could hit a half-built schema.
+    run_startup_migrations()
+    yield
+
+
+app = FastAPI(title="RISK WISE Backend", version="2.0.0-dev", lifespan=_lifespan)
 
 
 @app.middleware("http")
