@@ -113,6 +113,7 @@ class ExportReportRequest(BaseModel):
 
 
 class ExportReportData(BaseModel):
+    status: str = "delegated_to_electron"
     report_path: str = ""
 
 

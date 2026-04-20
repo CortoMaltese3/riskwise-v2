@@ -1013,6 +1013,86 @@ ipcMain.handle("open-report", async (_event, reportPath) => {
   }
 });
 
+const PRINT_READY_POLL_MS = 200;
+const PRINT_READY_TIMEOUT_MS = 15000;
+
+const waitForPrintReady = (webContents) =>
+  new Promise((resolve, reject) => {
+    const deadline = Date.now() + PRINT_READY_TIMEOUT_MS;
+    const check = async () => {
+      if (Date.now() > deadline) {
+        reject(new Error("Print view timed out — scenario data did not load in time"));
+        return;
+      }
+      try {
+        const ready = await webContents.executeJavaScript(
+          "document.body.dataset.printReady"
+        );
+        if (ready === "true") {
+          resolve();
+        } else {
+          setTimeout(check, PRINT_READY_POLL_MS);
+        }
+      } catch {
+        setTimeout(check, PRINT_READY_POLL_MS);
+      }
+    };
+    check();
+  });
+
+ipcMain.handle("export-pdf", async (_event, { scenarioId }) => {
+  let printWin = null;
+  try {
+    printWin = new BrowserWindow({
+      show: false,
+      width: 1200,
+      height: 900,
+      webPreferences: {
+        ...HARDENED_WEB_PREFERENCES,
+        preload: path.join(basePath, "build", "preload.js"),
+      },
+    });
+
+    await new Promise((resolve, reject) => {
+      printWin.webContents.once("did-finish-load", resolve);
+      printWin.webContents.once("did-fail-load", (_e, code, desc) =>
+        reject(new Error(`Print view failed to load: ${desc} (${code})`))
+      );
+      printWin.loadFile(path.join(basePath, "build", "index.html"), {
+        query: { view: "print", scenarioId },
+      });
+    });
+
+    await waitForPrintReady(printWin.webContents);
+
+    const pdfBuffer = await printWin.webContents.printToPDF({
+      printBackground: true,
+      pageSize: "A4",
+    });
+
+    printWin.destroy();
+    printWin = null;
+
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      title: "Save PDF",
+      defaultPath: `riskwise-scenario-${scenarioId}.pdf`,
+      filters: [{ name: "PDF Files", extensions: ["pdf"] }],
+    });
+
+    if (canceled || !filePath) {
+      return { success: false, reason: "cancelled" };
+    }
+
+    fs.writeFileSync(filePath, pdfBuffer);
+    log.info("[electron] PDF saved:", filePath);
+    return { success: true, filePath };
+  } catch (error) {
+    log.error("[electron] PDF export failed:", error);
+    if (printWin && !printWin.isDestroyed()) printWin.destroy();
+    return { success: false, reason: error.message };
+  }
+});
+
 ipcMain.on("minimize", () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.minimize();
