@@ -191,6 +191,77 @@
         "title": "Country",
         "type": "object"
       },
+      "CredDataset": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_builtin": {
+            "title": "Is Builtin",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "uploaded_at": {
+            "format": "date-time",
+            "title": "Uploaded At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "uploaded_at",
+          "is_builtin"
+        ],
+        "title": "CredDataset",
+        "type": "object"
+      },
+      "CredDatasetsResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CredDataset"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "CredDatasetsResponse",
+        "type": "object"
+      },
       "DataValidateData": {
         "properties": {
           "data": {
@@ -257,6 +328,24 @@
           "status"
         ],
         "title": "DeleteScenarioResponse",
+        "type": "object"
+      },
+      "DeleteSnapshotResponse": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "DeleteSnapshotResponse",
         "type": "object"
       },
       "ExportReportData": {
@@ -485,6 +574,48 @@
           "status"
         ],
         "title": "MeasuresResponse",
+        "type": "object"
+      },
+      "PatchScenarioRequest": {
+        "additionalProperties": false,
+        "description": "Body for ``PATCH /api/v1/scenarios/{id}`` \u2014 partial metadata update.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          }
+        },
+        "title": "PatchScenarioRequest",
         "type": "object"
       },
       "SaveScenarioRequest": {
@@ -901,6 +1032,61 @@
         "title": "ScenarioWorkspaceItem",
         "type": "object"
       },
+      "SnapshotItem": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "scenario_id": {
+            "title": "Scenario Id",
+            "type": "string"
+          },
+          "snapshot_type": {
+            "title": "Snapshot Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scenario_id",
+          "snapshot_type"
+        ],
+        "title": "SnapshotItem",
+        "type": "object"
+      },
+      "SnapshotListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SnapshotItem"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "SnapshotListResponse",
+        "type": "object"
+      },
       "Status": {
         "properties": {
           "code": {
@@ -1081,9 +1267,30 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/cache/clear": {
+      "post": {
+        "description": "Admin-only reset for the Entity/Hazard LRU and DuckDB computation cache.\n\nNot surfaced in the UI: intended for support flows that need a\nguaranteed cold repeat of a scenario (e.g. when validating a fix to\na CLIMADA bug that an old cached result is masking).",
+        "operationId": "cache_clear_api_v1_cache_clear_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Cache Clear Api V1 Cache Clear Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Cache Clear"
+      }
+    },
     "/api/v1/countries": {
       "get": {
-        "description": "Return the countries RISK WISE can run \u2014 built-in plus custom drop-ins.\n\nEach entry carries a ``source`` field (``\"builtin\"`` or ``\"custom\"``)\nso the frontend can label them distinctly (issue #56, Scenario 2).\nInvalid custom drop-ins are skipped and logged via the extensibility\nregistry's ``errors`` list; they do not appear here.",
+        "description": "Return the countries RISK WISE can run \u2014 built-in plus custom drop-ins.\n\nEach entry carries a ``source`` field (``\"builtin\"`` or ``\"custom\"``)\nso the frontend can label them distinctly (issue #56, Scenario 2).\nInvalid custom drop-ins are skipped at startup (see\n:func:`_scan_user_data_countries`) and do not appear here.",
         "operationId": "countries_api_v1_countries_get",
         "responses": {
           "200": {
@@ -1212,6 +1419,83 @@
         "summary": "Macro Cred Output"
       }
     },
+    "/api/v1/macro/datasets": {
+      "get": {
+        "operationId": "macro_datasets_api_v1_macro_datasets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredDatasetsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Macro Datasets"
+      },
+      "post": {
+        "operationId": "macro_datasets_upload_api_v1_macro_datasets_post",
+        "responses": {
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Macro Datasets Upload Api V1 Macro Datasets Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Macro Datasets Upload"
+      }
+    },
+    "/api/v1/macro/datasets/{dataset_id}": {
+      "delete": {
+        "operationId": "macro_datasets_delete_api_v1_macro_datasets__dataset_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "title": "Dataset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Macro Datasets Delete Api V1 Macro Datasets  Dataset Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Macro Datasets Delete"
+      }
+    },
     "/api/v1/measures/{country}/{hazard}": {
       "get": {
         "operationId": "measures_api_v1_measures__country___hazard__get",
@@ -1232,6 +1516,22 @@
             "schema": {
               "title": "Hazard",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "measure_set_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Measure Set Id"
             }
           }
         ],
@@ -1504,6 +1804,53 @@
           }
         },
         "summary": "Get Scenario Endpoint"
+      },
+      "patch": {
+        "operationId": "patch_scenario_endpoint_api_v1_scenarios__scenario_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchScenarioRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveScenarioResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Scenario Endpoint"
       }
     },
     "/api/v1/scenarios/{scenario_id}/export": {
@@ -1602,6 +1949,84 @@
           }
         },
         "summary": "Save Scenario Endpoint"
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}/snapshots": {
+      "get": {
+        "operationId": "list_snapshots_endpoint_api_v1_scenarios__scenario_id__snapshots_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Snapshots Endpoint"
+      }
+    },
+    "/api/v1/snapshots/{snapshot_id}": {
+      "delete": {
+        "operationId": "delete_snapshot_endpoint_api_v1_snapshots__snapshot_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteSnapshotResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Snapshot Endpoint"
       }
     },
     "/api/v1/temp/clear": {

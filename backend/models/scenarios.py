@@ -66,7 +66,34 @@ class SaveScenarioResponse(BaseModel):
     status: Status
 
 
+class PatchScenarioRequest(BaseModel):
+    """Body for ``PATCH /api/v1/scenarios/{id}`` — partial metadata update."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, min_length=1)
+    tags: str | None = None
+    notes: str | None = None
+
+
 class DeleteScenarioResponse(BaseModel):
+    data: dict
+    status: Status
+
+
+class SnapshotItem(BaseModel):
+    id: str
+    scenario_id: str
+    snapshot_type: str
+    created_at: datetime | None = None
+
+
+class SnapshotListResponse(BaseModel):
+    data: list[SnapshotItem]
+    status: Status
+
+
+class DeleteSnapshotResponse(BaseModel):
     data: dict
     status: Status
 

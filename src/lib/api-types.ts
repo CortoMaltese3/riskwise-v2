@@ -4,6 +4,30 @@
  */
 
 export interface paths {
+    "/api/v1/cache/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cache Clear
+         * @description Admin-only reset for the Entity/Hazard LRU and DuckDB computation cache.
+         *
+         *     Not surfaced in the UI: intended for support flows that need a
+         *     guaranteed cold repeat of a scenario (e.g. when validating a fix to
+         *     a CLIMADA bug that an old cached result is masking).
+         */
+        post: operations["cache_clear_api_v1_cache_clear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/countries": {
         parameters: {
             query?: never;
@@ -17,8 +41,8 @@ export interface paths {
          *
          *     Each entry carries a ``source`` field (``"builtin"`` or ``"custom"``)
          *     so the frontend can label them distinctly (issue #56, Scenario 2).
-         *     Invalid custom drop-ins are skipped and logged via the extensibility
-         *     registry's ``errors`` list; they do not appear here.
+         *     Invalid custom drop-ins are skipped at startup (see
+         *     :func:`_scan_user_data_countries`) and do not appear here.
          */
         get: operations["countries_api_v1_countries_get"];
         put?: never;
@@ -92,6 +116,41 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/macro/datasets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Macro Datasets */
+        get: operations["macro_datasets_api_v1_macro_datasets_get"];
+        put?: never;
+        /** Macro Datasets Upload */
+        post: operations["macro_datasets_upload_api_v1_macro_datasets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/macro/datasets/{dataset_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Macro Datasets Delete */
+        delete: operations["macro_datasets_delete_api_v1_macro_datasets__dataset_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -231,7 +290,8 @@ export interface paths {
         delete: operations["delete_scenario_endpoint_api_v1_scenarios__scenario_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Patch Scenario Endpoint */
+        patch: operations["patch_scenario_endpoint_api_v1_scenarios__scenario_id__patch"];
         trace?: never;
     };
     "/api/v1/scenarios/{scenario_id}/export": {
@@ -263,6 +323,40 @@ export interface paths {
         /** Save Scenario Endpoint */
         post: operations["save_scenario_endpoint_api_v1_scenarios__scenario_id__save_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scenarios/{scenario_id}/snapshots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Snapshots Endpoint */
+        get: operations["list_snapshots_endpoint_api_v1_scenarios__scenario_id__snapshots_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/snapshots/{snapshot_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Snapshot Endpoint */
+        delete: operations["delete_snapshot_endpoint_api_v1_snapshots__snapshot_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -361,6 +455,30 @@ export interface components {
              */
             source: "builtin" | "custom";
         };
+        /** CredDataset */
+        CredDataset: {
+            /** Id */
+            id: string;
+            /** Is Builtin */
+            is_builtin: boolean;
+            /** Name */
+            name: string;
+            /** Sha256 */
+            sha256?: string | null;
+            /** Source */
+            source?: string | null;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+        };
+        /** CredDatasetsResponse */
+        CredDatasetsResponse: {
+            /** Data */
+            data: components["schemas"]["CredDataset"][];
+            status: components["schemas"]["Status"];
+        };
         /** DataValidateData */
         DataValidateData: {
             /** Data */
@@ -382,6 +500,14 @@ export interface components {
         };
         /** DeleteScenarioResponse */
         DeleteScenarioResponse: {
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
+            status: components["schemas"]["Status"];
+        };
+        /** DeleteSnapshotResponse */
+        DeleteSnapshotResponse: {
             /** Data */
             data: {
                 [key: string]: unknown;
@@ -482,6 +608,18 @@ export interface components {
         MeasuresResponse: {
             data: components["schemas"]["MeasuresData"];
             status: components["schemas"]["Status"];
+        };
+        /**
+         * PatchScenarioRequest
+         * @description Body for ``PATCH /api/v1/scenarios/{id}`` — partial metadata update.
+         */
+        PatchScenarioRequest: {
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Tags */
+            tags?: string | null;
         };
         /**
          * SaveScenarioRequest
@@ -596,6 +734,23 @@ export interface components {
             /** Tags */
             tags?: string | null;
         };
+        /** SnapshotItem */
+        SnapshotItem: {
+            /** Created At */
+            created_at?: string | null;
+            /** Id */
+            id: string;
+            /** Scenario Id */
+            scenario_id: string;
+            /** Snapshot Type */
+            snapshot_type: string;
+        };
+        /** SnapshotListResponse */
+        SnapshotListResponse: {
+            /** Data */
+            data: components["schemas"]["SnapshotItem"][];
+            status: components["schemas"]["Status"];
+        };
         /** Status */
         Status: {
             /** Code */
@@ -667,6 +822,28 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    cache_clear_api_v1_cache_clear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     countries_api_v1_countries_get: {
         parameters: {
             query?: never;
@@ -793,9 +970,86 @@ export interface operations {
             };
         };
     };
-    measures_api_v1_measures__country___hazard__get: {
+    macro_datasets_api_v1_macro_datasets_get: {
         parameters: {
             query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredDatasetsResponse"];
+                };
+            };
+        };
+    };
+    macro_datasets_upload_api_v1_macro_datasets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    macro_datasets_delete_api_v1_macro_datasets__dataset_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    measures_api_v1_measures__country___hazard__get: {
+        parameters: {
+            query?: {
+                measure_set_id?: string | null;
+            };
             header?: never;
             path: {
                 country: string;
@@ -1044,6 +1298,41 @@ export interface operations {
             };
         };
     };
+    patch_scenario_endpoint_api_v1_scenarios__scenario_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchScenarioRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaveScenarioResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     export_scenario_api_v1_scenarios__scenario_id__export_post: {
         parameters: {
             query?: never;
@@ -1101,6 +1390,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SaveScenarioResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_snapshots_endpoint_api_v1_scenarios__scenario_id__snapshots_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_snapshot_endpoint_api_v1_snapshots__snapshot_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteSnapshotResponse"];
                 };
             };
             /** @description Validation Error */

@@ -31,7 +31,11 @@ export type ExportReportRequest = Schema<"ExportReportRequest">;
 export type ExportReportResponse = Schema<"ExportReportResponse">;
 export type SaveScenarioRequest = Schema<"SaveScenarioRequest">;
 export type SaveScenarioResponse = Schema<"SaveScenarioResponse">;
+export type PatchScenarioRequest = Schema<"PatchScenarioRequest">;
 export type DeleteScenarioResponse = Schema<"DeleteScenarioResponse">;
+export type SnapshotItem = Schema<"SnapshotItem">;
+export type SnapshotListResponse = Schema<"SnapshotListResponse">;
+export type DeleteSnapshotResponse = Schema<"DeleteSnapshotResponse">;
 export type MacroChartDataRequest = Schema<"MacroChartDataRequest">;
 export type MacroChartDataResponse = Schema<"MacroChartDataResponse">;
 export type MacroCredOutputResponse = Schema<"MacroCredOutputResponse">;
@@ -53,6 +57,9 @@ const get = <T>(path: string): Promise<IpcResult<T>> =>
 
 const post = <T>(path: string, body: unknown): Promise<IpcResult<T>> =>
   http().request<T>("POST", path, body ?? {}, newRequestId());
+
+const patch = <T>(path: string, body: unknown): Promise<IpcResult<T>> =>
+  http().request<T>("PATCH", path, body ?? {}, newRequestId());
 
 const del = <T>(path: string): Promise<IpcResult<T>> =>
   http().request<T>("DELETE", path, null, newRequestId());
@@ -83,8 +90,17 @@ const RiskWiseClient = {
   saveScenario: (id: string, body: SaveScenarioRequest) =>
     post<SaveScenarioResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}/save`, body),
 
+  patchScenario: (id: string, body: PatchScenarioRequest) =>
+    patch<SaveScenarioResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}`, body),
+
   deleteScenario: (id: string) =>
     del<DeleteScenarioResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}`),
+
+  listSnapshots: (scenarioId: string) =>
+    get<SnapshotListResponse>(`/api/v1/scenarios/${encodeURIComponent(scenarioId)}/snapshots`),
+
+  deleteSnapshot: (id: string) =>
+    del<DeleteSnapshotResponse>(`/api/v1/snapshots/${encodeURIComponent(id)}`),
 
   fetchCREDOutput: () => get<MacroCredOutputResponse>("/api/v1/macro/cred-output"),
 

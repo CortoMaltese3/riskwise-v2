@@ -29,15 +29,19 @@ from models.scenario import (
 )
 from models.scenarios import (
     DeleteScenarioResponse,
+    DeleteSnapshotResponse,
     ExportReportData,
     ExportReportRequest,
     ExportReportResponse,
+    PatchScenarioRequest,
     SaveScenarioRequest,
     SaveScenarioResponse,
     ScenarioDetailPayload,
     ScenarioDetailResponse,
     ScenarioListResponse,
     ScenarioWorkspaceItem,
+    SnapshotItem,
+    SnapshotListResponse,
 )
 from models.temp import TempClearResponse
 from models.waterfall import WaterfallCategory, WaterfallPayload, WaterfallResponse
@@ -57,6 +61,7 @@ __all__ = [
     "DataValidateRequest",
     "DataValidateResponse",
     "DeleteScenarioResponse",
+    "DeleteSnapshotResponse",
     "ErrorResponse",
     "ExportReportData",
     "ExportReportRequest",
@@ -68,12 +73,15 @@ __all__ = [
     "MacroCredOutputResponse",
     "MeasuresData",
     "MeasuresResponse",
+    "PatchScenarioRequest",
     "SaveScenarioRequest",
     "SaveScenarioResponse",
     "ScenarioDetailPayload",
     "ScenarioDetailResponse",
     "ScenarioListResponse",
     "ScenarioWorkspaceItem",
+    "SnapshotItem",
+    "SnapshotListResponse",
     "ScenarioErrorEvent",
     "ScenarioProgressEvent",
     "ScenarioResultEvent",
