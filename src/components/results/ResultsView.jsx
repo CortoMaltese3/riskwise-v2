@@ -6,10 +6,12 @@ import ResultsViewTitle from "../title/ResultsViewTitle";
 import EconomicResultsCard from "./EconomicResultsCard";
 import MacroEconomicResultsCard from "./MacroEconomicResultsCard";
 import OutputResultsCard from "./OutputResultsCard";
+import LoadingSkeleton from "../layout/LoadingSkeleton";
 import useStore from "../../store";
 
 const ResultsView = () => {
-  const { selectedTab } = useStore();
+  const selectedTab = useStore((state) => state.selectedTab);
+  const isScenarioRunning = useStore((state) => state.isScenarioRunning);
 
   if (selectedTab === 0) {
     return null;
@@ -19,9 +21,15 @@ const ResultsView = () => {
     <Box sx={{ width: "100%" }}>
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <ResultsViewTitle selectedTab={selectedTab} />
-        {selectedTab === 1 && <EconomicResultsCard />}
-        {selectedTab === 2 && <MacroEconomicResultsCard />}
-        {selectedTab === 3 && <OutputResultsCard />}
+        {isScenarioRunning ? (
+          <LoadingSkeleton data-testid="results-skeleton" />
+        ) : (
+          <>
+            {selectedTab === 1 && <EconomicResultsCard />}
+            {selectedTab === 2 && <MacroEconomicResultsCard />}
+            {selectedTab === 3 && <OutputResultsCard />}
+          </>
+        )}
       </Box>
     </Box>
   );
