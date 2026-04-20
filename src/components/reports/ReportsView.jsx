@@ -38,10 +38,7 @@ const ReportsView = () => {
 
   const onRemoveReportHandler = async (report) => {
     try {
-      const response = await RiskWiseClient.removeReport(report.id, {
-        reportType: report.type,
-        image: report.image,
-      });
+      const response = await RiskWiseClient.deleteScenario(report.id);
 
       // Ensure that the response and status exist
       const message = response?.result?.status?.message || "Failed to remove report";

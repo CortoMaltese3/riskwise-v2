@@ -198,8 +198,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Scenarios */
-        get: operations["list_scenarios_api_v1_scenarios_get"];
+        /** List Scenarios Endpoint */
+        get: operations["list_scenarios_endpoint_api_v1_scenarios_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -215,12 +215,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Scenario */
-        get: operations["get_scenario_api_v1_scenarios__scenario_id__get"];
+        /** Get Scenario Endpoint */
+        get: operations["get_scenario_endpoint_api_v1_scenarios__scenario_id__get"];
         put?: never;
         post?: never;
-        /** Delete Scenario */
-        delete: operations["delete_scenario_api_v1_scenarios__scenario_id__delete"];
+        /** Delete Scenario Endpoint */
+        delete: operations["delete_scenario_endpoint_api_v1_scenarios__scenario_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -252,8 +252,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Save Scenario */
-        post: operations["save_scenario_api_v1_scenarios__scenario_id__save_post"];
+        /** Save Scenario Endpoint */
+        post: operations["save_scenario_endpoint_api_v1_scenarios__scenario_id__save_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -366,8 +366,8 @@ export interface components {
             data: components["schemas"]["DataValidateData"];
             status: components["schemas"]["Status"];
         };
-        /** DeleteReportResponse */
-        DeleteReportResponse: {
+        /** DeleteScenarioResponse */
+        DeleteScenarioResponse: {
             /** Data */
             data: {
                 [key: string]: unknown;
@@ -470,50 +470,47 @@ export interface components {
             status: components["schemas"]["Status"];
         };
         /**
-         * ReportItem
-         * @description One persisted report row.
-         *
-         *     The legacy storage layer attaches arbitrary metadata to each report; we
-         *     accept any extra keys and only validate the ones the UI actively reads.
+         * SaveScenarioRequest
+         * @description Body for ``POST /api/v1/scenarios/{id}/save`` — the save-as dialog.
          */
-        ReportItem: {
-            /** Data */
-            data?: {
-                [key: string]: unknown;
-            } | null;
-            /** Id */
-            id: string;
-            /** Image */
-            image?: string | null;
-            /** Scenario Id */
-            scenario_id?: string | null;
-            /** Type */
-            type?: string | null;
-        } & {
-            [key: string]: unknown;
-        };
-        /** ReportListResponse */
-        ReportListResponse: {
-            /** Data */
-            data: components["schemas"]["ReportItem"][];
-            status: components["schemas"]["Status"];
-        };
-        /** ReportResponse */
-        ReportResponse: {
-            data: components["schemas"]["ReportItem"];
-            status: components["schemas"]["Status"];
+        SaveScenarioRequest: {
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+            /** Tags */
+            tags?: string | null;
         };
         /** SaveScenarioResponse */
         SaveScenarioResponse: {
-            data: components["schemas"]["SaveScenarioResponseData"];
+            data: components["schemas"]["ScenarioWorkspaceItem"];
             status: components["schemas"]["Status"];
         };
-        /** SaveScenarioResponseData */
-        SaveScenarioResponseData: {
-            /** Data */
-            data: {
-                [key: string]: unknown;
+        /**
+         * ScenarioDetailPayload
+         * @description Full scenario: metadata row plus the result blobs keyed by type.
+         *
+         *     Result values are pre-decoded JSON strings — the frontend parses them
+         *     as needed. Storing raw strings keeps the payload auditable at the
+         *     network boundary without adding a per-type Pydantic schema here.
+         */
+        ScenarioDetailPayload: {
+            /** Results */
+            results?: {
+                [key: string]: string;
             };
+            scenario: components["schemas"]["ScenarioWorkspaceItem"];
+        };
+        /** ScenarioDetailResponse */
+        ScenarioDetailResponse: {
+            data: components["schemas"]["ScenarioDetailPayload"];
+            status: components["schemas"]["Status"];
+        };
+        /** ScenarioListResponse */
+        ScenarioListResponse: {
+            /** Data */
+            data: components["schemas"]["ScenarioWorkspaceItem"][];
+            status: components["schemas"]["Status"];
         };
         /**
          * ScenarioRunRequest
@@ -546,6 +543,44 @@ export interface components {
             timeHorizon?: number[] | null;
         } & {
             [key: string]: unknown;
+        };
+        /**
+         * ScenarioWorkspaceItem
+         * @description A saved-scenario row as it appears in the workspace list.
+         */
+        ScenarioWorkspaceItem: {
+            /** Annual Growth */
+            annual_growth?: number | null;
+            /** App Option */
+            app_option?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Exposure Economic */
+            exposure_economic?: string | null;
+            /** Exposure Non Economic */
+            exposure_non_economic?: string | null;
+            /** Future Year */
+            future_year?: number | null;
+            /** Hazard Type */
+            hazard_type?: string | null;
+            /** Id */
+            id: string;
+            /** Is Era */
+            is_era?: boolean | null;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Ref Year */
+            ref_year?: number | null;
+            /** Scenario */
+            scenario?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Tags */
+            tags?: string | null;
         };
         /** Status */
         Status: {
@@ -913,7 +948,7 @@ export interface operations {
             };
         };
     };
-    list_scenarios_api_v1_scenarios_get: {
+    list_scenarios_endpoint_api_v1_scenarios_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -928,12 +963,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReportListResponse"];
+                    "application/json": components["schemas"]["ScenarioListResponse"];
                 };
             };
         };
     };
-    get_scenario_api_v1_scenarios__scenario_id__get: {
+    get_scenario_endpoint_api_v1_scenarios__scenario_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -950,7 +985,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReportResponse"];
+                    "application/json": components["schemas"]["ScenarioDetailResponse"];
                 };
             };
             /** @description Validation Error */
@@ -964,12 +999,9 @@ export interface operations {
             };
         };
     };
-    delete_scenario_api_v1_scenarios__scenario_id__delete: {
+    delete_scenario_endpoint_api_v1_scenarios__scenario_id__delete: {
         parameters: {
-            query?: {
-                report_type?: string;
-                image?: string | null;
-            };
+            query?: never;
             header?: never;
             path: {
                 scenario_id: string;
@@ -984,7 +1016,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeleteReportResponse"];
+                    "application/json": components["schemas"]["DeleteScenarioResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1033,7 +1065,7 @@ export interface operations {
             };
         };
     };
-    save_scenario_api_v1_scenarios__scenario_id__save_post: {
+    save_scenario_endpoint_api_v1_scenarios__scenario_id__save_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1042,7 +1074,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveScenarioRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
