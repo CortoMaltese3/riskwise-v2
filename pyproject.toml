@@ -20,7 +20,7 @@ dependencies = [
     "climada==6.1.0",
     "geopandas>=0.14,<2",
     "numpy>=1.24,<3",
-    "pandas>=2.0,<3",
+    "pandas>=2.0,<4",
     "shapely>=2.0,<3",
     "pycountry>=24.6",
     "openpyxl>=3.1,<4",
@@ -31,7 +31,7 @@ dependencies = [
     "duckdb>=1.0,<2",
     "fastapi>=0.110,<1",
     "uvicorn[standard]>=0.27,<1",
-    "psutil>=5.9,<7",
+    "psutil>=5.9,<8",
     "structlog>=24,<26",
 ]
 
@@ -47,7 +47,7 @@ bundle = [
     # Pinned ranges validated against Python 3.12 + CLIMADA 6.1.0.
     # Bumping either side requires re-running the build matrix in
     # docs/architecture-decisions/adr-bundling.md §5.
-    "nuitka>=2.4,<3",
+    "nuitka>=2.4,<5",
     "pyinstaller>=6.6,<7",
 ]
 
