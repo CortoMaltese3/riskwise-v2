@@ -2,7 +2,7 @@
 Module for handling cost-benefit analysis operations.
 
 This module contains the `CostBenefitHandler` class, which manages cost-benefit analysis
-operations such as retrieving measures from Excel files, loading discount rates, calculating
+operations such as retrieving measures from DuckDB, loading discount rates, calculating
 cost-benefit, and producing structured JSON payloads consumed by the frontend charts.
 
 Classes:
@@ -12,8 +12,8 @@ Classes:
 
 Methods:
 
-- `get_measure_set_from_excel`:
-    Retrieve a MeasureSet object related to a specified hazard code from an Excel file.
+- `get_measure_names_from_db`:
+    Retrieve adaptation measure names for a hazard type from DuckDB.
 - `get_discount_rates_from_excel`:
     Load discount rates from an Excel file.
 - `calculate_cost_benefit`:
@@ -26,10 +26,10 @@ Methods:
 
 import json
 
+import duckdb
 from climada.engine import CostBenefit, ImpactCalc
 from climada.engine.cost_benefit import NO_MEASURE, risk_aai_agg
 from climada.entity import DiscRates, Entity
-from climada.entity.measures import MeasureSet
 from climada.hazard import Hazard
 
 from constants import DATA_TEMP_DIR, REQUIREMENTS_DIR
@@ -42,60 +42,50 @@ COSTBEN_DATA_FILENAME = "cost_benefit_data.json"
 hazard_handler = HazardHandler()
 logger = LoggerConfig(logger_types=["file"])
 
-
 class CostBenefitHandler:
-    """
-    Class for handling cost-benefit analysis operations.
+    """Class for handling cost-benefit analysis operations."""
 
-    This class provides methods for retrieving measures from Excel files, loading discount rates,
-    calculating cost-benefit, and plotting results.
-    """
+    def get_measure_names_from_db(
+        self,
+        conn: duckdb.DuckDBPyConnection,
+        hazard_code: str,
+        measure_set_id: str | None = None,
+    ) -> list[str]:
+        """Return measure names for *hazard_code* from the canonical DuckDB store.
 
-    def get_measure_set_from_excel(self, hazard_code: str) -> MeasureSet:
+        When *measure_set_id* is supplied the query is scoped to that set;
+        otherwise the built-in set is used. Returns an empty list when no
+        measures are found so the caller can decide how to handle it.
         """
-        Retrieves a MeasureSet object related to a specified hazard code from an Excel file.
-
-        If the file is not found or no measures are found for the specified hazard code,
-        the function returns None.
-
-        :param hazard_code: The code representing the specific hazard to retrieve measures for.
-        :type hazard_code: str
-        :return: A MeasureSet object containing the measures associated with the hazard code,
-                or None if the file is not found or no measures exist for the hazard code.
-        :rtype: MeasureSet or None
-        """
-        measures_path = REQUIREMENTS_DIR / "adaptation_measures.xlsx"
-
+        hazard_type = hazard_handler.get_hazard_name(hazard_code) or hazard_code
         try:
-            # Attempt to load the measure set from the Excel file adaptation_measures.xlsx
-            measure_set = MeasureSet.from_excel(measures_path)
-            measure_list = measure_set.get_measure(haz_type=hazard_code)
-
-            # Check if measures were found for the given hazard code
-            if measure_list:
-                # If measures are found, create a new MeasureSet with them and
-                # perform any necessary checks
-                measure_set = MeasureSet(measure_list)
-                measure_set.check()
-                return measure_set
-            # Log and handle the case where no measures are found for the hazard code
-            # without interrupting the flow
-            logger.log("info", f"No measures found for hazard type '{hazard_code}'")
-            return None
-        except FileNotFoundError as e:
-            # Log the case where the Excel file is not found and return None to continue the flow
-            logger.log(
-                "error",
-                f"Adaptation measures excel file not found at {measures_path}. More info: {e}",
-            )
-            return None
+            if measure_set_id:
+                rows = conn.execute(
+                    """
+                    SELECT am.name
+                    FROM adaptation_measures am
+                    WHERE am.hazard_type = ?
+                      AND am.measure_set_id = ?
+                    ORDER BY am.name
+                    """,
+                    [hazard_type, measure_set_id],
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """
+                    SELECT am.name
+                    FROM adaptation_measures am
+                    JOIN measure_sets ms ON ms.id = am.measure_set_id
+                    WHERE am.hazard_type = ?
+                      AND ms.is_builtin = TRUE
+                    ORDER BY am.name
+                    """,
+                    [hazard_type],
+                ).fetchall()
+            return [r[0] for r in rows]
         except Exception as exc:
-            # Log any unexpected errors and return None to avoid breaking the flow
-            logger.log(
-                "error",
-                f"An unexpected error occurred while processing the Excel file. More info: {exc}",
-            )
-            return None
+            logger.log("error", f"Failed to fetch measure names from DB. More info: {exc}")
+            return []
 
     def get_discount_rates_from_excel(self) -> DiscRates:
         """

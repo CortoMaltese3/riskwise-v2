@@ -265,6 +265,7 @@ def _scan_user_data_countries() -> None:
 
 
 _CRED_XLSX_PATH = _REPO_ROOT / "requirements" / "cred_output.xlsx"
+_MEASURES_XLSX_PATH = _REPO_ROOT / "requirements" / "adaptation_measures.xlsx"
 
 
 @asynccontextmanager
@@ -285,6 +286,12 @@ async def _lifespan(_app: FastAPI):
         from macroeconomic.cred_seeder import run_startup_cred_seed
 
         run_startup_cred_seed(_CRED_XLSX_PATH)
+    # Seed the built-in adaptation measures; idempotent — skips if already present.
+    # Set RISKWISE_SKIP_MEASURES_SEED=1 in test fixtures that pre-seed their own DB.
+    if not os.getenv("RISKWISE_SKIP_MEASURES_SEED"):
+        from measures.measures_seeder import run_startup_measures_seed
+
+        run_startup_measures_seed(_MEASURES_XLSX_PATH)
     yield
 
 
@@ -476,8 +483,11 @@ async def data_validate(payload: DataValidateRequest) -> dict:
 
 
 @app.get(f"{API_PREFIX}/measures/{{country}}/{{hazard}}", response_model=MeasuresResponse)
-async def measures(country: str, hazard: str) -> dict:
-    return await _dispatch("run_fetch_measures.py", {"countryName": country, "hazardType": hazard})
+async def measures(country: str, hazard: str, measure_set_id: str | None = None) -> dict:
+    payload: dict = {"countryName": country, "hazardType": hazard}
+    if measure_set_id is not None:
+        payload["measureSetId"] = measure_set_id
+    return await _dispatch("run_fetch_measures.py", payload)
 
 
 def _status_ok() -> dict:
