@@ -52,24 +52,26 @@ def test_applies_initial_on_empty_db(conn: duckdb.DuckDBPyConnection) -> None:
     rows = conn.execute(
         "SELECT version, applied_at FROM schema_version ORDER BY version"
     ).fetchall()
-    assert len(rows) == 1
-    version, applied_at = rows[0]
-    assert version == 1
-    assert applied_at is not None
+    # Every on-disk migration lands and is logged exactly once; the first
+    # row is ``0001_initial`` and later rows are whatever follow-on
+    # migrations exist (e.g. ``0002_provenance``).
+    assert [row[0] for row in rows] == list(range(1, len(rows) + 1))
+    assert all(row[1] is not None for row in rows)
 
 
 def test_rerun_is_idempotent(conn: duckdb.DuckDBPyConnection) -> None:
     run_migrations(conn)
-    first_applied_at = conn.execute(
-        "SELECT applied_at FROM schema_version WHERE version = 1"
-    ).fetchone()[0]
+    first_rows = conn.execute(
+        "SELECT version, applied_at FROM schema_version ORDER BY version"
+    ).fetchall()
 
     run_migrations(conn)
 
-    rows = conn.execute("SELECT version, applied_at FROM schema_version").fetchall()
-    assert len(rows) == 1
-    assert rows[0][0] == 1
-    assert rows[0][1] == first_applied_at
+    rows = conn.execute(
+        "SELECT version, applied_at FROM schema_version ORDER BY version"
+    ).fetchall()
+    # No duplicates, and the original applied_at timestamps are preserved.
+    assert rows == first_rows
 
 
 def test_rejects_unknown_future_version(conn: duckdb.DuckDBPyConnection, tmp_path: Path) -> None:

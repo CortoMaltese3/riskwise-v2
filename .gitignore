@@ -41,6 +41,8 @@ translation_validation.log
 scripts/*
 # Tracked build/packaging hooks (electron-builder afterPack, etc.).
 !scripts/apply-electron-fuses.js
+# Tracked helper to (re)build the shipped data-manifest SHA map (#55).
+!scripts/generate_manifest.py
 notes.txt
 
 #certificates

@@ -53,6 +53,18 @@ jobs:
       - name: Run pytest
         run: pytest -q
 
+      # Issue #55 Scenario 4: run the determinism fixture twice on the same
+      # runner and gate the merge on bit-identical outputs. The in-test
+      # assertions already compare the two computations; running the whole
+      # file twice catches accidental state leakage between pytest
+      # invocations (e.g. caches seeded by a previous ``pytest -q``).
+      - name: Determinism smoke (run twice)
+        env:
+          RISKWISE_SKIP_MANIFEST_VERIFY: "1"
+        run: |
+          pytest -q tests/determinism
+          pytest -q tests/determinism
+
   frontend:
     name: Frontend (eslint + prettier + vitest)
     runs-on: ubuntu-latest

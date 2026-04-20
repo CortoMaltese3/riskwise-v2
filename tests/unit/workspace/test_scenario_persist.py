@@ -37,6 +37,18 @@ def tmp_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return db_path
 
 
+_FIXTURE_PROVENANCE: dict = {
+    "app_version": "2.0.0-dev",
+    "engine_version": "2.0.0-dev",
+    "climada_version": "4.1.1",
+    "entity_data_sha256": "a" * 64,
+    "hazard_data_sha256": "b" * 64,
+    "country_config_sha256": "c" * 64,
+    "config_version": "1",
+    "random_seed": 1234567890,
+}
+
+
 def _write_run_artifacts(temp_dir: Path) -> None:
     """Lay down the JSON files the scenario runner produces on success."""
     temp_dir.mkdir(parents=True, exist_ok=True)
@@ -68,7 +80,13 @@ def test_scenario_run_persists_result_blobs(tmp_db: Path, tmp_path: Path) -> Non
     results = read_result_blobs(temp_dir)
     results["impact_summary"] = json.dumps(summary).encode("utf-8")
 
-    insert_scenario("run-1", params, results, name="Egypt flood 2050")
+    insert_scenario(
+        "run-1",
+        params,
+        results,
+        provenance=_FIXTURE_PROVENANCE,
+        name="Egypt flood 2050",
+    )
 
     detail = get_scenario("run-1")
     assert detail is not None
@@ -110,7 +128,13 @@ def test_scenario_run_without_cost_benefit_still_persists(tmp_db: Path, tmp_path
         "is_era": True,
         "app_option": "era",
     }
-    insert_scenario("run-2", params, results, name="Thailand historical")
+    insert_scenario(
+        "run-2",
+        params,
+        results,
+        provenance=_FIXTURE_PROVENANCE,
+        name="Thailand historical",
+    )
 
     detail = get_scenario("run-2")
     assert detail is not None

@@ -80,6 +80,7 @@ from models import (
     WaterfallResponse,
 )
 from progress import ProgressEvent, progress_callback_var
+from provenance import ManifestError, verify_manifest
 
 API_PREFIX = "/api/v1"
 
@@ -216,8 +217,33 @@ async def _dispatch(script_name: str, data: Any) -> dict:
     return await asyncio.to_thread(_dispatch_sync, script_name, data)
 
 
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_MANIFEST_PATH = _REPO_ROOT / "data" / "manifest.json"
+
+
+def _verify_shipped_data_manifest() -> None:
+    """Check every entry in ``data/manifest.json`` against its SHA on disk.
+
+    A mismatch is fatal: tampered or missing seed data would produce
+    silently-wrong scenarios. We log a structured error so the Electron
+    shell can surface it and exit with a non-zero code. The manifest file
+    itself not being present is also fatal in production; set
+    ``RISKWISE_SKIP_MANIFEST_VERIFY=1`` in dev environments that ship
+    without the full data tree.
+    """
+    api_log = get_logger("api")
+    try:
+        verify_manifest(_MANIFEST_PATH, _REPO_ROOT)
+    except ManifestError as exc:
+        api_log.error("startup.manifest_failed", error=str(exc))
+        raise
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
+    # Manifest verification runs before migrations so a tampered build
+    # aborts the process before it touches the user's scenario DB.
+    _verify_shipped_data_manifest()
     # DuckDB migrations must complete before any endpoint is served;
     # otherwise the first request could hit a half-built schema.
     run_startup_migrations()

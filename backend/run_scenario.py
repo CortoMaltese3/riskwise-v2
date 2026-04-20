@@ -19,6 +19,7 @@ import json
 import sys
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from time import time
 from typing import Any
 
@@ -34,7 +35,14 @@ from exposure.exposure_handler import ExposureHandler
 from hazard.hazard_handler import HazardHandler
 from impact.impact_handler import ImpactHandler
 from logger_config import LoggerConfig
+from provenance import REPRODUCIBILITY_NOTE
+from provenance import collect as collect_provenance
+from provenance import new_random_seed
 from scenario_strategy import ScenarioDataStrategy, make_strategy
+
+_DATA_ENTITIES_DIR = Path(__file__).resolve().parent.parent / "data" / "entities"
+_DATA_HAZARDS_DIR = Path(__file__).resolve().parent.parent / "data" / "hazards"
+_COUNTRIES_DIR = Path(__file__).resolve().parent.parent / "countries"
 
 
 @dataclass
@@ -125,6 +133,11 @@ class RunScenario:
             request, self.base_handler, self.hazard_handler
         )
         self.status = Status()
+        # Seed once per run and hand the derived RNG to any stochastic step.
+        # Storing the seed on ``self`` lets ``_persist_to_db`` stamp it onto
+        # the scenario row so the run is reproducible from the DB alone.
+        self.random_seed: int = new_random_seed()
+        self.rng: np.random.Generator = np.random.default_rng(self.random_seed)
         self._clear()
 
     def _initialize_handlers(self):
@@ -419,6 +432,36 @@ class RunScenario:
         self.logger.log("info", f"Finished running scenario in {time() - initial_time}sec.")
         return response
 
+    def _collect_provenance(self):
+        """Return a :class:`provenance.ProvenanceRecord` for the current run.
+
+        Resolves the on-disk paths for the entity / hazard files the runner
+        loaded (hashed by SHA-256) and the country config (hashed likewise).
+        ``config_version`` is the integer version from the country config,
+        stringified so DuckDB stores it verbatim.
+        """
+        entity_path = _DATA_ENTITIES_DIR / self.request_data.entity_filename
+        hazard_path = _DATA_HAZARDS_DIR / self.request_data.hazard_filename
+        country_config_path = (
+            _COUNTRIES_DIR / self.request_data.country_code / "config.json"
+        )
+        config_version_value = ""
+        try:
+            cfg = load_country_config(self.request_data.country_code)
+            config_version_value = str(cfg.config_version)
+        except CountryConfigError:
+            # Custom-mode runs frequently skip country config; the empty
+            # string satisfies the NOT NULL column without pretending a
+            # version exists.
+            pass
+        return collect_provenance(
+            entity_path=entity_path if entity_path.is_file() else None,
+            hazard_path=hazard_path if hazard_path.is_file() else None,
+            country_config_path=country_config_path if country_config_path.is_file() else None,
+            config_version_value=config_version_value,
+            random_seed=self.random_seed,
+        )
+
     def _persist_to_db(self, map_title: str, metadata: dict) -> str | None:
         """Write the run to DuckDB: one ``scenarios`` row + N result blobs.
 
@@ -441,16 +484,24 @@ class RunScenario:
                 "app_option": metadata["app_option"],
             }
             results = read_result_blobs(DATA_TEMP_DIR)
-            # ``impact_summary`` is the run metadata + the derived map title;
-            # it exists so the workspace list can repopulate without having
-            # to inflate the geojson blobs.
-            summary = {**metadata, "map_title": map_title}
+            provenance = self._collect_provenance().as_dict()
+            # ``impact_summary`` is the run metadata + the derived map title
+            # + the provenance stamp; it exists so the workspace list (and
+            # the PDF export stub) can repopulate without having to inflate
+            # the geojson blobs.
+            summary = {
+                **metadata,
+                "map_title": map_title,
+                "provenance": provenance,
+                "reproducibility_note": REPRODUCIBILITY_NOTE,
+            }
             results["impact_summary"] = json.dumps(summary).encode("utf-8")
 
             insert_scenario(
                 scenario_id,
                 params,
                 results,
+                provenance=provenance,
                 name=map_title,
             )
             return scenario_id

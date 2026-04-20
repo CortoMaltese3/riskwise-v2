@@ -20,6 +20,17 @@ from typing import Any
 
 from db.connection import get_connection
 
+_PROVENANCE_FIELDS: tuple[str, ...] = (
+    "app_version",
+    "engine_version",
+    "climada_version",
+    "entity_data_sha256",
+    "hazard_data_sha256",
+    "country_config_sha256",
+    "config_version",
+    "random_seed",
+)
+
 RESULT_TYPES = (
     "hazard_geojson",
     "exposure_geojson",
@@ -65,12 +76,24 @@ def insert_scenario(
     params: dict[str, Any],
     results: dict[str, bytes],
     *,
+    provenance: dict[str, Any],
     name: str | None = None,
     tags: str | None = None,
     notes: str | None = None,
     status: str = "completed",
 ) -> None:
-    """Persist a freshly-finished run: one ``scenarios`` row + N result blobs."""
+    """Persist a freshly-finished run: one ``scenarios`` row + N result blobs.
+
+    ``provenance`` is mandatory: every scenario row must carry a complete
+    set of reproducibility fields (see migration ``0002_provenance.sql``).
+    A missing field is a handler-level error — the DB would also reject
+    the insert via its NOT NULL constraint, but raising here gives the
+    caller a clearer traceback pointing at the offending key.
+    """
+    missing = [f for f in _PROVENANCE_FIELDS if provenance.get(f) is None]
+    if missing:
+        raise ValueError(f"insert_scenario: missing provenance fields: {missing}")
+
     conn = get_connection()
     try:
         conn.execute(
@@ -78,8 +101,12 @@ def insert_scenario(
             INSERT INTO scenarios (
                 id, name, tags, notes, country, hazard_type, scenario,
                 exposure_economic, exposure_non_economic, ref_year,
-                future_year, annual_growth, is_era, app_option, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                future_year, annual_growth, is_era, app_option, status,
+                app_version, engine_version, climada_version,
+                entity_data_sha256, hazard_data_sha256, country_config_sha256,
+                config_version, random_seed
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                      ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 scenario_id,
@@ -97,6 +124,14 @@ def insert_scenario(
                 params.get("is_era"),
                 params.get("app_option"),
                 status,
+                provenance["app_version"],
+                provenance["engine_version"],
+                provenance["climada_version"],
+                provenance["entity_data_sha256"],
+                provenance["hazard_data_sha256"],
+                provenance["country_config_sha256"],
+                provenance["config_version"],
+                provenance["random_seed"],
             ],
         )
         for result_type, blob in results.items():
