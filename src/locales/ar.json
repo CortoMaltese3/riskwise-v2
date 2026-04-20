@@ -741,5 +741,11 @@
     "adaptation_measures_retention_furrows": "أخاديد الاحتفاظ بالمياه",
     "adaptation_measures_agricultural_zoning": "تقسيم المناطق الزراعية",
     "adaptation_measures_water_tolerant_crops": "المحاصيل المقاومة للمياه",
-    "adaptation_measures_flood_index_insurance": "التأمين القائم على مؤشر الفيضانات"
+    "adaptation_measures_flood_index_insurance": "التأمين القائم على مؤشر الفيضانات",
+    "chart_show_values": "عرض القيم",
+    "chart_hide_values": "إخفاء القيم",
+    "chart_data_table_summary": "عرض جدول البيانات",
+    "chart_data_table_header_category": "الفئة",
+    "chart_data_table_header_value": "القيمة",
+    "economic_non_economic_adaptation_chart_tooltip_measure": "الإجراء"
 }

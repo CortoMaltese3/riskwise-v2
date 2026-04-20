@@ -1,6 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import axe from "axe-core";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -32,6 +33,8 @@ vi.mock("chart.js", () => ({
   Legend: {},
 }));
 
+vi.mock("chartjs-plugin-datalabels", () => ({ default: {} }));
+
 const FIXTURE = {
   present_year: 2024,
   future_year: 2050,
@@ -50,13 +53,17 @@ const FIXTURE = {
 };
 
 let WaterfallChart;
+let useStore;
 
 beforeAll(async () => {
   ({ default: WaterfallChart } = await import("../components/charts/WaterfallChart"));
+  ({ default: useStore } = await import("../store"));
 });
 
 beforeEach(() => {
   barSpy.mockClear();
+  globalThis.localStorage?.removeItem("riskwise.showChartValues");
+  useStore.setState({ showChartValues: false });
 });
 
 describe("WaterfallChart", () => {
@@ -110,8 +117,49 @@ describe("WaterfallChart", () => {
   it("colors the totals differently from the deltas", () => {
     render(<WaterfallChart data={FIXTURE} />);
     const props = barSpy.mock.calls[0][0];
-    const colors = props.data.datasets[0].backgroundColor;
+    const colors = props.data.datasets[0].borderColor;
     expect(colors[0]).toBe(colors[3]); // both totals share the same color
     expect(colors[0]).not.toBe(colors[1]); // total vs. delta differ
+  });
+
+  it("marks the canvas with role=img and a descriptive aria-label", () => {
+    render(<WaterfallChart data={FIXTURE} />);
+    const props = barSpy.mock.calls[0][0];
+    expect(props.role).toBe("img");
+    expect(typeof props["aria-label"]).toBe("string");
+    expect(props["aria-label"]).toContain("2024");
+    expect(props["aria-label"]).toContain("2050");
+  });
+
+  it("renders a screen-reader-accessible data table fallback", () => {
+    render(<WaterfallChart data={FIXTURE} />);
+    const table = screen.getByRole("table");
+    expect(table).toBeInTheDocument();
+    FIXTURE.categories.forEach((c) => {
+      expect(screen.getByText(c.label)).toBeInTheDocument();
+    });
+  });
+
+  it("has no critical or serious axe violations", async () => {
+    const { container } = render(<WaterfallChart data={FIXTURE} />);
+    const results = await axe.run(container, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
+    });
+    const critical = results.violations.filter((v) => v.impact === "critical");
+    const serious = results.violations.filter((v) => v.impact === "serious");
+    expect(critical).toHaveLength(0);
+    expect(serious).toHaveLength(0);
+  });
+
+  it("exposes a Show values toggle that gates datalabels display", () => {
+    render(<WaterfallChart data={FIXTURE} />);
+    const initial = barSpy.mock.calls.at(-1)[0];
+    expect(initial.options.plugins.datalabels.display).toBe(false);
+    const toggle = screen.getByRole("button", { name: /chart_show_values/i });
+    act(() => {
+      fireEvent.click(toggle);
+    });
+    const afterToggle = barSpy.mock.calls.at(-1)[0];
+    expect(afterToggle.options.plugins.datalabels.display).toBe(true);
   });
 });

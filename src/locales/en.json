@@ -741,5 +741,11 @@
     "adaptation_measures_retention_furrows": "Retention furrows",
     "adaptation_measures_agricultural_zoning": "Agricultural zoning",
     "adaptation_measures_water_tolerant_crops": "Water tolerant crops",
-    "adaptation_measures_flood_index_insurance": "Flood index insurance"
+    "adaptation_measures_flood_index_insurance": "Flood index insurance",
+    "chart_show_values": "Show values",
+    "chart_hide_values": "Hide values",
+    "chart_data_table_summary": "View data table",
+    "chart_data_table_header_category": "Category",
+    "chart_data_table_header_value": "Value",
+    "economic_non_economic_adaptation_chart_tooltip_measure": "Measure"
 }

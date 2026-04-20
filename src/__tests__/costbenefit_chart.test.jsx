@@ -1,6 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import axe from "axe-core";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -32,6 +33,8 @@ vi.mock("chart.js", () => ({
   Legend: {},
 }));
 
+vi.mock("chartjs-plugin-datalabels", () => ({ default: {} }));
+
 const FIXTURE = {
   currency_unit: "USD",
   present_year: 2024,
@@ -43,13 +46,17 @@ const FIXTURE = {
 };
 
 let CostBenefitChart;
+let useStore;
 
 beforeAll(async () => {
   ({ default: CostBenefitChart } = await import("../components/charts/CostBenefitChart"));
+  ({ default: useStore } = await import("../store"));
 });
 
 beforeEach(() => {
   barSpy.mockClear();
+  globalThis.localStorage?.removeItem("riskwise.showChartValues");
+  useStore.setState({ showChartValues: false });
 });
 
 describe("CostBenefitChart", () => {
@@ -95,7 +102,46 @@ describe("CostBenefitChart", () => {
   it("colors profitable measures (ratio >= 1) differently from unprofitable ones", () => {
     render(<CostBenefitChart data={FIXTURE} />);
     const props = barSpy.mock.calls[0][0];
-    const colors = props.data.datasets[0].backgroundColor;
+    const colors = props.data.datasets[0].borderColor;
     expect(colors[0]).not.toBe(colors[1]);
+  });
+
+  it("marks the canvas with role=img and a descriptive aria-label", () => {
+    render(<CostBenefitChart data={FIXTURE} />);
+    const props = barSpy.mock.calls[0][0];
+    expect(props.role).toBe("img");
+    expect(props["aria-label"]).toContain("Seawall");
+    expect(props["aria-label"]).toMatch(/2[.,]5/);
+  });
+
+  it("renders a screen-reader-accessible data table fallback", () => {
+    render(<CostBenefitChart data={FIXTURE} />);
+    const table = screen.getByRole("table");
+    expect(table).toBeInTheDocument();
+    expect(screen.getByText("Seawall")).toBeInTheDocument();
+    expect(screen.getByText("Mangroves")).toBeInTheDocument();
+  });
+
+  it("has no critical or serious axe violations", async () => {
+    const { container } = render(<CostBenefitChart data={FIXTURE} />);
+    const results = await axe.run(container, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
+    });
+    const critical = results.violations.filter((v) => v.impact === "critical");
+    const serious = results.violations.filter((v) => v.impact === "serious");
+    expect(critical).toHaveLength(0);
+    expect(serious).toHaveLength(0);
+  });
+
+  it("exposes a Show values toggle that gates datalabels display", () => {
+    render(<CostBenefitChart data={FIXTURE} />);
+    const initial = barSpy.mock.calls.at(-1)[0];
+    expect(initial.options.plugins.datalabels.display).toBe(false);
+    const toggle = screen.getByRole("button", { name: /chart_show_values/i });
+    act(() => {
+      fireEvent.click(toggle);
+    });
+    const afterToggle = barSpy.mock.calls.at(-1)[0];
+    expect(afterToggle.options.plugins.datalabels.display).toBe(true);
   });
 });

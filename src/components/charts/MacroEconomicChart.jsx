@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Typography } from "@mui/material";
+import { Box, Button, Stack, Typography } from "@mui/material";
 import { Line } from "react-chartjs-2";
 import {
   CategoryScale,
@@ -14,8 +14,10 @@ import {
   Title,
   Tooltip,
 } from "chart.js";
+import ChartDataLabels from "chartjs-plugin-datalabels";
 
 import useStore from "../../store";
+import ChartDataTable from "./ChartDataTable";
 
 // Register all necessary elements
 ChartJS.register(
@@ -26,7 +28,8 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  ChartDataLabels
 );
 
 const MacroEconomicChart = () => {
@@ -38,6 +41,8 @@ const MacroEconomicChart = () => {
     selectedMacroSector,
     selectedMacroVariable,
     macroEconomicChartTitle,
+    showChartValues,
+    toggleShowChartValues,
   } = useStore();
 
   // Filter data based on selected filters
@@ -150,8 +155,25 @@ const MacroEconomicChart = () => {
           },
         },
       },
+      datalabels: {
+        display: showChartValues,
+        align: "top",
+        color: "rgba(33, 33, 33, 0.9)",
+        font: { size: 10, weight: 600 },
+        formatter: (value) => `${Number(value).toFixed(1)}%`,
+      },
     },
   };
+
+  const tableHeaders = [t("macro_display_chart_x_axis_label"), ...datasets.map((d) => d.label)];
+  const tableRows = labels.map((year, i) => [
+    year,
+    ...datasets.map((d) => (d.data[i] == null ? "" : `${d.data[i].toFixed(2)}%`)),
+  ]);
+
+  const ariaLabel = macroEconomicChartTitle
+    ? `${macroEconomicChartTitle}. ${datasets.length} series across ${labels.length} years.`
+    : t("macro_display_chart_not_available");
 
   return (
     <Box
@@ -166,15 +188,31 @@ const MacroEconomicChart = () => {
       }}
     >
       <Box sx={{ height: "100%", overflowY: "auto" }}>
-        <div>
-          {filteredData.length > 0 ? (
-            <Line data={transformedData} options={options} />
-          ) : (
-            <Typography variant="h6" align="center" color="textSecondary">
-              {t("macro_display_chart_not_available")}
-            </Typography>
-          )}
-        </div>
+        {filteredData.length > 0 ? (
+          <>
+            <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+              <Button
+                size="small"
+                variant={showChartValues ? "contained" : "outlined"}
+                onClick={toggleShowChartValues}
+                aria-pressed={showChartValues}
+              >
+                {showChartValues ? t("chart_hide_values") : t("chart_show_values")}
+              </Button>
+            </Stack>
+            <Line data={transformedData} options={options} aria-label={ariaLabel} role="img" />
+            <ChartDataTable
+              caption={macroEconomicChartTitle}
+              headers={tableHeaders}
+              rows={tableRows}
+              summaryLabel={t("chart_data_table_summary")}
+            />
+          </>
+        ) : (
+          <Typography variant="h6" align="center" color="textSecondary">
+            {t("macro_display_chart_not_available")}
+          </Typography>
+        )}
       </Box>
     </Box>
   );
