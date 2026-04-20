@@ -17,6 +17,7 @@ import useStore from "../../store";
 import useWorkspaceStore from "../../store/workspaceSlice";
 import { enqueueToast } from "../../hooks/useToast";
 import ScenarioTable from "./ScenarioTable";
+import WorkspaceImportExport from "./WorkspaceImportExport";
 
 const uniqueNonEmpty = (values) => [...new Set(values.filter(Boolean))].sort();
 
@@ -52,7 +53,7 @@ const EmptyState = ({ onStart }) => (
       No saved scenarios yet
     </Typography>
     <Typography variant="body2" sx={{ mb: 3 }}>
-      Run your first scenario to see it appear here.
+      Run your first scenario to see it appear here, or import an existing workspace.
     </Typography>
     <Button variant="contained" onClick={onStart}>
       Run your first scenario
@@ -127,12 +128,23 @@ const WorkspaceView = ({ initialScenarios }) => {
   };
 
   if (!scenarios.length) {
-    return <EmptyState onStart={() => setActiveSection("risk")} />;
+    return (
+      <Stack spacing={2} sx={{ p: 2 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="h5">Workspace</Typography>
+          <WorkspaceImportExport onImported={loadScenarios} />
+        </Stack>
+        <EmptyState onStart={() => setActiveSection("risk")} />
+      </Stack>
+    );
   }
 
   return (
     <Stack spacing={2} sx={{ p: 2 }}>
-      <Typography variant="h5">Workspace</Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography variant="h5">Workspace</Typography>
+        <WorkspaceImportExport onImported={loadScenarios} />
+      </Stack>
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
         <TextField

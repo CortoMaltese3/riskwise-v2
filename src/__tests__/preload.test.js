@@ -17,6 +17,8 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "copy-folder",
   "open-report",
   "export-pdf",
+  "export-workspace",
+  "import-workspace",
   "http:request",
   "http:scenarioRun",
   "http:cancelScenario",
@@ -95,6 +97,8 @@ describe("preload bridge surface", () => {
     exposed.electron.copyFolder("a", "b");
     exposed.electron.openReport("/tmp/r.docx");
     exposed.electron.exportPdf("scenario-id");
+    exposed.electron.exportWorkspace();
+    exposed.electron.importWorkspace();
     exposed.api.http.request("GET", "/", null, "rid");
     exposed.api.http.runScenario({}, "rid");
     exposed.api.http.cancelScenario("job", "rid");
