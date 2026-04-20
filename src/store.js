@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { generateRunCode } from "./utils/misc";
 
 const SIDEBAR_STORAGE_KEY = "riskwise.sidebarCollapsed";
+const SHOW_CHART_VALUES_STORAGE_KEY = "riskwise.showChartValues";
 
 const readSidebarCollapsed = () => {
   try {
@@ -20,9 +21,26 @@ const writeSidebarCollapsed = (value) => {
   }
 };
 
+const readShowChartValues = () => {
+  try {
+    return globalThis.localStorage?.getItem(SHOW_CHART_VALUES_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+const writeShowChartValues = (value) => {
+  try {
+    globalThis.localStorage?.setItem(SHOW_CHART_VALUES_STORAGE_KEY, value ? "true" : "false");
+  } catch {
+    // storage may be unavailable (private mode, tests without jsdom storage)
+  }
+};
+
 const useStore = create((set, get) => ({
   activeSection: "risk",
   sidebarCollapsed: readSidebarCollapsed(),
+  showChartValues: readShowChartValues(),
   activeMap: "hazard",
   activeMapRef: null,
   activeViewControl: "display_map",
@@ -102,6 +120,15 @@ const useStore = create((set, get) => ({
   setSidebarCollapsed: (collapsed) => {
     writeSidebarCollapsed(collapsed);
     set({ sidebarCollapsed: collapsed });
+  },
+  setShowChartValues: (show) => {
+    writeShowChartValues(show);
+    set({ showChartValues: show });
+  },
+  toggleShowChartValues: () => {
+    const next = !get().showChartValues;
+    writeShowChartValues(next);
+    set({ showChartValues: next });
   },
   setActiveMap: (map) => set({ activeMap: map }),
   setActiveMapRef: (mapRef) => set({ activeMapRef: mapRef }),

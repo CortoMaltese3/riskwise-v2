@@ -741,5 +741,11 @@
     "adaptation_measures_retention_furrows": "ร่องเก็บน้ำ",
     "adaptation_measures_agricultural_zoning": "เขตเกษตรเศรษฐกิจ",
     "adaptation_measures_water_tolerant_crops": "พืชทนน้ำ",
-    "adaptation_measures_flood_index_insurance": "ประกันภัยดัชนีอุทกภัย"
+    "adaptation_measures_flood_index_insurance": "ประกันภัยดัชนีอุทกภัย",
+    "chart_show_values": "แสดงค่า",
+    "chart_hide_values": "ซ่อนค่า",
+    "chart_data_table_summary": "ดูตารางข้อมูล",
+    "chart_data_table_header_category": "หมวดหมู่",
+    "chart_data_table_header_value": "ค่า",
+    "economic_non_economic_adaptation_chart_tooltip_measure": "มาตรการ"
 }

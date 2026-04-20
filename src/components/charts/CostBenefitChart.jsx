@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Typography } from "@mui/material";
+import { Box, Button, Stack, Typography } from "@mui/material";
 import { Bar } from "react-chartjs-2";
 import {
   BarElement,
@@ -12,12 +12,21 @@ import {
   Title,
   Tooltip,
 } from "chart.js";
+import ChartDataLabels from "chartjs-plugin-datalabels";
 
-ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend);
+import useStore from "../../store";
+import { formatNumber } from "../../utils/formatters";
+import { patternForIndex } from "../../utils/chartPatterns";
+import ChartDataTable from "./ChartDataTable";
+
+ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend, ChartDataLabels);
 
 const COLOR_PROFITABLE = "rgba(75, 192, 120, 0.85)";
 const COLOR_MARGINAL = "rgba(59, 145, 157, 0.85)";
 const COLOR_UNPROFITABLE = "rgba(220, 60, 60, 0.85)";
+const PATTERN_PROFITABLE = 0;
+const PATTERN_MARGINAL = 1;
+const PATTERN_UNPROFITABLE = 2;
 
 const formatCurrency = (value, unit) => {
   const formatted = Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -27,16 +36,18 @@ const formatCurrency = (value, unit) => {
 const formatRatio = (value) =>
   Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
-const colorFor = (ratio) => {
-  if (ratio >= 1) return COLOR_PROFITABLE;
-  if (ratio > 0) return COLOR_MARGINAL;
-  return COLOR_UNPROFITABLE;
+const styleFor = (ratio) => {
+  if (ratio >= 1) return { color: COLOR_PROFITABLE, patternIndex: PATTERN_PROFITABLE };
+  if (ratio > 0) return { color: COLOR_MARGINAL, patternIndex: PATTERN_MARGINAL };
+  return { color: COLOR_UNPROFITABLE, patternIndex: PATTERN_UNPROFITABLE };
 };
 
 const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, errorMessage }, ref) {
   const { t } = useTranslation();
   const internalRef = useRef(null);
   const chartRef = ref ?? internalRef;
+  const showChartValues = useStore((state) => state.showChartValues);
+  const toggleShowChartValues = useStore((state) => state.toggleShowChartValues);
 
   useEffect(() => {
     return () => {
@@ -59,7 +70,9 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
   const unit = data.currency_unit || "";
   const labels = data.measures.map((m) => m.name);
   const ratios = data.measures.map((m) => m.benefit_cost_ratio);
-  const colors = ratios.map(colorFor);
+  const styles = ratios.map(styleFor);
+  const colors = styles.map((s) => s.color);
+  const patterns = styles.map((s) => patternForIndex(s.color, s.patternIndex));
 
   const chartData = {
     labels,
@@ -67,7 +80,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
       {
         label: t("economic_non_economic_adaptation_chart_ratio_label"),
         data: ratios,
-        backgroundColor: colors,
+        backgroundColor: patterns,
         borderColor: colors,
         borderWidth: 1,
       },
@@ -108,12 +121,64 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
           },
         },
       },
+      datalabels: {
+        display: showChartValues,
+        anchor: "end",
+        align: "end",
+        color: "rgba(33, 33, 33, 0.9)",
+        font: { size: 11, weight: 600 },
+        formatter: (value) => formatNumber(value),
+      },
     },
   };
 
+  const ariaLabel = `${titleText}. ${data.measures
+    .map((m) => `${m.name}: ${formatRatio(m.benefit_cost_ratio)}`)
+    .join(", ")}`;
+
+  const tableHeaders = [
+    t("economic_non_economic_adaptation_chart_tooltip_measure") ||
+      t("chart_data_table_header_category"),
+    t("economic_non_economic_adaptation_chart_tooltip_cost") + (unit ? ` (${unit})` : ""),
+    t("economic_non_economic_adaptation_chart_tooltip_benefit") + (unit ? ` (${unit})` : ""),
+    t("economic_non_economic_adaptation_chart_tooltip_ratio"),
+  ];
+  const tableRows = data.measures.map((m) => [
+    m.name,
+    formatNumber(m.cost),
+    formatNumber(m.benefit),
+    formatRatio(m.benefit_cost_ratio),
+  ]);
+
   return (
-    <Box sx={{ width: "100%", height: "100%", minHeight: 320 }}>
-      <Bar ref={chartRef} data={chartData} options={options} />
+    <Box
+      sx={{
+        width: "100%",
+        height: "100%",
+        minHeight: 320,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+        <Button
+          size="small"
+          variant={showChartValues ? "contained" : "outlined"}
+          onClick={toggleShowChartValues}
+          aria-pressed={showChartValues}
+        >
+          {showChartValues ? t("chart_hide_values") : t("chart_show_values")}
+        </Button>
+      </Stack>
+      <Box sx={{ flex: 1, minHeight: 240 }}>
+        <Bar ref={chartRef} data={chartData} options={options} aria-label={ariaLabel} role="img" />
+      </Box>
+      <ChartDataTable
+        caption={titleText}
+        headers={tableHeaders}
+        rows={tableRows}
+        summaryLabel={t("chart_data_table_summary")}
+      />
     </Box>
   );
 });
