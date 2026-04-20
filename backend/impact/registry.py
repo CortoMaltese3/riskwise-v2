@@ -247,6 +247,24 @@ def load_country_registry(
     return ImpactFunctionRegistry(specs)
 
 
+def load_registry_from_paths(
+    sources: Iterable[tuple[str, Path]],
+) -> ImpactFunctionRegistry:
+    """Load an :class:`ImpactFunctionRegistry` from explicit ``(iso3, path)`` pairs.
+
+    This is the entry point the extensibility layer uses so built-in and
+    custom ``impact_functions.json`` files (which live under different
+    roots) can be merged into a single registry. ID-uniqueness and
+    unit-consistency validation runs across the merged spec list — a
+    custom drop-in that reuses a built-in ``(haz_type, exp_type, id)``
+    triple is rejected at startup rather than shadowing silently.
+    """
+    specs: list[ImpactFunctionSpec] = []
+    for iso3, path in sources:
+        specs.extend(_parse_file(path, iso3))
+    return ImpactFunctionRegistry(specs)
+
+
 def _parse_file(path: Path, iso3: str) -> list[ImpactFunctionSpec]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))

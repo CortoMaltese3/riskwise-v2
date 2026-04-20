@@ -48,11 +48,36 @@ def _default_root() -> Path:
     return Path(__file__).resolve().parents[2] / "countries"
 
 
+def _resolve_config_path(iso3: str, base_dir: Path | None) -> Path:
+    """Resolve the config.json path for ``iso3``.
+
+    If ``base_dir`` is given, look there (the path the tests use to point
+    at a ``tmp_path``). Otherwise ask the extensibility registry — that
+    knows about both the shipped built-ins and any custom drop-ins under
+    ``<user-data>/countries/``. A code unknown to the registry falls back
+    to the built-in tree so the error message still names the expected
+    path.
+    """
+    if base_dir is not None:
+        return base_dir / iso3 / "config.json"
+
+    # Deferred import to break the cycle: the extensibility registry
+    # imports this module when it validates custom countries.
+    from extensibility.registry import get_registry
+
+    entry = get_registry().get(iso3)
+    if entry is not None:
+        return entry.config_path
+    return _default_root() / iso3 / "config.json"
+
+
 def load_country_config(country_code: str, base_dir: Path | None = None) -> CountryConfig:
     """Load and validate the country config for the given ISO3 code.
 
     :param country_code: ISO3 country code (case-insensitive).
-    :param base_dir: Override the ``countries/`` root (used in tests).
+    :param base_dir: Override the ``countries/`` root (used in tests). When
+        omitted, the extensibility registry resolves built-in vs custom
+        country locations automatically.
     :raises CountryConfigError: when the file is missing, unreadable,
         invalid JSON, or fails schema validation.
     """
@@ -60,8 +85,7 @@ def load_country_config(country_code: str, base_dir: Path | None = None) -> Coun
         raise CountryConfigError("country_code must be a non-empty ISO3 string.")
     iso3 = country_code.upper()
 
-    root = base_dir if base_dir is not None else _default_root()
-    path = root / iso3 / "config.json"
+    path = _resolve_config_path(iso3, base_dir)
 
     if not path.is_file():
         raise CountryConfigError(

@@ -173,6 +173,15 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "source": {
+            "default": "builtin",
+            "enum": [
+              "builtin",
+              "custom"
+            ],
+            "title": "Source",
+            "type": "string"
           }
         },
         "required": [
@@ -1074,6 +1083,7 @@
   "paths": {
     "/api/v1/countries": {
       "get": {
+        "description": "Return the countries RISK WISE can run \u2014 built-in plus custom drop-ins.\n\nEach entry carries a ``source`` field (``\"builtin\"`` or ``\"custom\"``)\nso the frontend can label them distinctly (issue #56, Scenario 2).\nInvalid custom drop-ins are skipped and logged via the extensibility\nregistry's ``errors`` list; they do not appear here.",
         "operationId": "countries_api_v1_countries_get",
         "responses": {
           "200": {

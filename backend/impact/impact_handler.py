@@ -40,7 +40,7 @@ from climada.hazard import Hazard
 
 from base_handler import BaseHandler
 from constants import DATA_TEMP_DIR
-from impact.registry import ImpactFunctionRegistry, load_country_registry
+from impact.registry import ImpactFunctionRegistry, load_country_registry, load_registry_from_paths
 from logger_config import LoggerConfig
 
 logger = LoggerConfig(logger_types=["file"])
@@ -55,22 +55,39 @@ _HAZARD_SELECTOR_TO_HAZ_TYPE: dict[str, str] = {
     "heatwave": "HW",
 }
 
-# Built-in country codes whose impact functions ship with the repository.
-# When ``RISKWISE_IMPACT_COUNTRIES`` is set the env var wins so ops can
-# point at a custom set without editing code.
-_BUILTIN_COUNTRY_CODES: tuple[str, ...] = ("EGY", "THA")
-
 _registry_cache: ImpactFunctionRegistry | None = None
 
 
 def _get_registry() -> ImpactFunctionRegistry:
-    """Lazily load and cache the impact-function registry on first use."""
+    """Lazily load and cache the impact-function registry on first use.
+
+    Without the ``RISKWISE_IMPACT_COUNTRIES`` override, the registry is
+    built from every country the extensibility layer knows about — shipped
+    built-ins plus custom drop-ins under ``<user-data>/countries/``. With
+    the override, only the listed built-in codes are read (custom
+    countries are ignored), giving ops a hard switch for forensic reruns.
+    """
     global _registry_cache
     if _registry_cache is None:
         env = os.environ.get("RISKWISE_IMPACT_COUNTRIES")
-        codes = tuple(c.strip() for c in env.split(",") if c.strip()) if env else _BUILTIN_COUNTRY_CODES
-        _registry_cache = load_country_registry(codes)
+        if env:
+            codes = tuple(c.strip() for c in env.split(",") if c.strip())
+            _registry_cache = load_country_registry(codes)
+        else:
+            # Deferred import so this module stays importable in tests
+            # that don't spin up the full registry.
+            from extensibility.registry import get_registry as get_country_registry
+
+            _registry_cache = load_registry_from_paths(
+                get_country_registry().impact_function_paths()
+            )
     return _registry_cache
+
+
+def reset_registry_cache() -> None:
+    """Drop the cached registry. Tests call this after mutating user-data."""
+    global _registry_cache
+    _registry_cache = None
 
 
 class ImpactHandler:

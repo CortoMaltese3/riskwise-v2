@@ -142,6 +142,8 @@
     "card_country_title": "الدولة",
     "card_country_egypt": "مصر",
     "card_country_thailand": "تايلاند",
+    "card_country_source_builtin": "مدمج",
+    "card_country_source_custom": "مخصص",
     "card_country_remarks": "ملاحظات: الدولة المختارة ستكون محل التحليل. يرجى ملاحظة أن تغيير الدولة يتطلب إعادة تحديد جميع البيانات.",
     "card_country_macro_remarks": "ملاحظات: الدولة المختارة ستكون محل التحليل. يرجى ملاحظة أن تغيير الدولة يتطلب إعادة تحديد جميع البيانات.",
     "card_hazard_title": "الخطر",
