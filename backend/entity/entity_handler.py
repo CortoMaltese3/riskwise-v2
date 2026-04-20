@@ -21,13 +21,16 @@ Methods:
 """
 
 from copy import deepcopy
+from pathlib import Path
 
+import pandas as pd
 from climada.entity import DiscRates, Entity, Exposures
 from climada.entity.measures import MeasureSet
 from climada.entity.impact_funcs import ImpactFuncSet
 from climada.util.api_client import Client
 
 
+from cache import file_cache_key, get_entity_cache
 from constants import DATA_ENTITIES_DIR
 from logger_config import LoggerConfig
 
@@ -94,10 +97,21 @@ class EntityHandler:
         """
         try:
             entity_filepath = DATA_ENTITIES_DIR / filepath
+            cache = get_entity_cache()
+            cache_key = file_cache_key(entity_filepath)
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return cached
             entity = Entity.from_excel(entity_filepath)
             entity.check()
             exposure = entity.exposures
             exposure.gdf = exposure.gdf.loc[:, ~exposure.gdf.columns.str.contains("^Unnamed")]
+            # Write a parquet sidecar next to the xlsx so repeat loads can
+            # skip the openpyxl parse of the exposures sheet. The sidecar is
+            # keyed by the xlsx mtime via write_exposures_parquet; a later
+            # edit to the xlsx invalidates it automatically.
+            self._write_exposures_parquet_sidecar(entity_filepath, exposure.gdf)
+            cache.put(cache_key, entity)
 
             # Retrieve and check unique value units
             unique_value_units = entity.exposures.gdf["value_unit"].unique()
@@ -153,6 +167,54 @@ class EntityHandler:
         except Exception as e:
             logger.log("error", f"Failed to generate future entity: {e}")
             return None
+
+    @staticmethod
+    def parquet_sidecar_path(xlsx_path: Path | str) -> Path:
+        """Return the sibling ``.parquet`` path for an entity ``.xlsx``."""
+        return Path(xlsx_path).with_suffix(".parquet")
+
+    def _write_exposures_parquet_sidecar(
+        self, xlsx_path: Path | str, gdf: "pd.DataFrame"
+    ) -> None:
+        sidecar = self.parquet_sidecar_path(xlsx_path)
+        try:
+            # GeoDataFrame round-trips through parquet when pyarrow is
+            # available; fall back to the plain DataFrame representation
+            # if the geometry column trips serialisation.
+            frame: pd.DataFrame = gdf
+            if hasattr(gdf, "to_parquet"):
+                frame.to_parquet(sidecar, index=False)
+            else:  # pragma: no cover - defensive
+                pd.DataFrame(gdf).to_parquet(sidecar, index=False)
+        except Exception as exc:  # pragma: no cover - sidecar is best-effort
+            logger.log(
+                "warning",
+                f"Failed to write parquet sidecar for {xlsx_path}: {exc}",
+            )
+
+    def load_exposures_dataframe(self, xlsx_path: Path | str) -> "pd.DataFrame":
+        """Load the exposures DataFrame, preferring the parquet sidecar.
+
+        Returns the DataFrame straight from the sibling ``.parquet`` when
+        it exists and is at least as fresh as the ``.xlsx``. Otherwise the
+        xlsx is parsed, a sidecar is written for next time, and the parsed
+        frame is returned.
+        """
+        xlsx = Path(xlsx_path)
+        sidecar = self.parquet_sidecar_path(xlsx)
+        if sidecar.is_file() and xlsx.is_file():
+            if sidecar.stat().st_mtime_ns >= xlsx.stat().st_mtime_ns:
+                return pd.read_parquet(sidecar)
+        df = pd.read_excel(xlsx)
+        df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
+        try:
+            df.to_parquet(sidecar, index=False)
+        except Exception as exc:  # pragma: no cover
+            logger.log(
+                "warning",
+                f"Failed to write parquet sidecar for {xlsx}: {exc}",
+            )
+        return df
 
     def get_entity_filename(self, country_code: str, hazard_code: str, exposure_type: str) -> str:
         """

@@ -402,6 +402,12 @@ async def scenario_cancel(job_id: str) -> dict:
     if cancel_event is None:
         raise HTTPException(status_code=404, detail="Unknown job_id")
     cancel_event.set()
+    # Cancelled runs may have partial CLIMADA objects pinned in the LRU
+    # caches from the aborted load path; drop them so the next run starts
+    # from a clean slate rather than reusing a half-initialised entity.
+    from cache import clear_all as _clear_object_caches
+
+    _clear_object_caches()
     return {"status": "ok", "cancelled": True, "job_id": job_id}
 
 
@@ -616,6 +622,22 @@ async def countries() -> dict:
 @app.post(f"{API_PREFIX}/temp/clear", response_model=TempClearResponse)
 async def temp_clear() -> dict:
     return await _dispatch("run_clear_temp_dir.py", None)
+
+
+@app.post(f"{API_PREFIX}/cache/clear")
+async def cache_clear() -> dict:
+    """Admin-only reset for the Entity/Hazard LRU and DuckDB computation cache.
+
+    Not surfaced in the UI: intended for support flows that need a
+    guaranteed cold repeat of a scenario (e.g. when validating a fix to
+    a CLIMADA bug that an old cached result is masking).
+    """
+    from cache import clear_all as _clear_object_caches
+    from db import cache_store
+
+    await asyncio.to_thread(_clear_object_caches)
+    await asyncio.to_thread(cache_store.clear)
+    return {"data": {"cleared": True}, "status": _status_ok()}
 
 
 class _ReadyNotifyServer(uvicorn.Server):
