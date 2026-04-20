@@ -209,6 +209,18 @@ const RiskMap = () => {
     fetchGeoJson(activeRPLayer);
   }, [activeRPLayer, fetchGeoJson]);
 
+  // Re-fetch mid-run when the backend signals the impact GeoJSON is ready.
+  useEffect(() => {
+    if (!window.electron?.onProgress) {
+      return undefined;
+    }
+    return window.electron.onProgress((payload) => {
+      if (payload?.step === "impact_ready") {
+        fetchGeoJson(activeRPLayer);
+      }
+    });
+  }, [activeRPLayer, fetchGeoJson]);
+
   return (
     <MapContainer
       key={selectedCountry}

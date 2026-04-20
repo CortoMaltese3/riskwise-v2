@@ -359,6 +359,31 @@ class TestScenarioFlow:
 
         assert app_module.jobs.get_queue(job_id) is None
 
+    def test_scenario_stream_emits_partial_geojson_events_in_order(
+        self, client: TestClient
+    ) -> None:
+        """Parallel GeoJSON generation must surface as ``progress`` events
+        carrying a ``step`` name (``exposure_ready`` / ``hazard_ready`` /
+        ``impact_ready``) that precede the final ``result`` event."""
+
+        def fake_scenario(_payload: dict) -> dict:
+            cb = progress_callback_var.get()
+            assert cb is not None
+            cb({"type": "progress", "step": "exposure_ready", "data": {"features": []}})
+            cb({"type": "progress", "step": "hazard_ready", "data": {"features": []}})
+            cb({"type": "progress", "step": "impact_ready", "data": {"features": []}})
+            return {"data": {"mapTitle": "T"}, "status": {"code": 2000}}
+
+        with patch.object(app_module, "_run_scenario_sync", side_effect=fake_scenario):
+            job_id = client.post("/api/v1/scenario/run", json={}).json()["job_id"]
+            with client.stream("GET", f"/api/v1/scenario/{job_id}/stream") as stream:
+                events = _collect_sse(stream)
+
+        steps = [e.get("step") for e in events if e.get("type") == "progress" and "step" in e]
+        assert steps == ["exposure_ready", "hazard_ready", "impact_ready"]
+        types_in_order = [e["type"] for e in events]
+        assert types_in_order.index("result") > types_in_order.index("progress")
+
 
 class TestReadyNotifyServer:
     def test_ready_notify_server_is_uvicorn_server_subclass(self) -> None:

@@ -193,6 +193,18 @@ const HazardMap = () => {
     fetchGeoJson(activeRPLayer);
   }, [activeRPLayer, fetchGeoJson]);
 
+  // Re-fetch mid-run when the backend signals the hazard GeoJSON is ready.
+  useEffect(() => {
+    if (!window.electron?.onProgress) {
+      return undefined;
+    }
+    return window.electron.onProgress((payload) => {
+      if (payload?.step === "hazard_ready") {
+        fetchGeoJson(activeRPLayer);
+      }
+    });
+  }, [activeRPLayer, fetchGeoJson]);
+
   return (
     <MapContainer
       key={selectedCountry}
