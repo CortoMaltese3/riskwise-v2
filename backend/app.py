@@ -59,6 +59,7 @@ from logging_config import (
 from models import (
     CostBenefitResponse,
     CountriesResponse,
+    CredDatasetsResponse,
     DataValidateRequest,
     DataValidateResponse,
     DeleteScenarioResponse,
@@ -263,6 +264,9 @@ def _scan_user_data_countries() -> None:
     )
 
 
+_CRED_XLSX_PATH = _REPO_ROOT / "requirements" / "cred_output.xlsx"
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
     # Manifest verification runs before migrations so a tampered build
@@ -275,6 +279,12 @@ async def _lifespan(_app: FastAPI):
     # DuckDB migrations must complete before any endpoint is served;
     # otherwise the first request could hit a half-built schema.
     run_startup_migrations()
+    # Seed the built-in CRED dataset; idempotent — skips if already present.
+    # Set RISKWISE_SKIP_CRED_SEED=1 in test fixtures that pre-seed their own DB.
+    if not os.getenv("RISKWISE_SKIP_CRED_SEED"):
+        from macroeconomic.cred_seeder import run_startup_cred_seed
+
+        run_startup_cred_seed(_CRED_XLSX_PATH)
     yield
 
 
@@ -534,6 +544,24 @@ async def delete_scenario_endpoint(scenario_id: str) -> dict:
     if not removed:
         raise HTTPException(status_code=404, detail="Scenario not found")
     return {"data": {"id": scenario_id}, "status": _status_ok()}
+
+
+@app.get(f"{API_PREFIX}/macro/datasets", response_model=CredDatasetsResponse)
+async def macro_datasets() -> dict:
+    from db.cred_store import list_cred_datasets
+
+    datasets = await asyncio.to_thread(list_cred_datasets)
+    return {"data": datasets, "status": _status_ok()}
+
+
+@app.post(f"{API_PREFIX}/macro/datasets", status_code=405)
+async def macro_datasets_upload() -> dict:
+    raise HTTPException(status_code=405, detail="CRED dataset upload is available in Phase 3")
+
+
+@app.delete(f"{API_PREFIX}/macro/datasets/{{dataset_id}}", status_code=405)
+async def macro_datasets_delete(dataset_id: str) -> dict:
+    raise HTTPException(status_code=405, detail="CRED dataset delete is available in Phase 3")
 
 
 @app.get(f"{API_PREFIX}/macro/cred-output", response_model=MacroCredOutputResponse)

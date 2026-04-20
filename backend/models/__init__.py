@@ -13,6 +13,8 @@ from models.health import HealthResponse
 from models.macro import (
     ChartDataDataset,
     ChartDataPayload,
+    CredDataset,
+    CredDatasetsResponse,
     MacroChartDataRequest,
     MacroChartDataResponse,
     MacroCredOutputResponse,
@@ -43,6 +45,8 @@ from models.waterfall import WaterfallCategory, WaterfallPayload, WaterfallRespo
 __all__ = [
     "ChartDataDataset",
     "ChartDataPayload",
+    "CredDataset",
+    "CredDatasetsResponse",
     "CostBenefitMeasure",
     "CostBenefitPayload",
     "CostBenefitResponse",
