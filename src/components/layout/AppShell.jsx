@@ -9,7 +9,7 @@ import DataInput from "../input/DataInput";
 import MacroEconomicInput from "../inputMacro/MacroEconomicInput";
 import MainView from "../main/MainView";
 import ResultsView from "../results/ResultsView";
-import ReportsView from "../reports/ReportsView";
+import WorkspaceView from "../workspace/WorkspaceView";
 import HomeView from "./views/HomeView";
 import SettingsView from "./views/SettingsView";
 
@@ -58,9 +58,9 @@ const MacroeconomicView = () => (
   </Box>
 );
 
-const WorkspaceView = () => (
-  <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
-    <ReportsView />
+const WorkspaceSection = () => (
+  <Box sx={{ flexGrow: 1, overflow: "auto" }}>
+    <WorkspaceView />
   </Box>
 );
 
@@ -68,7 +68,7 @@ const sectionComponents = {
   home: HomeView,
   risk: RiskAssessmentView,
   macro: MacroeconomicView,
-  workspace: WorkspaceView,
+  workspace: WorkspaceSection,
   settings: SettingsView,
 };
 

@@ -148,6 +148,51 @@ def insert_scenario(
         conn.close()
 
 
+def patch_scenario_metadata(
+    scenario_id: str,
+    *,
+    name: str | None = None,
+    tags: str | None = None,
+    notes: str | None = None,
+) -> ScenarioRow | None:
+    """Partial update: only fields passed as non-None are written.
+
+    Unlike :func:`update_scenario_metadata`, ``None`` means "leave as-is".
+    Used by ``PATCH /api/v1/scenarios/{id}`` for inline rename and
+    tag/note edits where the client sends only the changed field.
+    """
+    updates: list[str] = []
+    values: list[Any] = []
+    if name is not None:
+        updates.append("name = ?")
+        values.append(name)
+    if tags is not None:
+        updates.append("tags = ?")
+        values.append(tags)
+    if notes is not None:
+        updates.append("notes = ?")
+        values.append(notes)
+    if not updates:
+        detail = get_scenario(scenario_id)
+        return detail.scenario if detail else None
+    values.append(scenario_id)
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            f"""
+            UPDATE scenarios SET {", ".join(updates)} WHERE id = ?
+            RETURNING id, name, tags, notes, country, hazard_type, scenario,
+                      exposure_economic, exposure_non_economic, ref_year,
+                      future_year, annual_growth, is_era, app_option, status,
+                      created_at
+            """,
+            values,
+        ).fetchone()
+    finally:
+        conn.close()
+    return _row_to_scenario(row) if row is not None else None
+
+
 def update_scenario_metadata(
     scenario_id: str,
     *,
@@ -224,6 +269,44 @@ def get_scenario(scenario_id: str) -> ScenarioDetail | None:
             continue
         results[result_type] = bytes(data).decode("utf-8")
     return ScenarioDetail(scenario=_row_to_scenario(row), results=results)
+
+
+@dataclass
+class SnapshotRow:
+    id: str
+    scenario_id: str
+    snapshot_type: str
+    created_at: datetime | None
+
+
+def list_snapshots(scenario_id: str) -> list[SnapshotRow]:
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT id, scenario_id, snapshot_type, created_at
+            FROM snapshots WHERE scenario_id = ?
+            ORDER BY created_at DESC
+            """,
+            [scenario_id],
+        ).fetchall()
+    finally:
+        conn.close()
+    return [
+        SnapshotRow(id=r[0], scenario_id=r[1], snapshot_type=r[2], created_at=r[3]) for r in rows
+    ]
+
+
+def delete_snapshot(snapshot_id: str) -> bool:
+    conn = get_connection()
+    try:
+        result = conn.execute(
+            "DELETE FROM snapshots WHERE id = ? RETURNING id",
+            [snapshot_id],
+        ).fetchone()
+        return result is not None
+    finally:
+        conn.close()
 
 
 def delete_scenario(scenario_id: str) -> bool:

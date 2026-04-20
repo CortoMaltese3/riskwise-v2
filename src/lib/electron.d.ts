@@ -20,7 +20,7 @@ export type IpcResult<T> = { success: true; result: T } | { success: false; erro
 
 export interface ApiHttpBridge {
   request<T>(
-    method: "GET" | "POST" | "DELETE",
+    method: "GET" | "POST" | "PATCH" | "DELETE",
     path: string,
     body: unknown,
     requestId?: string

@@ -28,6 +28,9 @@ vi.mock("../inputMacro/MacroEconomicInput", () => ({
 vi.mock("../main/MainView", () => ({ default: () => <div data-testid="main-view" /> }));
 vi.mock("../results/ResultsView", () => ({ default: () => <div data-testid="results-view" /> }));
 vi.mock("../reports/ReportsView", () => ({ default: () => <div data-testid="reports-view" /> }));
+vi.mock("../workspace/WorkspaceView", () => ({
+  default: () => <div data-testid="workspace-view" />,
+}));
 
 function renderShell() {
   return render(

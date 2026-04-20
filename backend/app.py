@@ -63,6 +63,7 @@ from models import (
     DataValidateRequest,
     DataValidateResponse,
     DeleteScenarioResponse,
+    DeleteSnapshotResponse,
     ErrorResponse,
     ExportReportRequest,
     ExportReportResponse,
@@ -72,11 +73,13 @@ from models import (
     MacroChartDataResponse,
     MacroCredOutputResponse,
     MeasuresResponse,
+    PatchScenarioRequest,
     SaveScenarioRequest,
     SaveScenarioResponse,
     ScenarioDetailResponse,
     ScenarioListResponse,
     ScenarioRunRequest,
+    SnapshotListResponse,
     TempClearResponse,
     WaterfallResponse,
 )
@@ -534,6 +537,42 @@ async def get_scenario_endpoint(scenario_id: str) -> dict:
 async def export_scenario(scenario_id: str, payload: ExportReportRequest) -> dict:
     body = {**payload.model_dump(exclude_none=True), "scenarioRunCode": scenario_id}
     return await _dispatch("run_export_report.py", body)
+
+
+@app.patch(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=SaveScenarioResponse)
+async def patch_scenario_endpoint(scenario_id: str, payload: PatchScenarioRequest) -> dict:
+    from db import patch_scenario_metadata
+
+    row = await asyncio.to_thread(
+        patch_scenario_metadata,
+        scenario_id,
+        name=payload.name,
+        tags=payload.tags,
+        notes=payload.notes,
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    return {"data": _scenario_row_to_dict(row), "status": _status_ok()}
+
+
+@app.get(f"{API_PREFIX}/scenarios/{{scenario_id}}/snapshots", response_model=SnapshotListResponse)
+async def list_snapshots_endpoint(scenario_id: str) -> dict:
+    from dataclasses import asdict
+
+    from db import list_snapshots
+
+    rows = await asyncio.to_thread(list_snapshots, scenario_id)
+    return {"data": [asdict(r) for r in rows], "status": _status_ok()}
+
+
+@app.delete(f"{API_PREFIX}/snapshots/{{snapshot_id}}", response_model=DeleteSnapshotResponse)
+async def delete_snapshot_endpoint(snapshot_id: str) -> dict:
+    from db import delete_snapshot
+
+    removed = await asyncio.to_thread(delete_snapshot, snapshot_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Snapshot not found")
+    return {"data": {"id": snapshot_id}, "status": _status_ok()}
 
 
 @app.post(f"{API_PREFIX}/scenarios/{{scenario_id}}/save", response_model=SaveScenarioResponse)
