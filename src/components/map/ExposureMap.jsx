@@ -118,6 +118,20 @@ const ExposureMap = () => {
     }
   }, [activeAdminLayer]);
 
+  // Re-fetch as soon as the backend signals the exposure GeoJSON is ready,
+  // so the layer paints mid-run instead of waiting for the final ``result``
+  // event to arrive at run completion.
+  useEffect(() => {
+    if (!window.electron?.onProgress) {
+      return undefined;
+    }
+    return window.electron.onProgress((payload) => {
+      if (payload?.step === "exposure_ready") {
+        fetchGeoJson(activeAdminLayer);
+      }
+    });
+  }, [activeAdminLayer]);
+
   const MapEvents = () => {
     const map = useMap();
 

@@ -17,7 +17,9 @@ Classes:
 
 import json
 import sys
+import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from time import time
@@ -29,16 +31,14 @@ from climada.entity import DiscRates
 from constants import DATA_TEMP_DIR
 from costben.costben_handler import CostBenefitHandler
 from countries.loader import CountryConfigError, load_country_config
-from db import insert_scenario, read_result_blobs
-from db import cache_store
+from db import cache_store, insert_scenario, read_result_blobs
 from entity.entity_handler import EntityHandler
 from exposure.exposure_handler import ExposureHandler
 from hazard.hazard_handler import HazardHandler
 from impact.impact_handler import ImpactHandler
 from logger_config import LoggerConfig
-from provenance import REPRODUCIBILITY_NOTE
+from provenance import REPRODUCIBILITY_NOTE, new_random_seed
 from provenance import collect as collect_provenance
-from provenance import new_random_seed
 from scenario_strategy import ScenarioDataStrategy, make_strategy
 
 _DATA_ENTITIES_DIR = Path(__file__).resolve().parent.parent / "data" / "entities"
@@ -308,9 +308,7 @@ class RunScenario:
             self.costben_handler.compute_cost_benefit_data(
                 cost_benefit, entity_present, entity_future
             )
-            self.base_handler.update_progress(
-                55, "Computing waterfall chart data..."
-            )
+            self.base_handler.update_progress(55, "Computing waterfall chart data...")
             self.costben_handler.compute_waterfall_data(
                 cost_benefit, hazard_present, entity_present, hazard_future, entity_future
             )
@@ -332,27 +330,15 @@ class RunScenario:
         hazard_active = hazard_future if is_future else hazard_present
         impact_active = impact_future if is_future else impact_present
 
-        # --- GeoJSONs ---
-        self.base_handler.update_progress(70, "Generating Exposure map data files...")
-        self.exposure_handler.generate_exposure_geojson(
+        # --- GeoJSONs (generated concurrently; each emits an SSE partial
+        # result event so the frontend can render layers as they finish
+        # instead of waiting for all three). ---
+        self.base_handler.update_progress(70, "Generating map data files...")
+        self._generate_geojsons_parallel(
             exposure_active,
-            self.request_data.country_name,
-        )
-
-        self.base_handler.update_progress(75, "Generating Hazard map data files...")
-        self.hazard_handler.generate_hazard_geojson(
             hazard_active,
-            self.request_data.country_name,
-            return_periods,
-        )
-
-        self.base_handler.update_progress(80, "Generating Impact map data files...")
-        self.impact_handler.generate_impact_geojson(
             impact_active,
-            self.request_data.country_name,
             return_periods,
-            self.request_data.asset_type,
-            self.request_data.exposure_type,
         )
 
         # --- Parquet report data ---
@@ -387,6 +373,92 @@ class RunScenario:
         )
 
         self.base_handler.update_progress(100, "Scenario run successfully.")
+
+    # Map the SSE ``step`` name to the GeoJSON file each generator writes
+    # into ``DATA_TEMP_DIR``. Ordering matches the acceptance criterion but
+    # the *emission* order depends on which task finishes first.
+    _GEOJSON_OUTPUTS = (
+        ("exposure_ready", "exposures_geodata.json"),
+        ("hazard_ready", "hazards_geodata.json"),
+        ("impact_ready", "risks_geodata.json"),
+    )
+
+    def _generate_geojsons_parallel(
+        self,
+        exposure_active: Any,
+        hazard_active: Any,
+        impact_active: Any,
+        return_periods: tuple,
+    ) -> None:
+        """Generate the three scenario GeoJSONs concurrently.
+
+        Each task writes its output file through the existing handler (so
+        the on-disk layout downstream code relies on is unchanged) and
+        then, as it completes, the driver emits a ``progress`` SSE event
+        carrying the parsed GeoJSON so the renderer can paint that layer
+        before the other two finish. Thread names are logged to make the
+        parallelism observable in traces.
+        """
+        from progress import progress_callback_var
+
+        callback = progress_callback_var.get()
+        country_name = self.request_data.country_name
+        asset_type = self.request_data.asset_type
+        exposure_type = self.request_data.exposure_type
+
+        def _run_exposure() -> str:
+            self.logger.log(
+                "info",
+                f"Generating exposure geojson on thread {threading.current_thread().name}",
+            )
+            self.exposure_handler.generate_exposure_geojson(exposure_active, country_name)
+            return "exposure_ready"
+
+        def _run_hazard() -> str:
+            self.logger.log(
+                "info",
+                f"Generating hazard geojson on thread {threading.current_thread().name}",
+            )
+            self.hazard_handler.generate_hazard_geojson(hazard_active, country_name, return_periods)
+            return "hazard_ready"
+
+        def _run_impact() -> str:
+            self.logger.log(
+                "info",
+                f"Generating impact geojson on thread {threading.current_thread().name}",
+            )
+            self.impact_handler.generate_impact_geojson(
+                impact_active,
+                country_name,
+                return_periods,
+                asset_type,
+                exposure_type,
+            )
+            return "impact_ready"
+
+        step_to_file = dict(self._GEOJSON_OUTPUTS)
+        with ThreadPoolExecutor(max_workers=3, thread_name_prefix="geojson") as pool:
+            futures = [
+                pool.submit(_run_exposure),
+                pool.submit(_run_hazard),
+                pool.submit(_run_impact),
+            ]
+            for future in as_completed(futures):
+                try:
+                    step = future.result()
+                except Exception as exc:
+                    self.logger.log("error", f"GeoJSON generation task failed: {exc}")
+                    continue
+                if callback is None:
+                    continue
+                path = DATA_TEMP_DIR / step_to_file[step]
+                try:
+                    with open(path, encoding="utf-8") as fh:
+                        data = json.load(fh)
+                except (OSError, ValueError) as exc:
+                    self.logger.log("warning", f"Failed to read {step} partial from {path}: {exc}")
+                    continue
+                callback({"type": "progress", "step": step, "data": data})
 
     def run_scenario(self) -> dict:
         """Entry point: run the scenario and return a response dict.
@@ -559,9 +631,7 @@ class RunScenario:
         """
         entity_path = _DATA_ENTITIES_DIR / self.request_data.entity_filename
         hazard_path = _DATA_HAZARDS_DIR / self.request_data.hazard_filename
-        country_config_path = _resolve_country_config_path(
-            self.request_data.country_code
-        )
+        country_config_path = _resolve_country_config_path(self.request_data.country_code)
         config_version_value = ""
         try:
             cfg = load_country_config(self.request_data.country_code)
