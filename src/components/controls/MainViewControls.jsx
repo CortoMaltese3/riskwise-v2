@@ -29,8 +29,8 @@ const MainViewControls = () => {
         // maxWidth: controls.length === 1 ? "50%" : "100%",
         maxWidth: "100%",
         margin: "auto",
-        bgcolor: "#FFCCCC",
-        border: "1px solid #000000",
+        bgcolor: "accent.light",
+        border: "1px solid var(--mui-palette-common-black)",
         borderRadius: "16px",
       }}
     >
@@ -46,7 +46,7 @@ const MainViewControls = () => {
           {controls.map((control, index) => (
             <React.Fragment key={control.id}>
               {index !== 0 && (
-                <Divider orientation="vertical" flexItem sx={{ bgcolor: "#000000" }} />
+                <Divider orientation="vertical" flexItem sx={{ bgcolor: "common.black" }} />
               )}
               <IconButton
                 onClick={() => handleSelect(control.id)}
@@ -54,7 +54,7 @@ const MainViewControls = () => {
                   flexGrow: 1,
                   color: "text.primary",
                   "&:hover": {
-                    backgroundColor: "#FFCCCC",
+                    backgroundColor: "accent.light",
                   },
                 }}
               >

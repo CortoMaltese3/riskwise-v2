@@ -35,10 +35,10 @@ const MainTabs = () => {
   };
 
   return (
-    <Box sx={{ bgcolor: "#70ADB5" }}>
+    <Box sx={{ bgcolor: "tab.main" }}>
       <AppBar
         position="fixed"
-        sx={{ bgcolor: "#70ADB5", top: "80px", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        sx={{ bgcolor: "tab.main", top: "80px", zIndex: (theme) => theme.zIndex.drawer + 1 }}
       >
         <Tabs
           value={selectedTab}
@@ -48,8 +48,8 @@ const MainTabs = () => {
           indicatorColor="secondary"
           centered // Center the tabs within the AppBar
           sx={{
-            ".Mui-selected": { bgcolor: "#3B919D", color: "#fff" },
-            ".MuiTab-root": { color: "#fff" }, // Text color for all main tabs
+            ".Mui-selected": { bgcolor: "primary.dark", color: "common.white" },
+            ".MuiTab-root": { color: "common.white" }, // Text color for all main tabs
           }}
         >
           <Tab

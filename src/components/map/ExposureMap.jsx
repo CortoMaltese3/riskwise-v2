@@ -58,7 +58,9 @@ const ExposureMap = () => {
 
   const style = (feature) => {
     return {
-      fillColor: mapInfo.colorScale ? mapInfo.colorScale(feature.properties.value) : "#FFF",
+      fillColor: mapInfo.colorScale
+        ? mapInfo.colorScale(feature.properties.value)
+        : "var(--mui-palette-common-white)",
       weight: 2,
       opacity: 1,
       color: "white",
@@ -73,8 +75,8 @@ const ExposureMap = () => {
     minWidth: "60px",
     maxWidth: "60px",
     fontSize: "0.75rem",
-    bgcolor: layer === activeAdminLayer ? "#2A4D69" : "#5C87B1",
-    "&:hover": { bgcolor: "#9886D6" },
+    bgcolor: layer === activeAdminLayer ? "mapControl.main" : "mapControl.light",
+    "&:hover": { bgcolor: "mapControl.hover" },
   });
 
   const buttonContainerStyle = {

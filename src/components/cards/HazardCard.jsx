@@ -119,8 +119,8 @@ const HazardCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "#DCEFF2",
-        border: "2px solid #3B919D",
+        bgcolor: "card.bg",
+        border: "2px solid var(--mui-palette-primary-dark)",
         borderRadius: "16px",
       }}
     >
@@ -133,7 +133,7 @@ const HazardCard = () => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            backgroundColor: "#F79191",
+            backgroundColor: "accent.main",
             borderRadius: "8px",
             padding: "8px",
             marginBottom: "24px",
@@ -149,7 +149,7 @@ const HazardCard = () => {
               key={hazard}
               onClick={() => handleCardSelect(hazard)}
               sx={{
-                backgroundColor: isButtonSelected(hazard) ? "#F79191" : "#FFCCCC",
+                backgroundColor: isButtonSelected(hazard) ? "accent.main" : "accent.light",
                 borderRadius: "8px",
                 margin: "16px",
                 marginLeft: 0,
@@ -175,11 +175,11 @@ const HazardCard = () => {
               component="span"
               onClick={handleLoadButtonClick}
               sx={{
-                bgcolor: "#FFEBEB",
-                color: "#000000",
+                bgcolor: "accent.paleBg",
+                color: "common.black",
                 fontWeight: "bold",
                 margin: 2,
-                "&:hover": { bgcolor: "#FFCCCC" },
+                "&:hover": { bgcolor: "accent.light" },
                 transition: "transform 0.1s ease-in-out", // Add transition for transform
                 "&:active": {
                   transform: "scale(0.96)", // Slightly scale down when clicked
@@ -207,11 +207,11 @@ const HazardCard = () => {
             <Button
               component="span"
               sx={{
-                bgcolor: "#FFEBEB",
-                color: "#000000",
+                bgcolor: "accent.paleBg",
+                color: "common.black",
                 fontWeight: "bold",
                 margin: 2,
-                "&:hover": { bgcolor: "#FFCCCC" },
+                "&:hover": { bgcolor: "accent.light" },
                 transition: "transform 0.1s ease-in-out", // Add transition for transform
                 "&:active": {
                   transform: "scale(0.96)", // Slightly scale down when clicked
@@ -239,7 +239,7 @@ const HazardCard = () => {
             <Typography variant="body2" color="text.primary" sx={{ textAlign: "center" }}>
               {t("card_exposure_economic_upload_file")}: {selectedHazardFile}
             </Typography>
-            <IconButton onClick={clearUploadedFile} size="small" sx={{ color: "#F35A5A" }}>
+            <IconButton onClick={clearUploadedFile} size="small" sx={{ color: "accent.dark" }}>
               <CloseIcon />
             </IconButton>
           </Box>
@@ -258,14 +258,14 @@ const HazardCard = () => {
             <Typography variant="body2" color="text.primary" sx={{ textAlign: "center" }}>
               {t("card_exposure_economic_fetch_exposure")}: {fetchHazardMessage}
             </Typography>
-            <IconButton onClick={clearFetchedData} size="small" sx={{ color: "#F35A5A" }}>
+            <IconButton onClick={clearFetchedData} size="small" sx={{ color: "accent.dark" }}>
               <CloseIcon />
             </IconButton>
           </Box>
         )}
 
         {/* Remarks section */}
-        <Box sx={{ padding: 2, backgroundColor: "#F2F2F2", borderRadius: "8px" }}>
+        <Box sx={{ padding: 2, backgroundColor: "surface.muted", borderRadius: "8px" }}>
           <Typography variant="body2" color="text.primary">
             {t("card_hazard_remarks")}
           </Typography>

@@ -8,7 +8,7 @@ const MacroEconomicVariable = () => {
   const { setSelectedMacroCard, setActiveViewControl, selectedMacroVariable } = useStore();
   const { t } = useTranslation();
   const [clicked, setClicked] = useState(false); // State to manage click animation
-  const [bgColor, setBgColor] = useState("#CCE1E7"); // State to manage background color
+  const [bgColor, setBgColor] = useState("inputCard.default"); // State to manage background color
 
   const handleMouseDown = () => {
     setClicked(true); // Trigger animation
@@ -25,9 +25,9 @@ const MacroEconomicVariable = () => {
 
   const handleBgColor = () => {
     if (selectedMacroVariable) {
-      setBgColor("#C0E7CF"); // green
+      setBgColor("inputCard.valid"); // green
     } else {
-      setBgColor("#CCE1E7"); // default light blue
+      setBgColor("inputCard.default"); // default light blue
     }
   };
 
@@ -47,7 +47,7 @@ const MacroEconomicVariable = () => {
         bgcolor: bgColor,
         transition: "background-color 0.3s, transform 0.1s", // Added transform to the transition
         "&:hover": {
-          bgcolor: "#DAE7EA",
+          bgcolor: "inputCard.hover",
         },
         ".MuiCardContent-root:last-child": {
           padding: 2,
@@ -72,8 +72,8 @@ const MacroEconomicVariable = () => {
               }}
               sx={{
                 ".MuiInputBase-input.Mui-disabled": {
-                  WebkitTextFillColor: "#A6A6A6", // Change the text color for disabled content
-                  bgcolor: "#E6E6E6", // Change background for disabled TextField
+                  WebkitTextFillColor: "inputCard.disabledText", // Change the text color for disabled content
+                  bgcolor: "inputCard.disabledBg", // Change background for disabled TextField
                   padding: 1,
                 },
               }}

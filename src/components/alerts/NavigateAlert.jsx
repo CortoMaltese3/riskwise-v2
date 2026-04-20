@@ -59,7 +59,7 @@ const NavigateAlert = () => {
             component="div"
             sx={{
               mt: 2,
-              bgcolor: "#F35A5A",
+              bgcolor: "accent.dark",
               color: "white",
               fontWeight: "bold",
               textAlign: "center",
@@ -76,7 +76,7 @@ const NavigateAlert = () => {
             sx={{
               maxWidth: 800,
               mb: 2,
-              border: "2px solid #AAAAAA",
+              border: "2px solid var(--mui-palette-surface-border)",
               borderRadius: "16px",
             }}
           >
@@ -106,7 +106,7 @@ const NavigateAlert = () => {
                 backgroundColor: "white",
                 color: "black",
                 ":hover": {
-                  backgroundColor: "#FFCCCC",
+                  backgroundColor: "accent.light",
                 },
                 "text-transform": "none",
               }}
@@ -134,7 +134,7 @@ const NavigateAlert = () => {
           component="div"
           sx={{
             mt: 2,
-            bgcolor: "#F35A5A",
+            bgcolor: "accent.dark",
             color: "white",
             fontWeight: "bold",
             textAlign: "center",
@@ -150,8 +150,8 @@ const NavigateAlert = () => {
           sx={{
             maxWidth: 800,
             mb: 2,
-            // bgcolor: "#DCEFF2",
-            border: "2px solid #AAAAAA",
+            // bgcolor: "card.bg",
+            border: "2px solid var(--mui-palette-surface-border)",
             borderRadius: "16px",
           }}
         >
@@ -178,8 +178,8 @@ const NavigateAlert = () => {
             maxWidth: 800,
             margin: "auto",
             marginBottom: 2,
-            bgcolor: "#DCEFF2",
-            border: "2px solid #3B919D",
+            bgcolor: "card.bg",
+            border: "2px solid var(--mui-palette-primary-dark)",
             borderRadius: "16px",
           }}
         >
@@ -192,7 +192,7 @@ const NavigateAlert = () => {
               sx={{
                 textAlign: "center",
                 fontWeight: "bold",
-                backgroundColor: "#F79191",
+                backgroundColor: "accent.main",
                 borderRadius: "8px",
                 padding: "8px",
               }}
@@ -206,7 +206,7 @@ const NavigateAlert = () => {
                   key={option}
                   onClick={() => handleSelect(option)}
                   sx={{
-                    backgroundColor: "#FFCCCC",
+                    backgroundColor: "accent.light",
                     flexGrow: 1,
                     borderRadius: "8px",
                     marginLeft: 0,
@@ -232,7 +232,7 @@ const NavigateAlert = () => {
                 </CardActionArea>
               ))}
             </Box>
-            <Box sx={{ padding: 2, backgroundColor: "#F2F2F2", borderRadius: "8px" }}>
+            <Box sx={{ padding: 2, backgroundColor: "surface.muted", borderRadius: "8px" }}>
               <Typography variant="body2" color="text.primary">
                 {t("card_option_remarks")}
               </Typography>

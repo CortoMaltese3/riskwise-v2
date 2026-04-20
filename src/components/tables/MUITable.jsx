@@ -16,8 +16,8 @@ import { styled } from "@mui/material/styles";
 
 // Custom styled components for the header and rows
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  backgroundColor: "#73B588", // Green header background
-  color: theme.palette.common.white, // White text in the header
+  backgroundColor: theme.palette.tableHeader.main,
+  color: theme.palette.common.white,
   fontWeight: "bold",
 }));
 

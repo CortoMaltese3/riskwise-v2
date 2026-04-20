@@ -73,27 +73,28 @@ export default [
       },
     },
   },
-  // theme-tokens-enforced: component files listed here must consume colours
-  // via the MUI theme (e.g. `bgcolor: "header.main"`). Raw hex or rgb() in
-  // source literals is an error. Issue #15 migrates Header first; add files
-  // to this glob list as each component is converted to tokens.
+  // theme-tokens-enforced (issue #78): every source file under `src/` must
+  // consume colours via the MUI theme (palette paths in `sx`, CSS variables,
+  // or `theme.palette.*` in styled). Raw hex literals are an error. The only
+  // escape hatch is `src/theme/**` where the palette tokens themselves live.
+  //
+  // rgba() is NOT banned here — chart libraries (Chart.js) need raw rgba for
+  // per-dataset styling, and the issue's acceptance criteria scope the gate
+  // to hex literals only.
   {
-    files: ["src/components/nav/Header.jsx"],
+    files: ["src/**/*.{js,jsx}"],
+    ignores: ["src/theme/**"],
     rules: {
       "no-restricted-syntax": [
         "error",
         {
-          selector: "Literal[value=/^\\s*#[0-9a-fA-F]{3,8}\\s*$/]",
+          selector: "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
           message: "Use a theme token (palette path or CSS variable) instead of a raw hex colour.",
         },
         {
-          selector: "Literal[value=/rgba?\\(/]",
-          message: "Use a theme token instead of a raw rgb()/rgba() colour.",
-        },
-        {
-          selector: "TemplateElement[value.raw=/#[0-9a-fA-F]{3,8}|rgba?\\(/]",
+          selector: "TemplateElement[value.raw=/#[0-9a-fA-F]{3,8}\\b/]",
           message:
-            "Use a theme token (palette path or CSS variable) instead of a raw hex/rgb colour in template strings.",
+            "Use a theme token (palette path or CSS variable) instead of a raw hex colour in template strings.",
         },
       ],
     },

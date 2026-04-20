@@ -16,7 +16,7 @@ const ResultsViewTitle = () => {
         sx={{
           margin: "auto",
           marginBottom: 2,
-          bgcolor: "#F35A5A",
+          bgcolor: "accent.dark",
           color: "white",
           fontWeight: "bold",
           textAlign: "center",

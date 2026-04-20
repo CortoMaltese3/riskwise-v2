@@ -71,8 +71,8 @@ const ReportCard = ({ data, image, id, isSelected, onCardClick, onReportAction, 
         onClick={handleClick}
         sx={{
           alignItems: "flex-start",
-          backgroundColor: isSelected ? "#CCE1E7" : "FFFFFF",
-          border: "1px solid #ccc",
+          backgroundColor: isSelected ? "inputCard.default" : "common.white",
+          border: "1px solid var(--mui-palette-surface-borderLight)",
           borderRadius: "16px",
           display: "flex",
           flexDirection: "row",
@@ -82,7 +82,7 @@ const ReportCard = ({ data, image, id, isSelected, onCardClick, onReportAction, 
           cursor: "pointer",
           transition: "background-color 0.3s, transform 0.1s", // Added transform to the transition
           "&:hover": {
-            bgcolor: "#DAE7EA",
+            bgcolor: "inputCard.hover",
           },
           ".MuiCardContent-root:last-child": {
             padding: 2,
