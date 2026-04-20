@@ -56,6 +56,18 @@ export interface ElectronBridge {
   exportPdf: (
     scenarioId: string
   ) => Promise<{ success: boolean; filePath?: string; reason?: string }>;
+  exportWorkspace: () => Promise<{
+    success: boolean;
+    filePath?: string;
+    scenarioCount?: number;
+    reason?: string;
+  }>;
+  importWorkspace: () => Promise<{
+    success: boolean;
+    imported?: number;
+    skipped?: number;
+    reason?: string;
+  }>;
 }
 
 declare global {

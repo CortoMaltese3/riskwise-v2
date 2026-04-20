@@ -1093,6 +1093,83 @@ ipcMain.handle("export-pdf", async (_event, { scenarioId }) => {
   }
 });
 
+// Workspace ZIP export/import (issue #82).
+//
+// Export: backend builds the `.riskwise-workspace` archive at a temp path,
+// returns the path; main moves the file to the user-chosen destination and
+// unlinks the source so the temp copy does not linger.
+// Import: Electron shows the open dialog, POSTs the chosen path to the
+// backend, which validates the manifest and merges scenarios skipping
+// duplicate UUIDs.
+ipcMain.handle("export-workspace", async () => {
+  try {
+    const response = await httpRequest("GET", "/api/v1/workspace/export-data", null);
+    const exportPath = response?.data?.export_path;
+    const scenarioCount = response?.data?.scenario_count ?? 0;
+    if (!exportPath) {
+      return { success: false, reason: "Backend did not return an export path" };
+    }
+
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      title: "Export Workspace",
+      defaultPath: path.basename(exportPath),
+      filters: [{ name: "RISK WISE Workspace", extensions: ["riskwise-workspace"] }],
+    });
+
+    if (canceled || !filePath) {
+      try {
+        fs.unlinkSync(exportPath);
+        fs.rmdirSync(path.dirname(exportPath));
+      } catch (err) {
+        log.warn("[electron] cleanup after cancelled export failed:", err.message);
+      }
+      return { success: false, reason: "cancelled" };
+    }
+
+    fs.copyFileSync(exportPath, filePath);
+    try {
+      fs.unlinkSync(exportPath);
+      fs.rmdirSync(path.dirname(exportPath));
+    } catch (err) {
+      log.warn("[electron] failed to remove export temp file:", err.message);
+    }
+
+    log.info("[electron] workspace exported:", filePath);
+    return { success: true, filePath, scenarioCount };
+  } catch (error) {
+    const message = error instanceof BackendError ? error.envelope.message : error.message;
+    log.error("[electron] workspace export failed:", message);
+    return { success: false, reason: message };
+  }
+});
+
+ipcMain.handle("import-workspace", async () => {
+  try {
+    const { filePaths, canceled } = await dialog.showOpenDialog({
+      title: "Import Workspace",
+      properties: ["openFile"],
+      filters: [{ name: "RISK WISE Workspace", extensions: ["riskwise-workspace"] }],
+    });
+
+    if (canceled || !filePaths || filePaths.length === 0) {
+      return { success: false, reason: "cancelled" };
+    }
+
+    const importPath = filePaths[0];
+    const response = await httpRequest("POST", "/api/v1/workspace/import", {
+      import_path: importPath,
+    });
+    const imported = response?.data?.imported_count ?? 0;
+    const skipped = response?.data?.skipped_count ?? 0;
+    log.info("[electron] workspace imported:", { imported, skipped });
+    return { success: true, imported, skipped };
+  } catch (error) {
+    const message = error instanceof BackendError ? error.envelope.message : error.message;
+    log.error("[electron] workspace import failed:", message);
+    return { success: false, reason: message };
+  }
+});
+
 ipcMain.on("minimize", () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.minimize();

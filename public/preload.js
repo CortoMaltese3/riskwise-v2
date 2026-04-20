@@ -48,6 +48,12 @@ contextBridge.exposeInMainWorld("electron", {
 
   exportPdf: (scenarioId) => ipcRenderer.invoke("export-pdf", { scenarioId }),
 
+  // Workspace export/import (issue #82): main process shows the OS save/open
+  // dialog and delegates build/merge to the backend. Renderer only triggers
+  // the flow and reads back the summary result.
+  exportWorkspace: () => ipcRenderer.invoke("export-workspace"),
+  importWorkspace: () => ipcRenderer.invoke("import-workspace"),
+
   // Long-running scenario progress events streamed from the SSE bridge.
   onProgress: (callback) => subscribe("progress", callback),
 });

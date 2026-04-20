@@ -45,6 +45,13 @@ from models.scenarios import (
 )
 from models.temp import TempClearResponse
 from models.waterfall import WaterfallCategory, WaterfallPayload, WaterfallResponse
+from models.workspace import (
+    WorkspaceExportData,
+    WorkspaceExportResponse,
+    WorkspaceImportData,
+    WorkspaceImportRequest,
+    WorkspaceImportResponse,
+)
 
 __all__ = [
     "ChartDataDataset",
@@ -92,4 +99,9 @@ __all__ = [
     "WaterfallCategory",
     "WaterfallPayload",
     "WaterfallResponse",
+    "WorkspaceExportData",
+    "WorkspaceExportResponse",
+    "WorkspaceImportData",
+    "WorkspaceImportRequest",
+    "WorkspaceImportResponse",
 ]

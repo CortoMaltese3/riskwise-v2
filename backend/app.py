@@ -82,6 +82,9 @@ from models import (
     SnapshotListResponse,
     TempClearResponse,
     WaterfallResponse,
+    WorkspaceExportResponse,
+    WorkspaceImportRequest,
+    WorkspaceImportResponse,
 )
 from progress import ProgressEvent, progress_callback_var
 from provenance import ManifestError, verify_manifest
@@ -663,6 +666,39 @@ async def countries() -> dict:
 @app.post(f"{API_PREFIX}/temp/clear", response_model=TempClearResponse)
 async def temp_clear() -> dict:
     return await _dispatch("run_clear_temp_dir.py", None)
+
+
+@app.get(f"{API_PREFIX}/workspace/export-data", response_model=WorkspaceExportResponse)
+async def workspace_export() -> dict:
+    """Build a ``.riskwise-workspace`` ZIP at a temp path and return its location.
+
+    The Electron main process copies the file to the user's chosen save
+    location and removes the temp copy afterwards, so the backend never
+    needs to stream binary through the IPC channel.
+    """
+    from workspace_handler import build_export_to_temp
+
+    output_path, manifest = await asyncio.to_thread(build_export_to_temp)
+    return {
+        "data": {
+            "export_path": str(output_path),
+            "scenario_count": int(manifest["scenario_count"]),
+            "export_date": str(manifest["export_date"]),
+            "app_version": str(manifest["app_version"]),
+        },
+        "status": _status_ok(),
+    }
+
+
+@app.post(f"{API_PREFIX}/workspace/import", response_model=WorkspaceImportResponse)
+async def workspace_import(payload: WorkspaceImportRequest) -> dict:
+    from workspace_handler import WorkspaceImportError, import_workspace
+
+    try:
+        counts = await asyncio.to_thread(import_workspace, Path(payload.import_path))
+    except WorkspaceImportError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"data": counts, "status": _status_ok()}
 
 
 @app.post(f"{API_PREFIX}/cache/clear")
