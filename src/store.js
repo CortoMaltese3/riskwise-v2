@@ -2,7 +2,27 @@ import { create } from "zustand";
 
 import { generateRunCode } from "./utils/misc";
 
+const SIDEBAR_STORAGE_KEY = "riskwise.sidebarCollapsed";
+
+const readSidebarCollapsed = () => {
+  try {
+    return globalThis.localStorage?.getItem(SIDEBAR_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+const writeSidebarCollapsed = (value) => {
+  try {
+    globalThis.localStorage?.setItem(SIDEBAR_STORAGE_KEY, value ? "true" : "false");
+  } catch {
+    // storage may be unavailable (private mode, tests without jsdom storage)
+  }
+};
+
 const useStore = create((set, get) => ({
+  activeSection: "risk",
+  sidebarCollapsed: readSidebarCollapsed(),
   activeMap: "hazard",
   activeMapRef: null,
   activeViewControl: "display_map",
@@ -78,6 +98,11 @@ const useStore = create((set, get) => ({
       reports: newReports,
     })),
 
+  setActiveSection: (section) => set({ activeSection: section }),
+  setSidebarCollapsed: (collapsed) => {
+    writeSidebarCollapsed(collapsed);
+    set({ sidebarCollapsed: collapsed });
+  },
   setActiveMap: (map) => set({ activeMap: map }),
   setActiveMapRef: (mapRef) => set({ activeMapRef: mapRef }),
   setWaterfallChartRef: (chartRef) => set({ waterfallChartRef: chartRef }),
