@@ -272,9 +272,9 @@ class RunScenario:
         self.costben_handler.plot_cost_benefit(cost_benefit, self.request_data.asset_type)
         if is_future:
             self.base_handler.update_progress(
-                55, "Plotting waterfall graph with given risk metric..."
+                55, "Computing waterfall chart data..."
             )
-            self.costben_handler.plot_waterfall(
+            self.costben_handler.compute_waterfall_data(
                 cost_benefit, hazard_present, entity_present, hazard_future, entity_future
             )
 

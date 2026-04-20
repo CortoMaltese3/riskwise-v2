@@ -51,6 +51,7 @@ const useStore = create((set, get) => ({
   selectedSubTab: 0,
   selectedTab: 0,
   selectedTimeHorizon: [2024, 2050],
+  waterfallChartRef: null,
 
   // Method to add a new report
   addReport: (newReport) => {
@@ -78,6 +79,7 @@ const useStore = create((set, get) => ({
 
   setActiveMap: (map) => set({ activeMap: map }),
   setActiveMapRef: (mapRef) => set({ activeMapRef: mapRef }),
+  setWaterfallChartRef: (chartRef) => set({ waterfallChartRef: chartRef }),
   setAlertMessage: (message) => set({ alertMessage: message }),
   setAlertSeverity: (severity) => set({ alertSeverity: severity }),
   setAlertShowMessage: (show) => set({ alertShowMessage: show }),

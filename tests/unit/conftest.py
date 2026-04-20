@@ -50,7 +50,11 @@ _stub_module(
 _stub_module("climada.entity.measures", MeasureSet=_Stub)
 _stub_module("climada.entity.impact_funcs", ImpactFunc=_Stub, ImpactFuncSet=_Stub)
 _stub_module("climada.engine", CostBenefit=_Stub, Impact=_Stub, ImpactCalc=_Stub)
-_stub_module("climada.engine.cost_benefit", risk_aai_agg=lambda *_, **__: None)
+_stub_module(
+    "climada.engine.cost_benefit",
+    NO_MEASURE="no measure",
+    risk_aai_agg=lambda *_, **__: None,
+)
 _stub_module("climada.hazard", Hazard=_Stub)
 _stub_module("geopandas", GeoDataFrame=_Stub, read_file=lambda *_, **__: None)
 _stub_module("shapely")

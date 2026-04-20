@@ -123,6 +123,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/scenario/waterfall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scenario Waterfall */
+        get: operations["scenario_waterfall_api_v1_scenario_waterfall_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/scenario/{job_id}/cancel": {
         parameters: {
             query?: never;
@@ -504,12 +521,46 @@ export interface components {
         };
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** WaterfallCategory */
+        WaterfallCategory: {
+            /** Base */
+            base: number;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: number;
+        };
+        /** WaterfallPayload */
+        WaterfallPayload: {
+            /** Categories */
+            categories: components["schemas"]["WaterfallCategory"][];
+            /** Future Year */
+            future_year: number;
+            /**
+             * Measurement Unit
+             * @default
+             */
+            measurement_unit: string;
+            /** Present Year */
+            present_year: number;
+        };
+        /** WaterfallResponse */
+        WaterfallResponse: {
+            data: components["schemas"]["WaterfallPayload"];
+            status: components["schemas"]["Status"];
         };
     };
     responses: never;
@@ -707,6 +758,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scenario_waterfall_api_v1_scenario_waterfall_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterfallResponse"];
                 };
             };
         };
