@@ -61,6 +61,7 @@ contextBridge.exposeInMainWorld("electron", {
   // binary crosses the IPC boundary.
   selectCustomDataPack: () => ipcRenderer.invoke("select-custom-data-pack"),
   selectCredDataset: () => ipcRenderer.invoke("select-cred-dataset"),
+  selectMeasuresDataset: () => ipcRenderer.invoke("select-measures-dataset"),
   getPathForFile: (file) => {
     if (!webUtils || typeof webUtils.getPathForFile !== "function") return "";
     try {

@@ -57,34 +57,75 @@ class CostBenefitHandler:
         otherwise the built-in set is used. Returns an empty list when no
         measures are found so the caller can decide how to handle it.
         """
+        measures = self.get_measures_from_db(conn, hazard_code, measure_set_id)
+        return [m["name"] for m in measures]
+
+    def get_measures_from_db(
+        self,
+        conn: duckdb.DuckDBPyConnection,
+        hazard_code: str,
+        measure_set_id: str | None = None,
+        country_name: str | None = None,
+    ) -> list[dict]:
+        """Return full measure rows for *hazard_code*.
+
+        Default (``measure_set_id`` omitted) merges the built-in set with
+        every custom set whose measures apply to the hazard — and optionally
+        the given country. A measure applies to a country when its ``country``
+        column is NULL (set-wide) or a case-insensitive match. Each returned
+        dict also carries the owning set's id, name, and ``is_builtin`` so
+        the UI can render badges and tooltips without a second query.
+        """
         hazard_type = hazard_handler.get_hazard_name(hazard_code) or hazard_code
         try:
+            params: list[object] = [hazard_type]
+            clauses = ["am.hazard_type = ?"]
             if measure_set_id:
-                rows = conn.execute(
-                    """
-                    SELECT am.name
-                    FROM adaptation_measures am
-                    WHERE am.hazard_type = ?
-                      AND am.measure_set_id = ?
-                    ORDER BY am.name
-                    """,
-                    [hazard_type, measure_set_id],
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    """
-                    SELECT am.name
-                    FROM adaptation_measures am
-                    JOIN measure_sets ms ON ms.id = am.measure_set_id
-                    WHERE am.hazard_type = ?
-                      AND ms.is_builtin = TRUE
-                    ORDER BY am.name
-                    """,
-                    [hazard_type],
-                ).fetchall()
-            return [r[0] for r in rows]
+                clauses.append("am.measure_set_id = ?")
+                params.append(measure_set_id)
+            if country_name:
+                clauses.append("(am.country IS NULL OR LOWER(am.country) = LOWER(?))")
+                params.append(country_name)
+
+            rows = conn.execute(
+                f"""
+                SELECT
+                    am.id,
+                    am.measure_set_id,
+                    ms.name  AS measure_set_name,
+                    ms.is_builtin,
+                    am.country,
+                    am.hazard_type,
+                    am.exposure_type,
+                    am.name,
+                    am.cost_factor,
+                    am.hazard_reduction_percentage,
+                    am.description,
+                    am.source_reference
+                FROM adaptation_measures am
+                JOIN measure_sets ms ON ms.id = am.measure_set_id
+                WHERE {" AND ".join(clauses)}
+                ORDER BY ms.is_builtin DESC, ms.name, am.name
+                """,
+                params,
+            ).fetchall()
+            cols = [
+                "id",
+                "measure_set_id",
+                "measure_set_name",
+                "is_builtin",
+                "country",
+                "hazard_type",
+                "exposure_type",
+                "name",
+                "cost_factor",
+                "hazard_reduction_percentage",
+                "description",
+                "source_reference",
+            ]
+            return [dict(zip(cols, r, strict=True)) for r in rows]
         except Exception as exc:
-            logger.log("error", f"Failed to fetch measure names from DB. More info: {exc}")
+            logger.log("error", f"Failed to fetch measures from DB. More info: {exc}")
             return []
 
     def get_discount_rates_from_excel(self) -> DiscRates:

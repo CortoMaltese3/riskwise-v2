@@ -224,6 +224,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/measures/datasets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Measure Datasets */
+        get: operations["measure_datasets_api_v1_measures_datasets_get"];
+        put?: never;
+        /** Measure Datasets Upload */
+        post: operations["measure_datasets_upload_api_v1_measures_datasets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/measures/datasets/{measure_set_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Measure Datasets Delete */
+        delete: operations["measure_datasets_delete_api_v1_measures_datasets__measure_set_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/measures/{country}/{hazard}": {
         parameters: {
             query?: never;
@@ -816,10 +851,100 @@ export interface components {
             }[];
             status: components["schemas"]["Status"];
         };
+        /** Measure */
+        Measure: {
+            /** Cost Factor */
+            cost_factor: number;
+            /** Country */
+            country?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Exposure Type */
+            exposure_type?: string | null;
+            /** Hazard Reduction Percentage */
+            hazard_reduction_percentage: number;
+            /** Hazard Type */
+            hazard_type: string;
+            /** Id */
+            id: string;
+            /** Is Builtin */
+            is_builtin: boolean;
+            /** Measure Set Id */
+            measure_set_id: string;
+            /** Measure Set Name */
+            measure_set_name: string;
+            /** Name */
+            name: string;
+            /** Source Reference */
+            source_reference?: string | null;
+        };
+        /** MeasureSet */
+        MeasureSet: {
+            /** Countries */
+            countries?: string | null;
+            /** Hazards */
+            hazards?: string | null;
+            /** Id */
+            id: string;
+            /** Is Builtin */
+            is_builtin: boolean;
+            /**
+             * Measure Count
+             * @default 0
+             */
+            measure_count: number;
+            /** Name */
+            name: string;
+            /** Sha256 */
+            sha256?: string | null;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+        };
+        /** MeasureSetDeleteData */
+        MeasureSetDeleteData: {
+            /** Id */
+            id: string;
+        };
+        /** MeasureSetDeleteResponse */
+        MeasureSetDeleteResponse: {
+            data: components["schemas"]["MeasureSetDeleteData"];
+            status: components["schemas"]["Status"];
+        };
+        /**
+         * MeasureSetUploadRequest
+         * @description Payload for POST ``/api/v1/measures/datasets``.
+         *
+         *     As with the CRED upload endpoint, the renderer passes the xlsx path on
+         *     disk rather than multipart bytes — Electron and the backend share the
+         *     user's filesystem, so streaming through the loopback channel is
+         *     unnecessary overhead.
+         */
+        MeasureSetUploadRequest: {
+            /** Name */
+            name: string;
+            /** Xlsx Path */
+            xlsx_path: string;
+        };
+        /** MeasureSetUploadResponse */
+        MeasureSetUploadResponse: {
+            data: components["schemas"]["MeasureSet"];
+            status: components["schemas"]["Status"];
+        };
+        /** MeasureSetsResponse */
+        MeasureSetsResponse: {
+            /** Data */
+            data: components["schemas"]["MeasureSet"][];
+            status: components["schemas"]["Status"];
+        };
         /** MeasuresData */
         MeasuresData: {
             /** Adaptationmeasures */
             adaptationMeasures: string[];
+            /** Measures */
+            measures?: components["schemas"]["Measure"][];
         };
         /** MeasuresResponse */
         MeasuresResponse: {
@@ -1432,6 +1557,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CredDatasetDeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    measure_datasets_api_v1_measures_datasets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeasureSetsResponse"];
+                };
+            };
+        };
+    };
+    measure_datasets_upload_api_v1_measures_datasets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeasureSetUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeasureSetUploadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    measure_datasets_delete_api_v1_measures_datasets__measure_set_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measure_set_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeasureSetDeleteResponse"];
                 };
             };
             /** @description Validation Error */

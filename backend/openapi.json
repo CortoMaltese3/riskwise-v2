@@ -832,6 +832,252 @@
         "title": "MacroCredOutputResponse",
         "type": "object"
       },
+      "Measure": {
+        "properties": {
+          "cost_factor": {
+            "title": "Cost Factor",
+            "type": "number"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "exposure_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Type"
+          },
+          "hazard_reduction_percentage": {
+            "title": "Hazard Reduction Percentage",
+            "type": "number"
+          },
+          "hazard_type": {
+            "title": "Hazard Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_builtin": {
+            "title": "Is Builtin",
+            "type": "boolean"
+          },
+          "measure_set_id": {
+            "title": "Measure Set Id",
+            "type": "string"
+          },
+          "measure_set_name": {
+            "title": "Measure Set Name",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reference"
+          }
+        },
+        "required": [
+          "id",
+          "measure_set_id",
+          "measure_set_name",
+          "name",
+          "hazard_type",
+          "cost_factor",
+          "hazard_reduction_percentage",
+          "is_builtin"
+        ],
+        "title": "Measure",
+        "type": "object"
+      },
+      "MeasureSet": {
+        "properties": {
+          "countries": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Countries"
+          },
+          "hazards": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hazards"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_builtin": {
+            "title": "Is Builtin",
+            "type": "boolean"
+          },
+          "measure_count": {
+            "default": 0,
+            "title": "Measure Count",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "uploaded_at": {
+            "format": "date-time",
+            "title": "Uploaded At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "uploaded_at",
+          "is_builtin"
+        ],
+        "title": "MeasureSet",
+        "type": "object"
+      },
+      "MeasureSetDeleteData": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "MeasureSetDeleteData",
+        "type": "object"
+      },
+      "MeasureSetDeleteResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MeasureSetDeleteData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "MeasureSetDeleteResponse",
+        "type": "object"
+      },
+      "MeasureSetUploadRequest": {
+        "additionalProperties": false,
+        "description": "Payload for POST ``/api/v1/measures/datasets``.\n\nAs with the CRED upload endpoint, the renderer passes the xlsx path on\ndisk rather than multipart bytes \u2014 Electron and the backend share the\nuser's filesystem, so streaming through the loopback channel is\nunnecessary overhead.",
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "xlsx_path": {
+            "minLength": 1,
+            "title": "Xlsx Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "xlsx_path"
+        ],
+        "title": "MeasureSetUploadRequest",
+        "type": "object"
+      },
+      "MeasureSetUploadResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MeasureSet"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "MeasureSetUploadResponse",
+        "type": "object"
+      },
+      "MeasureSetsResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/MeasureSet"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "MeasureSetsResponse",
+        "type": "object"
+      },
       "MeasuresData": {
         "properties": {
           "adaptationMeasures": {
@@ -839,6 +1085,13 @@
               "type": "string"
             },
             "title": "Adaptationmeasures",
+            "type": "array"
+          },
+          "measures": {
+            "items": {
+              "$ref": "#/components/schemas/Measure"
+            },
+            "title": "Measures",
             "type": "array"
           }
         },
@@ -2054,6 +2307,99 @@
           }
         },
         "summary": "Macro Datasets Delete"
+      }
+    },
+    "/api/v1/measures/datasets": {
+      "get": {
+        "operationId": "measure_datasets_api_v1_measures_datasets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureSetsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Measure Datasets"
+      },
+      "post": {
+        "operationId": "measure_datasets_upload_api_v1_measures_datasets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeasureSetUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureSetUploadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Measure Datasets Upload"
+      }
+    },
+    "/api/v1/measures/datasets/{measure_set_id}": {
+      "delete": {
+        "operationId": "measure_datasets_delete_api_v1_measures_datasets__measure_set_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_set_id",
+            "required": true,
+            "schema": {
+              "title": "Measure Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureSetDeleteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Measure Datasets Delete"
       }
     },
     "/api/v1/measures/{country}/{hazard}": {

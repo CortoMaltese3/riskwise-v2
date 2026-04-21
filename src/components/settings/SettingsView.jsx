@@ -4,6 +4,7 @@ import { Box, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
 
 import CustomDataSection from "./CustomDataSection";
 import CREDDataSection from "./CREDDataSection";
+import MeasuresSection from "./MeasuresSection";
 
 const TABS = [
   { id: "custom-data", labelKey: "settings_tab_custom_data" },
@@ -53,12 +54,7 @@ const SettingsView = () => {
         <Box role="tabpanel" sx={{ p: 3, flexGrow: 1, overflow: "auto" }}>
           {activeTab === "custom-data" && <CustomDataSection />}
           {activeTab === "cred-data" && <CREDDataSection />}
-          {activeTab === "measures" && (
-            <PlaceholderPanel
-              titleKey="settings_tab_measures"
-              bodyKey="settings_measures_placeholder"
-            />
-          )}
+          {activeTab === "measures" && <MeasuresSection />}
           {activeTab === "about" && (
             <PlaceholderPanel titleKey="settings_tab_about" bodyKey="settings_about_body" />
           )}

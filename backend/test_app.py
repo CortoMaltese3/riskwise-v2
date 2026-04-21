@@ -74,7 +74,7 @@ class TestSynchronousEndpoints:
 
     def test_measures_passes_path_params(self, client: TestClient) -> None:
         envelope = {
-            "data": {"adaptationMeasures": []},
+            "data": {"adaptationMeasures": [], "measures": []},
             "status": {"code": 2000, "message": "ok"},
         }
         with patch.object(app_module, "_dispatch_sync", return_value=envelope) as m:

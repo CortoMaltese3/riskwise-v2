@@ -1212,6 +1212,26 @@ ipcMain.handle("select-cred-dataset", async () => {
   }
 });
 
+// Adaptation-measure set upload (issue #92): mirrors the CRED picker —
+// the main process resolves an absolute xlsx path; the renderer forwards
+// it to ``POST /api/v1/measures/datasets`` where validation happens.
+ipcMain.handle("select-measures-dataset", async () => {
+  try {
+    const { filePaths, canceled } = await dialog.showOpenDialog({
+      title: "Upload Adaptation Measures",
+      properties: ["openFile"],
+      filters: [{ name: "Adaptation Measures", extensions: ["xlsx"] }],
+    });
+    if (canceled || !filePaths || filePaths.length === 0) {
+      return { success: false, reason: "cancelled" };
+    }
+    return { success: true, filePath: filePaths[0] };
+  } catch (error) {
+    log.error("[electron] select-measures-dataset failed:", error);
+    return { success: false, reason: error.message };
+  }
+});
+
 ipcMain.on("minimize", () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.minimize();
