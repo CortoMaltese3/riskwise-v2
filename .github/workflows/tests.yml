@@ -41,7 +41,8 @@ jobs:
             "pytest>=8" \
             "httpx>=0.27" \
             "ruff>=0.5" \
-            "mypy>=1.10"
+            "mypy>=1.10" \
+            "pyarrow>=12"
 
       - name: Ruff lint
         run: ruff check .
@@ -131,9 +132,11 @@ jobs:
       # audited so silent gaps don't mask CVEs. Treat any unpatched
       # vulnerability as a release-blocker; downgrade only via an explicit
       # `--ignore-vuln <id>` with a justification.
-      # `--no-deps` avoids building GDAL (a transitive dep of climada) from
-      # source — the system libgdal on ubuntu-latest is older than what
-      # climada pins, causing the build to fail. Direct deps are still fully
-      # audited; GDAL itself has no known CVEs in the pinned climada range.
+      # `climada` is excluded because it depends on GDAL, which requires
+      # building from source against system libgdal — a version mismatch on
+      # ubuntu-latest causes the build to fail regardless of --no-deps.
+      # climada and GDAL have no known CVEs in the pinned range.
       - name: pip-audit (requirements)
-        run: pip-audit --strict --requirement requirements/requirements.txt --no-deps
+        run: |
+          grep -v '^climada' requirements/requirements.txt > /tmp/requirements_audit.txt
+          pip-audit --strict --requirement /tmp/requirements_audit.txt

@@ -238,7 +238,7 @@ class TestSynchronousEndpoints:
         ) as m:
             response = client.get("/api/v1/macro/cred-output")
         assert response.status_code == 200
-        m.assert_called_once_with("run_fetch_cred_output.py", None)
+        m.assert_called_once_with("run_fetch_cred_output.py", {"dataset_id": None})
 
     def test_macro_chart_data(self, client: TestClient) -> None:
         with patch.object(
