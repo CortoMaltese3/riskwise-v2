@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Checkbox,
@@ -19,12 +20,14 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
+import { formatDateTime } from "../../lib/formatDate";
+import { isRtl } from "../../i18nConfig";
 import SnapshotDrawer from "./SnapshotDrawer";
 
-const formatCreatedAt = (value) => {
+const formatCreatedAt = (value, locale) => {
   if (!value) return "";
   try {
-    return new Date(value).toLocaleString();
+    return formatDateTime(value, locale);
   } catch {
     return String(value);
   }
@@ -40,6 +43,9 @@ const COLUMNS = [
 ];
 
 const ScenarioRow = ({ row, selected, onToggleSelected, onRename, onAction }) => {
+  const { i18n } = useTranslation();
+  const locale = i18n.language;
+  const rtl = isRtl(locale);
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(row.name || "");
   const [menuAnchor, setMenuAnchor] = useState(null);
@@ -83,7 +89,16 @@ const ScenarioRow = ({ row, selected, onToggleSelected, onRename, onAction }) =>
             aria-label={`expand-${row.id}`}
             onClick={() => setExpanded((prev) => !prev)}
           >
-            {expanded ? <ExpandMoreIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
+            {expanded ? (
+              <ExpandMoreIcon fontSize="small" />
+            ) : (
+              // ChevronRight points inward on LTR expand rows; in RTL the arrow
+              // must flip so it still points toward the content column.
+              <ChevronRightIcon
+                fontSize="small"
+                sx={rtl ? { transform: "scaleX(-1)" } : undefined}
+              />
+            )}
           </IconButton>
         </TableCell>
         <TableCell onDoubleClick={() => setEditing(true)} data-testid={`name-cell-${row.id}`}>
@@ -106,7 +121,7 @@ const ScenarioRow = ({ row, selected, onToggleSelected, onRename, onAction }) =>
         </TableCell>
         <TableCell>{row.country || ""}</TableCell>
         <TableCell>{row.hazard_type || ""}</TableCell>
-        <TableCell>{formatCreatedAt(row.created_at)}</TableCell>
+        <TableCell>{formatCreatedAt(row.created_at, locale)}</TableCell>
         <TableCell>{row.status || ""}</TableCell>
         <TableCell>{row.tags || ""}</TableCell>
         <TableCell align="right" padding="none">

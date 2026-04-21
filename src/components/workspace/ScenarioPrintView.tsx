@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Box, Table, TableBody, TableCell, TableRow, Typography } from "@mui/material";
+
+import { formatDate as formatDateI18n, formatDateTime } from "../../lib/formatDate";
 
 // JSX chart components without TS prop declarations — cast to avoid forwardRef
 // inference issues when importing untyped JSX sources into a TS file.
@@ -64,10 +67,10 @@ interface Provenance {
   random_seed?: number;
 }
 
-const formatDate = (iso: string | null) => {
+const formatDate = (iso: string | null, locale: string) => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleString();
+    return formatDateI18n(iso, locale);
   } catch {
     return String(iso);
   }
@@ -91,6 +94,8 @@ const parseJsonResult = <T,>(json: string, setter: (v: T) => void) => {
 };
 
 const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
+  const { i18n } = useTranslation();
+  const locale = i18n.language;
   const [meta, setMeta] = useState<ScenarioMeta | null>(null);
   const [waterfallData, setWaterfallData] = useState<WaterfallData | null>(null);
   const [costbenData, setCostbenData] = useState<CostBenefitData | null>(null);
@@ -157,7 +162,7 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
       ["App Version", provenance.app_version],
       ["Engine Version", provenance.engine_version],
       ["CLIMADA Version", provenance.climada_version],
-      ["Computed At", meta.created_at ? formatDate(meta.created_at) : undefined],
+      ["Computed At", meta.created_at ? formatDate(meta.created_at, locale) : undefined],
       ["Entity Data SHA-256", provenance.entity_data_sha256],
       ["Hazard Data SHA-256", provenance.hazard_data_sha256],
       ["Country Config SHA-256", provenance.country_config_sha256],
@@ -182,7 +187,7 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
           {meta.name ?? meta.id}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Generated {new Date().toLocaleString()}
+          Generated {formatDateTime(new Date(), locale)}
         </Typography>
 
         <Typography variant="h5" gutterBottom>

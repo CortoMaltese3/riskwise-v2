@@ -5,7 +5,7 @@ import Button from "@mui/material/Button";
 import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
 
 import "leaflet/dist/leaflet.css";
-import { formatNumber } from "../../utils/formatters";
+import { formatNumber } from "../../lib/formatNumber";
 import { getScaleLegacy } from "../../utils/colorScalesLegacy";
 import LegendLegacy from "./LegendLegacy";
 import useStore from "../../store";
@@ -14,7 +14,8 @@ const adminLayers = [0, 1, 2]; // Administrative layers
 
 const ExposureMap = () => {
   const { selectedCountry, selectedExposureEconomic, selectedHazard, setActiveMapRef } = useStore();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
   const mapRefSet = useRef(false);
 
   const [activeAdminLayer, setActiveAdminLayer] = useState(0);
@@ -107,7 +108,7 @@ const ExposureMap = () => {
       layer.bindPopup(
         `${t("map_exposure_popup_country")}: ${country}<br>${t(
           "map_exposure_button_admin"
-        )}: ${name}<br>${t("map_exposure_popup_value")}: ${formatNumber(value)} ${unit}`
+        )}: ${name}<br>${t("map_exposure_popup_value")}: ${formatNumber(value, locale)} ${unit}`
       );
     }
   };

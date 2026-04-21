@@ -2,11 +2,12 @@ import React from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
 
-import { formatNumberDivisor } from "../../utils/formatters";
+import { formatNumberDivisor } from "../../lib/formatNumber";
 import "./LegendLegacy.css";
 
 const LegendLegacy = ({ colorScale, minValue, maxValue, type, unit }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
   const getSuffixAndDivisor = (value) => {
     if (value >= 1e9) return { suffix: t("map_legend_title_billions_suffix"), divisor: 1e9 };
     if (value >= 1e6) return { suffix: t("map_legend_title_millions_suffix"), divisor: 1e6 };
@@ -43,10 +44,10 @@ const LegendLegacy = ({ colorScale, minValue, maxValue, type, unit }) => {
       </div>
       <div className="legend-values">
         {minValue === maxValue ? (
-          <span>{formatNumberDivisor(minValue, divisor)}</span>
+          <span>{formatNumberDivisor(minValue, divisor, locale)}</span>
         ) : (
           <>
-            <span>{formatNumberDivisor(minValue, divisor)}</span>
+            <span>{formatNumberDivisor(minValue, divisor, locale)}</span>
             <span>{formatNumberDivisor((minValue + maxValue) / 2, divisor)}</span>
             <span>{formatNumberDivisor(maxValue, divisor)}</span>
           </>

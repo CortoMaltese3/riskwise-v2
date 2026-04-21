@@ -17,6 +17,8 @@ import {
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
 import useStore from "../../store";
+import { isRtl } from "../../i18nConfig";
+import { formatNumber } from "../../lib/formatNumber";
 import ChartDataTable from "./ChartDataTable";
 
 // Register all necessary elements
@@ -33,7 +35,9 @@ ChartJS.register(
 );
 
 const MacroEconomicChart = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
+  const rtl = isRtl(locale);
   const {
     credOutputData,
     selectedMacroCountry,
@@ -106,7 +110,7 @@ const MacroEconomicChart = () => {
     const label =
       key === "None"
         ? t("macro_display_chart_no_adaptation")
-        : `${(parseFloat(key) * 100).toFixed(2)}% ${t("macro_display_chart_adaptation")}`;
+        : `${formatNumber(parseFloat(key) * 100, locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}% ${t("macro_display_chart_adaptation")}`;
 
     return {
       label,
@@ -125,6 +129,10 @@ const MacroEconomicChart = () => {
   };
 
   const options = {
+    // Chart.js honors `rtl: true` by mirroring legend/tooltip layout; combined
+    // with the locale-aware tick formatter below, this keeps Arabic renders
+    // visually correct without duplicating chart code per locale.
+    rtl,
     scales: {
       x: {
         type: "category",
@@ -140,19 +148,19 @@ const MacroEconomicChart = () => {
           text: t("macro_display_chart_y_axis_label"),
         },
         ticks: {
-          callback: (val) => `${Number(val).toFixed(2)}%`,
+          callback: (val) =>
+            `${formatNumber(Number(val), locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,
         },
       },
     },
     plugins: {
-      legend: { display: true },
+      legend: { display: true, rtl },
       title: { display: true, text: macroEconomicChartTitle },
       tooltip: {
+        rtl,
         callbacks: {
-          label: (ctx) => {
-            const y = ctx.parsed.y;
-            return `${ctx.dataset.label}: ${y.toFixed(2)}%`;
-          },
+          label: (ctx) =>
+            `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y, locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,
         },
       },
       datalabels: {
@@ -160,7 +168,8 @@ const MacroEconomicChart = () => {
         align: "top",
         color: "rgba(33, 33, 33, 0.9)",
         font: { size: 10, weight: 600 },
-        formatter: (value) => `${Number(value).toFixed(1)}%`,
+        formatter: (value) =>
+          `${formatNumber(Number(value), locale, { maximumFractionDigits: 1, minimumFractionDigits: 1 })}%`,
       },
     },
   };
@@ -168,7 +177,11 @@ const MacroEconomicChart = () => {
   const tableHeaders = [t("macro_display_chart_x_axis_label"), ...datasets.map((d) => d.label)];
   const tableRows = labels.map((year, i) => [
     year,
-    ...datasets.map((d) => (d.data[i] == null ? "" : `${d.data[i].toFixed(2)}%`)),
+    ...datasets.map((d) =>
+      d.data[i] == null
+        ? ""
+        : `${formatNumber(d.data[i], locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`
+    ),
   ]);
 
   const ariaLabel = macroEconomicChartTitle

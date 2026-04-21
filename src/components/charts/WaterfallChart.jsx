@@ -15,7 +15,8 @@ import {
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
 import useStore from "../../store";
-import { formatNumber } from "../../utils/formatters";
+import { isRtl } from "../../i18nConfig";
+import { formatNumber } from "../../lib/formatNumber";
 import { patternForIndex } from "../../utils/chartPatterns";
 import ChartDataTable from "./ChartDataTable";
 
@@ -29,25 +30,27 @@ const PATTERN_TOTAL = 0;
 const PATTERN_INCREASE = 1;
 const PATTERN_DECREASE = 2;
 
-const formatValue = (value, unit) => {
-  const formatted = Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+const formatValue = (value, unit, locale) => {
+  const formatted = formatNumber(Number(value), locale);
   return unit ? `${formatted} ${unit}` : formatted;
 };
 
-const buildAriaLabel = (t, data, unit) => {
+const buildAriaLabel = (t, data, unit, locale) => {
   const present = data.categories.find((c) => c.key === "risk_present");
   const future = data.categories.find((c) => c.key === "risk_future");
   const parts = [t("economic_non_economic_risk_display_chart_title")];
   if (present && future) {
     parts.push(
-      `${data.present_year}: ${formatValue(present.value, unit)}, ${data.future_year}: ${formatValue(future.value, unit)}`
+      `${data.present_year}: ${formatValue(present.value, unit, locale)}, ${data.future_year}: ${formatValue(future.value, unit, locale)}`
     );
   }
   return parts.join(" — ");
 };
 
 const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMessage }, ref) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
+  const rtl = isRtl(locale);
   const internalRef = useRef(null);
   const chartRef = ref ?? internalRef;
   const showChartValues = useStore((state) => state.showChartValues);
@@ -113,24 +116,26 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
     responsive: true,
     maintainAspectRatio: false,
     animation: { duration: 0 },
+    rtl,
     scales: {
       y: {
         beginAtZero: true,
         title: { display: true, text: unit || "Impact" },
         ticks: {
-          callback: (val) => Number(val).toLocaleString(undefined, { maximumFractionDigits: 0 }),
+          callback: (val) => formatNumber(Number(val), locale, { maximumFractionDigits: 0 }),
         },
       },
     },
     plugins: {
-      legend: { display: false },
+      legend: { display: false, rtl },
       title: { display: true, text: titleText },
       tooltip: {
+        rtl,
         callbacks: {
           title: (items) => items[0]?.label ?? "",
           label: (ctx) => {
             const category = data.categories[ctx.dataIndex];
-            return formatValue(category.value, unit);
+            return formatValue(category.value, unit, locale);
           },
         },
       },
@@ -142,7 +147,7 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
         font: { size: 11, weight: 600 },
         formatter: (_value, ctx) => {
           const category = data.categories[ctx.dataIndex];
-          return formatNumber(category.value);
+          return formatNumber(category.value, locale);
         },
       },
     },
@@ -152,7 +157,7 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
     t("chart_data_table_header_category"),
     t("chart_data_table_header_value") + (unit ? ` (${unit})` : ""),
   ];
-  const tableRows = data.categories.map((c) => [c.label, formatNumber(c.value)]);
+  const tableRows = data.categories.map((c) => [c.label, formatNumber(c.value, locale)]);
 
   return (
     <Box
@@ -179,7 +184,7 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
           ref={chartRef}
           data={chartData}
           options={options}
-          aria-label={buildAriaLabel(t, data, unit)}
+          aria-label={buildAriaLabel(t, data, unit, locale)}
           role="img"
         />
       </Box>

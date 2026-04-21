@@ -15,7 +15,8 @@ import {
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
 import useStore from "../../store";
-import { formatNumber } from "../../utils/formatters";
+import { isRtl } from "../../i18nConfig";
+import { formatNumber } from "../../lib/formatNumber";
 import { patternForIndex } from "../../utils/chartPatterns";
 import ChartDataTable from "./ChartDataTable";
 
@@ -28,13 +29,12 @@ const PATTERN_PROFITABLE = 0;
 const PATTERN_MARGINAL = 1;
 const PATTERN_UNPROFITABLE = 2;
 
-const formatCurrency = (value, unit) => {
-  const formatted = Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+const formatCurrency = (value, unit, locale) => {
+  const formatted = formatNumber(Number(value), locale);
   return unit ? `${formatted} ${unit}` : formatted;
 };
 
-const formatRatio = (value) =>
-  Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+const formatRatio = (value, locale) => formatNumber(Number(value), locale);
 
 const styleFor = (ratio) => {
   if (ratio >= 1) return { color: COLOR_PROFITABLE, patternIndex: PATTERN_PROFITABLE };
@@ -43,7 +43,9 @@ const styleFor = (ratio) => {
 };
 
 const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, errorMessage }, ref) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
+  const rtl = isRtl(locale);
   const internalRef = useRef(null);
   const chartRef = ref ?? internalRef;
   const showChartValues = useStore((state) => state.showChartValues);
@@ -93,6 +95,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
     responsive: true,
     maintainAspectRatio: false,
     animation: { duration: 0 },
+    rtl,
     scales: {
       y: {
         beginAtZero: true,
@@ -101,22 +104,23 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
           text: t("economic_non_economic_adaptation_chart_ratio_label"),
         },
         ticks: {
-          callback: (val) => Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 }),
+          callback: (val) => formatNumber(Number(val), locale),
         },
       },
     },
     plugins: {
-      legend: { display: false },
+      legend: { display: false, rtl },
       title: { display: true, text: titleText },
       tooltip: {
+        rtl,
         callbacks: {
           title: (items) => items[0]?.label ?? "",
           label: (ctx) => {
             const measure = data.measures[ctx.dataIndex];
             return [
-              `${t("economic_non_economic_adaptation_chart_tooltip_cost")}: ${formatCurrency(measure.cost, unit)}`,
-              `${t("economic_non_economic_adaptation_chart_tooltip_benefit")}: ${formatCurrency(measure.benefit, unit)}`,
-              `${t("economic_non_economic_adaptation_chart_tooltip_ratio")}: ${formatRatio(measure.benefit_cost_ratio)}`,
+              `${t("economic_non_economic_adaptation_chart_tooltip_cost")}: ${formatCurrency(measure.cost, unit, locale)}`,
+              `${t("economic_non_economic_adaptation_chart_tooltip_benefit")}: ${formatCurrency(measure.benefit, unit, locale)}`,
+              `${t("economic_non_economic_adaptation_chart_tooltip_ratio")}: ${formatRatio(measure.benefit_cost_ratio, locale)}`,
             ];
           },
         },
@@ -127,13 +131,13 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
         align: "end",
         color: "rgba(33, 33, 33, 0.9)",
         font: { size: 11, weight: 600 },
-        formatter: (value) => formatNumber(value),
+        formatter: (value) => formatNumber(value, locale),
       },
     },
   };
 
   const ariaLabel = `${titleText}. ${data.measures
-    .map((m) => `${m.name}: ${formatRatio(m.benefit_cost_ratio)}`)
+    .map((m) => `${m.name}: ${formatRatio(m.benefit_cost_ratio, locale)}`)
     .join(", ")}`;
 
   const tableHeaders = [
@@ -145,9 +149,9 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
   ];
   const tableRows = data.measures.map((m) => [
     m.name,
-    formatNumber(m.cost),
-    formatNumber(m.benefit),
-    formatRatio(m.benefit_cost_ratio),
+    formatNumber(m.cost, locale),
+    formatNumber(m.benefit, locale),
+    formatRatio(m.benefit_cost_ratio, locale),
   ]);
 
   return (

@@ -1,20 +1,24 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
+import { useTranslation } from "react-i18next";
 import { Box, IconButton, Stack, Typography } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
+import { formatDateTime } from "../../lib/formatDate";
 
-const formatCreatedAt = (value) => {
+const formatCreatedAt = (value, locale) => {
   if (!value) return "";
   try {
-    return new Date(value).toLocaleString();
+    return formatDateTime(value, locale);
   } catch {
     return String(value);
   }
 };
 
 const SnapshotDrawer = ({ scenarioId }) => {
+  const { i18n } = useTranslation();
+  const locale = i18n.language;
   const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -86,7 +90,7 @@ const SnapshotDrawer = ({ scenarioId }) => {
           <Box>
             <Typography variant="body2">{snap.snapshot_type}</Typography>
             <Typography variant="caption" color="text.secondary">
-              {formatCreatedAt(snap.created_at)}
+              {formatCreatedAt(snap.created_at, locale)}
             </Typography>
           </Box>
           <IconButton

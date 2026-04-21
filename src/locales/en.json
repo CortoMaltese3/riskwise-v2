@@ -754,5 +754,7 @@
     "chart_data_table_summary": "View data table",
     "chart_data_table_header_category": "Category",
     "chart_data_table_header_value": "Value",
-    "economic_non_economic_adaptation_chart_tooltip_measure": "Measure"
+    "economic_non_economic_adaptation_chart_tooltip_measure": "Measure",
+    "workspace_scenarios_selected_one": "{{count}} scenario selected",
+    "workspace_scenarios_selected_other": "{{count}} scenarios selected"
 }

@@ -754,5 +754,6 @@
     "chart_data_table_summary": "ดูตารางข้อมูล",
     "chart_data_table_header_category": "หมวดหมู่",
     "chart_data_table_header_value": "ค่า",
-    "economic_non_economic_adaptation_chart_tooltip_measure": "มาตรการ"
+    "economic_non_economic_adaptation_chart_tooltip_measure": "มาตรการ",
+    "workspace_scenarios_selected_other": "เลือก {{count}} สถานการณ์"
 }
