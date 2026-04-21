@@ -1192,6 +1192,26 @@ ipcMain.handle("select-custom-data-pack", async () => {
   }
 });
 
+// CRED dataset upload (issue #91): same pattern as the country pack picker —
+// the main process returns an absolute path, the renderer forwards it to
+// ``POST /api/v1/macro/datasets`` so binary never crosses the IPC boundary.
+ipcMain.handle("select-cred-dataset", async () => {
+  try {
+    const { filePaths, canceled } = await dialog.showOpenDialog({
+      title: "Upload CRED Dataset",
+      properties: ["openFile"],
+      filters: [{ name: "CRED Dataset", extensions: ["xlsx"] }],
+    });
+    if (canceled || !filePaths || filePaths.length === 0) {
+      return { success: false, reason: "cancelled" };
+    }
+    return { success: true, filePath: filePaths[0] };
+  } catch (error) {
+    log.error("[electron] select-cred-dataset failed:", error);
+    return { success: false, reason: error.message };
+  }
+});
+
 ipcMain.on("minimize", () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.minimize();

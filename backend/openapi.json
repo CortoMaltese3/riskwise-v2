@@ -242,6 +242,73 @@
         "title": "CredDataset",
         "type": "object"
       },
+      "CredDatasetDeleteData": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "CredDatasetDeleteData",
+        "type": "object"
+      },
+      "CredDatasetDeleteResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CredDatasetDeleteData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "CredDatasetDeleteResponse",
+        "type": "object"
+      },
+      "CredDatasetUploadRequest": {
+        "additionalProperties": false,
+        "description": "Payload for POST ``/api/v1/macro/datasets``.\n\nThe renderer passes the xlsx path on disk (same pattern as custom-data\nimports) rather than multipart bytes \u2014 Electron and the backend share\nthe user's filesystem, so streaming through the loopback channel is\nunnecessary overhead.",
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "xlsx_path": {
+            "minLength": 1,
+            "title": "Xlsx Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "xlsx_path"
+        ],
+        "title": "CredDatasetUploadRequest",
+        "type": "object"
+      },
+      "CredDatasetUploadResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CredDataset"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "CredDatasetUploadResponse",
+        "type": "object"
+      },
       "CredDatasetsResponse": {
         "properties": {
           "data": {
@@ -678,6 +745,17 @@
               }
             ],
             "title": "Countryname"
+          },
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
           },
           "scenario": {
             "anyOf": [
@@ -1842,6 +1920,24 @@
     "/api/v1/macro/cred-output": {
       "get": {
         "operationId": "macro_cred_output_api_v1_macro_cred_output_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "dataset_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dataset Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -1852,6 +1948,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Macro Cred Output"
@@ -1876,18 +1982,36 @@
       },
       "post": {
         "operationId": "macro_datasets_upload_api_v1_macro_datasets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredDatasetUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "405": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Macro Datasets Upload Api V1 Macro Datasets Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/CredDatasetUploadResponse"
                 }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Macro Datasets Upload"
@@ -1908,13 +2032,11 @@
           }
         ],
         "responses": {
-          "405": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Macro Datasets Delete Api V1 Macro Datasets  Dataset Id  Delete",
-                  "type": "object"
+                  "$ref": "#/components/schemas/CredDatasetDeleteResponse"
                 }
               }
             },

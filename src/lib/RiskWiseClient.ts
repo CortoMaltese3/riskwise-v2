@@ -39,6 +39,11 @@ export type DeleteSnapshotResponse = Schema<"DeleteSnapshotResponse">;
 export type MacroChartDataRequest = Schema<"MacroChartDataRequest">;
 export type MacroChartDataResponse = Schema<"MacroChartDataResponse">;
 export type MacroCredOutputResponse = Schema<"MacroCredOutputResponse">;
+export type CredDataset = Schema<"CredDataset">;
+export type CredDatasetsResponse = Schema<"CredDatasetsResponse">;
+export type CredDatasetUploadRequest = Schema<"CredDatasetUploadRequest">;
+export type CredDatasetUploadResponse = Schema<"CredDatasetUploadResponse">;
+export type CredDatasetDeleteResponse = Schema<"CredDatasetDeleteResponse">;
 export type TempClearResponse = Schema<"TempClearResponse">;
 export type WaterfallResponse = Schema<"WaterfallResponse">;
 export type WaterfallPayload = Schema<"WaterfallPayload">;
@@ -109,10 +114,21 @@ const RiskWiseClient = {
   deleteSnapshot: (id: string) =>
     del<DeleteSnapshotResponse>(`/api/v1/snapshots/${encodeURIComponent(id)}`),
 
-  fetchCREDOutput: () => get<MacroCredOutputResponse>("/api/v1/macro/cred-output"),
+  fetchCREDOutput: (datasetId?: string | null) => {
+    const qs = datasetId ? `?dataset_id=${encodeURIComponent(datasetId)}` : "";
+    return get<MacroCredOutputResponse>(`/api/v1/macro/cred-output${qs}`);
+  },
 
   fetchMacroChartData: (body: MacroChartDataRequest) =>
     post<MacroChartDataResponse>("/api/v1/macro/chart-data", body),
+
+  listCREDDatasets: () => get<CredDatasetsResponse>("/api/v1/macro/datasets"),
+
+  uploadCREDDataset: (body: CredDatasetUploadRequest) =>
+    post<CredDatasetUploadResponse>("/api/v1/macro/datasets", body),
+
+  deleteCREDDataset: (id: string) =>
+    del<CredDatasetDeleteResponse>(`/api/v1/macro/datasets/${encodeURIComponent(id)}`),
 
   fetchCountries: () => get<CountriesResponse>("/api/v1/countries"),
 

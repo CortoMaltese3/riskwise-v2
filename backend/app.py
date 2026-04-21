@@ -59,7 +59,10 @@ from logging_config import (
 from models import (
     CostBenefitResponse,
     CountriesResponse,
+    CredDatasetDeleteResponse,
     CredDatasetsResponse,
+    CredDatasetUploadRequest,
+    CredDatasetUploadResponse,
     CustomDataDeleteResponse,
     CustomDataImportRequest,
     CustomDataImportResponse,
@@ -214,7 +217,10 @@ def _dispatch_sync(script_name: str, data: Any) -> dict:
     if script_name == "run_fetch_cred_output.py":
         from run_fetch_cred_output import RunFetchCredOutput
 
-        return RunFetchCredOutput().run_fetch_cred_output()
+        ds = None
+        if isinstance(data, dict):
+            ds = data.get("dataset_id")
+        return RunFetchCredOutput(dataset_id=ds).run_fetch_cred_output()
     if script_name == "run_fetch_waterfall.py":
         from run_fetch_waterfall import RunFetchWaterfall
 
@@ -620,19 +626,40 @@ async def macro_datasets() -> dict:
     return {"data": datasets, "status": _status_ok()}
 
 
-@app.post(f"{API_PREFIX}/macro/datasets", status_code=405)
-async def macro_datasets_upload() -> dict:
-    raise HTTPException(status_code=405, detail="CRED dataset upload is available in Phase 3")
+@app.post(f"{API_PREFIX}/macro/datasets", response_model=CredDatasetUploadResponse)
+async def macro_datasets_upload(payload: CredDatasetUploadRequest) -> dict:
+    from macroeconomic.cred_dataset_handler import CredDatasetError, import_dataset
+
+    try:
+        metadata = await asyncio.to_thread(import_dataset, payload.name, Path(payload.xlsx_path))
+    except CredDatasetError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"data": metadata, "status": _status_ok()}
 
 
-@app.delete(f"{API_PREFIX}/macro/datasets/{{dataset_id}}", status_code=405)
+@app.delete(f"{API_PREFIX}/macro/datasets/{{dataset_id}}", response_model=CredDatasetDeleteResponse)
 async def macro_datasets_delete(dataset_id: str) -> dict:
-    raise HTTPException(status_code=405, detail="CRED dataset delete is available in Phase 3")
+    from macroeconomic.cred_dataset_handler import (
+        CredDatasetError,
+        CredDatasetNotFound,
+        CredDatasetProtected,
+        delete_dataset,
+    )
+
+    try:
+        await asyncio.to_thread(delete_dataset, dataset_id)
+    except CredDatasetProtected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except CredDatasetNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CredDatasetError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"data": {"id": dataset_id}, "status": _status_ok()}
 
 
 @app.get(f"{API_PREFIX}/macro/cred-output", response_model=MacroCredOutputResponse)
-async def macro_cred_output() -> dict:
-    return await _dispatch("run_fetch_cred_output.py", None)
+async def macro_cred_output(dataset_id: str | None = None) -> dict:
+    return await _dispatch("run_fetch_cred_output.py", {"dataset_id": dataset_id})
 
 
 @app.post(f"{API_PREFIX}/macro/chart-data", response_model=MacroChartDataResponse)

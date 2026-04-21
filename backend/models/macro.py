@@ -15,6 +15,7 @@ class MacroChartDataRequest(BaseModel):
     scenario: str | None = None
     sector: str | None = None
     variable: str | None = None
+    dataset_id: str | None = None
 
 
 class ChartDataDataset(BaseModel):
@@ -59,4 +60,33 @@ class CredDataset(BaseModel):
 
 class CredDatasetsResponse(BaseModel):
     data: list[CredDataset]
+    status: Status
+
+
+class CredDatasetUploadRequest(BaseModel):
+    """Payload for POST ``/api/v1/macro/datasets``.
+
+    The renderer passes the xlsx path on disk (same pattern as custom-data
+    imports) rather than multipart bytes — Electron and the backend share
+    the user's filesystem, so streaming through the loopback channel is
+    unnecessary overhead.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(..., min_length=1)
+    xlsx_path: str = Field(..., min_length=1)
+
+
+class CredDatasetUploadResponse(BaseModel):
+    data: CredDataset
+    status: Status
+
+
+class CredDatasetDeleteData(BaseModel):
+    id: str
+
+
+class CredDatasetDeleteResponse(BaseModel):
+    data: CredDatasetDeleteData
     status: Status

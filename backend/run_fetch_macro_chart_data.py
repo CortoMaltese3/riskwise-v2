@@ -18,6 +18,8 @@ class RunFetchMacroChartData:
         self.scenario = str(request.get("scenario", "")).strip()
         self.sector = str(request.get("sector", "")).strip()
         self.macro_variable = str(request.get("variable", "")).strip()
+        dataset_id = request.get("dataset_id")
+        self.dataset_id = str(dataset_id).strip() if dataset_id else None
 
     def valid_request(self) -> bool:
         for field in ["countryName", "scenario", "sector", "variable"]:
@@ -39,6 +41,7 @@ class RunFetchMacroChartData:
                 scenario=self.scenario,
                 sector=self.sector,
                 variable=self.macro_variable,
+                dataset_id=self.dataset_id,
             )
             title = self.base_handler.set_macroeconomic_chart_title(
                 self.country_name, self.macro_variable

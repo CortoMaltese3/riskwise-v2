@@ -60,6 +60,7 @@ contextBridge.exposeInMainWorld("electron", {
   // import / delete go through the regular ``api.http`` bridge so no extra
   // binary crosses the IPC boundary.
   selectCustomDataPack: () => ipcRenderer.invoke("select-custom-data-pack"),
+  selectCredDataset: () => ipcRenderer.invoke("select-cred-dataset"),
   getPathForFile: (file) => {
     if (!webUtils || typeof webUtils.getPathForFile !== "function") return "";
     try {
