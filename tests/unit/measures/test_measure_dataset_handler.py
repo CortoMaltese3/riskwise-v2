@@ -184,7 +184,7 @@ def test_import_inserts_metadata_and_data(
 
     count = migrated_conn.execute(
         "SELECT COUNT(*) FROM adaptation_measures WHERE measure_set_id = ?", [meta["id"]]
-    ).fetchone()[0]
+    ).fetchone()[0]  # type: ignore[index]
     assert count == 2
 
     stored = get_measure_datasets_dir() / f"{meta['id']}.xlsx"
@@ -204,7 +204,7 @@ def test_import_rejects_invalid_xlsx(
 
     count = migrated_conn.execute(
         "SELECT COUNT(*) FROM measure_sets WHERE is_builtin = FALSE"
-    ).fetchone()[0]
+    ).fetchone()[0]  # type: ignore[index]
     assert count == 0
 
 
@@ -233,13 +233,13 @@ def test_delete_custom_dataset_removes_rows_and_file(
     assert (
         migrated_conn.execute(
             "SELECT COUNT(*) FROM measure_sets WHERE id = ?", [meta["id"]]
-        ).fetchone()[0]
+        ).fetchone()[0]  # type: ignore[index]
         == 0
     )
     assert (
         migrated_conn.execute(
             "SELECT COUNT(*) FROM adaptation_measures WHERE measure_set_id = ?", [meta["id"]]
-        ).fetchone()[0]
+        ).fetchone()[0]  # type: ignore[index]
         == 0
     )
     stored = get_measure_datasets_dir() / f"{meta['id']}.xlsx"

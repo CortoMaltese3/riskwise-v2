@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import zipfile
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -28,7 +29,9 @@ from fastapi.testclient import TestClient
 
 
 @pytest.fixture(autouse=True)
-def isolated_user_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def isolated_user_data(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Generator[Path, None, None]:
     """Point the user-data scanner at a throwaway directory for every test."""
     user_data = tmp_path / "user-data"
     monkeypatch.setenv("RISKWISE_USER_DATA_DIR", str(user_data))

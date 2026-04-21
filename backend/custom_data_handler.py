@@ -30,6 +30,7 @@ import tempfile
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 from countries.loader import CountryConfigError, load_country_config
 from extensibility.registry import BUILTIN_COUNTRY_CODES, reset_registry
@@ -125,7 +126,7 @@ def import_pack(zip_path: Path) -> dict[str, str]:
     """Extract a validated pack into ``<user-data>/countries/<ISO3>/``."""
     result = validate_pack(zip_path)
     if not result["valid"]:
-        errors = result["errors"] or ["Unknown validation error"]
+        errors = cast(list[object], result["errors"]) or ["Unknown validation error"]
         raise CustomDataError("; ".join(str(e) for e in errors))
 
     iso3 = str(result["iso3"])

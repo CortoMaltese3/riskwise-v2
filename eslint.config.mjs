@@ -103,8 +103,7 @@ export default [
         // +543 unless callers opt in explicitly. Route through
         // `src/lib/formatDate.ts` instead, which always selects a calendar.
         {
-          selector:
-            "CallExpression[callee.property.name='toLocaleDateString'][arguments.length<2]",
+          selector: "CallExpression[callee.property.name='toLocaleDateString'][arguments.length<2]",
           message:
             "Use formatDate() from src/lib/formatDate instead, or pass an explicit { calendar } option.",
         },

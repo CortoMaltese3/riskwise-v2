@@ -75,7 +75,7 @@ def _as_float(value: object) -> float | None:
     if value is None:
         return None
     try:
-        fv = float(value)
+        fv = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return None
     if math.isnan(fv):

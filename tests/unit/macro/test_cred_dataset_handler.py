@@ -162,7 +162,7 @@ def test_import_inserts_metadata_and_data(
     # Rows were inserted for this dataset id.
     count = migrated_conn.execute(
         "SELECT COUNT(*) FROM cred_data WHERE dataset_id = ?", [meta["id"]]
-    ).fetchone()[0]
+    ).fetchone()[0]  # type: ignore[index]
     assert count == 2
 
     # File was copied under user-data/cred/<id>.xlsx.
@@ -182,7 +182,7 @@ def test_import_rejects_invalid_xlsx(
         import_dataset("Bad", xlsx, conn=migrated_conn)
 
     # Nothing was inserted.
-    count = migrated_conn.execute("SELECT COUNT(*) FROM cred_datasets").fetchone()[0]
+    count = migrated_conn.execute("SELECT COUNT(*) FROM cred_datasets").fetchone()[0]  # type: ignore[index]
     assert count == 0
 
 
@@ -211,13 +211,13 @@ def test_delete_custom_dataset_removes_rows_and_file(
     assert (
         migrated_conn.execute(
             "SELECT COUNT(*) FROM cred_datasets WHERE id = ?", [meta["id"]]
-        ).fetchone()[0]
+        ).fetchone()[0]  # type: ignore[index]
         == 0
     )
     assert (
         migrated_conn.execute(
             "SELECT COUNT(*) FROM cred_data WHERE dataset_id = ?", [meta["id"]]
-        ).fetchone()[0]
+        ).fetchone()[0]  # type: ignore[index]
         == 0
     )
     stored = get_cred_datasets_dir() / f"{meta['id']}.xlsx"

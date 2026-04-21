@@ -9,13 +9,15 @@ from __future__ import annotations
 
 import sys
 import types
+from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import pytest
 
 
-def _load_handler() -> type:
+def _load_handler() -> Any:
     """Import ``EntityHandler`` after installing CLIMADA stubs.
 
     The module-level CLIMADA imports must resolve even on workstations
@@ -100,7 +102,7 @@ def test_load_exposures_dataframe_refreshes_on_stale_sidecar(tmp_path: Path) -> 
 
 
 @pytest.fixture(autouse=True)
-def _stub_constants(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def _stub_constants(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Generator[None, None, None]:
     # ``constants`` resolves DATA_ENTITIES_DIR at import time; the helper we
     # exercise does not use it, but importing the handler module touches the
     # real path. Nothing to assert here — fixture just neutralises side

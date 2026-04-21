@@ -123,9 +123,6 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install system deps for pip-audit (GDAL required by climada)
-        run: sudo apt-get install -y --no-install-recommends libgdal-dev
-
       - name: Install pip-audit
         run: python -m pip install --upgrade pip pip-audit
 
@@ -134,5 +131,9 @@ jobs:
       # audited so silent gaps don't mask CVEs. Treat any unpatched
       # vulnerability as a release-blocker; downgrade only via an explicit
       # `--ignore-vuln <id>` with a justification.
+      # `--no-deps` avoids building GDAL (a transitive dep of climada) from
+      # source — the system libgdal on ubuntu-latest is older than what
+      # climada pins, causing the build to fail. Direct deps are still fully
+      # audited; GDAL itself has no known CVEs in the pinned climada range.
       - name: pip-audit (requirements)
-        run: pip-audit --strict --requirement requirements/requirements.txt
+        run: pip-audit --strict --requirement requirements/requirements.txt --no-deps
