@@ -48,6 +48,7 @@ export const RiskAssessmentView = () => {
         component="aside"
         role="complementary"
         aria-label={t("results_panel_aria")}
+        data-tour="results-panel"
         sx={{ width: 260, overflow: "auto", borderLeft: 1, borderColor: "divider", p: 1 }}
       >
         <ResultsView />

@@ -33,10 +33,10 @@ const DataInput = () => {
         }}
       >
         <Grid container spacing={2}>
-          <Grid item xs={12}>
+          <Grid item xs={12} data-tour="country-selector">
             <Country />
           </Grid>
-          <Grid item xs={12}>
+          <Grid item xs={12} data-tour="hazard-selector">
             <Hazard />
           </Grid>
           <Grid item xs={12}>

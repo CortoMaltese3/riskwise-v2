@@ -128,7 +128,7 @@ const RunScenarioButton = () => {
   };
 
   return (
-    <Box sx={{ textAlign: "center", mt: 2 }}>
+    <Box sx={{ textAlign: "center", mt: 2 }} data-tour="run-button">
       <SaveScenarioDialog
         open={saveDialog.open}
         scenarioId={saveDialog.id}
