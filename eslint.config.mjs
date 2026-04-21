@@ -97,6 +97,23 @@ export default [
           message:
             "Use a theme token (palette path or CSS variable) instead of a raw hex colour in template strings.",
         },
+        // i18n-date-calendar (issue #86): block raw `toLocaleDateString()` /
+        // `toLocaleString()` calls that don't pin an explicit `calendar`.
+        // Thai locales default to the Buddhist calendar which shifts years by
+        // +543 unless callers opt in explicitly. Route through
+        // `src/lib/formatDate.ts` instead, which always selects a calendar.
+        {
+          selector:
+            "CallExpression[callee.property.name='toLocaleDateString'][arguments.length<2]",
+          message:
+            "Use formatDate() from src/lib/formatDate instead, or pass an explicit { calendar } option.",
+        },
+        {
+          selector:
+            "CallExpression[callee.property.name='toLocaleDateString'][arguments.1.type='ObjectExpression']:not([arguments.1.properties.0.key.name='calendar']):not(:has(Property[key.name='calendar']))",
+          message:
+            "toLocaleDateString() options must include an explicit `calendar` key (e.g. 'gregory' or 'buddhist'). Prefer formatDate() from src/lib/formatDate.",
+        },
       ],
     },
   },

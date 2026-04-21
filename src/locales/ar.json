@@ -754,5 +754,11 @@
     "chart_data_table_summary": "عرض جدول البيانات",
     "chart_data_table_header_category": "الفئة",
     "chart_data_table_header_value": "القيمة",
-    "economic_non_economic_adaptation_chart_tooltip_measure": "الإجراء"
+    "economic_non_economic_adaptation_chart_tooltip_measure": "الإجراء",
+    "workspace_scenarios_selected_zero": "لم يتم تحديد أي سيناريو",
+    "workspace_scenarios_selected_one": "تم تحديد سيناريو واحد",
+    "workspace_scenarios_selected_two": "تم تحديد سيناريوهين",
+    "workspace_scenarios_selected_few": "تم تحديد {{count}} سيناريوهات",
+    "workspace_scenarios_selected_many": "تم تحديد {{count}} سيناريو",
+    "workspace_scenarios_selected_other": "تم تحديد {{count}} سيناريو"
 }

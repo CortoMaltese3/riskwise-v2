@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Button,
@@ -64,6 +65,7 @@ const EmptyState = ({ onStart }) => (
 EmptyState.propTypes = { onStart: PropTypes.func.isRequired };
 
 const WorkspaceView = ({ initialScenarios }) => {
+  const { t } = useTranslation();
   const setActiveSection = useStore((state) => state.setActiveSection);
 
   const {
@@ -193,7 +195,9 @@ const WorkspaceView = ({ initialScenarios }) => {
 
       {selectedIds.length > 0 && (
         <Stack direction="row" spacing={1} alignItems="center">
-          <Typography variant="body2">{selectedIds.length} selected</Typography>
+          <Typography variant="body2">
+            {t("workspace_scenarios_selected", { count: selectedIds.length })}
+          </Typography>
           <Button size="small" color="error" onClick={deleteSelected}>
             Delete selected
           </Button>

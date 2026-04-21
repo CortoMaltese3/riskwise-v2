@@ -11,6 +11,10 @@ const resources = {
   th: { translation: translationTH },
 };
 
+const RTL_LANGS = ["ar", "he", "fa", "ur"];
+
+const isRtl = (lng) => RTL_LANGS.some((l) => lng.toLowerCase().startsWith(l));
+
 // Custom post-processor to handle empty or whitespace-only translations
 const fallbackWhitespacePostProcessor = {
   type: "postProcessor",
@@ -40,11 +44,7 @@ const bidiIsolatePostProcessor = {
   process(value, key, options) {
     if (value == null || typeof value !== "string") return value;
     const lng = (options.lng || i18n.language || "en").toLowerCase();
-    const dir = i18n.dir
-      ? i18n.dir(lng)
-      : ["ar", "he", "fa", "ur"].some((l) => lng.startsWith(l))
-        ? "rtl"
-        : "ltr";
+    const dir = i18n.dir ? i18n.dir(lng) : isRtl(lng) ? "rtl" : "ltr";
 
     if (dir === "rtl") {
       // Wrap LTR (ASCII) segments inside RTL text
@@ -66,9 +66,28 @@ i18n.use(initReactI18next).init({
   lng: "en",
   fallbackLng: "en",
   keySeparator: false,
+  // Plural keys use the i18next default suffix convention: `key_one`, `key_other`
+  // (+ full Arabic set `_zero`/`_two`/`_few`/`_many`). nsSeparator stays as the
+  // default ":" so the existing flat key namespace keeps working.
+  pluralSeparator: "_",
+  nsSeparator: ":",
   interpolation: { escapeValue: false },
   returnEmptyString: true,
   postProcess: ["bidiIsolate", "fallbackWhitespace"],
 });
 
+// Keep <html dir>/<html lang> in sync with the active language so MUI
+// (ThemeProvider direction), Chart.js (rtl option), and native BiDi reordering
+// all pick up the change from a single source of truth.
+export const applyDocumentDirection = (lng) => {
+  if (typeof document === "undefined") return;
+  const normalized = (lng || "en").toLowerCase();
+  document.documentElement.setAttribute("lang", normalized.split("-")[0]);
+  document.documentElement.setAttribute("dir", isRtl(normalized) ? "rtl" : "ltr");
+};
+
+applyDocumentDirection(i18n.language);
+i18n.on("languageChanged", applyDocumentDirection);
+
+export { isRtl };
 export default i18n;

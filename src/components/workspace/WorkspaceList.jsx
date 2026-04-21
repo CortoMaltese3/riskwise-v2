@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
+import { useTranslation } from "react-i18next";
 import {
   IconButton,
   List,
@@ -11,17 +12,20 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
+import { formatDateTime } from "../../lib/formatDate";
 
-const formatCreatedAt = (value) => {
+const formatCreatedAt = (value, locale) => {
   if (!value) return "";
   try {
-    return new Date(value).toLocaleString();
+    return formatDateTime(value, locale);
   } catch {
     return String(value);
   }
 };
 
 const WorkspaceList = ({ onOpen, items: itemsProp }) => {
+  const { i18n } = useTranslation();
+  const locale = i18n.language;
   const [items, setItems] = useState(itemsProp || []);
   const [loading, setLoading] = useState(itemsProp === undefined);
   const [error, setError] = useState("");
@@ -90,7 +94,7 @@ const WorkspaceList = ({ onOpen, items: itemsProp }) => {
           <ListItemButton onClick={() => onOpen?.(row)}>
             <ListItemText
               primary={row.name || row.id}
-              secondary={[row.country, row.hazard_type, formatCreatedAt(row.created_at)]
+              secondary={[row.country, row.hazard_type, formatCreatedAt(row.created_at, locale)]
                 .filter(Boolean)
                 .join(" • ")}
             />
