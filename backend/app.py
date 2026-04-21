@@ -60,6 +60,12 @@ from models import (
     CostBenefitResponse,
     CountriesResponse,
     CredDatasetsResponse,
+    CustomDataDeleteResponse,
+    CustomDataImportRequest,
+    CustomDataImportResponse,
+    CustomDataListResponse,
+    CustomDataValidateRequest,
+    CustomDataValidateResponse,
     DataValidateRequest,
     DataValidateResponse,
     DeleteScenarioResponse,
@@ -666,6 +672,44 @@ async def countries() -> dict:
 @app.post(f"{API_PREFIX}/temp/clear", response_model=TempClearResponse)
 async def temp_clear() -> dict:
     return await _dispatch("run_clear_temp_dir.py", None)
+
+
+@app.post(f"{API_PREFIX}/custom-data/validate", response_model=CustomDataValidateResponse)
+async def custom_data_validate(payload: CustomDataValidateRequest) -> dict:
+    from custom_data_handler import validate_pack
+
+    data = await asyncio.to_thread(validate_pack, Path(payload.zip_path))
+    return {"data": data, "status": _status_ok()}
+
+
+@app.post(f"{API_PREFIX}/custom-data/import", response_model=CustomDataImportResponse)
+async def custom_data_import(payload: CustomDataImportRequest) -> dict:
+    from custom_data_handler import CustomDataError, import_pack
+
+    try:
+        data = await asyncio.to_thread(import_pack, Path(payload.zip_path))
+    except CustomDataError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"data": data, "status": _status_ok()}
+
+
+@app.get(f"{API_PREFIX}/custom-data", response_model=CustomDataListResponse)
+async def custom_data_list() -> dict:
+    from custom_data_handler import list_custom_countries
+
+    countries_list = await asyncio.to_thread(list_custom_countries)
+    return {"data": {"countries": countries_list}, "status": _status_ok()}
+
+
+@app.delete(f"{API_PREFIX}/custom-data/{{iso3}}", response_model=CustomDataDeleteResponse)
+async def custom_data_delete(iso3: str) -> dict:
+    from custom_data_handler import CustomDataError, delete_custom_country
+
+    try:
+        await asyncio.to_thread(delete_custom_country, iso3)
+    except CustomDataError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"data": {"iso3": iso3.upper()}, "status": _status_ok()}
 
 
 @app.get(f"{API_PREFIX}/workspace/export-data", response_model=WorkspaceExportResponse)

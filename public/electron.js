@@ -1170,6 +1170,28 @@ ipcMain.handle("import-workspace", async () => {
   }
 });
 
+// Custom data pack selection (issue #90). The Settings > Custom Data tab
+// either gets the path from a dropped File (via ``webUtils.getPathForFile``
+// in preload) or asks the main process to open a native file picker here.
+// Validation, import, and delete all go through the regular ``api.http``
+// bridge — no binary crosses the IPC boundary.
+ipcMain.handle("select-custom-data-pack", async () => {
+  try {
+    const { filePaths, canceled } = await dialog.showOpenDialog({
+      title: "Import Country Pack",
+      properties: ["openFile"],
+      filters: [{ name: "Country Pack", extensions: ["zip"] }],
+    });
+    if (canceled || !filePaths || filePaths.length === 0) {
+      return { success: false, reason: "cancelled" };
+    }
+    return { success: true, filePath: filePaths[0] };
+  } catch (error) {
+    log.error("[electron] select-custom-data-pack failed:", error);
+    return { success: false, reason: error.message };
+  }
+});
+
 ipcMain.on("minimize", () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.minimize();

@@ -262,6 +262,211 @@
         "title": "CredDatasetsResponse",
         "type": "object"
       },
+      "CustomCountryEntry": {
+        "properties": {
+          "country_name": {
+            "title": "Country Name",
+            "type": "string"
+          },
+          "installed_at": {
+            "title": "Installed At",
+            "type": "string"
+          },
+          "iso3": {
+            "title": "Iso3",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "iso3",
+          "country_name",
+          "installed_at",
+          "source"
+        ],
+        "title": "CustomCountryEntry",
+        "type": "object"
+      },
+      "CustomDataDeleteData": {
+        "properties": {
+          "iso3": {
+            "title": "Iso3",
+            "type": "string"
+          }
+        },
+        "required": [
+          "iso3"
+        ],
+        "title": "CustomDataDeleteData",
+        "type": "object"
+      },
+      "CustomDataDeleteResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CustomDataDeleteData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "CustomDataDeleteResponse",
+        "type": "object"
+      },
+      "CustomDataImportData": {
+        "properties": {
+          "country_name": {
+            "title": "Country Name",
+            "type": "string"
+          },
+          "installed_at": {
+            "title": "Installed At",
+            "type": "string"
+          },
+          "iso3": {
+            "title": "Iso3",
+            "type": "string"
+          }
+        },
+        "required": [
+          "iso3",
+          "country_name",
+          "installed_at"
+        ],
+        "title": "CustomDataImportData",
+        "type": "object"
+      },
+      "CustomDataImportRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "zip_path": {
+            "minLength": 1,
+            "title": "Zip Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "zip_path"
+        ],
+        "title": "CustomDataImportRequest",
+        "type": "object"
+      },
+      "CustomDataImportResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CustomDataImportData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "CustomDataImportResponse",
+        "type": "object"
+      },
+      "CustomDataListData": {
+        "properties": {
+          "countries": {
+            "items": {
+              "$ref": "#/components/schemas/CustomCountryEntry"
+            },
+            "title": "Countries",
+            "type": "array"
+          }
+        },
+        "required": [
+          "countries"
+        ],
+        "title": "CustomDataListData",
+        "type": "object"
+      },
+      "CustomDataListResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CustomDataListData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "CustomDataListResponse",
+        "type": "object"
+      },
+      "CustomDataValidateData": {
+        "properties": {
+          "country_name": {
+            "title": "Country Name",
+            "type": "string"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "iso3": {
+            "title": "Iso3",
+            "type": "string"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid",
+          "errors",
+          "country_name",
+          "iso3"
+        ],
+        "title": "CustomDataValidateData",
+        "type": "object"
+      },
+      "CustomDataValidateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "zip_path": {
+            "minLength": 1,
+            "title": "Zip Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "zip_path"
+        ],
+        "title": "CustomDataValidateRequest",
+        "type": "object"
+      },
+      "CustomDataValidateResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CustomDataValidateData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "CustomDataValidateResponse",
+        "type": "object"
+      },
       "DataValidateData": {
         "properties": {
           "data": {
@@ -353,6 +558,11 @@
           "report_path": {
             "default": "",
             "title": "Report Path",
+            "type": "string"
+          },
+          "status": {
+            "default": "delegated_to_electron",
+            "title": "Status",
             "type": "string"
           }
         },
@@ -1258,6 +1468,101 @@
         ],
         "title": "WaterfallResponse",
         "type": "object"
+      },
+      "WorkspaceExportData": {
+        "description": "Shape returned by ``GET /api/v1/workspace/export-data``.\n\n``export_path`` points to a file on local disk under the system temp\ndirectory. The Electron main process copies it to the user's chosen\ndestination and unlinks the source afterwards.",
+        "properties": {
+          "app_version": {
+            "title": "App Version",
+            "type": "string"
+          },
+          "export_date": {
+            "title": "Export Date",
+            "type": "string"
+          },
+          "export_path": {
+            "title": "Export Path",
+            "type": "string"
+          },
+          "scenario_count": {
+            "title": "Scenario Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "export_path",
+          "scenario_count",
+          "export_date",
+          "app_version"
+        ],
+        "title": "WorkspaceExportData",
+        "type": "object"
+      },
+      "WorkspaceExportResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WorkspaceExportData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "WorkspaceExportResponse",
+        "type": "object"
+      },
+      "WorkspaceImportData": {
+        "properties": {
+          "imported_count": {
+            "title": "Imported Count",
+            "type": "integer"
+          },
+          "skipped_count": {
+            "title": "Skipped Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imported_count",
+          "skipped_count"
+        ],
+        "title": "WorkspaceImportData",
+        "type": "object"
+      },
+      "WorkspaceImportRequest": {
+        "additionalProperties": false,
+        "description": "Body posted to ``POST /api/v1/workspace/import``.\n\nThe renderer never reads the ZIP bytes \u2014 Electron's open dialog hands\nback an absolute path, and the backend consumes the file from disk.",
+        "properties": {
+          "import_path": {
+            "minLength": 1,
+            "title": "Import Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "import_path"
+        ],
+        "title": "WorkspaceImportRequest",
+        "type": "object"
+      },
+      "WorkspaceImportResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WorkspaceImportData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "WorkspaceImportResponse",
+        "type": "object"
       }
     }
   },
@@ -1305,6 +1610,139 @@
           }
         },
         "summary": "Countries"
+      }
+    },
+    "/api/v1/custom-data": {
+      "get": {
+        "operationId": "custom_data_list_api_v1_custom_data_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomDataListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Custom Data List"
+      }
+    },
+    "/api/v1/custom-data/import": {
+      "post": {
+        "operationId": "custom_data_import_api_v1_custom_data_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomDataImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomDataImportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Custom Data Import"
+      }
+    },
+    "/api/v1/custom-data/validate": {
+      "post": {
+        "operationId": "custom_data_validate_api_v1_custom_data_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomDataValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomDataValidateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Custom Data Validate"
+      }
+    },
+    "/api/v1/custom-data/{iso3}": {
+      "delete": {
+        "operationId": "custom_data_delete_api_v1_custom_data__iso3__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "iso3",
+            "required": true,
+            "schema": {
+              "title": "Iso3",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomDataDeleteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Custom Data Delete"
       }
     },
     "/api/v1/data/validate": {
@@ -2045,6 +2483,63 @@
           }
         },
         "summary": "Temp Clear"
+      }
+    },
+    "/api/v1/workspace/export-data": {
+      "get": {
+        "description": "Build a ``.riskwise-workspace`` ZIP at a temp path and return its location.\n\nThe Electron main process copies the file to the user's chosen save\nlocation and removes the temp copy afterwards, so the backend never\nneeds to stream binary through the IPC channel.",
+        "operationId": "workspace_export_api_v1_workspace_export_data_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceExportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Workspace Export"
+      }
+    },
+    "/api/v1/workspace/import": {
+      "post": {
+        "operationId": "workspace_import_api_v1_workspace_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceImportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Workspace Import"
       }
     }
   }
