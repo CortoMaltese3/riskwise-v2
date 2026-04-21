@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, Typography, TextField } from "@mui/material";
+import { Box, Card, CardContent, Stack, Typography, TextField } from "@mui/material";
 import useStore from "../../store";
+import ContextualTooltip from "../help/ContextualTooltip";
 import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const Country = () => {
@@ -39,9 +40,12 @@ const Country = () => {
     >
       <CardContent sx={{ p: 2 }}>
         <Box>
-          <Typography id="country-label" gutterBottom variant="h6" component="div" m={0}>
-            {t("country")}
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+            <Typography id="country-label" variant="h6" component="div" m={0}>
+              {t("country")}
+            </Typography>
+            <ContextualTooltip titleKey="input_tooltip_country" />
+          </Stack>
           {selectedCountry && (
             <TextField
               id="country"

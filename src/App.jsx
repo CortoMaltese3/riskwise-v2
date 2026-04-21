@@ -11,6 +11,7 @@ import ToastProvider from "./components/layout/ToastProvider";
 import NavigateAlert from "./components/alerts/NavigateAlert";
 import ScenarioPrintView from "./components/workspace/ScenarioPrintView";
 import HelpMenu from "./components/help/HelpMenu";
+import GlossaryDrawer from "./components/help/GlossaryDrawer";
 import GuidedTour from "./components/onboarding/GuidedTour";
 import Walkthrough from "./components/onboarding/Walkthrough";
 import baseTheme from "./theme/theme";
@@ -87,6 +88,7 @@ const App = () => {
               <Walkthrough />
               <GuidedTour />
               <HelpMenu />
+              <GlossaryDrawer />
             </Box>
           )}
         </ToastProvider>

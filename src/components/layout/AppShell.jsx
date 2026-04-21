@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Box } from "@mui/material";
+import { Box, Button, Stack, Typography } from "@mui/material";
+import InsightsIcon from "@mui/icons-material/Insights";
 
 import useStore from "../../store";
 import Sidebar, { TOP_BAR_HEIGHT } from "./Sidebar";
@@ -57,16 +58,42 @@ export const RiskAssessmentView = () => {
   );
 };
 
-const MacroeconomicView = () => (
-  <Box sx={{ display: "flex", flexGrow: 1, minHeight: 0 }}>
-    <LeftPanel>
-      <MacroEconomicInput />
-    </LeftPanel>
-    <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
-      <MainView />
+const MacroEmptyState = () => {
+  const { t } = useTranslation();
+  const setSelectedMacroCard = useStore((s) => s.setSelectedMacroCard);
+  return (
+    <Stack
+      alignItems="center"
+      justifyContent="center"
+      spacing={2}
+      sx={{ height: "100%", color: "text.secondary", textAlign: "center", px: 4 }}
+    >
+      <InsightsIcon sx={{ fontSize: 64 }} />
+      <Typography variant="h6">{t("macro_empty_title")}</Typography>
+      <Typography variant="body2" sx={{ maxWidth: 420 }}>
+        {t("macro_empty_body")}
+      </Typography>
+      <Button variant="contained" onClick={() => setSelectedMacroCard("country")}>
+        {t("macro_empty_cta")}
+      </Button>
+    </Stack>
+  );
+};
+
+const MacroeconomicView = () => {
+  const credOutputData = useStore((s) => s.credOutputData);
+  const showEmpty = !credOutputData || credOutputData.length === 0;
+  return (
+    <Box sx={{ display: "flex", flexGrow: 1, minHeight: 0 }}>
+      <LeftPanel>
+        <MacroEconomicInput />
+      </LeftPanel>
+      <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
+        {showEmpty ? <MacroEmptyState /> : <MainView />}
+      </Box>
     </Box>
-  </Box>
-);
+  );
+};
 
 const WorkspaceSection = () => (
   <Box sx={{ flexGrow: 1, overflow: "auto" }}>

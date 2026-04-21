@@ -19,6 +19,7 @@ import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
 import { patternForIndex } from "../../utils/chartPatterns";
 import ChartDataTable from "./ChartDataTable";
+import ChartInfoPopover from "../help/ChartInfoPopover";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend, ChartDataLabels);
 
@@ -110,7 +111,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
     },
     plugins: {
       legend: { display: false, rtl },
-      title: { display: true, text: titleText },
+      title: { display: false, text: titleText },
       tooltip: {
         rtl,
         callbacks: {
@@ -164,7 +165,16 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
         flexDirection: "column",
       }}
     >
-      <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+        <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Typography variant="subtitle1" component="h3" sx={{ m: 0 }}>
+            {titleText}
+          </Typography>
+          <ChartInfoPopover
+            titleKey="chart_info_cost_benefit_title"
+            bodyKey="chart_info_cost_benefit_body"
+          />
+        </Stack>
         <Button
           size="small"
           variant={showChartValues ? "contained" : "outlined"}

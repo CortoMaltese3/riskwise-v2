@@ -27,6 +27,7 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import InfoIcon from "@mui/icons-material/Info";
 import KeyboardIcon from "@mui/icons-material/Keyboard";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import TourIcon from "@mui/icons-material/Tour";
 
@@ -49,6 +50,7 @@ const HelpMenu = () => {
   const setHelpMenuOpen = useStore((s) => s.setHelpMenuOpen);
   const startTour = useStore((s) => s.startTour);
   const startWalkthrough = useStore((s) => s.startWalkthrough);
+  const setGlossaryOpen = useStore((s) => s.setGlossaryOpen);
 
   const [toursOpen, setToursOpen] = useState(true);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -58,6 +60,11 @@ const HelpMenu = () => {
   const handleRestartWalkthrough = () => {
     close();
     startWalkthrough();
+  };
+
+  const handleOpenGlossary = () => {
+    close();
+    setGlossaryOpen(true);
   };
 
   return (
@@ -99,6 +106,13 @@ const HelpMenu = () => {
                 <RestartAltIcon />
               </ListItemIcon>
               <ListItemText primary={t("help_menu_restart_walkthrough")} />
+            </ListItemButton>
+
+            <ListItemButton onClick={handleOpenGlossary}>
+              <ListItemIcon>
+                <MenuBookIcon />
+              </ListItemIcon>
+              <ListItemText primary={t("help_menu_glossary")} />
             </ListItemButton>
 
             <ListItemButton onClick={() => setShortcutsOpen(true)}>

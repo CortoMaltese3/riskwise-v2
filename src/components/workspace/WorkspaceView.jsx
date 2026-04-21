@@ -38,29 +38,32 @@ const compareBy = (key, dir) => (a, b) => {
   return dir === "asc" ? cmp : -cmp;
 };
 
-const EmptyState = ({ onStart }) => (
-  <Box
-    sx={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      py: 10,
-      color: "text.secondary",
-    }}
-  >
-    <InboxIcon sx={{ fontSize: 64, mb: 2 }} />
-    <Typography variant="h6" gutterBottom>
-      No saved scenarios yet
-    </Typography>
-    <Typography variant="body2" sx={{ mb: 3 }}>
-      Run your first scenario to see it appear here, or import an existing workspace.
-    </Typography>
-    <Button variant="contained" onClick={onStart}>
-      Run your first scenario
-    </Button>
-  </Box>
-);
+const EmptyState = ({ onStart }) => {
+  const { t } = useTranslation();
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        py: 10,
+        color: "text.secondary",
+      }}
+    >
+      <InboxIcon sx={{ fontSize: 64, mb: 2 }} />
+      <Typography variant="h6" gutterBottom>
+        {t("workspace_empty_title")}
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 3 }}>
+        {t("workspace_empty_body")}
+      </Typography>
+      <Button variant="contained" onClick={onStart}>
+        {t("workspace_empty_cta")}
+      </Button>
+    </Box>
+  );
+};
 
 EmptyState.propTypes = { onStart: PropTypes.func.isRequired };
 

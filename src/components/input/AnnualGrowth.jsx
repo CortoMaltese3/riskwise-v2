@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, TextField, Typography } from "@mui/material";
+import { Box, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
+import ContextualTooltip from "../help/ContextualTooltip";
 import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const AnnualGrowth = () => {
@@ -80,25 +81,25 @@ const AnnualGrowth = () => {
       <CardContent>
         {!selectedExposureEconomic && !selectedExposureNonEconomic && (
           <Box>
-            <Typography id="annual-growth-slider" gutterBottom variant="h6" component="div" m={0}>
-              {t("input_annual_growth_title")}
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+              <Typography id="annual-growth-slider" variant="h6" component="div" m={0}>
+                {t("input_annual_growth_title")}
+              </Typography>
+              <ContextualTooltip titleKey="input_tooltip_annual_growth" />
+            </Stack>
           </Box>
         )}
 
         {selectedExposureEconomic && (
           <Box>
-            <Typography
-              id="annual-growth-gdp-slider"
-              gutterBottom
-              variant="h6"
-              component="div"
-              m={0}
-            >
-              {selectedExposureEconomic
-                ? t("input_annual_gdp_growth_title")
-                : t("input_annual_population_growth_title")}
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+              <Typography id="annual-growth-gdp-slider" variant="h6" component="div" m={0}>
+                {selectedExposureEconomic
+                  ? t("input_annual_gdp_growth_title")
+                  : t("input_annual_population_growth_title")}
+              </Typography>
+              <ContextualTooltip titleKey="input_tooltip_annual_growth" />
+            </Stack>
             <TextField
               id="annual-growth-gdp-textfield"
               fullWidth
@@ -113,14 +114,12 @@ const AnnualGrowth = () => {
 
         {selectedExposureNonEconomic && (
           <Box>
-            <Typography
-              id="annual-growth-population-slider"
-              gutterBottom
-              variant="h6"
-              component="div"
-            >
-              {t("input_annual_population_growth_title")}
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+              <Typography id="annual-growth-population-slider" variant="h6" component="div">
+                {t("input_annual_population_growth_title")}
+              </Typography>
+              <ContextualTooltip titleKey="input_tooltip_annual_growth" />
+            </Stack>
             <TextField
               id="annual-growth-population-textfield"
               fullWidth
