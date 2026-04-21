@@ -51,7 +51,12 @@ const Sidebar = () => {
         },
       }}
     >
-      <Box component="nav" role="navigation" aria-label={t("sidebar_primary_nav_aria")}>
+      <Box
+        component="nav"
+        role="navigation"
+        aria-label={t("sidebar_primary_nav_aria")}
+        data-tour="sidebar-nav"
+      >
         <List disablePadding>
           {items.map(({ id, labelKey, icon: Icon }) => {
             const label = t(labelKey);
@@ -62,6 +67,7 @@ const Sidebar = () => {
                 onClick={() => setActiveSection(id)}
                 aria-label={label}
                 aria-current={selected ? "page" : undefined}
+                data-tour={id === "workspace" ? "workspace-nav" : undefined}
                 sx={{
                   minHeight: 48,
                   px: sidebarCollapsed ? 2 : 2.5,

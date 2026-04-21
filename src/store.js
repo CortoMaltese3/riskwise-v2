@@ -4,6 +4,8 @@ import { generateRunCode } from "./utils/misc";
 
 const SIDEBAR_STORAGE_KEY = "riskwise.sidebarCollapsed";
 const SHOW_CHART_VALUES_STORAGE_KEY = "riskwise.showChartValues";
+const WALKTHROUGH_STORAGE_KEY = "riskwise.hasSeenWalkthrough";
+const TOUR_STATE_STORAGE_KEY = "riskwise.tourState";
 
 const readSidebarCollapsed = () => {
   try {
@@ -37,10 +39,62 @@ const writeShowChartValues = (value) => {
   }
 };
 
+const readHasSeenWalkthrough = () => {
+  try {
+    return globalThis.localStorage?.getItem(WALKTHROUGH_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+const writeHasSeenWalkthrough = (value) => {
+  try {
+    globalThis.localStorage?.setItem(WALKTHROUGH_STORAGE_KEY, value ? "true" : "false");
+  } catch {
+    // no-op
+  }
+};
+
+const readTourState = () => {
+  try {
+    const raw = globalThis.localStorage?.getItem(TOUR_STATE_STORAGE_KEY);
+    if (!raw) return { activeTour: null, tourStep: 0 };
+    const parsed = JSON.parse(raw);
+    return {
+      activeTour: typeof parsed?.activeTour === "string" ? parsed.activeTour : null,
+      tourStep: Number.isInteger(parsed?.tourStep) ? parsed.tourStep : 0,
+    };
+  } catch {
+    return { activeTour: null, tourStep: 0 };
+  }
+};
+
+const writeTourState = (activeTour, tourStep) => {
+  try {
+    globalThis.localStorage?.setItem(
+      TOUR_STATE_STORAGE_KEY,
+      JSON.stringify({ activeTour, tourStep })
+    );
+  } catch {
+    // no-op
+  }
+};
+
+const initialTourState = readTourState();
+const initialHasSeenWalkthrough = readHasSeenWalkthrough();
+
 const useStore = create((set, get) => ({
   activeSection: "risk",
   sidebarCollapsed: readSidebarCollapsed(),
   showChartValues: readShowChartValues(),
+  // Onboarding / guided-tour state. ``hasSeenWalkthrough`` is the only
+  // persisted first-run flag; ``activeTour``/``tourStep`` are persisted so a
+  // guided tour survives accidental reloads (resumable, per issue #88).
+  hasSeenWalkthrough: initialHasSeenWalkthrough,
+  walkthroughActive: !initialHasSeenWalkthrough,
+  helpMenuOpen: false,
+  activeTour: initialTourState.activeTour,
+  tourStep: initialTourState.tourStep,
   activeMap: "hazard",
   activeMapRef: null,
   activeViewControl: "display_map",
@@ -268,6 +322,27 @@ const useStore = create((set, get) => ({
 
   setSelectedTimeHorizon: (timeHorizon) => set({ selectedTimeHorizon: timeHorizon }),
   setActiveViewControl: (control) => set({ activeViewControl: control }),
+
+  startWalkthrough: () => set({ walkthroughActive: true, helpMenuOpen: false }),
+  finishWalkthrough: () => {
+    writeHasSeenWalkthrough(true);
+    set({ walkthroughActive: false, hasSeenWalkthrough: true });
+  },
+  setHelpMenuOpen: (open) => set({ helpMenuOpen: open }),
+  toggleHelpMenu: () => set((state) => ({ helpMenuOpen: !state.helpMenuOpen })),
+  startTour: (tourId) => {
+    writeTourState(tourId, 0);
+    set({ activeTour: tourId, tourStep: 0, helpMenuOpen: false });
+  },
+  setTourStep: (step) => {
+    const nextStep = Math.max(0, step);
+    writeTourState(get().activeTour, nextStep);
+    set({ tourStep: nextStep });
+  },
+  endTour: () => {
+    writeTourState(null, 0);
+    set({ activeTour: null, tourStep: 0 });
+  },
 }));
 
 export default useStore;
