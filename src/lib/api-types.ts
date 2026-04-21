@@ -582,6 +582,36 @@ export interface components {
              */
             uploaded_at: string;
         };
+        /** CredDatasetDeleteData */
+        CredDatasetDeleteData: {
+            /** Id */
+            id: string;
+        };
+        /** CredDatasetDeleteResponse */
+        CredDatasetDeleteResponse: {
+            data: components["schemas"]["CredDatasetDeleteData"];
+            status: components["schemas"]["Status"];
+        };
+        /**
+         * CredDatasetUploadRequest
+         * @description Payload for POST ``/api/v1/macro/datasets``.
+         *
+         *     The renderer passes the xlsx path on disk (same pattern as custom-data
+         *     imports) rather than multipart bytes — Electron and the backend share
+         *     the user's filesystem, so streaming through the loopback channel is
+         *     unnecessary overhead.
+         */
+        CredDatasetUploadRequest: {
+            /** Name */
+            name: string;
+            /** Xlsx Path */
+            xlsx_path: string;
+        };
+        /** CredDatasetUploadResponse */
+        CredDatasetUploadResponse: {
+            data: components["schemas"]["CredDataset"];
+            status: components["schemas"]["Status"];
+        };
         /** CredDatasetsResponse */
         CredDatasetsResponse: {
             /** Data */
@@ -756,6 +786,8 @@ export interface components {
         MacroChartDataRequest: {
             /** Countryname */
             countryName?: string | null;
+            /** Dataset Id */
+            dataset_id?: string | null;
             /** Scenario */
             scenario?: string | null;
             /** Sector */
@@ -1300,7 +1332,9 @@ export interface operations {
     };
     macro_cred_output_api_v1_macro_cred_output_get: {
         parameters: {
-            query?: never;
+            query?: {
+                dataset_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1314,6 +1348,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MacroCredOutputResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1345,17 +1388,28 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CredDatasetUploadRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
-            405: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["CredDatasetUploadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1372,14 +1426,12 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            405: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["CredDatasetDeleteResponse"];
                 };
             };
             /** @description Validation Error */

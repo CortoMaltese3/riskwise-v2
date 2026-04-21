@@ -20,6 +20,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "export-workspace",
   "import-workspace",
   "select-custom-data-pack",
+  "select-cred-dataset",
   "http:request",
   "http:scenarioRun",
   "http:cancelScenario",
@@ -101,6 +102,7 @@ describe("preload bridge surface", () => {
     exposed.electron.exportWorkspace();
     exposed.electron.importWorkspace();
     exposed.electron.selectCustomDataPack();
+    exposed.electron.selectCredDataset();
     exposed.api.http.request("GET", "/", null, "rid");
     exposed.api.http.runScenario({}, "rid");
     exposed.api.http.cancelScenario("job", "rid");

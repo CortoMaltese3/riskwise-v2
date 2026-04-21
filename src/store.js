@@ -104,6 +104,10 @@ const useStore = create((set, get) => ({
   alertSeverity: "info",
   alertShowMessage: false,
   credOutputData: [],
+  credDatasets: [],
+  // ``null`` means "use the built-in"; the backend resolves that to the
+  // ``is_builtin = TRUE`` row so we never persist the built-in id.
+  activeCredDatasetId: null,
   // Global error surface (issue #12 scenario 6). ``error`` holds the backend
   // envelope (code, detail, error_id); ``errorMessage`` is the user-facing
   // string shown by the toast. Both are cleared together by ``clearError``.
@@ -193,6 +197,20 @@ const useStore = create((set, get) => ({
   setAlertSeverity: (severity) => set({ alertSeverity: severity }),
   setAlertShowMessage: (show) => set({ alertShowMessage: show }),
   setCredOutputData: (data) => set({ credOutputData: data }),
+  setCredDatasets: (datasets) => set({ credDatasets: datasets }),
+  setActiveCredDatasetId: (id) => {
+    const next = id || null;
+    if (get().activeCredDatasetId === next) return;
+    // Clearing ``credOutputData`` forces the next Macroeconomic tab entry
+    // to re-fetch against the new dataset — MainTabs only reloads when the
+    // cached array is empty.
+    set({
+      activeCredDatasetId: next,
+      credOutputData: [],
+      macroEconomicChartData: {},
+      macroEconomicChartTitle: "",
+    });
+  },
   setError: (envelope) =>
     set({
       error: envelope,

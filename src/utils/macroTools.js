@@ -16,7 +16,8 @@ export const useMacroTools = () => {
   } = useStore.getState();
 
   const loadCREDOutputData = () => {
-    RiskWiseClient.fetchCREDOutput()
+    const { activeCredDatasetId } = useStore.getState();
+    RiskWiseClient.fetchCREDOutput(activeCredDatasetId)
       .then((response) => {
         setAlertMessage(response.result.status.message);
         response.result.status.code === 2000

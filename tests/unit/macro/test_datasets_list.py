@@ -29,9 +29,5 @@ def test_datasets_list_shape_has_all_fields(api_client) -> None:
         assert field in ds
 
 
-def test_datasets_post_returns_405(api_client) -> None:
-    assert api_client.post("/api/v1/macro/datasets", json={}).status_code == 405
-
-
-def test_datasets_delete_returns_405(api_client) -> None:
-    assert api_client.delete("/api/v1/macro/datasets/some-id").status_code == 405
+def test_datasets_delete_unknown_returns_404(api_client) -> None:
+    assert api_client.delete("/api/v1/macro/datasets/nonexistent").status_code == 404
