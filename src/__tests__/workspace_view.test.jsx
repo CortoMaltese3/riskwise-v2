@@ -110,7 +110,7 @@ describe("WorkspaceView", () => {
 
   it("shows the empty state CTA when no scenarios exist", () => {
     renderView([]);
-    expect(screen.getByText(/no saved scenarios yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no scenarios yet/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /run your first scenario/i })).toBeInTheDocument();
   });
 

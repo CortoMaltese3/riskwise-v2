@@ -20,6 +20,7 @@ import useStore from "../../store";
 import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
 import ChartDataTable from "./ChartDataTable";
+import ChartInfoPopover from "../help/ChartInfoPopover";
 
 // Register all necessary elements
 ChartJS.register(
@@ -155,7 +156,7 @@ const MacroEconomicChart = () => {
     },
     plugins: {
       legend: { display: true, rtl },
-      title: { display: true, text: macroEconomicChartTitle },
+      title: { display: false, text: macroEconomicChartTitle },
       tooltip: {
         rtl,
         callbacks: {
@@ -203,7 +204,21 @@ const MacroEconomicChart = () => {
       <Box sx={{ height: "100%", overflowY: "auto" }}>
         {filteredData.length > 0 ? (
           <>
-            <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{ mb: 1 }}
+            >
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Typography variant="subtitle1" component="h3" sx={{ m: 0 }}>
+                  {macroEconomicChartTitle}
+                </Typography>
+                <ChartInfoPopover
+                  titleKey="chart_info_macro_title"
+                  bodyKey="chart_info_macro_body"
+                />
+              </Stack>
               <Button
                 size="small"
                 variant={showChartValues ? "contained" : "outlined"}

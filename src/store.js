@@ -93,6 +93,7 @@ const useStore = create((set, get) => ({
   hasSeenWalkthrough: initialHasSeenWalkthrough,
   walkthroughActive: !initialHasSeenWalkthrough,
   helpMenuOpen: false,
+  glossaryOpen: false,
   activeTour: initialTourState.activeTour,
   tourStep: initialTourState.tourStep,
   activeMap: "hazard",
@@ -330,6 +331,8 @@ const useStore = create((set, get) => ({
   },
   setHelpMenuOpen: (open) => set({ helpMenuOpen: open }),
   toggleHelpMenu: () => set((state) => ({ helpMenuOpen: !state.helpMenuOpen })),
+  setGlossaryOpen: (open) => set({ glossaryOpen: open }),
+  toggleGlossary: () => set((state) => ({ glossaryOpen: !state.glossaryOpen })),
   startTour: (tourId) => {
     writeTourState(tourId, 0);
     set({ activeTour: tourId, tourStep: 0, helpMenuOpen: false });

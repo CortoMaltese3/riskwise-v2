@@ -70,6 +70,7 @@
     "react-i18next": "17.0.3",
     "react-joyride": "^3.0.2",
     "react-leaflet": "5.0.0",
+    "react-markdown": "^10.1.0",
     "svgo": "4.0.1",
     "web-vitals": "5.2.0",
     "zustand": "5.0.12"

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, TextField, Typography } from "@mui/material";
+import { Box, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
+import ContextualTooltip from "../help/ContextualTooltip";
 import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const ExposureEconomic = () => {
@@ -81,9 +82,12 @@ const ExposureEconomic = () => {
     >
       <CardContent>
         <Box>
-          <Typography id="exposure-dropdown" gutterBottom variant="h6" component="div" m={0}>
-            {t("input_exposure_economic_title")}
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+            <Typography id="exposure-dropdown" variant="h6" component="div" m={0}>
+              {t("input_exposure_economic_title")}
+            </Typography>
+            <ContextualTooltip titleKey="input_tooltip_exposure_economic" />
+          </Stack>
           {selectedExposureEconomic && (
             <TextField
               id="exposure-economic-textfield"

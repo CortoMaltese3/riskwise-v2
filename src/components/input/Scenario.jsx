@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, TextField, Typography } from "@mui/material";
+import { Box, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
+import ContextualTooltip from "../help/ContextualTooltip";
 import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const Scenario = () => {
@@ -39,9 +40,12 @@ const Scenario = () => {
     >
       <CardContent>
         <Box>
-          <Typography id="scenario-dropdown" gutterBottom variant="h6" component="div" m={0}>
-            {t("scenario_title")}
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+            <Typography id="scenario-dropdown" variant="h6" component="div" m={0}>
+              {t("scenario_title")}
+            </Typography>
+            <ContextualTooltip titleKey="input_tooltip_scenario" />
+          </Stack>
 
           {selectedScenario && (
             <TextField

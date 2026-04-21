@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, TextField, Typography } from "@mui/material";
+import { Box, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 
 import useStore from "../../store";
+import ContextualTooltip from "../help/ContextualTooltip";
 import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const TimeHorizon = () => {
@@ -61,9 +62,12 @@ const TimeHorizon = () => {
       >
         <CardContent>
           <Box>
-            <Typography id="time-horizon-dropdown" gutterBottom variant="h6" component="div" m={0}>
-              {t("time_horizon_title")}
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+              <Typography id="time-horizon-dropdown" variant="h6" component="div" m={0}>
+                {t("time_horizon_title")}
+              </Typography>
+              <ContextualTooltip titleKey="input_tooltip_time_horizon" />
+            </Stack>
             {selectedTimeHorizon && (
               <TextField
                 id="timeHorizon"
