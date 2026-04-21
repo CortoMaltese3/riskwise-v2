@@ -6,25 +6,16 @@ from pathlib import Path
 
 import openpyxl
 import pytest
-from macroeconomic.cred_seeder import CredSeedError, seed_builtin_cred
+from macroeconomic.cred_seeder import CRED_COLUMNS, CredSeedError, seed_builtin_cred
 
 
 def _write_xlsx(path: Path, rows: list[dict]) -> None:
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "cred_output"
-    cols = [
-        "country",
-        "scenario",
-        "adpatation",
-        "economic_indicator",
-        "economic_sector",
-        "year",
-        "proportion_change_from_baseline",
-    ]
-    ws.append(cols)
+    ws.append(CRED_COLUMNS)
     for row in rows:
-        ws.append([row.get(c) for c in cols])
+        ws.append([row.get(c) for c in CRED_COLUMNS])
     wb.save(path)
 
 
@@ -33,7 +24,7 @@ def _valid_rows() -> list[dict]:
         {
             "country": "egypt",
             "scenario": "historical",
-            "adpatation": 0.0,
+            "adaptation": 0.0,
             "economic_indicator": "gdp",
             "economic_sector": "whole_economy",
             "year": 2024,
@@ -42,7 +33,7 @@ def _valid_rows() -> list[dict]:
         {
             "country": "egypt",
             "scenario": "historical",
-            "adpatation": 0.33,
+            "adaptation": 0.33,
             "economic_indicator": "gdp",
             "economic_sector": "whole_economy",
             "year": 2024,
@@ -77,7 +68,7 @@ def test_seed_maps_columns_correctly(migrated_conn, tmp_path: Path) -> None:
     seed_builtin_cred(migrated_conn, xlsx)
 
     r = migrated_conn.execute(
-        "SELECT country, scenario, adpatation, variable, sector, year, value FROM cred_data"
+        "SELECT country, scenario, adaptation, variable, sector, year, value FROM cred_data"
     ).fetchone()
     assert r == ("egypt", "historical", 0.0, "gdp", "whole_economy", 2024, pytest.approx(0.004))
 

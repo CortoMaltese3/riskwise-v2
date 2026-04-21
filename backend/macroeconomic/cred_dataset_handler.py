@@ -16,7 +16,6 @@ from pathlib import Path
 
 import duckdb
 import pandas as pd
-
 from constants import USER_DATA_DIR
 from logging_config import get_logger
 from macroeconomic.cred_seeder import REQUIRED_COLUMNS
@@ -75,10 +74,7 @@ def validate_xlsx_schema(xlsx_path: Path) -> ValidationResult:
     if CRED_SHEET_NAME not in sheets:
         return ValidationResult(
             False,
-            [
-                f"Missing sheet '{CRED_SHEET_NAME}'. "
-                f"Found sheets: {', '.join(sheets) or '(none)'}."
-            ],
+            [f"Missing sheet '{CRED_SHEET_NAME}'. Found sheets: {', '.join(sheets) or '(none)'}."],
         )
     df = sheets[CRED_SHEET_NAME]
 
@@ -91,9 +87,7 @@ def validate_xlsx_schema(xlsx_path: Path) -> ValidationResult:
         return ValidationResult(False, errors)
 
     if df.empty:
-        return ValidationResult(
-            False, [f"Sheet '{CRED_SHEET_NAME}' has no data rows."]
-        )
+        return ValidationResult(False, [f"Sheet '{CRED_SHEET_NAME}' has no data rows."])
 
     for i, row in enumerate(df.to_dict(orient="records")):
         row_errors = _validate_row(row, i)
@@ -110,9 +104,7 @@ def _validate_row(row: dict, row_index: int) -> list[str]:
     try:
         int(row["year"])
     except (TypeError, ValueError):
-        errors.append(
-            f"Row {row_index}: 'year' must be an integer, got {row['year']!r}."
-        )
+        errors.append(f"Row {row_index}: 'year' must be an integer, got {row['year']!r}.")
     v = row["proportion_change_from_baseline"]
     if v is None:
         return errors
@@ -122,8 +114,7 @@ def _validate_row(row: dict, row_index: int) -> list[str]:
             raise ValueError("NaN")
     except (TypeError, ValueError):
         errors.append(
-            f"Row {row_index}: 'proportion_change_from_baseline' must be numeric, "
-            f"got {v!r}."
+            f"Row {row_index}: 'proportion_change_from_baseline' must be numeric, got {v!r}."
         )
     return errors
 
@@ -175,7 +166,7 @@ def import_dataset(
             conn.executemany(
                 """
                 INSERT INTO cred_data
-                    (id, dataset_id, country, scenario, adpatation,
+                    (id, dataset_id, country, scenario, adaptation,
                      variable, sector, year, value)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
@@ -185,7 +176,7 @@ def import_dataset(
                         dataset_id,
                         str(r["country"]),
                         str(r["scenario"]),
-                        r["adpatation"] if r["adpatation"] is not None else None,
+                        r["adaptation"] if r["adaptation"] is not None else None,
                         str(r["economic_indicator"]),
                         str(r["economic_sector"]),
                         int(r["year"]),

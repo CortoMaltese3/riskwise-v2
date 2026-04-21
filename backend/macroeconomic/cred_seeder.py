@@ -15,22 +15,22 @@ from typing import Any
 
 import duckdb
 import pandas as pd
-
 from logging_config import get_logger
 from provenance import sha256_file
 
 _log = get_logger("macroeconomic.cred_seeder")
 
 
-REQUIRED_COLUMNS = {
+CRED_COLUMNS = [
     "country",
     "scenario",
-    "adpatation",
+    "adaptation",
     "economic_indicator",
     "economic_sector",
     "year",
     "proportion_change_from_baseline",
-}
+]
+REQUIRED_COLUMNS: set[str] = set(CRED_COLUMNS)
 
 BUILTIN_DATASET_NAME = "Built-in CRED v2024"
 
@@ -42,16 +42,14 @@ class CredSeedError(RuntimeError):
 def _validate_row(row: dict[str, Any], row_index: int) -> None:
     """Raise CredSeedError if the row fails structural validation."""
     for col in REQUIRED_COLUMNS:
-        if col not in row or (row[col] is None and col != "adpatation"):
+        if col not in row or (row[col] is None and col != "adaptation"):
             raise CredSeedError(
                 f"Row {row_index}: missing required column '{col}' — found {list(row.keys())}"
             )
     try:
         int(row["year"])
     except (TypeError, ValueError):
-        raise CredSeedError(
-            f"Row {row_index}: 'year' must be an integer, got {row['year']!r}"
-        )
+        raise CredSeedError(f"Row {row_index}: 'year' must be an integer, got {row['year']!r}")
     v = row["proportion_change_from_baseline"]
     try:
         fv = float(v) if v is not None else None
@@ -93,9 +91,7 @@ def seed_builtin_cred(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> None:
 
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
-        raise CredSeedError(
-            f"xlsx is missing required columns: {sorted(missing)}"
-        )
+        raise CredSeedError(f"xlsx is missing required columns: {sorted(missing)}")
 
     dataset_id = str(uuid.uuid4())
     rows = df.to_dict(orient="records")
@@ -116,7 +112,7 @@ def seed_builtin_cred(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> None:
         conn.executemany(
             """
             INSERT INTO cred_data
-                (id, dataset_id, country, scenario, adpatation,
+                (id, dataset_id, country, scenario, adaptation,
                  variable, sector, year, value)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -126,7 +122,7 @@ def seed_builtin_cred(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> None:
                     dataset_id,
                     str(r["country"]),
                     str(r["scenario"]),
-                    r["adpatation"] if r["adpatation"] is not None else None,
+                    r["adaptation"] if r["adaptation"] is not None else None,
                     str(r["economic_indicator"]),
                     str(r["economic_sector"]),
                     int(r["year"]),

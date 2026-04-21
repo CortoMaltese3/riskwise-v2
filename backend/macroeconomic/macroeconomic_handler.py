@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import duckdb
-
 from logging_config import get_logger
+from macroeconomic.cred_seeder import CRED_COLUMNS
 
 _log = get_logger("macroeconomic.handler")
 
@@ -44,25 +44,16 @@ class MacroeconomicHandler:
 
             rows = conn.execute(
                 """
-                SELECT country, scenario, adpatation, variable AS economic_indicator,
+                SELECT country, scenario, adaptation, variable AS economic_indicator,
                        sector AS economic_sector, year, value AS proportion_change_from_baseline
                 FROM cred_data
                 WHERE dataset_id = ?
-                ORDER BY country, scenario, adpatation, variable, sector, year
+                ORDER BY country, scenario, adaptation, variable, sector, year
                 """,
                 [dataset_id],
             ).fetchall()
 
-            cols = [
-                "country",
-                "scenario",
-                "adpatation",
-                "economic_indicator",
-                "economic_sector",
-                "year",
-                "proportion_change_from_baseline",
-            ]
-            return [dict(zip(cols, r)) for r in rows]
+            return [dict(zip(CRED_COLUMNS, r, strict=True)) for r in rows]
         finally:
             if self._conn is None:
                 conn.close()
@@ -93,14 +84,14 @@ class MacroeconomicHandler:
 
             rows = conn.execute(
                 """
-                SELECT year, adpatation, value
+                SELECT year, adaptation, value
                 FROM cred_data
                 WHERE dataset_id = ?
                   AND country    = ?
                   AND scenario   = ?
                   AND sector     = ?
                   AND variable   = ?
-                ORDER BY adpatation, year
+                ORDER BY adaptation, year
                 """,
                 [dataset_id, country, scenario, sector, variable],
             ).fetchall()
