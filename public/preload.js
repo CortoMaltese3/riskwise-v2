@@ -5,7 +5,7 @@
 // renderer-supplied) and Node built-ins are never exposed. The
 // `src/__tests__/preload.test.js` allowlist enforces this on every CI run.
 
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer, webUtils } = require("electron");
 
 // `once: true` for request/reply RPC channels (one reply per invoke);
 // `once: false` for long-lived event streams. Returns an unsubscribe so
@@ -53,6 +53,21 @@ contextBridge.exposeInMainWorld("electron", {
   // the flow and reads back the summary result.
   exportWorkspace: () => ipcRenderer.invoke("export-workspace"),
   importWorkspace: () => ipcRenderer.invoke("import-workspace"),
+
+  // Custom data pack selection (issue #90). The renderer either drops a
+  // ZIP (path resolved via ``webUtils.getPathForFile``) or clicks Browse
+  // (main process opens a native ``dialog.showOpenDialog``). Validation /
+  // import / delete go through the regular ``api.http`` bridge so no extra
+  // binary crosses the IPC boundary.
+  selectCustomDataPack: () => ipcRenderer.invoke("select-custom-data-pack"),
+  getPathForFile: (file) => {
+    if (!webUtils || typeof webUtils.getPathForFile !== "function") return "";
+    try {
+      return webUtils.getPathForFile(file) || "";
+    } catch {
+      return "";
+    }
+  },
 
   // Long-running scenario progress events streamed from the SSE bridge.
   onProgress: (callback) => subscribe("progress", callback),

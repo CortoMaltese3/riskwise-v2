@@ -13,7 +13,7 @@ import MainView from "../main/MainView";
 import ResultsView from "../results/ResultsView";
 import WorkspaceView from "../workspace/WorkspaceView";
 import HomeView from "./views/HomeView";
-import SettingsView from "./views/SettingsView";
+import SettingsView from "../settings/SettingsView";
 
 const sectionToTab = { home: 0, risk: 1, macro: 2, workspace: 3, settings: 0 };
 

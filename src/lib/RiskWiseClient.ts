@@ -46,6 +46,13 @@ export type WaterfallCategory = Schema<"WaterfallCategory">;
 export type CostBenefitResponse = Schema<"CostBenefitResponse">;
 export type CostBenefitPayload = Schema<"CostBenefitPayload">;
 export type CostBenefitMeasure = Schema<"CostBenefitMeasure">;
+export type CustomDataValidateRequest = Schema<"CustomDataValidateRequest">;
+export type CustomDataValidateResponse = Schema<"CustomDataValidateResponse">;
+export type CustomDataImportRequest = Schema<"CustomDataImportRequest">;
+export type CustomDataImportResponse = Schema<"CustomDataImportResponse">;
+export type CustomDataListResponse = Schema<"CustomDataListResponse">;
+export type CustomDataDeleteResponse = Schema<"CustomDataDeleteResponse">;
+export type CustomCountryEntry = Schema<"CustomCountryEntry">;
 
 const http = () => window.api.http;
 
@@ -114,6 +121,17 @@ const RiskWiseClient = {
   fetchCostBenefitData: () => get<CostBenefitResponse>("/api/v1/scenario/cost-benefit"),
 
   clearTempDir: () => post<TempClearResponse>("/api/v1/temp/clear", {}),
+
+  validateCustomDataPack: (body: CustomDataValidateRequest) =>
+    post<CustomDataValidateResponse>("/api/v1/custom-data/validate", body),
+
+  importCustomDataPack: (body: CustomDataImportRequest) =>
+    post<CustomDataImportResponse>("/api/v1/custom-data/import", body),
+
+  listCustomDataPacks: () => get<CustomDataListResponse>("/api/v1/custom-data"),
+
+  deleteCustomDataPack: (iso3: string) =>
+    del<CustomDataDeleteResponse>(`/api/v1/custom-data/${encodeURIComponent(iso3)}`),
 
   shutdown: () => {
     window.electron.shutdown();

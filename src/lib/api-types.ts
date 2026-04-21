@@ -53,6 +53,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/custom-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Custom Data List */
+        get: operations["custom_data_list_api_v1_custom_data_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/custom-data/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Custom Data Import */
+        post: operations["custom_data_import_api_v1_custom_data_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/custom-data/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Custom Data Validate */
+        post: operations["custom_data_validate_api_v1_custom_data_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/custom-data/{iso3}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Custom Data Delete */
+        delete: operations["custom_data_delete_api_v1_custom_data__iso3__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/data/validate": {
         parameters: {
             query?: never;
@@ -379,6 +447,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspace/export-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Workspace Export
+         * @description Build a ``.riskwise-workspace`` ZIP at a temp path and return its location.
+         *
+         *     The Electron main process copies the file to the user's chosen save
+         *     location and removes the temp copy afterwards, so the backend never
+         *     needs to stream binary through the IPC channel.
+         */
+        get: operations["workspace_export_api_v1_workspace_export_data_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Workspace Import */
+        post: operations["workspace_import_api_v1_workspace_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -479,6 +588,77 @@ export interface components {
             data: components["schemas"]["CredDataset"][];
             status: components["schemas"]["Status"];
         };
+        /** CustomCountryEntry */
+        CustomCountryEntry: {
+            /** Country Name */
+            country_name: string;
+            /** Installed At */
+            installed_at: string;
+            /** Iso3 */
+            iso3: string;
+            /** Source */
+            source: string;
+        };
+        /** CustomDataDeleteData */
+        CustomDataDeleteData: {
+            /** Iso3 */
+            iso3: string;
+        };
+        /** CustomDataDeleteResponse */
+        CustomDataDeleteResponse: {
+            data: components["schemas"]["CustomDataDeleteData"];
+            status: components["schemas"]["Status"];
+        };
+        /** CustomDataImportData */
+        CustomDataImportData: {
+            /** Country Name */
+            country_name: string;
+            /** Installed At */
+            installed_at: string;
+            /** Iso3 */
+            iso3: string;
+        };
+        /** CustomDataImportRequest */
+        CustomDataImportRequest: {
+            /** Zip Path */
+            zip_path: string;
+        };
+        /** CustomDataImportResponse */
+        CustomDataImportResponse: {
+            data: components["schemas"]["CustomDataImportData"];
+            status: components["schemas"]["Status"];
+        };
+        /** CustomDataListData */
+        CustomDataListData: {
+            /** Countries */
+            countries: components["schemas"]["CustomCountryEntry"][];
+        };
+        /** CustomDataListResponse */
+        CustomDataListResponse: {
+            data: components["schemas"]["CustomDataListData"];
+            status: components["schemas"]["Status"];
+        };
+        /** CustomDataValidateData */
+        CustomDataValidateData: {
+            /** Country Name */
+            country_name: string;
+            /** Errors */
+            errors: string[];
+            /** Iso3 */
+            iso3: string;
+            /** Valid */
+            valid: boolean;
+        };
+        /** CustomDataValidateRequest */
+        CustomDataValidateRequest: {
+            /** Zip Path */
+            zip_path: string;
+        };
+        /** CustomDataValidateResponse */
+        CustomDataValidateResponse: {
+            data: components["schemas"]["CustomDataValidateData"];
+            status: components["schemas"]["Status"];
+        };
         /** DataValidateData */
         DataValidateData: {
             /** Data */
@@ -521,6 +701,11 @@ export interface components {
              * @default
              */
             report_path: string;
+            /**
+             * Status
+             * @default delegated_to_electron
+             */
+            status: string;
         };
         /**
          * ExportReportRequest
@@ -813,6 +998,52 @@ export interface components {
             data: components["schemas"]["WaterfallPayload"];
             status: components["schemas"]["Status"];
         };
+        /**
+         * WorkspaceExportData
+         * @description Shape returned by ``GET /api/v1/workspace/export-data``.
+         *
+         *     ``export_path`` points to a file on local disk under the system temp
+         *     directory. The Electron main process copies it to the user's chosen
+         *     destination and unlinks the source afterwards.
+         */
+        WorkspaceExportData: {
+            /** App Version */
+            app_version: string;
+            /** Export Date */
+            export_date: string;
+            /** Export Path */
+            export_path: string;
+            /** Scenario Count */
+            scenario_count: number;
+        };
+        /** WorkspaceExportResponse */
+        WorkspaceExportResponse: {
+            data: components["schemas"]["WorkspaceExportData"];
+            status: components["schemas"]["Status"];
+        };
+        /** WorkspaceImportData */
+        WorkspaceImportData: {
+            /** Imported Count */
+            imported_count: number;
+            /** Skipped Count */
+            skipped_count: number;
+        };
+        /**
+         * WorkspaceImportRequest
+         * @description Body posted to ``POST /api/v1/workspace/import``.
+         *
+         *     The renderer never reads the ZIP bytes — Electron's open dialog hands
+         *     back an absolute path, and the backend consumes the file from disk.
+         */
+        WorkspaceImportRequest: {
+            /** Import Path */
+            import_path: string;
+        };
+        /** WorkspaceImportResponse */
+        WorkspaceImportResponse: {
+            data: components["schemas"]["WorkspaceImportData"];
+            status: components["schemas"]["Status"];
+        };
     };
     responses: never;
     parameters: never;
@@ -860,6 +1091,123 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CountriesResponse"];
+                };
+            };
+        };
+    };
+    custom_data_list_api_v1_custom_data_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomDataListResponse"];
+                };
+            };
+        };
+    };
+    custom_data_import_api_v1_custom_data_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomDataImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomDataImportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    custom_data_validate_api_v1_custom_data_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomDataValidateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomDataValidateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    custom_data_delete_api_v1_custom_data__iso3__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                iso3: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomDataDeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1481,6 +1829,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TempClearResponse"];
+                };
+            };
+        };
+    };
+    workspace_export_api_v1_workspace_export_data_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceExportResponse"];
+                };
+            };
+        };
+    };
+    workspace_import_api_v1_workspace_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceImportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
