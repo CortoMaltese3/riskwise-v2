@@ -22,6 +22,7 @@ export default [
       "docs/**",
       "spike/**",
       "translations/**",
+      ".venv/**",
       "**/*.ts",
       "**/*.tsx",
       "**/*.d.ts",

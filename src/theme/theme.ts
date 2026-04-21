@@ -137,6 +137,18 @@ export const theme = createTheme({
     fontFamily: '"Inter", "Segoe UI", sans-serif',
   },
   shape: { borderRadius: 12 },
+  components: {
+    MuiButtonBase: {
+      styleOverrides: {
+        root: {
+          "&:focus-visible": {
+            outline: "2px solid var(--mui-palette-primary-main)",
+            outlineOffset: "2px",
+          },
+        },
+      },
+    },
+  },
 });
 
 export default theme;

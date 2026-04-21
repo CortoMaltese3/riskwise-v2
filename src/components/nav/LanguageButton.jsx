@@ -27,7 +27,14 @@ const LanguageSelector = () => {
 
   return (
     <>
-      <IconButton color="inherit" onClick={(e) => setAnchorEl(e.currentTarget)}>
+      <IconButton
+        color="inherit"
+        onClick={(e) => setAnchorEl(e.currentTarget)}
+        aria-label={t("language_selector_aria")}
+        aria-haspopup="menu"
+        aria-controls="language-menu"
+        aria-expanded={Boolean(anchorEl)}
+      >
         <LanguageIcon />
       </IconButton>
       <Menu id="language-menu" anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>

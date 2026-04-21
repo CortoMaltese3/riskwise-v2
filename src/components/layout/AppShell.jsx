@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 
 import useStore from "../../store";
@@ -32,20 +33,28 @@ const LeftPanel = ({ children }) => (
   </Box>
 );
 
-const RiskAssessmentView = () => (
-  <Box sx={{ display: "flex", flexGrow: 1, minHeight: 0 }}>
-    <LeftPanel>
-      <DataInput />
-      <AdaptationMeasuresInput />
-    </LeftPanel>
-    <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
-      <MainView />
+export const RiskAssessmentView = () => {
+  const { t } = useTranslation();
+  return (
+    <Box sx={{ display: "flex", flexGrow: 1, minHeight: 0 }}>
+      <LeftPanel>
+        <DataInput />
+        <AdaptationMeasuresInput />
+      </LeftPanel>
+      <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
+        <MainView />
+      </Box>
+      <Box
+        component="aside"
+        role="complementary"
+        aria-label={t("results_panel_aria")}
+        sx={{ width: 260, overflow: "auto", borderLeft: 1, borderColor: "divider", p: 1 }}
+      >
+        <ResultsView />
+      </Box>
     </Box>
-    <Box sx={{ width: 260, overflow: "auto", borderLeft: 1, borderColor: "divider", p: 1 }}>
-      <ResultsView />
-    </Box>
-  </Box>
-);
+  );
+};
 
 const MacroeconomicView = () => (
   <Box sx={{ display: "flex", flexGrow: 1, minHeight: 0 }}>
@@ -73,6 +82,7 @@ const sectionComponents = {
 };
 
 const AppShell = () => {
+  const { t } = useTranslation();
   const { activeSection, setSelectedTab } = useStore();
 
   useEffect(() => {
@@ -88,6 +98,9 @@ const AppShell = () => {
       <Sidebar />
       <Box
         component="main"
+        role="main"
+        id="main-content"
+        aria-label={t("main_content_aria")}
         sx={{
           flexGrow: 1,
           display: "flex",

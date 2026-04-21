@@ -239,7 +239,12 @@ const HazardCard = () => {
             <Typography variant="body2" color="text.primary" sx={{ textAlign: "center" }}>
               {t("card_exposure_economic_upload_file")}: {selectedHazardFile}
             </Typography>
-            <IconButton onClick={clearUploadedFile} size="small" sx={{ color: "accent.dark" }}>
+            <IconButton
+              onClick={clearUploadedFile}
+              size="small"
+              sx={{ color: "accent.dark" }}
+              aria-label={t("clear_uploaded_file_aria")}
+            >
               <CloseIcon />
             </IconButton>
           </Box>
@@ -258,7 +263,12 @@ const HazardCard = () => {
             <Typography variant="body2" color="text.primary" sx={{ textAlign: "center" }}>
               {t("card_exposure_economic_fetch_exposure")}: {fetchHazardMessage}
             </Typography>
-            <IconButton onClick={clearFetchedData} size="small" sx={{ color: "accent.dark" }}>
+            <IconButton
+              onClick={clearFetchedData}
+              size="small"
+              sx={{ color: "accent.dark" }}
+              aria-label={t("clear_fetched_data_aria")}
+            >
               <CloseIcon />
             </IconButton>
           </Box>

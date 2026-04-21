@@ -27,6 +27,8 @@ const TopBar = () => {
   return (
     <AppBar
       position="fixed"
+      role="banner"
+      aria-label={t("application_title")}
       sx={{
         bgcolor: "header.main",
         color: "header.contrastText",
