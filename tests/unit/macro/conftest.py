@@ -9,24 +9,14 @@ import openpyxl
 import pytest
 from db.migrations import run_migrations
 from fastapi.testclient import TestClient
-from macroeconomic.cred_seeder import seed_builtin_cred
+from macroeconomic.cred_seeder import CRED_COLUMNS, seed_builtin_cred
 
 
 def write_minimal_xlsx(path: Path) -> None:
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "cred_output"
-    ws.append(
-        [
-            "country",
-            "scenario",
-            "adpatation",
-            "economic_indicator",
-            "economic_sector",
-            "year",
-            "proportion_change_from_baseline",
-        ]
-    )
+    ws.append(CRED_COLUMNS)
     for year in [2024, 2025]:
         for adp in [0.0, 0.33]:
             ws.append(["egypt", "historical", adp, "gdp", "whole_economy", year, 0.001 * year])

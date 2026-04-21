@@ -14,25 +14,16 @@ from macroeconomic.cred_dataset_handler import (
     import_dataset,
     validate_xlsx_schema,
 )
-
-REQUIRED_COLS = [
-    "country",
-    "scenario",
-    "adpatation",
-    "economic_indicator",
-    "economic_sector",
-    "year",
-    "proportion_change_from_baseline",
-]
+from macroeconomic.cred_seeder import CRED_COLUMNS
 
 
 def _write_xlsx(path: Path, rows: list[dict], sheet_name: str = "cred_output") -> None:
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = sheet_name
-    ws.append(REQUIRED_COLS)
+    ws.append(CRED_COLUMNS)
     for row in rows:
-        ws.append([row.get(c) for c in REQUIRED_COLS])
+        ws.append([row.get(c) for c in CRED_COLUMNS])
     wb.save(path)
 
 
@@ -41,7 +32,7 @@ def _valid_rows() -> list[dict]:
         {
             "country": "egypt",
             "scenario": "historical",
-            "adpatation": 0.0,
+            "adaptation": 0.0,
             "economic_indicator": "gdp",
             "economic_sector": "whole_economy",
             "year": 2024,
@@ -50,7 +41,7 @@ def _valid_rows() -> list[dict]:
         {
             "country": "egypt",
             "scenario": "historical",
-            "adpatation": 0.33,
+            "adaptation": 0.33,
             "economic_indicator": "gdp",
             "economic_sector": "whole_economy",
             "year": 2024,
@@ -107,7 +98,7 @@ def test_validate_missing_column(tmp_path: Path) -> None:
     ws = wb.active
     ws.title = "cred_output"
     # Omit 'scenario' on purpose.
-    cols_without_scenario = [c for c in REQUIRED_COLS if c != "scenario"]
+    cols_without_scenario = [c for c in CRED_COLUMNS if c != "scenario"]
     ws.append(cols_without_scenario)
     ws.append([_valid_rows()[0][c] for c in cols_without_scenario])
     wb.save(xlsx)

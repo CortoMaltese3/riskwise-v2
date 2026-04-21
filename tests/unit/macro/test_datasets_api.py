@@ -12,18 +12,9 @@ from pathlib import Path
 
 import openpyxl
 import pytest
+from macroeconomic.cred_seeder import CRED_COLUMNS
 
 from .conftest import write_minimal_xlsx
-
-REQUIRED_COLS = [
-    "country",
-    "scenario",
-    "adpatation",
-    "economic_indicator",
-    "economic_sector",
-    "year",
-    "proportion_change_from_baseline",
-]
 
 
 def _custom_xlsx(path: Path) -> None:
@@ -31,7 +22,7 @@ def _custom_xlsx(path: Path) -> None:
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "cred_output"
-    ws.append(REQUIRED_COLS)
+    ws.append(CRED_COLUMNS)
     for year in (2024, 2025):
         for adp in (0.0, 0.5):
             ws.append(["thailand", "historical", adp, "gdp", "whole_economy", year, 0.123])
@@ -80,7 +71,7 @@ def test_upload_missing_column_returns_400_with_actionable_message(
     ws = wb.active
     ws.title = "cred_output"
     # Omit 'scenario' — matches the column the issue names in its example.
-    cols = [c for c in REQUIRED_COLS if c != "scenario"]
+    cols = [c for c in CRED_COLUMNS if c != "scenario"]
     ws.append(cols)
     ws.append(["egypt", 0.0, "gdp", "whole_economy", 2024, 0.1])
     wb.save(xlsx)
