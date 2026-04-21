@@ -1,4 +1,11 @@
-"""Fetch adaptation measure names for a given hazard type from DuckDB."""
+"""Fetch adaptation measures for a given hazard/country from DuckDB.
+
+The default path merges the built-in measure set with every applicable
+custom set (issue #92). The response keeps the legacy ``adaptationMeasures``
+list of names so the scenario-run pipeline continues to work unchanged, and
+adds a ``measures`` field carrying the full metadata the UI needs to render
+the Built-in/Custom badges and source-reference tooltips.
+"""
 
 from __future__ import annotations
 
@@ -33,12 +40,13 @@ class RunFetchScenario:
 
         if not self.valid_request():
             return {
-                "data": {"adaptationMeasures": []},
+                "data": {"adaptationMeasures": [], "measures": []},
                 "status": {"code": 4000, "message": "Invalid request: Missing required fields"},
             }
 
         hazard_type = self.request.get("hazardType", "")
         measure_set_id: str | None = self.request.get("measureSetId")
+        country_name: str | None = self.request.get("countryName") or None
         hazard_code = self.hazard_handler.get_hazard_code(hazard_type)
         hazard_beautified = self.base_handler.beautify_hazard_type(hazard_type)
 
@@ -46,11 +54,13 @@ class RunFetchScenario:
 
         conn = get_connection(resolve_db_path())
         try:
-            adaptation_measures = self.costben_handler.get_measure_names_from_db(
-                conn, hazard_code, measure_set_id
+            measures = self.costben_handler.get_measures_from_db(
+                conn, hazard_code, measure_set_id, country_name
             )
         finally:
             conn.close()
+
+        adaptation_measures = [m["name"] for m in measures]
 
         if not hazard_code or not adaptation_measures:
             status_code = 3000
@@ -67,7 +77,10 @@ class RunFetchScenario:
             f"Finished fetching adaptation measures data in {time() - initial_time:.2f}sec.",
         )
         return {
-            "data": {"adaptationMeasures": adaptation_measures},
+            "data": {
+                "adaptationMeasures": adaptation_measures,
+                "measures": measures,
+            },
             "status": {"code": status_code, "message": run_status_message},
         }
 

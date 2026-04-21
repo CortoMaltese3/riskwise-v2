@@ -36,7 +36,17 @@ from models.macro import (
     MacroChartDataResponse,
     MacroCredOutputResponse,
 )
-from models.measures import MeasuresData, MeasuresResponse
+from models.measures import (
+    Measure,
+    MeasuresData,
+    MeasureSet,
+    MeasureSetDeleteData,
+    MeasureSetDeleteResponse,
+    MeasureSetsResponse,
+    MeasureSetUploadRequest,
+    MeasureSetUploadResponse,
+    MeasuresResponse,
+)
 from models.scenario import (
     JobAcceptedResponse,
     ScenarioErrorEvent,
@@ -110,6 +120,13 @@ __all__ = [
     "MacroChartDataRequest",
     "MacroChartDataResponse",
     "MacroCredOutputResponse",
+    "Measure",
+    "MeasureSet",
+    "MeasureSetDeleteData",
+    "MeasureSetDeleteResponse",
+    "MeasureSetsResponse",
+    "MeasureSetUploadRequest",
+    "MeasureSetUploadResponse",
     "MeasuresData",
     "MeasuresResponse",
     "PatchScenarioRequest",

@@ -1,25 +1,41 @@
 import React, { useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
-import { Box, Card, CardContent, Typography } from "@mui/material";
+import { Box, Card, CardContent, Chip, Stack, Tooltip, Typography } from "@mui/material";
 
 import AdaptationMeasuresViewTitle from "../title/AdaptationMeasuresViewTitle";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import useStore from "../../store";
 
 const AdaptationMeasuresInput = () => {
-  const { selectedHazard, selectedSubTab, selectedTab } = useStore();
+  const { selectedCountry, selectedHazard, selectedSubTab, selectedTab } = useStore();
   const { t } = useTranslation();
 
-  const [adaptationMeasures, setAdaptationMeasures] = useState([]);
+  const [measures, setMeasures] = useState([]);
 
   const onFetchAdaptationMeasuresHandler = async () => {
-    RiskWiseClient.fetchAdaptationMeasures("", selectedHazard)
+    RiskWiseClient.fetchAdaptationMeasures(selectedCountry ?? "", selectedHazard)
       .then((response) => {
-        setAdaptationMeasures(response.result.data.adaptationMeasures);
+        const data = response?.result?.data;
+        if (Array.isArray(data?.measures) && data.measures.length > 0) {
+          setMeasures(data.measures);
+          return;
+        }
+        // Older responses only carry the name list; synthesize minimal objects
+        // so the chip / tooltip code path still has something to render.
+        const names = data?.adaptationMeasures ?? [];
+        setMeasures(
+          names.map((name) => ({
+            id: name,
+            name,
+            is_builtin: true,
+            source_reference: null,
+          }))
+        );
       })
       .catch((error) => {
         console.log(error);
+        setMeasures([]);
       });
   };
 
@@ -27,7 +43,7 @@ const AdaptationMeasuresInput = () => {
     if (selectedHazard) {
       onFetchAdaptationMeasuresHandler();
     }
-  }, [selectedHazard]);
+  }, [selectedHazard, selectedCountry]);
 
   if (!(selectedTab === 1 && selectedSubTab === 1)) {
     return null;
@@ -36,7 +52,7 @@ const AdaptationMeasuresInput = () => {
   return (
     <>
       <AdaptationMeasuresViewTitle />
-      {adaptationMeasures.length > 0 ? (
+      {measures.length > 0 ? (
         <Box
           sx={{
             mt: 2,
@@ -45,28 +61,54 @@ const AdaptationMeasuresInput = () => {
             borderRadius: "8px",
           }}
         >
-          {adaptationMeasures.map((measureName, index) => (
-            <Card
-              key={index}
-              variant="outlined"
-              sx={{
-                bgcolor: (theme) => theme.palette.inputCard.default,
-                mb: 2,
-                minHeight: "24px",
-              }}
-            >
-              <CardContent sx={{ p: 1 }}>
-                <Typography
-                  gutterBottom
-                  variant="h6"
-                  component="div"
-                  sx={{ my: 0, wordWrap: "break-word" }} // wordWrap for long text
+          {measures.map((measure) => {
+            const badgeLabel = measure.is_builtin
+              ? t("adaptation_measure_badge_builtin")
+              : t("adaptation_measure_badge_custom");
+            const tooltipText =
+              measure.source_reference ?? t("adaptation_measure_source_reference_missing");
+            return (
+              <Tooltip
+                key={measure.id ?? measure.name}
+                title={tooltipText}
+                placement="top-start"
+                arrow
+              >
+                <Card
+                  variant="outlined"
+                  sx={{
+                    bgcolor: (theme) => theme.palette.inputCard.default,
+                    mb: 2,
+                    minHeight: "24px",
+                  }}
                 >
-                  {t(measureName)}
-                </Typography>
-              </CardContent>
-            </Card>
-          ))}
+                  <CardContent sx={{ p: 1 }}>
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      spacing={1}
+                    >
+                      <Typography
+                        gutterBottom
+                        variant="h6"
+                        component="div"
+                        sx={{ my: 0, wordWrap: "break-word" }}
+                      >
+                        {t(measure.name)}
+                      </Typography>
+                      <Chip
+                        size="small"
+                        label={badgeLabel}
+                        color={measure.is_builtin ? "default" : "secondary"}
+                        variant="outlined"
+                      />
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Tooltip>
+            );
+          })}
         </Box>
       ) : (
         <Typography sx={{ mt: 2, textAlign: "center", fontStyle: "italic" }}>

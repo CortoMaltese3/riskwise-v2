@@ -20,7 +20,13 @@ export type HealthResponse = Schema<"HealthResponse">;
 export type CountriesResponse = Schema<"CountriesResponse">;
 export type DataValidateRequest = Schema<"DataValidateRequest">;
 export type DataValidateResponse = Schema<"DataValidateResponse">;
+export type Measure = Schema<"Measure">;
 export type MeasuresResponse = Schema<"MeasuresResponse">;
+export type MeasureSet = Schema<"MeasureSet">;
+export type MeasureSetsResponse = Schema<"MeasureSetsResponse">;
+export type MeasureSetUploadRequest = Schema<"MeasureSetUploadRequest">;
+export type MeasureSetUploadResponse = Schema<"MeasureSetUploadResponse">;
+export type MeasureSetDeleteResponse = Schema<"MeasureSetDeleteResponse">;
 export type ScenarioRunRequest = Schema<"ScenarioRunRequest">;
 export type JobAcceptedResponse = Schema<"JobAcceptedResponse">;
 export type ScenarioWorkspaceItem = Schema<"ScenarioWorkspaceItem">;
@@ -129,6 +135,14 @@ const RiskWiseClient = {
 
   deleteCREDDataset: (id: string) =>
     del<CredDatasetDeleteResponse>(`/api/v1/macro/datasets/${encodeURIComponent(id)}`),
+
+  listMeasureDatasets: () => get<MeasureSetsResponse>("/api/v1/measures/datasets"),
+
+  uploadMeasureDataset: (body: MeasureSetUploadRequest) =>
+    post<MeasureSetUploadResponse>("/api/v1/measures/datasets", body),
+
+  deleteMeasureDataset: (id: string) =>
+    del<MeasureSetDeleteResponse>(`/api/v1/measures/datasets/${encodeURIComponent(id)}`),
 
   fetchCountries: () => get<CountriesResponse>("/api/v1/countries"),
 

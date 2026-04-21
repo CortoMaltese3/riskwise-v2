@@ -81,6 +81,10 @@ from models import (
     MacroChartDataRequest,
     MacroChartDataResponse,
     MacroCredOutputResponse,
+    MeasureSetDeleteResponse,
+    MeasureSetsResponse,
+    MeasureSetUploadRequest,
+    MeasureSetUploadResponse,
     MeasuresResponse,
     PatchScenarioRequest,
     SaveScenarioRequest,
@@ -512,6 +516,48 @@ async def measures(country: str, hazard: str, measure_set_id: str | None = None)
     if measure_set_id is not None:
         payload["measureSetId"] = measure_set_id
     return await _dispatch("run_fetch_measures.py", payload)
+
+
+@app.get(f"{API_PREFIX}/measures/datasets", response_model=MeasureSetsResponse)
+async def measure_datasets() -> dict:
+    from db.measures_store import list_measure_sets
+
+    datasets = await asyncio.to_thread(list_measure_sets)
+    return {"data": datasets, "status": _status_ok()}
+
+
+@app.post(f"{API_PREFIX}/measures/datasets", response_model=MeasureSetUploadResponse)
+async def measure_datasets_upload(payload: MeasureSetUploadRequest) -> dict:
+    from measures.measure_dataset_handler import MeasureDatasetError, import_dataset
+
+    try:
+        metadata = await asyncio.to_thread(import_dataset, payload.name, Path(payload.xlsx_path))
+    except MeasureDatasetError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"data": metadata, "status": _status_ok()}
+
+
+@app.delete(
+    f"{API_PREFIX}/measures/datasets/{{measure_set_id}}",
+    response_model=MeasureSetDeleteResponse,
+)
+async def measure_datasets_delete(measure_set_id: str) -> dict:
+    from measures.measure_dataset_handler import (
+        MeasureDatasetError,
+        MeasureDatasetNotFound,
+        MeasureDatasetProtected,
+        delete_dataset,
+    )
+
+    try:
+        await asyncio.to_thread(delete_dataset, measure_set_id)
+    except MeasureDatasetProtected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except MeasureDatasetNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except MeasureDatasetError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"data": {"id": measure_set_id}, "status": _status_ok()}
 
 
 def _status_ok() -> dict:
