@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   Drawer,
   List,
+  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
@@ -37,7 +38,6 @@ const Sidebar = () => {
   return (
     <Drawer
       variant="permanent"
-      aria-label="primary navigation"
       sx={{
         width,
         flexShrink: 0,
@@ -51,17 +51,17 @@ const Sidebar = () => {
         },
       }}
     >
-      <Box role="navigation">
+      <Box component="nav" role="navigation" aria-label={t("sidebar_primary_nav_aria")}>
         <List disablePadding>
           {items.map(({ id, labelKey, icon: Icon }) => {
             const label = t(labelKey);
             const selected = activeSection === id;
             const button = (
               <ListItemButton
-                key={id}
                 selected={selected}
                 onClick={() => setActiveSection(id)}
                 aria-label={label}
+                aria-current={selected ? "page" : undefined}
                 sx={{
                   minHeight: 48,
                   px: sidebarCollapsed ? 2 : 2.5,
@@ -81,12 +81,16 @@ const Sidebar = () => {
                 {!sidebarCollapsed && <ListItemText primary={label} />}
               </ListItemButton>
             );
-            return sidebarCollapsed ? (
-              <Tooltip key={id} title={label} placement="right">
-                {button}
-              </Tooltip>
-            ) : (
-              button
+            return (
+              <ListItem key={id} disablePadding>
+                {sidebarCollapsed ? (
+                  <Tooltip title={label} placement="right">
+                    {button}
+                  </Tooltip>
+                ) : (
+                  button
+                )}
+              </ListItem>
             );
           })}
         </List>

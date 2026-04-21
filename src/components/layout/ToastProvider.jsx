@@ -47,41 +47,46 @@ const ToastProvider = ({ children }) => {
           pointerEvents: "none",
         }}
       >
-        {toasts.map((toast, index) => (
-          <Snackbar
-            key={toast.id}
-            open
-            autoHideDuration={toast.duration}
-            onClose={(_event, reason) => {
-              if (reason === "clickaway") return;
-              dismiss(toast.id);
-            }}
-            anchorOrigin={ANCHOR}
-            sx={{
-              position: "static",
-              transform: "none",
-              pointerEvents: "auto",
-              mb: index === toasts.length - 1 ? 0 : 1,
-            }}
-          >
-            <Alert
-              severity={toast.severity}
-              variant="filled"
-              onClose={() => dismiss(toast.id)}
-              sx={{ width: "100%", minWidth: 320 }}
+        {toasts.map((toast, index) => {
+          const isError = toast.severity === "error";
+          return (
+            <Snackbar
+              key={toast.id}
+              open
+              autoHideDuration={toast.duration}
+              onClose={(_event, reason) => {
+                if (reason === "clickaway") return;
+                dismiss(toast.id);
+              }}
+              anchorOrigin={ANCHOR}
+              sx={{
+                position: "static",
+                transform: "none",
+                pointerEvents: "auto",
+                mb: index === toasts.length - 1 ? 0 : 1,
+              }}
             >
-              <Typography variant="body2">{toast.message}</Typography>
-              {toast.code && (
-                <Typography
-                  variant="caption"
-                  sx={{ display: "block", fontFamily: "monospace", mt: 0.5 }}
-                >
-                  {toast.code}
-                </Typography>
-              )}
-            </Alert>
-          </Snackbar>
-        ))}
+              <Alert
+                severity={toast.severity}
+                variant="filled"
+                onClose={() => dismiss(toast.id)}
+                role={isError ? "alert" : "status"}
+                aria-live={isError ? "assertive" : "polite"}
+                sx={{ width: "100%", minWidth: 320 }}
+              >
+                <Typography variant="body2">{toast.message}</Typography>
+                {toast.code && (
+                  <Typography
+                    variant="caption"
+                    sx={{ display: "block", fontFamily: "monospace", mt: 0.5 }}
+                  >
+                    {toast.code}
+                  </Typography>
+                )}
+              </Alert>
+            </Snackbar>
+          );
+        })}
       </Stack>
     </>
   );

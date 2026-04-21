@@ -46,6 +46,10 @@ const MainViewControls = () => {
               )}
               <IconButton
                 onClick={() => handleSelect(control.id)}
+                aria-label={t("select_view_control_aria", {
+                  label: t(`macro_view_controls_${control.id}`),
+                })}
+                aria-pressed={control.id === activeViewControl}
                 sx={{
                   flexGrow: 1,
                   color: "text.primary",
