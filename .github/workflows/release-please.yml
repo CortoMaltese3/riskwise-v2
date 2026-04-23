@@ -18,7 +18,7 @@ jobs:
       # single "release PR" that, once merged, cuts the tag and GitHub
       # Release. See release-please-config.json for the full config and
       # .release-please-manifest.json for the current tracked version.
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v5
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
