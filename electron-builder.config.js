@@ -73,8 +73,8 @@ module.exports = {
   publish: [
     {
       provider: "github",
-      owner: "gkalomalos",
-      repo: "ERA-Project_RISK-WISE",
+      owner: "CortoMaltese3",
+      repo: "riskwise-v2",
       releaseType: "release",
       channel: "latest",
     },

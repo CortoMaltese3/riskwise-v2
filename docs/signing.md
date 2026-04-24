@@ -155,6 +155,25 @@ at runtime from the release channel is **not** covered by this signing path —
 it is verified separately via the engine-manifest signature described in
 [ARCHITECTURE.md § Area 13](ARCHITECTURE.md#area-13--auto-update--release-channels-high).
 
+## Engine download URL pattern
+
+Per [DECISIONS.md D15](DECISIONS.md#d15--engine-hosting-migrate-off-v1-public-repo-before-v2-public-release),
+the Python engine is hosted on the v2 repo's GitHub Releases page. The
+`sign-engine-manifest` job in
+[.github/workflows/release.yml](../.github/workflows/release.yml) emits a
+signed `engine-manifest.json` whose `download_url` follows this pattern:
+
+```
+https://github.com/CortoMaltese3/riskwise-v2/releases/download/vX.Y.Z/riskwise-engine.exe
+```
+
+`vX.Y.Z` is the release tag that triggered the workflow (`${GITHUB_REF_NAME}`).
+The Electron app fetches the manifest, verifies its minisign signature
+against the public key bundled at `resources/engine-manifest.pub`, and only
+then trusts the embedded `sha256` and `download_url`. There is no hardcoded
+fallback URL in the app — a missing or unverifiable manifest fails the
+first-launch engine install outright.
+
 ---
 
 ## Local development
