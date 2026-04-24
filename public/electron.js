@@ -1,5 +1,5 @@
 const { app, BrowserWindow, ipcMain, net, session, shell, dialog } = require("electron");
-const { autoUpdater, NsisUpdater } = require("electron-updater");
+const { autoUpdater } = require("electron-updater");
 const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
@@ -451,10 +451,14 @@ app.whenReady().then(async () => {
         releaseType: "release",
       });
 
-      if (NsisUpdater.prototype.verifySignature) {
-        NsisUpdater.prototype.verifySignature = async () => null;
-        log.warn("[electron] Signature verification disabled (self-signed certificate)");
-      }
+      // Azure Trusted Signing produces a valid Authenticode chain, so we
+      // leave electron-updater's default `verifyUpdateCodeSignature`
+      // function in place — it calls `signtool verify /pa` against the
+      // configured `publisherName`. The previous NsisUpdater prototype
+      // monkey-patch that disabled verification is gone; do NOT replace
+      // it with a boolean (the property is function-typed and would
+      // throw at download time). Signature verification is now active.
+      log.info("[electron] update signature verification is enabled (Azure Trusted Signing)");
 
       log.info(
         `[electron] auto-updater configured channel=${releaseChannel} allowPrerelease=${autoUpdater.allowPrerelease}`

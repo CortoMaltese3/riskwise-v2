@@ -1,183 +1,193 @@
-# Code Signing — Windows Installers
+# Code Signing — Windows Installers and Engine
 
-This document explains how to activate Authenticode signing for RISK WISE
-Windows builds once a certificate is available. The infrastructure is already
-wired into `package.json` and `.github/workflows/release.yml`; only the CI
-secrets and `publisherName` need to change.
+This document describes how Authenticode signing is wired into the RISK WISE
+Windows release pipeline. **Azure Trusted Signing** (per
+[DECISIONS.md D17](DECISIONS.md#d17--code-signing-provider-azure-trusted-signing-primary-sslcom-ev-fallback))
+is the activated provider: it issues short-lived leaf certificates from a
+Microsoft-operated CA that already has Windows SmartScreen reputation, so
+first-install warnings disappear on day one.
 
 Background: [DECISIONS.md D07](DECISIONS.md#d07--code-signing-wire-infrastructure-now-activate-when-cert-available)
-and [D17](DECISIONS.md#d17--code-signing-provider-azure-trusted-signing-primary-sslcom-ev-fallback).
+and D17.
 
 ---
 
-## Current state (unsigned)
+## What gets signed
 
-- `CSC_IDENTITY_AUTO_DISCOVERY=false` is set on the unsigned branch of the
-  release workflow, so electron-builder never tries to auto-pick a cert from
-  the runner's cert store.
-- `package.json → build.win` carries the signing config
-  (`signingHashAlgorithms`, `signAndEditExecutable`, `publisherName`
-  placeholder). These fields are dormant until electron-builder detects a
-  signing identity.
-- `build.forceCodeSigning` is `false`, so unsigned builds are permitted.
-- `public/electron.js` monkey-patches `NsisUpdater.verifySignature` to a no-op
-  because electron-updater otherwise refuses updates whose signature chain
-  cannot be verified. This patch **must be removed** once signing is activated.
+Every PE file that ships to users:
 
-Running `npx electron-builder -w` on a tag with no `CSC_LINK` secret produces
-an unsigned installer. SmartScreen warns on first install for every user.
+| Artifact | Path | Signed by |
+|---|---|---|
+| Installer | `dist/<version>/RiskWiseInstaller-*.exe` | `electron-builder` via `azureSignOptions` |
+| Uninstaller | Embedded in the NSIS installer | `electron-builder` (`signAndEditExecutable: true`) |
+| Update payload | `*.exe`, `*.blockmap` emitted alongside `latest*.yml` | `electron-builder` |
+| Bundled PE files (e.g. extraResources/engine DLLs) | inside the installer tree | `electron-builder` |
+| Python engine onefile | `dist/nuitka/riskwise-engine.exe` | [`scripts/build_engine.ps1`](../scripts/build_engine.ps1) signtool step |
 
----
+The engine onefile is a self-extracting executable — signing the outer `.exe`
+covers the embedded DLLs it decompresses at runtime. When Nuitka is invoked
+without `--onefile`, the signing step also picks up the sibling DLLs under
+`dist/nuitka/`.
 
-## Activation path A — SSL.com eSigner / DigiCert KeyLocker (CSC_LINK)
-
-This is the path the current CI guard implements (`if [ -n "$CSC_LINK" ]`).
-Both SSL.com eSigner and DigiCert KeyLocker expose an electron-builder-
-compatible signing identity through the standard `CSC_LINK` / `CSC_KEY_PASSWORD`
-env vars (typically via a wrapped `signtool` under the hood).
-
-### One-time setup
-
-1. Procure an EV Code Signing certificate from SSL.com or DigiCert. EV is
-   required for day-one SmartScreen reputation (see D17).
-2. Complete identity verification for the publisher. The verified common name
-   becomes the value of `win.publisherName` in `package.json`.
-3. Download the PFX / `.p12` bundle (or the cloud-signing shim binary) that
-   the provider issues. Never commit this file — base64-encode it and store
-   it as the `WINDOWS_CERTIFICATE` secret.
-4. Store the cert password as `WINDOWS_CERTIFICATE_PASSWORD`.
-
-### Required GitHub Actions secrets
-
-| Secret | Purpose |
-|---|---|
-| `WINDOWS_CERTIFICATE` | Base64-encoded PFX/p12 (wired to `CSC_LINK`). |
-| `WINDOWS_CERTIFICATE_PASSWORD` | PFX passphrase (wired to `CSC_KEY_PASSWORD`). |
-
-Both names are already referenced in [.github/workflows/release.yml](../.github/workflows/release.yml).
-
-### Activation steps
-
-1. Update `build.win.publisherName` in [package.json](../package.json) to the
-   verified publisher CN from the certificate (exact match is required or
-   electron-builder will warn and Windows will show the wrong publisher in the
-   UAC prompt).
-2. Populate the two secrets in the `CortoMaltese3/riskwise-v2` repository
-   (Settings → Secrets and variables → Actions).
-3. Cut a test tag (e.g. `v1.0.9-rc.1`) and verify:
-   - `npx signtool verify /pa /v dist/<version>/RiskWiseInstaller-*.exe`
-     reports "Successfully verified".
-   - SmartScreen does not warn on a fresh Windows VM.
-   - electron-updater downloads and installs a new release without tripping
-     signature verification (see "Removing the verifySignature patch" below).
+The engine is also protected out-of-band by the minisign-based
+`engine-manifest.json` signature ([ARCHITECTURE.md § Area 13](ARCHITECTURE.md#area-13--auto-update--release-channels-high))
+so the first-launch download path verifies even before Authenticode is
+consulted.
 
 ---
 
-## Activation path B — Azure Trusted Signing (preferred per D17)
+## Required GitHub Actions secrets
 
-D17 selects Azure Trusted Signing as the primary provider. Switching to it
-replaces the `CSC_LINK` guard with an Azure-credential guard and swaps the
-electron-builder signing config from PFX-based to `azureSignOptions`-based.
-
-### Required GitHub Actions secrets
+Populate these in the `CortoMaltese3/riskwise-v2` repository under
+Settings → Secrets and variables → Actions:
 
 | Secret | Purpose |
 |---|---|
 | `AZURE_TENANT_ID` | Entra tenant housing the service principal. |
-| `AZURE_CLIENT_ID` | Service-principal app ID scoped to the signing account. |
-| `AZURE_CLIENT_SECRET` | Service-principal secret. |
+| `AZURE_CLIENT_ID` | Service-principal app ID scoped to the signing account. Presence of this var is the probe that switches builds from unsigned to signed. |
+| `AZURE_CLIENT_SECRET` | Service-principal client secret. |
 | `AZURE_CODE_SIGNING_ACCOUNT_NAME` | Trusted Signing account name. |
-| `AZURE_CERT_PROFILE_NAME` | Certificate profile inside that account. |
+| `AZURE_CERT_PROFILE_NAME` | Certificate profile inside the account. |
 | `AZURE_ENDPOINT` | Region endpoint, e.g. `https://eus.codesigning.azure.net`. |
+| `AZURE_PUBLISHER_NAME` | Verified publisher CN issued after identity verification. Must match the cert exactly; electron-builder uses this for `publisherName`. |
 
-### electron-builder changes
-
-Replace the `publisherName` placeholder with the verified publisher and add
-`azureSignOptions` under `build.win`:
-
-```json
-"win": {
-  "signingHashAlgorithms": ["sha256"],
-  "signAndEditExecutable": true,
-  "publisherName": "<verified publisher CN>",
-  "azureSignOptions": {
-    "publisherName": "<verified publisher CN>",
-    "endpoint": "${env.AZURE_ENDPOINT}",
-    "certificateProfileName": "${env.AZURE_CERT_PROFILE_NAME}",
-    "codeSigningAccountName": "${env.AZURE_CODE_SIGNING_ACCOUNT_NAME}"
-  }
-}
-```
-
-### Workflow change
-
-Swap the shell guard in [.github/workflows/release.yml](../.github/workflows/release.yml)
-from `[ -n "$CSC_LINK" ]` to a step with `if: env.AZURE_CLIENT_ID != ''` and
-export the six Azure env vars from secrets. Keep the unsigned fallback path
-so fork builds and local runs still succeed.
-
-### Verification
-
-1. `signtool verify /pa /v` on the resulting installer.
-2. `Get-AuthenticodeSignature` in PowerShell must return `Valid` with the
-   expected signer CN.
-3. electron-updater must install an update without the `verifySignature`
-   monkey-patch.
+`AZURE_CLIENT_ID` is the signal bit: both the Electron build job and the
+engine build job short-circuit to an unsigned build when it is empty.
+This keeps fork builds and PR runs working until the Azure account is
+provisioned.
 
 ---
 
-## Removing the `verifySignature` monkey-patch
+## Azure Trusted Signing setup (one-time)
 
-Once any signing path is active, the patch in
-[public/electron.js](../public/electron.js) at the auto-updater configuration
-block must be removed:
+1. Provision an **Azure Trusted Signing** account
+   (Azure portal → Trusted Signing → Create).
+2. Complete publisher identity verification. The verified common name is
+   what ships in `publisherName` / SmartScreen / UAC prompts.
+3. Create a **Certificate profile** under the Trusted Signing account.
+4. Create an **Entra service principal** (App registration) and grant it
+   the `Trusted Signing Certificate Profile Signer` role on the signing
+   account. Record the tenant id, app (client) id, and generate a client
+   secret.
+5. Store all seven values above as GitHub Actions secrets.
+
+No PFX / `.p12` is involved — Azure Trusted Signing issues per-request
+short-lived leaf certificates, so there is nothing to rotate manually.
+
+---
+
+## How activation flows through the codebase
+
+`package.json` does not carry the `build` block directly — electron-builder
+config lives in [electron-builder.config.js](../electron-builder.config.js).
+The config is a small conditional:
 
 ```js
-if (NsisUpdater.prototype.verifySignature) {
-  NsisUpdater.prototype.verifySignature = async () => null;
-  log.warn("[electron] Signature verification disabled (self-signed certificate)");
+const azureSigningEnabled = Boolean(process.env.AZURE_CLIENT_ID);
+// ...
+win: {
+  // ...
+  publisherName,
+  ...(azureSigningEnabled
+    ? { azureSignOptions: { publisherName, endpoint, certificateProfileName,
+        codeSigningAccountName, azureTenantId, azureClientId, azureClientSecret } }
+    : {}),
 }
 ```
 
-Tracked as UPD-1 in [docs/security-baseline.md](security-baseline.md). Removing
-this block is the signal that the app is fully trusting code signing for
-update integrity.
+`.github/workflows/release.yml` routes the secrets into both jobs:
+
+- The **`build`** job (Electron installer) sets the Azure env vars and runs
+  `npx electron-builder -w --publish always`. When `AZURE_CLIENT_ID` is
+  empty it falls back to `CSC_IDENTITY_AUTO_DISCOVERY=false` + unsigned.
+- The **`build-engine`** job (Nuitka) sets the same six Azure env vars
+  (minus `AZURE_PUBLISHER_NAME`, which the engine signer does not use) so
+  that [`scripts/build_engine.ps1`](../scripts/build_engine.ps1) can invoke
+  `signtool` with `Azure.CodeSigning.Dlib.dll`.
+
+The Electron main process (`public/electron.js`, copied to
+`build/electron.js` at build time) enables update-payload signature
+verification by letting electron-updater's default
+`verifyUpdateCodeSignature` run. The previous monkey-patch
+(`NsisUpdater.prototype.verifySignature = async () => null`) is removed.
+electron-updater now refuses any update whose Authenticode chain does not
+verify against `publisherName`.
+
+> Implementation note: electron-updater exposes
+> `verifyUpdateCodeSignature` as a **function** (called with
+> `(publisherNames, tempFile)`), not a boolean flag. The activation
+> signal is removal of the override, not a literal `= true` assignment —
+> assigning `true` would throw `true is not a function` at update
+> download time. A log line in `public/electron.js` records that
+> verification is active so regressions are easy to spot in field logs.
 
 ---
 
-## What signing covers
+## Verification checklist
 
-electron-builder signs every executable and DLL emitted by the NSIS target
-when any of the paths above are active: the installer, the uninstaller, the
-update payload (`.exe` + blockmap), and any Windows PE files inside the
-bundled `build/`, `backend/`, and `data/` trees. The Python engine downloaded
-at runtime from the release channel is **not** covered by this signing path —
-it is verified separately via the engine-manifest signature described in
-[ARCHITECTURE.md § Area 13](ARCHITECTURE.md#area-13--auto-update--release-channels-high).
+Run on every signing rollout — and always on the first signed release.
 
-## Engine download URL pattern
+### On the build runner
 
-Per [DECISIONS.md D15](DECISIONS.md#d15--engine-hosting-migrate-off-v1-public-repo-before-v2-public-release),
-the Python engine is hosted on the v2 repo's GitHub Releases page. The
-`sign-engine-manifest` job in
-[.github/workflows/release.yml](../.github/workflows/release.yml) emits a
-signed `engine-manifest.json` whose `download_url` follows this pattern:
+1. `signtool verify /pa /v dist/<version>/RiskWiseInstaller-*.exe`
+   reports `Successfully verified`. The signer CN matches the verified
+   publisher.
+2. `signtool verify /pa /v dist/nuitka/riskwise-engine.exe`
+   reports the same.
+3. `Get-AuthenticodeSignature dist/<version>/*.exe` returns `Valid`.
+4. The release workflow logs include `AZURE_CLIENT_ID present — producing
+   Azure Trusted Signing build` and `Azure Trusted Signing complete` (for
+   the engine job).
 
-```
-https://github.com/CortoMaltese3/riskwise-v2/releases/download/vX.Y.Z/riskwise-engine.exe
-```
+### On a clean Windows VM
 
-`vX.Y.Z` is the release tag that triggered the workflow (`${GITHUB_REF_NAME}`).
-The Electron app fetches the manifest, verifies its minisign signature
-against the public key bundled at `resources/engine-manifest.pub`, and only
-then trusts the embedded `sha256` and `download_url`. There is no hardcoded
-fallback URL in the app — a missing or unverifiable manifest fails the
-first-launch engine install outright.
+5. Download the installer from the GitHub release (not a local rebuild).
+6. Double-click → SmartScreen **passes immediately** (no "Windows
+   protected your PC" warning). The UAC prompt shows the verified
+   publisher CN as "Verified publisher", not "Unknown".
+7. If SmartScreen still warns on the very first install from a brand-new
+   account, Azure Trusted Signing's Microsoft-rooted leaf is supposed to
+   carry inherited reputation; a warning here is a flag worth recording in
+   the release notes and raising with GIZ / Microsoft support. Do **not**
+   ship the release as "SmartScreen-clean" without confirming.
+8. Close the app, reopen it, trigger an auto-update check (Settings →
+   Check for updates). An update from a previous signed build downloads
+   and installs without prompting for signature trust — this confirms
+   `verifyUpdateCodeSignature` is working end-to-end.
+
+### On the engine path
+
+9. Run the app, let it download the engine on first launch
+   (`%LOCALAPPDATA%\RiskWiseEngine\`). Run `Get-AuthenticodeSignature` on
+   `riskwise-engine.exe` → `Valid` with the expected signer.
+10. `engine-manifest.json` verification still succeeds (minisign path is
+    orthogonal to Authenticode — both must pass).
+
+A failure at any step blocks the release.
 
 ---
 
 ## Local development
 
-There is no expectation to sign local builds. `npm run dist` sets
-`CSC_IDENTITY_AUTO_DISCOVERY=false` and produces an unsigned installer for
-smoke-testing. Only the tag-driven release workflow consumes signing secrets.
+There is no expectation to sign local builds.
+
+- `npm run dist` sets `CSC_IDENTITY_AUTO_DISCOVERY=false` and produces an
+  unsigned installer for smoke-testing.
+- `./scripts/build_engine.ps1` without `AZURE_CLIENT_ID` prints
+  `AZURE_CLIENT_ID not set — skipping Azure Trusted Signing (unsigned
+  build)` and exits successfully.
+
+Only the tag-driven release workflow consumes signing secrets.
+
+---
+
+## Deprecated: CSC_LINK / SSL.com eSigner path
+
+The earlier Phase-1 activation path used `CSC_LINK` / `CSC_KEY_PASSWORD`
+env vars with a PFX-based certificate from SSL.com or DigiCert (see
+D17's fallback clause). That path is no longer wired in
+`.github/workflows/release.yml` — the `AZURE_CLIENT_ID` guard replaced it.
+If Azure Trusted Signing ever has to be rolled back to a PFX provider,
+restore the old `if [ -n "$CSC_LINK" ]` branch, revert
+`electron-builder.config.js`'s conditional to set `signtool` options, and
+repopulate `WINDOWS_CERTIFICATE` / `WINDOWS_CERTIFICATE_PASSWORD`.

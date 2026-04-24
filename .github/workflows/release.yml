@@ -44,9 +44,10 @@ jobs:
 
       - run: npm run build
 
-      # Signing activates only when CSC_LINK is populated (see docs/signing.md).
-      # Cert-less runs fall through to the unsigned branch so the release
-      # pipeline keeps working until a certificate is provisioned.
+      # Signing activates only when Azure Trusted Signing credentials are
+      # present (AZURE_CLIENT_ID is the probe). Cert-less runs (forks, PR
+      # builds) fall through to the unsigned branch so the release pipeline
+      # keeps working until the Azure account is provisioned. See docs/signing.md.
       # The `-c.publish.channel=` override routes the build's `latest*.yml`
       # and installer to the correct channel resolved above.
       - name: Build and publish
@@ -56,16 +57,21 @@ jobs:
           if [ "$RELEASE_CHANNEL" != "stable" ]; then
             builder_channel="$RELEASE_CHANNEL"
           fi
-          if [ -n "$CSC_LINK" ]; then
-            echo "CSC_LINK present — producing signed build (channel=$builder_channel)"
+          if [ -n "$AZURE_CLIENT_ID" ]; then
+            echo "AZURE_CLIENT_ID present — producing Azure Trusted Signing build (channel=$builder_channel)"
             npx electron-builder -w --publish always -c.publish.channel="$builder_channel"
           else
-            echo "CSC_LINK empty — producing unsigned build (channel=$builder_channel)"
+            echo "AZURE_CLIENT_ID empty — producing unsigned build (channel=$builder_channel)"
             CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder -w --publish always -c.publish.channel="$builder_channel"
           fi
         env:
-          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
-          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_CODE_SIGNING_ACCOUNT_NAME: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT_NAME }}
+          AZURE_CERT_PROFILE_NAME: ${{ secrets.AZURE_CERT_PROFILE_NAME }}
+          AZURE_ENDPOINT: ${{ secrets.AZURE_ENDPOINT }}
+          AZURE_PUBLISHER_NAME: ${{ secrets.AZURE_PUBLISHER_NAME }}
 
   # Phase 4 Area 4 — bundle the Python engine with Nuitka on every `v*`
   # tag and attach the resulting .exe as a release artifact. Runs
@@ -91,8 +97,18 @@ jobs:
       - name: Install from lock file (with bundle extra)
         run: uv sync --extra bundle --frozen
 
+      # build_engine.ps1 embeds a guarded Azure Trusted Signing step that
+      # only runs when AZURE_CLIENT_ID is set. Forked PRs without secrets
+      # produce an unsigned engine binary and skip signing cleanly.
       - name: Build engine
         shell: pwsh
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_CODE_SIGNING_ACCOUNT_NAME: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT_NAME }}
+          AZURE_CERT_PROFILE_NAME: ${{ secrets.AZURE_CERT_PROFILE_NAME }}
+          AZURE_ENDPOINT: ${{ secrets.AZURE_ENDPOINT }}
         run: |
           . .venv/Scripts/Activate.ps1
           ./scripts/build_engine.ps1
