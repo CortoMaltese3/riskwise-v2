@@ -84,8 +84,8 @@ let supervisorBusy = false;
 const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours
 const REMIND_SNOOZE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const RELEASE_NOTES_CACHE_MS = 60 * 60 * 1000; // 1 hour
-const RELEASE_OWNER = "gkalomalos";
-const RELEASE_REPO = "ERA-Project_RISK-WISE";
+const RELEASE_OWNER = "CortoMaltese3";
+const RELEASE_REPO = "riskwise-v2";
 const ENGINE_MANIFEST_URL = `https://github.com/${RELEASE_OWNER}/${RELEASE_REPO}/releases/latest/download/engine-manifest.json`;
 const GITHUB_RELEASE_API = `https://api.github.com/repos/${RELEASE_OWNER}/${RELEASE_REPO}/releases`;
 const ENGINE_PUB_KEY_FILENAME = "engine-manifest.pub";
@@ -214,10 +214,15 @@ const downloadAndInstallEngine = async (loaderWindow) => {
   log.info("[electron] Archive will be downloaded to:", archivePath);
 
   try {
-    updateLoaderMessage("RISK WISE Engine is missing. Downloading...");
+    updateLoaderMessage("RISK WISE Engine is missing. Fetching manifest...");
 
-    const engineUrl =
-      "https://github.com/gkalomalos/ERA-Project_RISK-WISE/releases/download/v1.0.6/RiskWiseEngine.zip";
+    // Engine URL is driven by the signed engine-manifest.json (D15) — no
+    // hardcoded fallback. `fetchVerifiedEngineManifest` verifies the
+    // minisign signature before we trust any field inside.
+    const manifest = await fetchVerifiedEngineManifest();
+    const engineUrl = manifest.download_url;
+    log.info(`[electron] Engine manifest resolved version=${manifest.version} url=${engineUrl}`);
+    updateLoaderMessage("Downloading RISK WISE Engine...");
 
     await new Promise((resolve, reject) => {
       const request = net.request(engineUrl);

@@ -18,7 +18,7 @@ Please **do not** open a public GitHub issue for security problems.
 Report vulnerabilities privately via one of the following channels:
 
 - **GitHub security advisories** (preferred):
-  <https://github.com/gkalomalos/ERA-Project_RISK-WISE/security/advisories/new>
+  <https://github.com/CortoMaltese3/riskwise-v2/security/advisories/new>
 - **Email**: `georgios.kalomalos@sword-group.com`
 
 Please include, where possible:

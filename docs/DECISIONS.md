@@ -304,6 +304,15 @@ Track A (CLIMADA + Nuitka) is selected by default if Track B fails any of the ab
 
 **Consequence**: Phase 4 explicit checklist item. `installer.nsh` and `electron.js` updated to v2 release URLs. v1 repo release assets retained for v1 users but no new engine versions published there.
 
+**Migration status (2026-04-24, issue #117)**: Complete. `public/electron.js`
+(`RELEASE_OWNER` / `RELEASE_REPO` and the first-launch engine download),
+`installer/installer.nsh`, and `electron-builder.config.js` (auto-updater
+`publish` target) no longer reference the v1 public repo. The engine URL is
+driven entirely by the `download_url` field of the signed
+`engine-manifest.json` published by `.github/workflows/release.yml`; no
+hardcoded engine URL remains in the Electron app. The v1 public repo does
+not host v2 engine artifacts.
+
 ---
 
 ## D16 — Loopback HTTP startup handshake: verified, unblocked
