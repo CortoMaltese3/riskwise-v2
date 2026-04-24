@@ -56,6 +56,14 @@ jobs:
       - name: Run pytest
         run: pytest -q
 
+      # Issue #114: FastAPI integration tests exercise the real app via
+      # TestClient against a freshly-migrated DuckDB. CLIMADA entrypoints
+      # are monkey-patched per-test so we do not pay the geospatial
+      # install cost, but the suite still needs to run against the
+      # migrations and seeders the production lifespan invokes.
+      - name: Run integration tests
+        run: pytest -q tests/integration
+
       # Issue #55 Scenario 4: run the determinism fixture twice on the same
       # runner and gate the merge on bit-identical outputs. The in-test
       # assertions already compare the two computations; running the whole
@@ -92,6 +100,68 @@ jobs:
       - run: npm run format:check
 
       - run: npm test
+
+  e2e:
+    name: Electron E2E (Playwright)
+    runs-on: ubuntu-latest
+    # Issue #114: the Playwright suite drives the packaged Electron app
+    # end-to-end. It depends on the frontend build and gates releases —
+    # a failure here must block merges to main.
+    needs: [frontend]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # The backend launcher the Electron main spawns imports the app
+      # module and its runtime deps directly — install the minimal set
+      # that satisfies lifespan startup without the CLIMADA tree.
+      - name: Install backend runtime deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            "fastapi>=0.110,<1" \
+            "uvicorn[standard]>=0.27,<1" \
+            "duckdb>=1.0,<2" \
+            "pandas>=2.0,<3" \
+            "numpy>=1.24,<2" \
+            "openpyxl>=3.1,<4" \
+            "pycountry>=24.6" \
+            "structlog>=24,<26" \
+            "psutil>=5.9,<7" \
+            "pyarrow>=12"
+
+      - name: Install Node dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - name: Install Playwright system dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Build renderer + Electron main
+        run: npm run build
+
+      # Electron needs a display server on Linux; xvfb-run provides a
+      # virtual framebuffer so the app can launch headlessly. Playwright
+      # itself is headed by default for Electron — there is no
+      # ``--headless`` flag we can pass to bypass this.
+      - name: Run Playwright Electron suite
+        run: xvfb-run --auto-servernum npx playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
 
   npm-audit:
     name: Frontend security (npm audit)
