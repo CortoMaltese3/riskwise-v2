@@ -1,0 +1,87 @@
+name: Release Windows
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # Signing activates only when CSC_LINK is populated (see docs/signing.md).
+      # Cert-less runs fall through to the unsigned branch so the release
+      # pipeline keeps working until a certificate is provisioned.
+      - name: Build and publish
+        shell: bash
+        run: |
+          if [ -n "$CSC_LINK" ]; then
+            echo "CSC_LINK present — producing signed build"
+            npx electron-builder -w --publish always
+          else
+            echo "CSC_LINK empty — producing unsigned build"
+            CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder -w --publish always
+          fi
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+
+  # Phase 4 Area 4 — bundle the Python engine with Nuitka on every `v*`
+  # tag and attach the resulting .exe as a release artifact. Runs
+  # independently of the Electron build; shipping the engine separately
+  # keeps a failed Nuitka build from blocking a signed installer when the
+  # engine is already cut from an earlier tag (see ADR adr-bundling.md).
+  build-engine:
+    name: Build Python engine (Nuitka)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      # ``uv sync --extra bundle`` resolves against the committed uv.lock,
+      # which is the project's lock file of record (ADR §3.4's
+      # requirements.lock.txt is a build-time artefact of the same
+      # resolver, not a separate source of truth).
+      - name: Install from lock file (with bundle extra)
+        run: uv sync --extra bundle --frozen
+
+      # Activate the uv-managed venv so the script's ``python -m nuitka``
+      # resolves to the interpreter that has the bundle extra installed,
+      # not the bare setup-python one.
+      - name: Build engine
+        shell: pwsh
+        run: |
+          . .venv/Scripts/Activate.ps1
+          ./scripts/build_engine.ps1
+
+      - name: Upload engine artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: riskwise-engine
+          path: dist/nuitka/riskwise-engine.exe
+          if-no-files-found: error
+
+      - name: Attach engine to release
+        shell: bash
+        run: gh release upload "${GITHUB_REF_NAME}" dist/nuitka/riskwise-engine.exe --clobber
