@@ -1,9 +1,16 @@
-const { app, BrowserWindow, ipcMain, session, shell, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, net, session, shell, dialog } = require("electron");
 const { autoUpdater, NsisUpdater } = require("electron-updater");
 const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("node:crypto");
 const log = require("electron-log");
+const Store = require("electron-store");
+const {
+  isEngineVersionCompatible,
+  resolveReleaseChannel,
+  verifyEngineManifest,
+} = require("./engineManifest");
 
 global.pythonProcess = null;
 
@@ -59,6 +66,31 @@ const HEALTH_POLL_INTERVAL_MS = 10000;
 const MAX_RESTART_ATTEMPTS = 3;
 let healthPollTimer = null;
 let supervisorBusy = false;
+
+// Auto-update configuration (issue #115, Area 13).
+//
+// `electron-updater` checks GitHub Releases on a timer; the renderer drives
+// the consent UX so the dialog matches the rest of the app (native
+// `showMessageBox` is intentionally avoided after Phase 4). State that must
+// survive restarts — snooze timestamps, channel preference, release-notes
+// cache — lives in `electron-store`, which writes JSON under `userData`
+// separate from `riskwise.db` so the app DB stays purely a scenario store.
+const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours
+const REMIND_SNOOZE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const RELEASE_NOTES_CACHE_MS = 60 * 60 * 1000; // 1 hour
+const RELEASE_OWNER = "gkalomalos";
+const RELEASE_REPO = "ERA-Project_RISK-WISE";
+const ENGINE_MANIFEST_URL = `https://github.com/${RELEASE_OWNER}/${RELEASE_REPO}/releases/latest/download/engine-manifest.json`;
+const GITHUB_RELEASE_API = `https://api.github.com/repos/${RELEASE_OWNER}/${RELEASE_REPO}/releases`;
+const ENGINE_PUB_KEY_FILENAME = "engine-manifest.pub";
+
+let updateCheckTimer = null;
+let updateStore = null;
+let releaseChannel = "stable";
+// In-memory cache keyed by tag. Persisting to disk isn't worth the risk of
+// shipping stale release notes after a bad write — 1 h in-memory TTL is
+// enough to survive panel re-mounts and window reloads.
+const releaseNotesCache = new Map();
 
 const isDevelopmentEnv = () => {
   return !app.isPackaged;
@@ -178,8 +210,6 @@ const downloadAndInstallEngine = async (loaderWindow) => {
   try {
     updateLoaderMessage("RISK WISE Engine is missing. Downloading...");
 
-    // Use electron's net module
-    const { net } = require("electron");
     const engineUrl =
       "https://github.com/gkalomalos/ERA-Project_RISK-WISE/releases/download/v1.0.6/RiskWiseEngine.zip";
 
@@ -377,6 +407,15 @@ app.whenReady().then(async () => {
     console.error("Failed to initialize logging:", error);
   }
 
+  // Persistence bucket for update state — snooze deadlines, last-checked
+  // timestamp, user-chosen channel, offline-mode flag (stubbed here; Area 14
+  // toggles it from the Settings panel). Kept separate from `riskwise.db`.
+  try {
+    updateStore = new Store({ name: "riskwise-updates" });
+  } catch (error) {
+    log.error("[electron] failed to initialize update store:", error);
+  }
+
   // Configure auto-updater BEFORE any other startup logic
   if (!isDevelopmentEnv()) {
     try {
@@ -385,12 +424,19 @@ app.whenReady().then(async () => {
       autoUpdater.autoDownload = false;
       autoUpdater.autoInstallOnAppQuit = false;
       autoUpdater.allowDowngrade = false;
-      autoUpdater.allowPrerelease = false;
+
+      releaseChannel = resolveReleaseChannel(process.env.RELEASE_CHANNEL, app.getVersion());
+      const storedChannel = updateStore?.get("channel");
+      if (storedChannel && storedChannel !== releaseChannel) {
+        releaseChannel = storedChannel;
+      }
+      autoUpdater.channel = releaseChannel;
+      autoUpdater.allowPrerelease = releaseChannel !== "stable";
 
       autoUpdater.setFeedURL({
         provider: "github",
-        owner: "gkalomalos",
-        repo: "ERA-Project_RISK-WISE",
+        owner: RELEASE_OWNER,
+        repo: RELEASE_REPO,
         releaseType: "release",
       });
 
@@ -400,7 +446,7 @@ app.whenReady().then(async () => {
       }
 
       log.info(
-        "[electron] auto-updater configured (autoDownload=false, autoInstallOnAppQuit=false)"
+        `[electron] auto-updater configured channel=${releaseChannel} allowPrerelease=${autoUpdater.allowPrerelease}`
       );
     } catch (error) {
       log.error("[electron] failed to configure auto-updater:", error);
@@ -477,16 +523,12 @@ app.whenReady().then(async () => {
     startHealthSupervisor();
   }
 
-  // Check for updates AFTER main window is created
+  // Check for updates AFTER main window is created, then poll every 4 h.
+  // The renderer-side dialog (src/components/UpdateDialog.jsx) decides what
+  // to show — the check itself just fires off an electron-updater probe.
   if (!isDevelopmentEnv()) {
-    try {
-      log.info("[electron] checking for updates...");
-      autoUpdater.checkForUpdates().catch((err) => {
-        log.error("[electron] updater check failed:", err);
-      });
-    } catch (error) {
-      log.error("[electron] failed to check for updates:", error);
-    }
+    checkForAppUpdates("startup").catch(() => {});
+    startUpdateCheckTimer();
   }
 });
 
@@ -563,10 +605,7 @@ const waitForPythonProcessReady = (pythonProcess, timeoutMs = 300000) => {
   });
 };
 
-const randomErrorId = () => {
-  const { randomUUID } = require("crypto");
-  return randomUUID();
-};
+const randomErrorId = () => crypto.randomUUID();
 
 // Parse the backend's structured error envelope into the shape the renderer
 // consumes. Falls back to a synthetic envelope when the response isn't JSON
@@ -1232,6 +1271,365 @@ ipcMain.handle("select-measures-dataset", async () => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Auto-update pipeline (issue #115, Area 13)
+// ---------------------------------------------------------------------------
+
+// Offline mode is stubbed here and fully wired from the Settings panel in
+// Area 14. Anything that touches the network (app update check, release
+// notes fetch, engine-manifest fetch, engine download) must read this flag
+// first. We also treat a missing `net` module as "offline" so tests that
+// run outside Electron don't blow up.
+const isOfflineMode = () => {
+  if (!updateStore) return false;
+  return Boolean(updateStore.get("offlineMode", false));
+};
+
+const checkForAppUpdates = async (reason) => {
+  if (isDevelopmentEnv()) {
+    log.info(`[electron] update check skipped (dev env) reason=${reason}`);
+    return { skipped: "dev" };
+  }
+  if (isOfflineMode()) {
+    log.info(`[electron] update check skipped (offline mode) reason=${reason}`);
+    return { skipped: "offline" };
+  }
+  try {
+    log.info(`[electron] checking for app updates reason=${reason} channel=${releaseChannel}`);
+    await autoUpdater.checkForUpdates();
+    if (updateStore) updateStore.set("lastChecked", Date.now());
+    return { ok: true };
+  } catch (err) {
+    log.error("[electron] update check failed:", err.message);
+    return { error: err.message };
+  }
+};
+
+const startUpdateCheckTimer = () => {
+  if (updateCheckTimer) clearInterval(updateCheckTimer);
+  updateCheckTimer = setInterval(() => {
+    checkForAppUpdates("interval").catch((err) =>
+      log.error("[electron] interval update check errored:", err)
+    );
+  }, UPDATE_CHECK_INTERVAL_MS);
+};
+
+// Renderer-callable wrapper that the Settings panel invokes when the user
+// chooses "Install on next restart". We set autoDownload and begin the
+// download; electron-updater fires `update-downloaded` when it's ready, and
+// the quit-install happens naturally when the user closes the app.
+const beginUpdateDownload = async () => {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  try {
+    await autoUpdater.downloadUpdate();
+    return { ok: true };
+  } catch (err) {
+    log.error("[electron] downloadUpdate failed:", err.message);
+    return { error: err.message };
+  }
+};
+
+const snoozeUpdateReminder = () => {
+  if (!updateStore) return { error: "update store not initialized" };
+  const remindAfter = Date.now() + REMIND_SNOOZE_MS;
+  updateStore.set("remindAfter", remindAfter);
+  log.info(`[electron] update reminder snoozed until ${new Date(remindAfter).toISOString()}`);
+  return { ok: true, remindAfter };
+};
+
+const setReleaseChannel = (channel) => {
+  if (!["stable", "beta", "internal"].includes(channel)) {
+    return { error: `invalid channel: ${channel}` };
+  }
+  if (updateStore) updateStore.set("channel", channel);
+  releaseChannel = channel;
+  if (!isDevelopmentEnv()) {
+    autoUpdater.channel = channel;
+    autoUpdater.allowPrerelease = channel !== "stable";
+  }
+  log.info(`[electron] release channel set to ${channel}`);
+  return { ok: true, channel };
+};
+
+// Download to a Buffer via the Electron `net` module. Using `net` instead
+// of Node `https` gets us the system proxy and certificate store for free,
+// which matters on corporate Windows where a custom CA is common.
+const fetchBuffer = (url, headers = {}) =>
+  new Promise((resolve, reject) => {
+    const req = net.request(url);
+    for (const [name, value] of Object.entries(headers)) {
+      req.setHeader(name, value);
+    }
+    req.on("response", (response) => {
+      const chunks = [];
+      response.on("data", (chunk) => chunks.push(chunk));
+      response.on("end", () => {
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          resolve({
+            statusCode: response.statusCode,
+            headers: response.headers,
+            body: Buffer.concat(chunks),
+          });
+        } else {
+          reject(new Error(`HTTP ${response.statusCode} ${response.statusMessage || ""}`.trim()));
+        }
+      });
+      response.on("error", reject);
+    });
+    req.on("error", reject);
+    req.end();
+  });
+
+// Append to a file via HTTP Range. Returns the total bytes after append.
+// The caller passes the current on-disk size; we ask the server for that
+// offset onwards and stream directly into an append-mode stream. If the
+// server doesn't honor the Range header we fall back to a full fetch.
+const downloadRange = (url, destPath, startByte) =>
+  new Promise((resolve, reject) => {
+    const headers = {};
+    if (startByte > 0) headers.Range = `bytes=${startByte}-`;
+    const req = net.request(url);
+    for (const [name, value] of Object.entries(headers)) {
+      req.setHeader(name, value);
+    }
+    req.on("response", (response) => {
+      if (response.statusCode === 416) {
+        // File already complete — server says the requested range is
+        // beyond end-of-resource. Treat as success and let the hash check
+        // validate the on-disk file.
+        resolve({ appended: 0, resumed: true });
+        return;
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        reject(new Error(`HTTP ${response.statusCode}`));
+        return;
+      }
+      const resumed = response.statusCode === 206 && startByte > 0;
+      const flags = resumed ? "a" : "w";
+      const out = fs.createWriteStream(destPath, { flags });
+      let appended = 0;
+      response.on("data", (chunk) => {
+        appended += chunk.length;
+        out.write(chunk);
+      });
+      response.on("end", () => {
+        out.end();
+        out.on("close", () => resolve({ appended, resumed }));
+      });
+      response.on("error", (err) => {
+        out.destroy();
+        reject(err);
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
+
+const sha256File = (filePath) =>
+  new Promise((resolve, reject) => {
+    const hash = crypto.createHash("sha256");
+    const stream = fs.createReadStream(filePath);
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("end", () => resolve(hash.digest("hex")));
+    stream.on("error", reject);
+  });
+
+const readEnginePublicKey = () => {
+  // In dev the unpackaged tree keeps resources/ alongside public/; in a
+  // packaged build electron-builder copies resources/ under the app
+  // resources root. `process.resourcesPath` is the packaged location;
+  // `basePath` covers the dev case.
+  const candidates = [
+    path.join(basePath, "resources", ENGINE_PUB_KEY_FILENAME),
+    path.join(process.resourcesPath || "", ENGINE_PUB_KEY_FILENAME),
+  ];
+  for (const candidate of candidates) {
+    if (candidate && fs.existsSync(candidate)) {
+      return fs.readFileSync(candidate, "utf8");
+    }
+  }
+  throw new Error(
+    `engine-manifest public key not found in any of: ${candidates.filter(Boolean).join(", ")}`
+  );
+};
+
+// Fetch + verify the engine manifest. Verification must happen BEFORE we
+// trust the `sha256` or `download_url` inside — a compromised release
+// account could otherwise ship a malicious engine to every installed app.
+const fetchVerifiedEngineManifest = async () => {
+  if (isOfflineMode()) {
+    throw new Error("engine manifest fetch skipped: offline mode is active");
+  }
+  const { body } = await fetchBuffer(ENGINE_MANIFEST_URL, {
+    "User-Agent": `RiskWise/${app.getVersion()}`,
+  });
+  const text = body.toString("utf8");
+  const pubKey = readEnginePublicKey();
+  const manifest = verifyEngineManifest(text, pubKey);
+  log.info(`[electron] engine manifest verified version=${manifest.version}`);
+  return manifest;
+};
+
+// Resumable engine download with SHA-256 verification. `destPath` is
+// treated as append-mode on retry: we ask the server for the remainder
+// via HTTP Range. A post-download hash mismatch wipes the file so the
+// next retry starts clean.
+const downloadEngineWithResume = async (manifest, destPath, { maxAttempts = 3 } = {}) => {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const startByte = fs.existsSync(destPath) ? fs.statSync(destPath).size : 0;
+      log.info(
+        `[electron] engine download attempt ${attempt}/${maxAttempts} startByte=${startByte}`
+      );
+      const result = await downloadRange(manifest.download_url, destPath, startByte);
+      log.info(
+        `[electron] engine download appended=${result.appended} resumed=${result.resumed}`
+      );
+      const actualHash = await sha256File(destPath);
+      if (actualHash.toLowerCase() === String(manifest.sha256).toLowerCase()) {
+        log.info("[electron] engine SHA-256 matches manifest");
+        return { ok: true, path: destPath, sha256: actualHash };
+      }
+      log.warn(
+        `[electron] engine SHA-256 mismatch expected=${manifest.sha256} actual=${actualHash} — restarting from byte 0`
+      );
+      fs.unlinkSync(destPath);
+    } catch (err) {
+      log.error(`[electron] engine download attempt ${attempt} failed:`, err.message);
+      if (attempt === maxAttempts) throw err;
+    }
+  }
+  throw new Error(`engine download failed after ${maxAttempts} attempts`);
+};
+
+const isEngineBlocked = (manifest, cachedEngineVersion) => {
+  if (!manifest) return false;
+  if (!cachedEngineVersion) return true;
+  return !isEngineVersionCompatible(cachedEngineVersion, manifest);
+};
+
+// Release notes: we strip the body down to the `## en` (or `## en-US`)
+// section so the "What's New" panel shows localized content only. The
+// heading matches a simple `## en[^\n]*` pattern; anything before the
+// next `##` is kept. 1 h cache sidesteps GitHub API rate limits.
+const extractLanguageSection = (body, lang) => {
+  if (typeof body !== "string") return "";
+  const re = new RegExp(`(^|\n)##\\s+${lang}(?:-[A-Za-z]+)?\\s*\n([\\s\\S]*?)(?=\n##\\s+|$)`);
+  const match = body.match(re);
+  return match ? match[2].trim() : body.trim();
+};
+
+const fetchReleaseNotes = async ({ tag, language = "en" } = {}) => {
+  if (isOfflineMode()) {
+    return { skipped: "offline" };
+  }
+  const cacheKey = `${tag || "latest"}:${language}`;
+  const cached = releaseNotesCache.get(cacheKey);
+  if (cached && Date.now() - cached.fetchedAt < RELEASE_NOTES_CACHE_MS) {
+    return { ...cached, cached: true };
+  }
+  const url = tag ? `${GITHUB_RELEASE_API}/tags/${tag}` : `${GITHUB_RELEASE_API}/latest`;
+  const { body } = await fetchBuffer(url, {
+    Accept: "application/vnd.github+json",
+    "User-Agent": `RiskWise/${app.getVersion()}`,
+  });
+  const release = JSON.parse(body.toString("utf8"));
+  const section = extractLanguageSection(release.body || "", language);
+  const payload = {
+    fetchedAt: Date.now(),
+    tag: release.tag_name,
+    name: release.name,
+    body: section,
+    language,
+  };
+  releaseNotesCache.set(cacheKey, payload);
+  return payload;
+};
+
+ipcMain.handle("updates:check", async () => {
+  return checkForAppUpdates("user");
+});
+
+ipcMain.handle("updates:install-on-next-restart", async () => {
+  return beginUpdateDownload();
+});
+
+ipcMain.handle("updates:remind-later", async () => {
+  return snoozeUpdateReminder();
+});
+
+ipcMain.handle("updates:get-status", async () => {
+  return {
+    currentVersion: app.getVersion(),
+    channel: releaseChannel,
+    lastChecked: updateStore ? updateStore.get("lastChecked", null) : null,
+    remindAfter: updateStore ? updateStore.get("remindAfter", 0) : 0,
+    offlineMode: isOfflineMode(),
+  };
+});
+
+ipcMain.handle("updates:set-channel", async (_evt, channel) => setReleaseChannel(channel));
+
+ipcMain.handle("updates:get-release-notes", async (_evt, opts) => {
+  try {
+    return await fetchReleaseNotes(opts || {});
+  } catch (err) {
+    log.error("[electron] fetchReleaseNotes failed:", err.message);
+    return { error: err.message };
+  }
+});
+
+// "Downgrade to previous version" reuses electron-updater's two-arg
+// quitAndInstall(isSilent, isForceRunAfter) — passing (true, false)
+// performs a silent install without relaunching, which is what the AC
+// requires so the user can hand-pick the previous installer after quit.
+ipcMain.handle("updates:downgrade", async () => {
+  try {
+    setImmediate(() => autoUpdater.quitAndInstall(true, false));
+    return { ok: true };
+  } catch (err) {
+    log.error("[electron] downgrade failed:", err.message);
+    return { error: err.message };
+  }
+});
+
+ipcMain.handle("engine:verify-manifest", async () => {
+  try {
+    const manifest = await fetchVerifiedEngineManifest();
+    return { ok: true, manifest };
+  } catch (err) {
+    log.error("[electron] engine manifest verification failed:", err.message);
+    return { error: err.message };
+  }
+});
+
+ipcMain.handle("engine:check-blocked", async () => {
+  try {
+    const manifest = await fetchVerifiedEngineManifest();
+    const cachedEngineVersion = updateStore ? updateStore.get("engine.version", null) : null;
+    const blocked = isEngineBlocked(manifest, cachedEngineVersion);
+    return { ok: true, blocked, manifestVersion: manifest.version, cachedEngineVersion };
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+ipcMain.handle("engine:download-update", async () => {
+  try {
+    const manifest = await fetchVerifiedEngineManifest();
+    const engineRoot = process.env.LOCALAPPDATA;
+    if (!engineRoot) throw new Error("LOCALAPPDATA is not defined");
+    const destPath = path.join(engineRoot, "RiskWiseEngine.download");
+    await downloadEngineWithResume(manifest, destPath);
+    if (updateStore) updateStore.set("engine.version", manifest.version);
+    return { ok: true, version: manifest.version };
+  } catch (err) {
+    log.error("[electron] engine download failed:", err.message);
+    return { error: err.message };
+  }
+});
+
 ipcMain.on("minimize", () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.minimize();
@@ -1268,56 +1666,34 @@ autoUpdater.on("download-progress", (p) => {
   log.info(`[electron] downloading ${p.percent.toFixed(1)}% (${p.transferred}/${p.total})`);
 });
 
-autoUpdater.on("update-available", async (info) => {
-  log.info("[electron] update available:", info?.version);
-
-  try {
-    const { response } = await dialog.showMessageBox({
-      type: "info",
-      title: "Update Available",
-      message: `A new version (${info?.version ?? "unknown"}) is available. Download now?`,
-      buttons: ["Download", "Later"],
-      defaultId: 0,
-      cancelId: 1,
-    });
-
-    if (response === 0) {
-      log.info("[electron] user accepted download");
-      autoUpdater.downloadUpdate().catch((err) => {
-        log.error("[electron] downloadUpdate failed:", err);
-        dialog.showErrorBox("Update Error", "Failed to download update: " + err.message);
-      });
-    } else {
-      log.info("[electron] user declined download - will prompt on next start");
+autoUpdater.on("update-available", (info) => {
+  const version = info?.version ?? "unknown";
+  log.info("[electron] update available:", version);
+  if (updateStore) {
+    updateStore.set("lastChecked", Date.now());
+    const remindAfter = Number(updateStore.get("remindAfter", 0)) || 0;
+    if (Date.now() < remindAfter) {
+      log.info(
+        `[electron] update-available dialog snoozed until ${new Date(remindAfter).toISOString()}`
+      );
+      return;
     }
-  } catch (error) {
-    log.error("[electron] failed to show update dialog:", error);
+  }
+  // Dispatch to renderer; the React dialog handles user consent. We never
+  // auto-download — the user must click "Install on next restart" first.
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("update:available", { version });
   }
 });
 
-autoUpdater.on("update-downloaded", async () => {
-  log.info("[electron] update downloaded successfully");
-
-  try {
-    const { response } = await dialog.showMessageBox({
-      type: "info",
-      title: "Update Ready",
-      message: "Update has been downloaded. Restart now to install?",
-      buttons: ["Restart Now", "Later"],
-      defaultId: 0,
-      cancelId: 1,
-    });
-
-    if (response === 0) {
-      log.info("[electron] user accepted installation - restarting");
-      setImmediate(() => autoUpdater.quitAndInstall(false, true));
-    } else {
-      log.info("[electron] user declined installation - will prompt on next start");
-      // User chose "Later" - the update stays cached and will be prompted again on next launch
-      // No need to clear cache here - electron-updater handles re-prompting
-    }
-  } catch (error) {
-    log.error("[electron] failed to show update ready dialog:", error);
+autoUpdater.on("update-downloaded", (info) => {
+  log.info("[electron] update downloaded successfully:", info?.version);
+  // Arm install-on-quit rather than prompting for a restart. Users who
+  // clicked "Install on next restart" accept exactly that contract; an
+  // immediate-restart prompt would violate the "never auto-restart" AC.
+  autoUpdater.autoInstallOnAppQuit = true;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("update:downloaded", { version: info?.version });
   }
 });
 
@@ -1335,6 +1711,10 @@ autoUpdater.on("error", (err) => {
 app.on("before-quit", () => {
   log.info("[electron] terminating Python process before app quits...");
   stopHealthSupervisor();
+  if (updateCheckTimer) {
+    clearInterval(updateCheckTimer);
+    updateCheckTimer = null;
+  }
   cleanupPython();
 });
 

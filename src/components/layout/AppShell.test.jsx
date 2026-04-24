@@ -31,6 +31,10 @@ vi.mock("../reports/ReportsView", () => ({ default: () => <div data-testid="repo
 vi.mock("../workspace/WorkspaceView", () => ({
   default: () => <div data-testid="workspace-view" />,
 }));
+vi.mock("../UpdateDialog", () => ({ default: () => <div data-testid="update-dialog" /> }));
+vi.mock("../EngineStatusBanner", () => ({
+  default: () => <div data-testid="engine-status-banner" />,
+}));
 
 function renderShell() {
   return render(

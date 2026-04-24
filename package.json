@@ -60,6 +60,7 @@
     "d3-scale-chromatic": "3.1.0",
     "date-fns": "4.1.0",
     "electron-log": "5.4.3",
+    "electron-store": "^8.2.0",
     "electron-updater": "6.8.3",
     "file-saver": "2.0.5",
     "i18next": "26.0.5",
@@ -129,10 +130,17 @@
         "provider": "github",
         "owner": "gkalomalos",
         "repo": "ERA-Project_RISK-WISE",
-        "releaseType": "release"
+        "releaseType": "release",
+        "channel": "latest"
       }
     ],
     "generateUpdatesFilesForAllChannels": true,
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": "."
+      }
+    ],
     "win": {
       "target": [
         {

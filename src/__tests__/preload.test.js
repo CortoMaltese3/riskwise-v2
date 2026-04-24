@@ -10,6 +10,7 @@ import path from "node:path";
 const ALLOWED_INVOKE_CHANNELS = new Set([
   "fetch-temp-dir",
   "fetch-report-dir",
+  "fetch-log-dir",
   "clear-temp-dir",
   "is-development-env",
   "save-screenshot",
@@ -21,9 +22,20 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "import-workspace",
   "select-custom-data-pack",
   "select-cred-dataset",
+  "select-measures-dataset",
   "http:request",
   "http:scenarioRun",
   "http:cancelScenario",
+  "updates:check",
+  "updates:install-on-next-restart",
+  "updates:remind-later",
+  "updates:get-status",
+  "updates:set-channel",
+  "updates:get-release-notes",
+  "updates:downgrade",
+  "engine:verify-manifest",
+  "engine:check-blocked",
+  "engine:download-update",
 ]);
 
 const ALLOWED_SEND_CHANNELS = new Set(["shutdown", "minimize", "reload", "log:renderer"]);
@@ -34,6 +46,8 @@ const ALLOWED_LISTEN_CHANNELS = new Set([
   "save-screenshot-reply",
   "copy-file-reply",
   "copy-folder-reply",
+  "update:available",
+  "update:downloaded",
 ]);
 
 const loadPreload = () => {
@@ -103,6 +117,16 @@ describe("preload bridge surface", () => {
     exposed.electron.importWorkspace();
     exposed.electron.selectCustomDataPack();
     exposed.electron.selectCredDataset();
+    exposed.electron.updates.check();
+    exposed.electron.updates.installOnNextRestart();
+    exposed.electron.updates.remindLater();
+    exposed.electron.updates.getStatus();
+    exposed.electron.updates.setChannel("beta");
+    exposed.electron.updates.getReleaseNotes({ language: "en" });
+    exposed.electron.updates.downgrade();
+    exposed.electron.engine.verifyManifest();
+    exposed.electron.engine.checkBlocked();
+    exposed.electron.engine.downloadUpdate();
     exposed.api.http.request("GET", "/", null, "rid");
     exposed.api.http.runScenario({}, "rid");
     exposed.api.http.cancelScenario("job", "rid");
@@ -135,6 +159,8 @@ describe("preload bridge surface", () => {
       exposed.electron.onSaveScreenshotReply(() => {}),
       exposed.electron.onCopyFileReply(() => {}),
       exposed.electron.onCopyFolderReply(() => {}),
+      exposed.electron.updates.onAvailable(() => {}),
+      exposed.electron.updates.onDownloaded(() => {}),
       exposed.api.onBackendError(() => {}),
     ];
 

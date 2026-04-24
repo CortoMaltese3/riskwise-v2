@@ -22,20 +22,46 @@ jobs:
 
       - run: npm ci
 
+      # Derive the release channel from the tag so electron-builder knows
+      # which channel file (`latest.yml` / `beta.yml` / `internal.yml`) to
+      # publish. See ARCHITECTURE.md § Area 13.
+      #   v2.0.1          → stable
+      #   v2.0.1-beta.1   → beta
+      #   v2.0.1-internal → internal
+      - name: Resolve release channel
+        id: channel
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          case "$tag" in
+            *-beta.*)     channel="beta"     ;;
+            *-internal.*) channel="internal" ;;
+            *)            channel="stable"   ;;
+          esac
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "RELEASE_CHANNEL=$channel" >> "$GITHUB_ENV"
+          echo "Resolved channel: $channel (tag=$tag)"
+
       - run: npm run build
 
       # Signing activates only when CSC_LINK is populated (see docs/signing.md).
       # Cert-less runs fall through to the unsigned branch so the release
       # pipeline keeps working until a certificate is provisioned.
+      # The `-c.publish.channel=` override routes the build's `latest*.yml`
+      # and installer to the correct channel resolved above.
       - name: Build and publish
         shell: bash
         run: |
+          builder_channel="latest"
+          if [ "$RELEASE_CHANNEL" != "stable" ]; then
+            builder_channel="$RELEASE_CHANNEL"
+          fi
           if [ -n "$CSC_LINK" ]; then
-            echo "CSC_LINK present — producing signed build"
-            npx electron-builder -w --publish always
+            echo "CSC_LINK present — producing signed build (channel=$builder_channel)"
+            npx electron-builder -w --publish always -c.publish.channel="$builder_channel"
           else
-            echo "CSC_LINK empty — producing unsigned build"
-            CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder -w --publish always
+            echo "CSC_LINK empty — producing unsigned build (channel=$builder_channel)"
+            CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder -w --publish always -c.publish.channel="$builder_channel"
           fi
         env:
           CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
@@ -49,6 +75,9 @@ jobs:
   build-engine:
     name: Build Python engine (Nuitka)
     runs-on: windows-latest
+    outputs:
+      engine_sha256: ${{ steps.engine_hash.outputs.sha256 }}
+      engine_version: ${{ steps.engine_hash.outputs.version }}
     steps:
       - uses: actions/checkout@v6
 
@@ -59,21 +88,23 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v3
 
-      # ``uv sync --extra bundle`` resolves against the committed uv.lock,
-      # which is the project's lock file of record (ADR §3.4's
-      # requirements.lock.txt is a build-time artefact of the same
-      # resolver, not a separate source of truth).
       - name: Install from lock file (with bundle extra)
         run: uv sync --extra bundle --frozen
 
-      # Activate the uv-managed venv so the script's ``python -m nuitka``
-      # resolves to the interpreter that has the bundle extra installed,
-      # not the bare setup-python one.
       - name: Build engine
         shell: pwsh
         run: |
           . .venv/Scripts/Activate.ps1
           ./scripts/build_engine.ps1
+
+      - name: Compute engine SHA-256
+        id: engine_hash
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash -Algorithm SHA256 dist/nuitka/riskwise-engine.exe).Hash.ToLower()
+          "sha256=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "version=${env:GITHUB_REF_NAME}" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "engine sha256=$hash"
 
       - name: Upload engine artifact
         uses: actions/upload-artifact@v4
@@ -85,3 +116,71 @@ jobs:
       - name: Attach engine to release
         shell: bash
         run: gh release upload "${GITHUB_REF_NAME}" dist/nuitka/riskwise-engine.exe --clobber
+
+  # Phase 4 Area 13 — build, sign, and publish engine-manifest.json. The
+  # private key lives in `ENGINE_MANIFEST_KEY` (base64 of
+  # engine-manifest.key) plus `ENGINE_MANIFEST_KEY_PASSWORD`. The app
+  # bundles the public half in `resources/engine-manifest.pub` and refuses
+  # to trust the manifest SHA-256 until the signature verifies locally.
+  sign-engine-manifest:
+    name: Sign engine manifest (minisign)
+    runs-on: windows-latest
+    needs: build-engine
+    if: ${{ needs.build-engine.outputs.engine_sha256 != '' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Install minisign (scoop)
+        shell: pwsh
+        run: |
+          iwr -useb get.scoop.sh | iex
+          scoop install minisign
+
+      - name: Restore minisign private key
+        shell: pwsh
+        env:
+          ENGINE_MANIFEST_KEY: ${{ secrets.ENGINE_MANIFEST_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:ENGINE_MANIFEST_KEY)) {
+            throw "ENGINE_MANIFEST_KEY secret is not set — cannot sign engine manifest"
+          }
+          $bytes = [Convert]::FromBase64String($env:ENGINE_MANIFEST_KEY)
+          [IO.File]::WriteAllBytes("engine-manifest.key", $bytes)
+
+      - name: Generate engine manifest
+        shell: pwsh
+        env:
+          ENGINE_SHA256: ${{ needs.build-engine.outputs.engine_sha256 }}
+          ENGINE_VERSION: ${{ needs.build-engine.outputs.engine_version }}
+        run: |
+          $manifest = [ordered]@{
+            version          = $env:ENGINE_VERSION
+            sha256           = $env:ENGINE_SHA256
+            download_url     = "https://github.com/${{ github.repository }}/releases/download/$($env:ENGINE_VERSION)/riskwise-engine.exe"
+            min_app_version  = $env:ENGINE_VERSION
+            max_app_version  = $env:ENGINE_VERSION
+            signature        = ""
+          }
+          $json = $manifest | ConvertTo-Json -Depth 5
+          Set-Content -Path "engine-manifest.json" -Value $json -Encoding UTF8
+          Write-Host "Generated engine-manifest.json:"
+          Get-Content engine-manifest.json
+
+      - name: Sign engine manifest
+        shell: pwsh
+        env:
+          ENGINE_MANIFEST_KEY_PASSWORD: ${{ secrets.ENGINE_MANIFEST_KEY_PASSWORD }}
+        run: |
+          ./scripts/sign_manifest.ps1 `
+            -Manifest engine-manifest.json `
+            -PrivateKey engine-manifest.key `
+            -Password $env:ENGINE_MANIFEST_KEY_PASSWORD
+          Remove-Item -Path engine-manifest.key -Force
+
+      - name: Attach signed manifest to release
+        shell: bash
+        run: gh release upload "${GITHUB_REF_NAME}" engine-manifest.json --clobber
