@@ -73,6 +73,27 @@ contextBridge.exposeInMainWorld("electron", {
 
   // Long-running scenario progress events streamed from the SSE bridge.
   onProgress: (callback) => subscribe("progress", callback),
+
+  // Auto-update bridge (issue #115). `updates.*` drive the consent dialog
+  // and Settings panel; `engine.*` drive the signed-manifest engine update
+  // flow. All calls go through invoke/`handle` with result envelopes, so a
+  // backend error doesn't crash the renderer.
+  updates: {
+    check: () => ipcRenderer.invoke("updates:check"),
+    installOnNextRestart: () => ipcRenderer.invoke("updates:install-on-next-restart"),
+    remindLater: () => ipcRenderer.invoke("updates:remind-later"),
+    getStatus: () => ipcRenderer.invoke("updates:get-status"),
+    setChannel: (channel) => ipcRenderer.invoke("updates:set-channel", channel),
+    getReleaseNotes: (opts) => ipcRenderer.invoke("updates:get-release-notes", opts),
+    downgrade: () => ipcRenderer.invoke("updates:downgrade"),
+    onAvailable: (callback) => subscribe("update:available", callback),
+    onDownloaded: (callback) => subscribe("update:downloaded", callback),
+  },
+  engine: {
+    verifyManifest: () => ipcRenderer.invoke("engine:verify-manifest"),
+    checkBlocked: () => ipcRenderer.invoke("engine:check-blocked"),
+    downloadUpdate: () => ipcRenderer.invoke("engine:download-update"),
+  },
 });
 
 contextBridge.exposeInMainWorld("api", {

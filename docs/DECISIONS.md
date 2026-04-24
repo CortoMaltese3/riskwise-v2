@@ -408,3 +408,25 @@ Phase 4 (cert procured):
 **References**: [Microsoft — Azure Trusted Signing overview](https://learn.microsoft.com/en-us/azure/trusted-signing/overview), [electron-builder — Windows code signing](https://www.electron.build/code-signing-win), [DigiCert KeyLocker](https://www.digicert.com/tls-ssl/code-signing/keylocker), [SSL.com eSigner](https://www.ssl.com/esigner/).
 
 ---
+
+## Secrets table
+
+Every external secret consumed by the v2 release pipeline. Every row has a
+named owner and a documented storage location — ARCHITECTURE.md § Secrets
+ownership requires an annual review.
+
+| Secret | Purpose | Storage | Required by | Owner |
+|---|---|---|---|---|
+| `WINDOWS_CERTIFICATE` | Code-signing certificate (Azure Trusted Signing, base64-encoded `.pfx` when procured) | GitHub Actions repo secret | `.github/workflows/release.yml` (electron-builder `CSC_LINK`) | Release maintainer |
+| `WINDOWS_CERTIFICATE_PASSWORD` | Password for the above cert | GitHub Actions repo secret | `.github/workflows/release.yml` (electron-builder `CSC_KEY_PASSWORD`) | Release maintainer |
+| `ENGINE_MANIFEST_KEY` | Base64-encoded minisign **private** key (`engine-manifest.key`) for signing `engine-manifest.json` (issue #115, Area 13) | GitHub Actions environment secret with environment protection rules | `.github/workflows/release.yml` `sign-engine-manifest` job → `scripts/sign_manifest.ps1` | Release maintainer |
+| `ENGINE_MANIFEST_KEY_PASSWORD` | Password for the minisign private key (empty string allowed for automation keys) | GitHub Actions environment secret | `scripts/sign_manifest.ps1` | Release maintainer |
+| `GITHUB_TOKEN` | Release publishing + GitHub Releases API | GitHub Actions default | All release workflows | Platform-provided |
+
+The **public** half of the engine-manifest keypair (`engine-manifest.pub`)
+is committed to `resources/engine-manifest.pub` and ships inside the app
+bundle so `public/engineManifest.js` can verify a manifest offline.
+Generate the keypair with `minisign -G -p engine-manifest.pub -s engine-manifest.key`;
+never commit the private half.
+
+---
