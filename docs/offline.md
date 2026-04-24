@@ -88,8 +88,8 @@ The resulting `my-data.riskwise-pack.minisig` must live next to the
 pack file in the user's packs directory. Do **not** ship the private key
 inside the installer — only `engine-manifest.pub` is bundled.
 
-> Out of scope for this issue: `.riskwise-country-pack` signing (Area
-> 22) reuses the same minisign machinery but is layered on top of the
+> Out of scope for Area 14: `.riskwise-country-pack` signing (Area 22)
+> reuses the same minisign machinery but is layered on top of the
 > custom-data import flow, not the startup scanner.
 
 ## Installer variants
