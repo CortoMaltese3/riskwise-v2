@@ -20,6 +20,13 @@ const { TILES_FILENAME } = require("./public/offlineConstants");
 const isOfflineInstaller =
   process.env.OFFLINE_INSTALLER === "1" || process.env.OFFLINE_INSTALLER === "true";
 
+// Azure Trusted Signing activates only when a service-principal client id is
+// present. Dev and fork builds (no secrets) fall through to an unsigned
+// artifact so the `npm run dist` / PR-build path keeps working unchanged.
+// See docs/signing.md § "Activation path B".
+const azureSigningEnabled = Boolean(process.env.AZURE_CLIENT_ID);
+const publisherName = process.env.AZURE_PUBLISHER_NAME || "<org name when cert available>";
+
 const baseExtraResources = [{ from: "resources", to: "." }];
 
 const offlineExtraResources = () => {
@@ -90,7 +97,20 @@ module.exports = {
     icon: "build/icon.ico",
     signingHashAlgorithms: ["sha256"],
     signAndEditExecutable: true,
-    publisherName: "<org name when cert available>",
+    publisherName,
+    ...(azureSigningEnabled
+      ? {
+          azureSignOptions: {
+            publisherName,
+            endpoint: process.env.AZURE_ENDPOINT,
+            certificateProfileName: process.env.AZURE_CERT_PROFILE_NAME,
+            codeSigningAccountName: process.env.AZURE_CODE_SIGNING_ACCOUNT_NAME,
+            azureTenantId: process.env.AZURE_TENANT_ID,
+            azureClientId: process.env.AZURE_CLIENT_ID,
+            azureClientSecret: process.env.AZURE_CLIENT_SECRET,
+          },
+        }
+      : {}),
   },
   nsis: {
     oneClick: false,
