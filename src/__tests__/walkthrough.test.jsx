@@ -6,14 +6,18 @@ import { render, screen } from "@testing-library/react";
 // through a simple DOM marker. Joyride itself is well-tested upstream — here
 // we only care that Walkthrough decides to render it (run=true) based on the
 // ``hasSeenWalkthrough`` localStorage flag.
-vi.mock("react-joyride", () => ({
-  __esModule: true,
-  default: ({ run, steps }) =>
-    run ? <div data-testid="joyride" data-steps={steps?.length ?? 0} /> : null,
-  STATUS: { FINISHED: "finished", SKIPPED: "skipped" },
-  ACTIONS: { NEXT: "next", PREV: "prev" },
-  EVENTS: { STEP_AFTER: "step:after", TARGET_NOT_FOUND: "error:target_not_found" },
-}));
+vi.mock("react-joyride", () => {
+  const Mock = ({ run, steps }) =>
+    run ? <div data-testid="joyride" data-steps={steps?.length ?? 0} /> : null;
+  return {
+    __esModule: true,
+    default: Mock,
+    Joyride: Mock,
+    STATUS: { FINISHED: "finished", SKIPPED: "skipped" },
+    ACTIONS: { NEXT: "next", PREV: "prev" },
+    EVENTS: { STEP_AFTER: "step:after", TARGET_NOT_FOUND: "error:target_not_found" },
+  };
+});
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({

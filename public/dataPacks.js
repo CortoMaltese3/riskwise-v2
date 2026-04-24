@@ -7,7 +7,7 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
-const { execFileSync } = require("node:child_process");
+const zlib = require("node:zlib");
 
 const { verifyMinisignSignature } = require("./engineManifest");
 
@@ -15,17 +15,6 @@ const PACK_EXTENSION = ".riskwise-pack";
 const SIG_EXTENSION = ".minisig";
 
 const NULL_LOGGER = { info() {}, warn() {}, error() {} };
-
-// MSYS2 / Git-Bash GNU tar interprets `C:` as a remote host
-// ("Cannot connect to C: resolve failed"); the Windows-bundled bsdtar
-// at %SystemRoot%\System32\tar.exe handles drive-letter paths natively.
-// Resolve the system tar explicitly so dev environments with MSYS2 first
-// in PATH don't silently mis-extract.
-const resolveSystemTar = () => {
-  if (process.platform !== "win32") return "tar";
-  const systemRoot = process.env.SystemRoot || "C:\\Windows";
-  return path.join(systemRoot, "System32", "tar.exe");
-};
 
 const sha256OfBuffer = (buf) => crypto.createHash("sha256").update(buf).digest("hex");
 
@@ -43,10 +32,64 @@ const verifyPackSignature = (packBytes, sigText, pubKeyFileText) => {
   }
 };
 
+// Pure-Node ZIP extractor — supports store (method 0) and deflate (method 8).
+// Avoids shelling out to tar/unzip so the same code path runs on every OS
+// without worrying about GNU tar vs bsdtar vs MSYS2 path-handling differences.
+const extractZip = (zipBuf, destDir) => {
+  let pos = zipBuf.length - 22;
+  while (pos >= 0) {
+    if (zipBuf.readUInt32LE(pos) === 0x06054b50) break;
+    pos--;
+  }
+  if (pos < 0) throw new Error("ZIP EOCD not found");
+
+  const cdCount = zipBuf.readUInt16LE(pos + 10);
+  let cdOffset = zipBuf.readUInt32LE(pos + 16);
+
+  for (let i = 0; i < cdCount; i++) {
+    if (zipBuf.readUInt32LE(cdOffset) !== 0x02014b50) throw new Error("Bad central directory");
+    const method = zipBuf.readUInt16LE(cdOffset + 10);
+    const compSize = zipBuf.readUInt32LE(cdOffset + 20);
+    const uncompSize = zipBuf.readUInt32LE(cdOffset + 24);
+    const nameLen = zipBuf.readUInt16LE(cdOffset + 28);
+    const extraLen = zipBuf.readUInt16LE(cdOffset + 30);
+    const commentLen = zipBuf.readUInt16LE(cdOffset + 32);
+    const lfhOffset = zipBuf.readUInt32LE(cdOffset + 42);
+    const name = zipBuf.toString("utf8", cdOffset + 46, cdOffset + 46 + nameLen);
+    cdOffset += 46 + nameLen + extraLen + commentLen;
+
+    if (name.endsWith("/")) {
+      fs.mkdirSync(path.join(destDir, name), { recursive: true });
+      continue;
+    }
+
+    const lfhNameLen = zipBuf.readUInt16LE(lfhOffset + 26);
+    const lfhExtraLen = zipBuf.readUInt16LE(lfhOffset + 28);
+    const dataStart = lfhOffset + 30 + lfhNameLen + lfhExtraLen;
+    const compData = zipBuf.subarray(dataStart, dataStart + compSize);
+
+    let data;
+    if (method === 0) {
+      data = compData;
+    } else if (method === 8) {
+      data = zlib.inflateRawSync(compData);
+    } else {
+      throw new Error(`Unsupported ZIP compression method ${method}`);
+    }
+
+    if (data.length !== uncompSize) throw new Error(`Size mismatch for ${name}`);
+
+    const outPath = path.join(destDir, name);
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+    fs.writeFileSync(outPath, data);
+  }
+};
+
 const extractPack = (packPath, destDir) => {
   fs.rmSync(destDir, { recursive: true, force: true });
   fs.mkdirSync(destDir, { recursive: true });
-  execFileSync(resolveSystemTar(), ["-xf", packPath, "-C", destDir], { stdio: "pipe" });
+  const zipBuf = fs.readFileSync(packPath);
+  extractZip(zipBuf, destDir);
 };
 
 const importDataPack = ({ packPath, sigPath, publicKeyText, destRoot, logger }) => {
