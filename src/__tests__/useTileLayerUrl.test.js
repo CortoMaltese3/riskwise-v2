@@ -18,7 +18,7 @@ describe("useTileLayerUrl", () => {
     resetOfflineStore();
   });
 
-  it("returns the OpenStreetMap URL when offline mode is off", () => {
+  it("returns the remote tile URL when offline mode is off", () => {
     const { result } = renderHook(() => useTileLayerUrl());
     expect(result.current).toBe(REMOTE_TILE_URL);
   });

@@ -56,7 +56,8 @@ const HazardMap = () => {
     async (rpLayer) => {
       try {
         const tempPath = await window.electron.fetchTempDir();
-        const response = await fetch(`${tempPath}/hazards_geodata.json`);
+        const fileUrl = "file:///" + tempPath.replace(/\\/g, "/") + "/hazards_geodata.json";
+        const response = await fetch(fileUrl);
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

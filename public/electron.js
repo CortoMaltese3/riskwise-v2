@@ -33,7 +33,7 @@ const CSP_DIRECTIVES = [
   // `127.0.0.1:*` is allowed for the offline-mode MBTiles tile server,
   // which serves PNG tiles from a loopback ephemeral port (see
   // `tileServer.js`). Keep in sync with the meta tag in `index.html`.
-  "img-src 'self' data: blob: file: http://127.0.0.1:*",
+  "img-src 'self' data: blob: file: http://127.0.0.1:* https://*.basemaps.cartocdn.com",
   "font-src 'self' data:",
   "connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*",
   "worker-src 'self' blob:",

@@ -29,7 +29,8 @@ const ExposureMap = () => {
   const fetchGeoJson = async (layer) => {
     try {
       const tempPath = await window.electron.fetchTempDir();
-      const response = await fetch(`${tempPath}/exposures_geodata.json`);
+      const fileUrl = "file:///" + tempPath.replace(/\\/g, "/") + "/exposures_geodata.json";
+      const response = await fetch(fileUrl);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

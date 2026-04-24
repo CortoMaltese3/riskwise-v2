@@ -1,6 +1,6 @@
 import useStore from "../../store";
 
-const REMOTE_TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const REMOTE_TILE_URL = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 
 // When offline mode is active AND the local MBTiles tile server is up,
 // route Leaflet to the loopback URL so map tiles never leave the
