@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import Joyride, { STATUS } from "react-joyride";
+import { Joyride, STATUS } from "react-joyride";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 
