@@ -16,6 +16,7 @@ import HomeView from "./views/HomeView";
 import SettingsView from "../settings/SettingsView";
 import UpdateDialog from "../UpdateDialog";
 import EngineStatusBanner from "../EngineStatusBanner";
+import OfflineIndicator from "./OfflineIndicator";
 
 const sectionToTab = { home: 0, risk: 1, macro: 2, workspace: 3, settings: 0 };
 
@@ -143,6 +144,7 @@ const AppShell = () => {
         <Section />
       </Box>
       <UpdateDialog />
+      <OfflineIndicator />
     </Box>
   );
 };

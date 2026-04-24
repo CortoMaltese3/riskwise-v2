@@ -87,6 +87,15 @@ const useStore = create((set, get) => ({
   activeSection: "risk",
   sidebarCollapsed: readSidebarCollapsed(),
   showChartValues: readShowChartValues(),
+  // Offline mode. Source of truth is electron-store on the main side;
+  // the renderer mirrors it via the `electron.offline` IPC bridge.
+  // ``offlineTilePort`` stays null until the local MBTiles tile server
+  // is up — map components fall back to the remote CDN whenever it is
+  // null, regardless of the toggle.
+  offlineMode: false,
+  offlineTilePort: null,
+  offlineTilesPath: null,
+  offlineImportedPacks: [],
   // Onboarding / guided-tour state. ``hasSeenWalkthrough`` is the only
   // persisted first-run flag; ``activeTour``/``tourStep`` are persisted so a
   // guided tour survives accidental reloads (resumable, per issue #88).
@@ -174,6 +183,33 @@ const useStore = create((set, get) => ({
     set(() => ({
       reports: newReports,
     })),
+
+  // Apply an offline-status payload from the main process. Skips the
+  // `set` when no scalar field changed so subscribers don't re-render
+  // on every redundant broadcast (the main side broadcasts on each
+  // toggle / rescan even when the new payload is identical).
+  applyOfflineStatus: (status) => {
+    if (!status || typeof status !== "object") return;
+    const next = {
+      offlineMode: Boolean(status.enabled),
+      offlineTilePort: status.tilePort ?? null,
+      offlineTilesPath: status.tilesPath ?? null,
+      offlineImportedPacks: Array.isArray(status.importedPacks) ? status.importedPacks : [],
+    };
+    const prev = get();
+    const packsChanged =
+      prev.offlineImportedPacks.length !== next.offlineImportedPacks.length ||
+      prev.offlineImportedPacks.some((p, i) => p !== next.offlineImportedPacks[i]);
+    if (
+      prev.offlineMode === next.offlineMode &&
+      prev.offlineTilePort === next.offlineTilePort &&
+      prev.offlineTilesPath === next.offlineTilesPath &&
+      !packsChanged
+    ) {
+      return;
+    }
+    set(next);
+  },
 
   setActiveSection: (section) => set({ activeSection: section }),
   setSidebarCollapsed: (collapsed) => {

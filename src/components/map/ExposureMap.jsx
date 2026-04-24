@@ -9,10 +9,12 @@ import { formatNumber } from "../../lib/formatNumber";
 import { getScaleLegacy } from "../../utils/colorScalesLegacy";
 import LegendLegacy from "./LegendLegacy";
 import useStore from "../../store";
+import useTileLayerUrl from "./useTileLayerUrl";
 
 const adminLayers = [0, 1, 2]; // Administrative layers
 
 const ExposureMap = () => {
+  const tileLayerUrl = useTileLayerUrl();
   const { selectedCountry, selectedExposureEconomic, selectedHazard, setActiveMapRef } = useStore();
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
@@ -153,11 +155,7 @@ const ExposureMap = () => {
       zoom={6}
       style={{ height: "100%", width: "100%" }}
     >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        maxZoom={15}
-        minZoom={5}
-      />
+      <TileLayer url={tileLayerUrl} maxZoom={15} minZoom={5} />
       <MapEvents />
       <div style={buttonContainerStyle}>
         {adminLayers.map((layer) => (

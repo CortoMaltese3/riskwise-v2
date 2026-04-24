@@ -11,6 +11,9 @@ const {
   resolveReleaseChannel,
   verifyEngineManifest,
 } = require("./engineManifest");
+const { scanAndImportPacks } = require("./dataPacks");
+const { startTileServer } = require("./tileServer");
+const { TILES_FILENAME } = require("./offlineConstants");
 
 global.pythonProcess = null;
 
@@ -27,7 +30,10 @@ const CSP_DIRECTIVES = [
   "form-action 'none'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: file:",
+  // `127.0.0.1:*` is allowed for the offline-mode MBTiles tile server,
+  // which serves PNG tiles from a loopback ephemeral port (see
+  // `tileServer.js`). Keep in sync with the meta tag in `index.html`.
+  "img-src 'self' data: blob: file: http://127.0.0.1:*",
   "font-src 'self' data:",
   "connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*",
   "worker-src 'self' blob:",
@@ -530,6 +536,14 @@ app.whenReady().then(async () => {
     checkForAppUpdates("startup").catch(() => {});
     startUpdateCheckTimer();
   }
+
+  importStartupDataPacks();
+  if (isOfflineMode()) {
+    ensureTileServer().catch((err) =>
+      log.error("[electron] tile server start failed:", err.message)
+    );
+  }
+  broadcastOfflineStatus();
 });
 
 const createLoaderWindow = () => {
@@ -641,7 +655,30 @@ class BackendError extends Error {
   }
 }
 
+// Path prefixes that hit the CLIMADA Client API on the backend side.
+// When offline mode is active, the IPC layer rejects these so a renderer
+// XSS cannot exfiltrate via "fetch from client" actions even if the UI
+// guard is bypassed. Add new client-bound routes to this list as they
+// are wired up — the renderer surfaces the structured error envelope.
+const CLIMADA_CLIENT_ROUTE_PREFIXES = [
+  "/api/v1/climada-client/",
+  "/api/v1/hazard/fetch-from-client",
+];
+
+const isClimadaClientRoute = (urlPath) =>
+  typeof urlPath === "string" &&
+  CLIMADA_CLIENT_ROUTE_PREFIXES.some((prefix) => urlPath.startsWith(prefix));
+
 const httpRequest = async (method, path, body, requestId) => {
+  if (isOfflineMode() && isClimadaClientRoute(path)) {
+    throw new BackendError({
+      code: "offline_mode_active",
+      message: "CLIMADA Client API is unavailable in offline mode",
+      detail: `Request to ${path} blocked because offline mode is enabled`,
+      error_id: randomErrorId(),
+      request_id: requestId || null,
+    });
+  }
   if (!backendBaseUrl) {
     throw new BackendError({
       code: "backend_unavailable",
@@ -1275,14 +1312,107 @@ ipcMain.handle("select-measures-dataset", async () => {
 // Auto-update pipeline (issue #115, Area 13)
 // ---------------------------------------------------------------------------
 
-// Offline mode is stubbed here and fully wired from the Settings panel in
-// Area 14. Anything that touches the network (app update check, release
-// notes fetch, engine-manifest fetch, engine download) must read this flag
-// first. We also treat a missing `net` module as "offline" so tests that
-// run outside Electron don't blow up.
+// Offline mode. The toggle persists in `electron-store` (separate from
+// `riskwise.db` so the app still works if the DB is unavailable). Every
+// network code path — update check, release-notes fetch, engine-manifest
+// fetch, engine download, future telemetry — must call `isOfflineMode()`
+// before going to the network. The renderer learns the current state
+// via `offline:get-status` and `offline:status-changed`.
+const PACKS_DIRNAME = "packs";
+const USER_DATA_SUBDIR = "user-data";
+
+const NOOP_TILE_SERVER = Object.freeze({ port: null, close: async () => {} });
+
+let tileServerHandle = NOOP_TILE_SERVER;
+let importedPacks = [];
+let cachedMbtilesPath;
+
 const isOfflineMode = () => {
   if (!updateStore) return false;
   return Boolean(updateStore.get("offlineMode", false));
+};
+
+// The tile pack path doesn't change at runtime — packed once into
+// `extraResources` by the offline installer, never moved. Cache the
+// first lookup so per-IPC `offline:get-status` calls don't re-stat.
+const getMbtilesPath = () => {
+  if (cachedMbtilesPath === undefined) {
+    cachedMbtilesPath = resolveBundledResource("data", "tiles", TILES_FILENAME);
+  }
+  return cachedMbtilesPath;
+};
+
+const getOfflineStatus = () => ({
+  enabled: isOfflineMode(),
+  tilePort: tileServerHandle.port,
+  tilesPath: getMbtilesPath(),
+  importedPacks,
+});
+
+const broadcastOfflineStatus = () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("offline:status-changed", getOfflineStatus());
+  }
+};
+
+const ensureTileServer = async () => {
+  if (!isOfflineMode()) {
+    if (tileServerHandle.port) {
+      await tileServerHandle.close();
+      tileServerHandle = NOOP_TILE_SERVER;
+    }
+    return;
+  }
+  if (tileServerHandle.port) return;
+  const mbtilesPath = getMbtilesPath();
+  if (!mbtilesPath) {
+    log.warn("[electron] offline mode active but no MBTiles pack found — tiles unavailable");
+    return;
+  }
+  try {
+    tileServerHandle = await startTileServer({ mbtilesPath, logger: log });
+  } catch (err) {
+    log.error("[electron] failed to start tile server:", err.message);
+    tileServerHandle = NOOP_TILE_SERVER;
+  }
+};
+
+const setOfflineMode = async (enabled) => {
+  if (!updateStore) {
+    return { error: "update store not initialized" };
+  }
+  updateStore.set("offlineMode", Boolean(enabled));
+  log.info(`[electron] offline mode -> ${enabled ? "enabled" : "disabled"}`);
+  await ensureTileServer();
+  broadcastOfflineStatus();
+  return getOfflineStatus();
+};
+
+// Scan `%APPDATA%/RISK WISE/packs/` for `.riskwise-pack` files. Each
+// pack needs a sibling `.minisig` produced by `minisign -Sm <pack>`;
+// verification uses the engine-manifest public key. A bad signature
+// rejects the pack with a structured error the renderer surfaces in
+// the Offline panel.
+const importStartupDataPacks = () => {
+  importedPacks = [];
+  let publicKeyText;
+  try {
+    publicKeyText = readEnginePublicKey();
+  } catch (err) {
+    log.warn(`[electron] data-pack scan skipped: ${err.message}`);
+    return importedPacks;
+  }
+  try {
+    importedPacks = scanAndImportPacks({
+      packsDir: path.join(userDataDir, PACKS_DIRNAME),
+      publicKeyText,
+      destRoot: path.join(userDataDir, USER_DATA_SUBDIR),
+      logger: log,
+    });
+  } catch (err) {
+    log.error(`[electron] data-pack scan failed: ${err.message}`);
+  }
+  return importedPacks;
 };
 
 const checkForAppUpdates = async (reason) => {
@@ -1435,23 +1565,32 @@ const sha256File = (filePath) =>
     stream.on("error", reject);
   });
 
-const readEnginePublicKey = () => {
-  // In dev the unpackaged tree keeps resources/ alongside public/; in a
-  // packaged build electron-builder copies resources/ under the app
-  // resources root. `process.resourcesPath` is the packaged location;
-  // `basePath` covers the dev case.
+// In dev the unpackaged tree keeps `resources/` and `data/` alongside
+// `public/`; in a packaged build electron-builder copies them under the
+// app resources root. `process.resourcesPath` is the packaged location;
+// `basePath` covers the dev case. Returns the first existing candidate
+// path, or `null` if none match — caller decides whether absence is an
+// error (engine pubkey, throw) or the expected normal path (tile pack
+// in the lean installer).
+const resolveBundledResource = (...segments) => {
   const candidates = [
-    path.join(basePath, "resources", ENGINE_PUB_KEY_FILENAME),
-    path.join(process.resourcesPath || "", ENGINE_PUB_KEY_FILENAME),
+    path.join(basePath, ...segments),
+    process.resourcesPath ? path.join(process.resourcesPath, ...segments) : null,
   ];
   for (const candidate of candidates) {
-    if (candidate && fs.existsSync(candidate)) {
-      return fs.readFileSync(candidate, "utf8");
-    }
+    if (candidate && fs.existsSync(candidate)) return candidate;
   }
-  throw new Error(
-    `engine-manifest public key not found in any of: ${candidates.filter(Boolean).join(", ")}`
-  );
+  return null;
+};
+
+const readEnginePublicKey = () => {
+  const found = resolveBundledResource("resources", ENGINE_PUB_KEY_FILENAME);
+  if (!found) {
+    throw new Error(
+      `engine-manifest public key not found alongside resources/${ENGINE_PUB_KEY_FILENAME}`
+    );
+  }
+  return fs.readFileSync(found, "utf8");
 };
 
 // Fetch + verify the engine manifest. Verification must happen BEFORE we
@@ -1615,6 +1754,21 @@ ipcMain.handle("engine:check-blocked", async () => {
   }
 });
 
+ipcMain.handle("offline:get-status", () => getOfflineStatus());
+
+ipcMain.handle("offline:set-enabled", async (_evt, payload) => {
+  const enabled = Boolean(payload && payload.enabled);
+  return setOfflineMode(enabled);
+});
+
+ipcMain.handle("data-packs:get-status", () => importedPacks);
+
+ipcMain.handle("data-packs:rescan", () => {
+  const results = importStartupDataPacks();
+  broadcastOfflineStatus();
+  return results;
+});
+
 ipcMain.handle("engine:download-update", async () => {
   try {
     const manifest = await fetchVerifiedEngineManifest();
@@ -1714,6 +1868,10 @@ app.on("before-quit", () => {
   if (updateCheckTimer) {
     clearInterval(updateCheckTimer);
     updateCheckTimer = null;
+  }
+  if (tileServerHandle && tileServerHandle.port) {
+    tileServerHandle.close().catch(() => {});
+    tileServerHandle = NOOP_TILE_SERVER;
   }
   cleanupPython();
 });

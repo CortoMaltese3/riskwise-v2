@@ -16,7 +16,9 @@
     "quickstart": "electron .",
     "pack": "electron-builder --dir",
     "dist": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder -w",
+    "dist:offline": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false OFFLINE_INSTALLER=1 electron-builder -w",
     "publish": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder -w --publish always",
+    "publish:offline": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false OFFLINE_INSTALLER=1 electron-builder -w --publish always",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -106,80 +108,7 @@
     "node": ">=20",
     "npm": ">=10"
   },
-  "build": {
-    "asar": false,
-    "forceCodeSigning": false,
-    "afterPack": "scripts/apply-electron-fuses.js",
-    "appId": "com.giz.riskwise",
-    "productName": "RISK WISE",
-    "files": [
-      "build/**/*",
-      "backend/**/*",
-      "requirements/",
-      "data/entities/",
-      "data/hazards/"
-    ],
-    "icon": "build/icon.ico",
-    "directories": {
-      "output": "dist/${version}",
-      "buildResources": "assets"
-    },
-    "artifactName": "RiskWiseInstaller-v${version}-Setup.${ext}",
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "gkalomalos",
-        "repo": "ERA-Project_RISK-WISE",
-        "releaseType": "release",
-        "channel": "latest"
-      }
-    ],
-    "generateUpdatesFilesForAllChannels": true,
-    "extraResources": [
-      {
-        "from": "resources",
-        "to": "."
-      }
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "7z",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "build/icon.ico",
-      "signingHashAlgorithms": [
-        "sha256"
-      ],
-      "signAndEditExecutable": true,
-      "publisherName": "<org name when cert available>"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "allowElevation": true,
-      "license": "EULA.txt",
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "include": "installer/installer.nsh",
-      "displayLanguageSelector": false
-    }
+  "optionalDependencies": {
+    "@mapbox/mbtiles": "^0.12.1"
   }
 }

@@ -81,6 +81,28 @@ const ed25519PublicKeyFromRaw = (rawKey) =>
     type: "spki",
   });
 
+// Verify a parsed minisign signature against arbitrary bytes. Used by
+// both the engine-manifest (canonical-JSON bytes) and signed data-pack
+// (raw file bytes) verifiers — extracting the shared core keeps the
+// `Ed` vs prehashed branch in one place.
+const verifyMinisignSignature = (messageBytes, sigText, publicKeyFileText) => {
+  const pubKey = parseMinisignPublicKey(publicKeyFileText);
+  const sig = parseMinisignSignatureBlob(sigText);
+  if (!sig.keyId.equals(pubKey.keyId)) {
+    throw new Error("Signed with an unknown key");
+  }
+  const toVerify =
+    sig.sigAlg === "Ed"
+      ? messageBytes
+      : crypto.createHash("blake2b512").update(messageBytes).digest();
+  const keyObj = ed25519PublicKeyFromRaw(pubKey.publicKey);
+  const ok = crypto.verify(null, toVerify, keyObj, sig.signature);
+  if (!ok) {
+    throw new Error("Signature did not verify");
+  }
+  return { keyId: pubKey.keyId.toString("hex") };
+};
+
 // Canonical serialization: keys sorted alphabetically, no whitespace, no
 // signature field. Signing and verifying must use the same representation
 // — a single whitespace difference invalidates the signature.
@@ -107,23 +129,16 @@ const verifyEngineManifest = (manifestText, publicKeyFileText) => {
       throw new Error(`Manifest is missing required field: ${field}`);
     }
   }
-  const pubKey = parseMinisignPublicKey(publicKeyFileText);
-  const sig = parseMinisignSignatureBlob(manifest.signature);
-  if (!sig.keyId.equals(pubKey.keyId)) {
-    throw new Error("Manifest was signed with an unknown key");
-  }
-  const message = canonicalManifestBytes(manifest);
-  let toVerify;
-  if (sig.sigAlg === "Ed") {
-    toVerify = message;
-  } else {
-    // Prehashed mode — minisign hashes with BLAKE2b-512 before signing.
-    toVerify = crypto.createHash("blake2b512").update(message).digest();
-  }
-  const keyObj = ed25519PublicKeyFromRaw(pubKey.publicKey);
-  const ok = crypto.verify(null, toVerify, keyObj, sig.signature);
-  if (!ok) {
-    throw new Error("Manifest signature did not verify");
+  try {
+    verifyMinisignSignature(canonicalManifestBytes(manifest), manifest.signature, publicKeyFileText);
+  } catch (err) {
+    if (/unknown key/i.test(err.message)) {
+      throw new Error("Manifest was signed with an unknown key");
+    }
+    if (/did not verify/i.test(err.message)) {
+      throw new Error("Manifest signature did not verify");
+    }
+    throw err;
   }
   return manifest;
 };
@@ -181,12 +196,15 @@ const resolveReleaseChannel = (envChannel, appVersion) => {
 
 module.exports = {
   ALLOWED_CHANNELS,
+  ED25519_SPKI_DER_PREFIX,
   canonicalManifestBytes,
   channelFromVersion,
   compareVersions,
+  ed25519PublicKeyFromRaw,
   isEngineVersionCompatible,
   parseMinisignPublicKey,
   parseMinisignSignatureBlob,
   resolveReleaseChannel,
   verifyEngineManifest,
+  verifyMinisignSignature,
 };

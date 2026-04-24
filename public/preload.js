@@ -94,6 +94,25 @@ contextBridge.exposeInMainWorld("electron", {
     checkBlocked: () => ipcRenderer.invoke("engine:check-blocked"),
     downloadUpdate: () => ipcRenderer.invoke("engine:download-update"),
   },
+
+  // Offline mode (issue #116, Area 14). The Settings panel calls
+  // `getStatus`/`setEnabled` to drive the toggle; the AppShell subscribes
+  // to `onStatusChanged` so the status-bar indicator and tile-URL
+  // switching stay in sync if the toggle flips from another window.
+  offline: {
+    getStatus: () => ipcRenderer.invoke("offline:get-status"),
+    setEnabled: (enabled) => ipcRenderer.invoke("offline:set-enabled", { enabled }),
+    onStatusChanged: (callback) => subscribe("offline:status-changed", callback),
+  },
+
+  // Signed `.riskwise-pack` data packs (issue #116, Area 14). The main
+  // process verifies signatures on startup; the renderer reads the
+  // resulting per-pack status and can request a rescan after the user
+  // drops new files into `%APPDATA%/RISK WISE/packs/`.
+  dataPacks: {
+    getStatus: () => ipcRenderer.invoke("data-packs:get-status"),
+    rescan: () => ipcRenderer.invoke("data-packs:rescan"),
+  },
 });
 
 contextBridge.exposeInMainWorld("api", {
