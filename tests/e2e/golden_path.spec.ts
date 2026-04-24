@@ -17,7 +17,13 @@
  * workspace rows) the spec targets a DOM attribute Leaflet itself emits
  * (``.leaflet-tile-loaded``) or the scenario name the flow just wrote.
  */
-import { _electron as electron, expect, test, type ElectronApplication, type Page } from "@playwright/test";
+import {
+  _electron as electron,
+  expect,
+  test,
+  type ElectronApplication,
+  type Page,
+} from "@playwright/test";
 import path from "node:path";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
@@ -82,7 +88,10 @@ test("Egypt flood scenario: run → map → save → restore", async () => {
   await expect(window.getByText(scenarioName)).toBeVisible();
 
   // Restore the scenario — typically a row-level action or button.
-  await window.getByRole("button", { name: /restore/i }).first().click();
+  await window
+    .getByRole("button", { name: /restore/i })
+    .first()
+    .click();
   // Leaflet must re-render after restore.
   await expect(window.locator(".leaflet-tile-loaded").first()).toBeVisible({ timeout: 60_000 });
 });

@@ -8,7 +8,13 @@
  * ships — a mocked renderer would bypass the Electron save dialog that
  * actually writes the PDF.
  */
-import { _electron as electron, expect, test, type ElectronApplication, type Page } from "@playwright/test";
+import {
+  _electron as electron,
+  expect,
+  test,
+  type ElectronApplication,
+  type Page,
+} from "@playwright/test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -21,9 +27,15 @@ let window: Page;
 let exportDir: string;
 
 async function runScenario(page: Page, country: RegExp, hazard: RegExp, name: string) {
-  await page.getByRole("combobox", { name: /country/i }).first().click();
+  await page
+    .getByRole("combobox", { name: /country/i })
+    .first()
+    .click();
   await page.getByRole("option", { name: country }).click();
-  await page.getByRole("combobox", { name: /hazard/i }).first().click();
+  await page
+    .getByRole("combobox", { name: /hazard/i })
+    .first()
+    .click();
   await page.getByRole("option", { name: hazard }).click();
   await page.getByRole("button", { name: /^run$/i }).click();
   await expect(page.locator(".leaflet-tile-loaded").first()).toBeVisible({ timeout: 90_000 });

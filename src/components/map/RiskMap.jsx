@@ -11,8 +11,10 @@ import "leaflet/dist/leaflet.css";
 import { getScale } from "../../utils/colorScales";
 import Legend from "./Legend";
 import useStore from "../../store";
+import useTileLayerUrl from "./useTileLayerUrl";
 
 const RiskMap = () => {
+  const tileLayerUrl = useTileLayerUrl();
   const {
     selectedCountry,
     selectedHazard,
@@ -228,11 +230,7 @@ const RiskMap = () => {
       zoom={6}
       style={{ position: "relative", height: "100%", width: "100%" }}
     >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        maxZoom={15}
-        minZoom={5}
-      />
+      <TileLayer url={tileLayerUrl} maxZoom={15} minZoom={5} />
       <MapEvents />
       <div style={buttonContainerStyle}>
         {returnPeriods.map((rp) => (

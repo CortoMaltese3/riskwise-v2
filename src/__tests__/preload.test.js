@@ -36,6 +36,10 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "engine:verify-manifest",
   "engine:check-blocked",
   "engine:download-update",
+  "offline:get-status",
+  "offline:set-enabled",
+  "data-packs:get-status",
+  "data-packs:rescan",
 ]);
 
 const ALLOWED_SEND_CHANNELS = new Set(["shutdown", "minimize", "reload", "log:renderer"]);
@@ -48,6 +52,7 @@ const ALLOWED_LISTEN_CHANNELS = new Set([
   "copy-folder-reply",
   "update:available",
   "update:downloaded",
+  "offline:status-changed",
 ]);
 
 const loadPreload = () => {
@@ -127,6 +132,10 @@ describe("preload bridge surface", () => {
     exposed.electron.engine.verifyManifest();
     exposed.electron.engine.checkBlocked();
     exposed.electron.engine.downloadUpdate();
+    exposed.electron.offline.getStatus();
+    exposed.electron.offline.setEnabled(true);
+    exposed.electron.dataPacks.getStatus();
+    exposed.electron.dataPacks.rescan();
     exposed.api.http.request("GET", "/", null, "rid");
     exposed.api.http.runScenario({}, "rid");
     exposed.api.http.cancelScenario("job", "rid");
@@ -161,6 +170,7 @@ describe("preload bridge surface", () => {
       exposed.electron.onCopyFolderReply(() => {}),
       exposed.electron.updates.onAvailable(() => {}),
       exposed.electron.updates.onDownloaded(() => {}),
+      exposed.electron.offline.onStatusChanged(() => {}),
       exposed.api.onBackendError(() => {}),
     ];
 
