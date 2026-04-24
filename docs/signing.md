@@ -2,7 +2,7 @@
 
 This document explains how to activate Authenticode signing for RISK WISE
 Windows builds once a certificate is available. The infrastructure is already
-wired into `package.json` and `.github/workflows/app_release.yml`; only the CI
+wired into `package.json` and `.github/workflows/release.yml`; only the CI
 secrets and `publisherName` need to change.
 
 Background: [DECISIONS.md D07](DECISIONS.md#d07--code-signing-wire-infrastructure-now-activate-when-cert-available)
@@ -54,7 +54,7 @@ env vars (typically via a wrapped `signtool` under the hood).
 | `WINDOWS_CERTIFICATE` | Base64-encoded PFX/p12 (wired to `CSC_LINK`). |
 | `WINDOWS_CERTIFICATE_PASSWORD` | PFX passphrase (wired to `CSC_KEY_PASSWORD`). |
 
-Both names are already referenced in [.github/workflows/app_release.yml](../.github/workflows/app_release.yml).
+Both names are already referenced in [.github/workflows/release.yml](../.github/workflows/release.yml).
 
 ### Activation steps
 
@@ -111,7 +111,7 @@ Replace the `publisherName` placeholder with the verified publisher and add
 
 ### Workflow change
 
-Swap the shell guard in [.github/workflows/app_release.yml](../.github/workflows/app_release.yml)
+Swap the shell guard in [.github/workflows/release.yml](../.github/workflows/release.yml)
 from `[ -n "$CSC_LINK" ]` to a step with `if: env.AZURE_CLIENT_ID != ''` and
 export the six Azure env vars from secrets. Keep the unsigned fallback path
 so fork builds and local runs still succeed.

@@ -258,9 +258,31 @@ should not drive a decision.
 | PyInstaller `--onedir` | TBD | TBD | TBD | TBD | Fallback / baseline. |
 | PyInstaller `--onefile` | TBD | TBD | TBD | TBD | Optional; documents the temp-extract cost. |
 
-Each filled cell must also log: Python version, OS build, CPU model, `requirements.lock.txt`
-hash, and CLIMADA version. Put those in a footnote under the table once
-measurements land — not inline here.
+Each row above is a rendering of a single measurement row produced by
+`scripts/measure_engine.ps1`. The underlying JSON schema — which CI
+captures as a workflow artefact and which the maintainer pastes into the
+table above once collected — is:
+
+```json
+{
+  "bundler": "nuitka | pyinstaller | unbundled",
+  "bundle_size_mb": 0.0,
+  "cold_start_ms": 0.0,
+  "scenario_runtime_s": 0.0,
+  "runtime_delta_pct": 0.0,
+  "python_version": "Python 3.11.x",
+  "os_build": "Microsoft Windows … 10.0.22631",
+  "lock_hash": "<sha256 of the resolved lock file used for the build>"
+}
+```
+
+The `python_version`, `os_build`, and `lock_hash` fields are the
+per-row reproducibility footnote called out earlier in this section —
+record them alongside each filled cell (e.g. under the table as a
+footnote block, keyed by the row). CPU model is not captured by the
+JSON schema because the reference hardware in §4.1 and
+[`docs/benchmarks.md`](../benchmarks.md) already pins it; only rows taken
+on a different box need a CPU-model override in the footnote.
 
 ---
 
