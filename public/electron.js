@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, net, session, shell, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, net, protocol, session, shell, dialog } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const { spawn } = require("child_process");
 const path = require("path");
@@ -161,6 +161,13 @@ const cleanupPython = () => {
   }
   global.pythonProcess = null;
 };
+
+// Register `app://` as a privileged scheme so the renderer gets a real origin
+// (not `null`) when loaded from `file://` with webSecurity enabled. Must be
+// called before `app.whenReady()`.
+protocol.registerSchemesAsPrivileged([
+  { scheme: "app", privileges: { standard: true, secure: true, supportFetchAPI: true } },
+]);
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -375,7 +382,7 @@ app.on("web-contents-created", (_event, contents) => {
   });
 
   contents.on("will-navigate", (event, url) => {
-    if (!url.startsWith("file://")) {
+    if (!url.startsWith("file://") && !url.startsWith("app://")) {
       event.preventDefault();
       log.warn("[electron] blocked navigation to:", url);
     }
@@ -403,6 +410,17 @@ app.whenReady().then(async () => {
   // Block permission requests (camera, microphone, geolocation, etc.) — the
   // app does not need any of them, so deny by default.
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, deny) => deny(false));
+
+  // Serve the renderer build under `app://./` so it loads with a stable,
+  // non-null origin. This avoids the CORS null-origin block that Chromium
+  // applies to `file://` pages when webSecurity is enabled and the app path
+  // contains spaces (e.g. "RISK WISE").
+  const buildRoot = path.join(basePath, "build");
+  protocol.handle("app", (request) => {
+    const url = new URL(request.url);
+    const filePath = path.join(buildRoot, url.pathname === "/" ? "index.html" : url.pathname);
+    return net.fetch(`file://${filePath}`);
+  });
 
   try {
     userLogDir = path.join(app.getPath("userData"), "logs");
@@ -810,7 +828,7 @@ const createMainWindow = () => {
 
     mainWindow.show();
     mainWindow.maximize();
-    mainWindow.loadFile(path.join(basePath, "build", "index.html"));
+    mainWindow.loadURL("app://./index.html");
 
     if (isDevelopmentEnv()) {
       mainWindow.webContents.openDevTools();
@@ -1143,9 +1161,7 @@ ipcMain.handle("export-pdf", async (_event, { scenarioId }) => {
       printWin.webContents.once("did-fail-load", (_e, code, desc) =>
         reject(new Error(`Print view failed to load: ${desc} (${code})`))
       );
-      printWin.loadFile(path.join(basePath, "build", "index.html"), {
-        query: { view: "print", scenarioId },
-      });
+      printWin.loadURL(`app://./index.html?view=print&scenarioId=${encodeURIComponent(scenarioId)}`);
     });
 
     await waitForPrintReady(printWin.webContents);

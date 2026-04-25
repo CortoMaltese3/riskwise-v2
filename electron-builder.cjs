@@ -21,7 +21,7 @@ module.exports = {
   afterPack: "scripts/apply-electron-fuses.js",
   appId: "com.giz.riskwise",
   productName: "RISK WISE",
-  files: ["build/**/*", "backend/**/*", "requirements/", "data/entities/", "data/hazards/"],
+  files: ["build/**/*", "backend/**/*", "requirements/", "data/"],
   icon: "build/icon.ico",
   directories: {
     output: "dist/${version}",
