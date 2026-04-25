@@ -93,47 +93,7 @@ The application logs important actions and errors, facilitating debugging and mo
 
 ## Documentation
 
-Ensure you generate the updated documentation when pushing relevant code. Navigate to the root directory of the app and using your terminal or command prompt, run the following command:
-
-```sh
-sphinx-build -b html docs/ docs/_build
-```
-
-Developer documentation, including a detailed description of API endpoints and usage examples, can be found [here](https://ath-git.swordgroup.lan/unu/climada-unu/).
-
-### Install LaTeX (for PDF Generation)
-
-To generate PDFs, you'll need a LaTeX distribution. Follow these instructions based on your operating system:
-
-1. **Windows**: Install [MiKTeX](https://miktex.org/download). During installation, ensure you select the option to install packages on-the-fly, so MiKTeX can automatically download any missing packages.
-
-2. **macOS**: Install [MacTeX](https://tug.org/mactex/). After installation, make sure `pdflatex` is in your PATH by opening a terminal and running:
-   ```sh
-   which pdflatex
-   ```
-
-To generate a PDF version of the documentation, follow these steps:
-
-1. **Build LaTeX Files**: Run the following command to create LaTeX files in the `docs/_build/latex` directory.
-
-   ```sh
-   sphinx-build -b latex docs/ docs/_build/latex
-
-   ```
-
-2. **Navigate to LaTeX Directory**:
-
-   ```sh
-   cd docs/_build/latex
-
-   ```
-
-3. **Generate PDF with pdflatex**:
-   Run the command below, which compiles the tex file to PDF format. If needed, run this command multiple times to ensure cross-references resolve properly.
-
-   ```sh
-   pdflatex riskwise.tex
-   ```
+Reference documentation lives under [`docs/`](docs/) as Markdown and renders directly on GitHub. The primary entry points are [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/DECISIONS.md`](docs/DECISIONS.md). A hosted documentation site (MkDocs / Material) is tracked under [issue #136](https://github.com/CortoMaltese3/riskwise-v2/issues/136) for when there is a concrete audience for it.
 
 ## Before Opening a Pull Request
 
