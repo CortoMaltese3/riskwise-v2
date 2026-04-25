@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/GIZ-RiskFinance/ERA-Project_RISK-WISE/main/docs/architecture-decisions/engine-manifest-schema.json",
+  "$id": "https://raw.githubusercontent.com/GIZ-RiskFinance/ERA-Project_RISK-WISE/main/docs/spikes/engine-manifest-schema.json",
   "title": "RISKWISE Engine Manifest",
   "description": "Manifest describing a Python engine release payload consumed by the RISKWISE Electron app. Served as engine-manifest.json from the GitHub Release assets of the engine channel and signed with an offline key (minisign v0.9 / Ed25519). The detached signature lives next to the manifest as engine-manifest.json.minisig.",
   "type": "object",

@@ -4,7 +4,7 @@
 > **Status**: 🔄 In progress — 7 of 8 spikes closed; #4 (lama engine) is the only remaining spike. Pre-flight items #22–#24 still open.
 > **Goal**: De-risk the highest-uncertainty decisions before committing to Phase 1.
 > **Canonical references**: [ARCHITECTURE.md § Phase 0](../ARCHITECTURE.md#phase-0-research-spikes-weeks-1-2), [DECISIONS.md](../DECISIONS.md) (D01–D17)
-> **Output location**: per-spike ADRs live in [`docs/architecture-decisions/`](../architecture-decisions/); `docs/security-baseline.md` and `docs/accessibility-baseline.md` are direct-to-docs
+> **Output location**: per-spike ADRs live in [`docs/spikes/`](../spikes/); the two baseline audits live in [`docs/audits/`](../audits/) (`security-baseline-v1.md`, `accessibility-baseline-v1.md`)
 
 ---
 
@@ -18,11 +18,11 @@ Eight areas of v2 carry enough uncertainty that committing to Phase 1 without ev
 
 Do these **before** starting any spike. They are blockers or shared inputs across multiple spikes.
 
-- [x] **Resolve ADR output location** — Closed 2026-04-18. DECISIONS.md D12 amended: spike research docs live in `docs/architecture-decisions/`; summary decisions still get a DECISIONS.md entry linking to the file. Issue #20 closed.
+- [x] **Resolve ADR output location** — Closed 2026-04-18. DECISIONS.md D12 amended: spike research docs live in `docs/spikes/`; summary decisions still get a DECISIONS.md entry linking to the file. Issue #20 closed.
 - [x] **Pin CLIMADA version** — Closed 2026-04-18. Issue #21 closed.
-- [ ] **Capture CLIMADA baseline numbers** — Run v1 end-to-end on Egypt flood ERA scenario; record AAL and expected damage at 50/100/250 yr return periods. Commit to `docs/architecture-decisions/baseline-climada.md` with entity/hazard file SHAs, CLIMADA version used, and host machine specs. Hard input for spike #4 numerical accuracy row and #3 performance benchmarks. Tracked on issue #22 (Phase 0 milestone).
+- [ ] **Capture CLIMADA baseline numbers** — Run v1 end-to-end on Egypt flood ERA scenario; record AAL and expected damage at 50/100/250 yr return periods. Commit to `docs/spikes/baseline-climada.md` with entity/hazard file SHAs, CLIMADA version used, and host machine specs. Hard input for spike #4 numerical accuracy row and #3 performance benchmarks. Tracked on issue #22 (Phase 0 milestone).
 - [x] **Create `phase-0` GitHub milestone** — Done. Issues #3–#10, #21–#24 attached. Meta tracking issue #25 open.
-- [ ] **Confirm benchmark hardware** — ARCHITECTURE.md targets Windows 11, Intel i5 (4 cores), 16 GB RAM, SSD. Confirm whether the dev machine matches spec, or plan a VM / secondary machine for representative measurements. Document in `docs/architecture-decisions/baseline-climada.md`. Tracked on issue #23 (Phase 0 milestone).
+- [ ] **Confirm benchmark hardware** — ARCHITECTURE.md targets Windows 11, Intel i5 (4 cores), 16 GB RAM, SSD. Confirm whether the dev machine matches spec, or plan a VM / secondary machine for representative measurements. Document in `docs/spikes/baseline-climada.md`. Tracked on issue #23 (Phase 0 milestone).
 - [ ] **Confirm enterprise-firewall test host** — #5 PoC ran on Windows 11 Enterprise (no firewall block observed). Gap: third-party endpoint-protection agents (CrowdStrike, Carbon Black) not tested. Tracked on issue #24 (Phase 0 milestone).
 
 ---
@@ -31,14 +31,14 @@ Do these **before** starting any spike. They are blockers or shared inputs acros
 
 | # | Title | Priority | Effort | Status | Output doc |
 |---|-------|----------|--------|--------|-----------|
-| 5 | FastAPI + Electron loopback HTTP PoC | Critical | M | ✅ | [`docs/architecture-decisions/adr-fastapi-poc.md`](../architecture-decisions/adr-fastapi-poc.md), DECISIONS.md D16 |
-| 10 | Security baseline audit | High | S | ✅ | [`docs/security-baseline.md`](../security-baseline.md) |
-| 9 | Accessibility baseline audit | High | S | ✅ | [`docs/accessibility-baseline.md`](../accessibility-baseline.md) |
+| 5 | FastAPI + Electron loopback HTTP PoC | Critical | M | ✅ | [`docs/spikes/adr-fastapi-poc.md`](../spikes/adr-fastapi-poc.md), DECISIONS.md D16 |
+| 10 | Security baseline audit | High | S | ✅ | [`docs/audits/security-baseline-v1.md`](../audits/security-baseline-v1.md) |
+| 9 | Accessibility baseline audit | High | S | ✅ | [`docs/audits/accessibility-baseline-v1.md`](../audits/accessibility-baseline-v1.md) |
 | 7 | Code signing research | High | S | ✅ (design) | DECISIONS.md D17 |
-| 8 | Auto-update UX design | Medium | S | ✅ (design) | [`docs/architecture-decisions/adr-autoupdate-ux.md`](../architecture-decisions/adr-autoupdate-ux.md) |
-| 6 | MUI v7 theme prototype | High | M | ✅ (design + one-screen migration) | [`docs/mui-v7-spike-notes.md`](../mui-v7-spike-notes.md) |
-| 3 | Python bundling — Nuitka vs PyInstaller | High | L | ✅ design-complete; empirical measurements deferred pending Windows runner | [`docs/architecture-decisions/adr-bundling.md`](../architecture-decisions/adr-bundling.md) |
-| 4 | climate_lama_engine hazard coverage | High | M | 🔲 not started (scope options captured in issue #4) | `docs/architecture-decisions/adr-lama-engine.md` |
+| 8 | Auto-update UX design | Medium | S | ✅ (design) | [`docs/spikes/adr-autoupdate-ux.md`](../spikes/adr-autoupdate-ux.md) |
+| 6 | MUI v7 theme prototype | High | M | ✅ (design + one-screen migration) | [`docs/spikes/mui-v7-spike-notes.md`](../spikes/mui-v7-spike-notes.md) |
+| 3 | Python bundling — Nuitka vs PyInstaller | High | L | ✅ design-complete; empirical measurements deferred pending Windows runner | [`docs/spikes/adr-bundling.md`](../spikes/adr-bundling.md) |
+| 4 | climate_lama_engine hazard coverage | High | M | 🔲 not started (scope options captured in issue #4) | `docs/spikes/adr-lama-engine.md` |
 
 Ordered by recommended sequencing (see below). Status: 🔲 not started · 🔄 in progress · ✅ done · ❌ blocked.
 
@@ -92,7 +92,7 @@ Ordered by recommended sequencing (see below). Status: 🔲 not started · 🔄 
 - Depends on #7 (trust model context). Do not start until #7 is complete.
 - The engine-manifest schema draft in the issue omits two fields from ARCHITECTURE.md: `max_app_version` (inverse-bind protection) and a signature field. Both must be in the final schema before the spike closes.
 - Add one UX rule to the consent dialog spec: engine updates queue and never interrupt an active scenario run.
-- Schema draft landed at [`docs/architecture-decisions/engine-manifest-schema.json`](../architecture-decisions/engine-manifest-schema.json).
+- Schema draft landed at [`docs/spikes/engine-manifest-schema.json`](../spikes/engine-manifest-schema.json).
 
 ### #6 MUI v7 theme
 - Choose a representative target screen before starting (recommended: the DataInput/scenario-config left panel — it has MUI form controls, i18n, and sits beside a Leaflet map).
@@ -103,13 +103,13 @@ Ordered by recommended sequencing (see below). Status: 🔲 not started · 🔄 
 - Use Egypt flood ERA as the representative scenario for all timing measurements (consistent with the ≤ 90 s benchmark target).
 - Timebox Nuitka at 3 days; document failure modes if it hits C-extension walls — do not chase bundler bugs open-endedly.
 - Decide upfront whether the `pyproject.toml` produced here is the canonical v2 file or a throwaway (it overlaps with Phase 1 Area 19).
-- **Current state** (2026-04-18): design-only ADR committed at [`docs/architecture-decisions/adr-bundling.md`](../architecture-decisions/adr-bundling.md); empirical numbers deferred until a Windows runner is available. Exactly one outstanding item tracked in §7 of that ADR.
+- **Current state** (2026-04-18): design-only ADR committed at [`docs/spikes/adr-bundling.md`](../spikes/adr-bundling.md); empirical numbers deferred until a Windows runner is available. Exactly one outstanding item tracked in §7 of that ADR.
 
 ### #4 climate_lama_engine evaluation
 - Blocked by: CLIMADA baseline capture (pre-flight item above).
 - Document mapping/unit assumptions (units, CRS) before running comparisons — small preprocessing differences can cause artificial ±% failures against the D05 thresholds.
 - Set a ceiling on drought/heatwave gap analysis depth; the M-effort estimate in the issue can blow out if it requires deep C-code reading.
-- **Current state** (2026-04-18): not started. Three scope options (full empirical / design-only / hybrid) captured on issue #4 comment. Cross-referenced with [`adr-bundling.md` §6](../architecture-decisions/adr-bundling.md) for the joint Track A/B decision matrix.
+- **Current state** (2026-04-18): not started. Three scope options (full empirical / design-only / hybrid) captured on issue #4 comment. Cross-referenced with [`adr-bundling.md` §6](../spikes/adr-bundling.md) for the joint Track A/B decision matrix.
 
 ---
 
@@ -131,15 +131,15 @@ These areas are not covered by the 8 spikes. Flagged here so they are not forgot
 
 Phase 0 is complete when all of the following are true:
 
-- [ ] All 8 spike issues closed with output docs committed to `docs/architecture-decisions/` (or direct-to-`docs/` for the two baselines) — 7/8 done; #4 (lama engine) outstanding
+- [ ] All 8 spike issues closed with output docs committed to `docs/spikes/` (or direct-to-`docs/` for the two baselines) — 7/8 done; #4 (lama engine) outstanding
 - [ ] CLIMADA baseline numbers captured and committed — blocked on issue #22
 - [ ] Track A vs Track B decision made (DECISIONS.md D05 updated with measured results) — blocked on #4 + #22
 - [x] FastAPI loopback validated on target Windows environment — validated; gap (endpoint-protection agents) explicitly documented in D16 and issue #24
 - [x] MUI v7 upgrade path validated (app boots, Leaflet + i18n intact) — done, ThemeProvider merged in #31
 - [x] Signing provider shortlist complete; infrastructure wiring plan ready for Phase 1 — DECISIONS.md D17; issue #16 tracks Phase 1 wiring
 - [x] Auto-update schema + UX spec complete; feeds Phase 1 `UpdateDialog.jsx` — `adr-autoupdate-ux.md` + `engine-manifest-schema.json` committed
-- [x] axe-core violation count and NVDA notes committed to `docs/accessibility-baseline.md` — done
-- [x] Security posture inventory committed to `docs/security-baseline.md` — done
+- [x] axe-core violation count and NVDA notes committed to `docs/audits/accessibility-baseline-v1.md` — done
+- [x] Security posture inventory committed to `docs/audits/security-baseline-v1.md` — done
 
 ---
 

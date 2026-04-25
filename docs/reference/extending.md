@@ -51,27 +51,27 @@ app calls:
 
 1. `POST /api/v1/custom-data/validate` — inspects the archive without
    writing anything, runs the same
-   [`load_country_config`](../backend/countries/loader.py) validator
+   [`load_country_config`](../../backend/countries/loader.py) validator
    used at startup, and reports a list of human-readable errors if
    the pack is malformed.
 2. `POST /api/v1/custom-data/import` — on confirmation, extracts the
    archive to `<user-data>/countries/<ISO3>/` (overwriting any prior
    custom pack for that ISO3) and calls
-   [`reset_registry()`](../backend/extensibility/registry.py) so the
+   [`reset_registry()`](../../backend/extensibility/registry.py) so the
    country shows up immediately in the country selector, tagged
    **Custom**. No restart required.
 
 The importer rejects ZIPs that contain absolute paths, `..` traversal,
 Windows drive letters, more than one country, or an ISO3 that collides
 with a built-in (`EGY`, `THA`). See
-[`backend/custom_data_handler.py`](../backend/custom_data_handler.py)
+[`backend/custom_data_handler.py`](../../backend/custom_data_handler.py)
 for the full set of guardrails.
 
 ### Namespace isolation
 
 Built-in ISO3 codes (``EGY``, ``THA``) are reserved. A custom drop-in that
 reuses a built-in code raises
-[``ExtensibilityError``](../backend/extensibility/registry.py) at startup
+[``ExtensibilityError``](../../backend/extensibility/registry.py) at startup
 rather than silently shadowing the shipped config. Rename the directory
 if you need a custom variant (e.g. ``EG2`` or a non-ISO code).
 
@@ -82,7 +82,7 @@ distinctly.
 ### Schema — `config.json`
 
 Identical to the built-in format (issue #49). See
-[``backend/countries/loader.py``](../backend/countries/loader.py) for the
+[``backend/countries/loader.py``](../../backend/countries/loader.py) for the
 canonical validator.
 
 | Field | Type | Notes |
@@ -96,7 +96,7 @@ canonical validator.
 | `source_references` | array of strings | Citations for each value. |
 
 A missing or malformed file raises
-[``CountryConfigError``](../backend/countries/loader.py) naming the file,
+[``CountryConfigError``](../../backend/countries/loader.py) naming the file,
 the offending JSON path, and the specific problem — enough for an analyst
 to fix it without reading Python source. Other (valid) custom countries
 still load; only the invalid one is rejected and surfaced via a warning log
@@ -105,9 +105,9 @@ and the API's skipped-entries list.
 ### Schema — `impact_functions.json` (optional)
 
 A JSON array of entries; same shape as the built-in
-[``countries/EGY/impact_functions.json``](../countries/EGY/impact_functions.json).
+[``countries/EGY/impact_functions.json``](../../countries/EGY/impact_functions.json).
 The loader merges custom functions into the same
-[``ImpactFunctionRegistry``](../backend/impact/registry.py) as the
+[``ImpactFunctionRegistry``](../../backend/impact/registry.py) as the
 built-ins, so these scientific invariants hold across the **combined**
 set:
 
@@ -192,8 +192,8 @@ to the inputs that produced it.
 ```
 
 For the full, un-annotated files see the shipped
-[`countries/EGY/`](../countries/EGY) and
-[`countries/THA/`](../countries/THA) packs.
+[`countries/EGY/`](../../countries/EGY) and
+[`countries/THA/`](../../countries/THA) packs.
 
 ### Full example — `impact_functions.json`
 
@@ -216,7 +216,7 @@ The file is a JSON array; each element describes one impact function.
 ```
 
 See
-[`backend/impact/registry.py`](../backend/impact/registry.py) for the
+[`backend/impact/registry.py`](../../backend/impact/registry.py) for the
 full list of invariants enforced at load time (intensity monotonicity,
 unit consistency, ID and `(exp_type, haz_type)` uniqueness).
 
@@ -224,7 +224,7 @@ unit consistency, ID and `(exp_type, haz_type)` uniqueness).
 
 Phase 3 ships the built-in catalogue as an in-tree XLSX that is seeded
 into DuckDB on first launch by
-[`backend/measures/measures_seeder.py`](../backend/measures/measures_seeder.py).
+[`backend/measures/measures_seeder.py`](../../backend/measures/measures_seeder.py).
 User-supplied measure packs are not yet on a drop-in path (roadmap
 issue #9). Until then, a custom measure is a row appended to the
 shipped workbook with the columns listed below, re-seeded on the next
@@ -248,13 +248,13 @@ The seeder rejects duplicates keyed on
 
 Hazard types shipped today — flood (`FL`), drought (`D`), heatwave
 (`HW`) — are defined by CLIMADA and by the hazard-loader code in
-[`backend/scenario/hazard.py`](../backend/scenario/hazard.py). Adding a
+[`backend/scenario/hazard.py`](../../backend/scenario/hazard.py). Adding a
 genuinely new hazard type is not yet data-only: it requires
 (a) a CLIMADA `Hazard` subclass (or a compatible HDF5 loader),
 (b) a new intensity-unit entry and impact-function rows in the country
     pack (see the "Unit consistency" rule above),
 (c) a new peril-to-hazard mapping in
-    [`backend/measures/measures_seeder.py`](../backend/measures/measures_seeder.py).
+    [`backend/measures/measures_seeder.py`](../../backend/measures/measures_seeder.py).
 
 Until the hazard registry graduates to user-supplied drop-ins (roadmap
 issue #9), treat new hazards as an in-tree change. Adding a new
@@ -266,13 +266,13 @@ extend `return_periods` in `config.json` (see the Egypt example above).
 A run against a custom country records the custom config's
 ``config_version`` and ``country_config_sha256`` on the scenarios row —
 the same fields the built-ins use
-([``backend/provenance.py``](../backend/provenance.py)). That ties every
+([``backend/provenance.py``](../../backend/provenance.py)). That ties every
 saved scenario to the exact custom config bytes that were on disk when it
 ran; re-running later after the analyst edited the pack will surface a
 different SHA.
 
 See
-[``docs/DECISIONS.md`` § D14](DECISIONS.md#d14--era-scientific-constants-user-adjustable-via-country-configs-and-entity-files)
+[``docs/DECISIONS.md`` § D14](../DECISIONS.md#d14--era-scientific-constants-user-adjustable-via-country-configs-and-entity-files)
 and
-[``docs/ARCHITECTURE.md`` § Area 22](ARCHITECTURE.md#area-22--extensibility-custom-hazards-measures--impact-functions-medium)
+[``docs/ARCHITECTURE.md`` § Area 22](../ARCHITECTURE.md#area-22--extensibility-custom-hazards-measures--impact-functions-medium)
 for the design rationale.

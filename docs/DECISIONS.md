@@ -230,7 +230,7 @@ Track A (CLIMADA + Nuitka) is selected by default if Track B fails any of the ab
 **Status**: Accepted  
 **Date**: 2026-04-16
 
-**Decision**: Target WCAG 2.1 AA compliance. Enforce via `axe-core` in CI (fails on new violations). Document conformance in `docs/accessibility.md`.
+**Decision**: Target WCAG 2.1 AA compliance. Enforce via `axe-core` in CI (fails on new violations). Document conformance in `docs/reference/accessibility.md`.
 
 **Why**:
 - RISK WISE is government-facing. Many public-sector procurement requirements mandate WCAG 2.1 AA.
@@ -330,25 +330,35 @@ not host v2 engine artifacts.
 
 **Outstanding**: validation on a machine with a third-party endpoint-protection agent (CrowdStrike, Carbon Black) is tracked by issue #24 (deferred).
 
-**Spike code**: `spike/fastapi-poc/` — 7 automated tests covering `/health` and `/stream/test`, all passing. Full findings in [`docs/architecture-decisions/adr-fastapi-poc.md`](architecture-decisions/adr-fastapi-poc.md).
+**Spike code**: `spike/fastapi-poc/` — 7 automated tests covering `/health` and `/stream/test`, all passing. Full findings in [`docs/spikes/adr-fastapi-poc.md`](spikes/adr-fastapi-poc.md).
 
 ---
 
-## D12 — Single ARCHITECTURE.md + DECISIONS.md, with per-spike ADR files in `docs/architecture-decisions/`
+## D12 — `docs/` organization: ARCHITECTURE.md + DECISIONS.md at the root, four buckets below
 
-**Status**: Amended (2026-04-18)  
+**Status**: Amended (2026-04-25)
 **Date**: 2026-04-16
 
-**Decision**: Use two documents — `ARCHITECTURE.md` (what the system looks like and the implementation roadmap) and `docs/DECISIONS.md` (this file, all key decisions) — rather than individual ADR files per decision. **Amendment**: Phase 0 spike research docs (detailed findings, measurements, test logs) live in [`docs/architecture-decisions/`](architecture-decisions/); each spike gets one file there. Summary decisions still get a `DECISIONS.md` entry that links to the file where relevant.
+**Decision**: Use two top-level documents — `docs/ARCHITECTURE.md` (what the system looks like and the implementation roadmap) and `docs/DECISIONS.md` (this file, all key decisions) — rather than individual ADR files per decision. Below the root, organize Markdown docs into four lifecycle buckets:
+
+| Folder | Lifecycle | Contents |
+|---|---|---|
+| `docs/reference/` | Current truth, long-lived | How things work today: `accessibility.md`, `benchmarks.md`, `extending.md`, `signing.md`, `offline.md` |
+| `docs/audits/` | Frozen baselines, dated snapshots | One-shot audits: `accessibility-baseline-v1.md`, `security-baseline-v1.md` |
+| `docs/spikes/` | Research, design-time | Per-spike findings: `adr-bundling.md`, `adr-fastapi-poc.md`, `adr-autoupdate-ux.md`, `mui-v7-spike-notes.md`, `engine-manifest-schema.json` |
+| `docs/plan/` | Phase plans | `phase-0-research-spikes.md` … `phase-5-optional.md` |
+
+**Amendment 2026-04-25**: Renamed `docs/architecture-decisions/` → `docs/spikes/` (its actual content is spike research, not ADRs — ADRs live in this file). Created `docs/reference/` and `docs/audits/`. Suffixed dated baselines with `-v1` to make their historical scope explicit. Added `docs/README.md` as an index. Sphinx scaffolding (`conf.py`, `*.rst`, `Makefile`) was removed; a hosted-docs evaluation lives at issue #136.
 
 **Why**:
 - Project has one primary maintainer. The overhead of separate files per decision is not justified at this scale.
 - A single `DECISIONS.md` with `##` sections is easier to scan and maintain.
 - Spike research docs are longer-form (test outputs, measurements, gap analysis) and clutter `DECISIONS.md` if inlined. A separate folder keeps them findable without splitting the decision record itself.
+- Without the four-bucket convention, `docs/` accumulated as a flat heap. Mixed lifecycles (current truth next to dated baselines) made it hard to know what was authoritative.
 
-**Amendment rationale**: During Phase 0, spikes #3, #5, and #8 each produced 10–15 kB of findings that were too detailed for a DECISIONS.md entry. `docs/architecture-decisions/` was the natural home. Issue #20 (pre-flight: resolve ADR output location) is closed by this amendment.
+**Amendment 2026-04-18 rationale**: During Phase 0, spikes #3, #5, and #8 each produced 10–15 kB of findings that were too detailed for a DECISIONS.md entry. The original `docs/architecture-decisions/` folder was the natural home. Issue #20 (pre-flight: resolve ADR output location) is closed by this amendment.
 
-**When to revisit**: if the project gains contributors or decisions start superseding each other frequently, promote to full per-decision ADR files at that point.
+**When to revisit**: if the project gains contributors or decisions start superseding each other frequently, promote to full per-decision ADR files at that point. If a hosted-docs site (issue #136) is published, this organization should map cleanly to its top-level navigation.
 
 ---
 
@@ -401,7 +411,7 @@ The user base is small (low hundreds, government officials) and will never accum
 
 Phase 1 (now, no cert needed):
 - Add commented signing skeleton to `package.json` (done — `build._signingSkeleton`).
-- Document required env vars in `docs/signing.md` when written: `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_CODE_SIGNING_ACCOUNT_NAME`, `AZURE_CERT_PROFILE_NAME`, `AZURE_ENDPOINT`.
+- Document required env vars in `docs/reference/signing.md` when written: `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_CODE_SIGNING_ACCOUNT_NAME`, `AZURE_CERT_PROFILE_NAME`, `AZURE_ENDPOINT`.
 - Add conditional signing step to `.github/workflows/release.yml` guarded by `if: env.AZURE_CLIENT_ID != ''`. Unsigned remains the fallback for forks and dev builds.
 
 Phase 4 (cert procured):
@@ -501,7 +511,7 @@ import of `public/offlineConstants.js` — were removed.
   resilience, sideloaded data) and removing them costs more than
   keeping them dormant.
 
-**Consequence**: `docs/offline.md` carries a deferred banner. The
+**Consequence**: `docs/reference/offline.md` carries a deferred banner. The
 implementation work and the discovered mismatches above are tracked in
 [GitHub issue #134](https://github.com/CortoMaltese3/riskwise-v2/issues/134).
 A separate cleanup issue ([#135](https://github.com/CortoMaltese3/riskwise-v2/issues/135))

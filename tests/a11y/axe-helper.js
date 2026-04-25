@@ -4,7 +4,7 @@ import axe from "axe-core";
 // jsdom cannot evaluate colour contrast (`color-contrast`); that rule is
 // disabled here so contrast violations do not silently slip in. Contrast
 // is covered by the manual scan documented in
-// `docs/accessibility-baseline.md` and tracked for full Playwright/Chromium
+// `docs/audits/accessibility-baseline-v1.md` and tracked for full Playwright/Chromium
 // audits in a follow-up.
 export async function runAxe(container) {
   const results = await axe.run(container, {

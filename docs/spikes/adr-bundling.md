@@ -281,7 +281,7 @@ per-row reproducibility footnote called out earlier in this section —
 record them alongside each filled cell (e.g. under the table as a
 footnote block, keyed by the row). CPU model is not captured by the
 JSON schema because the reference hardware in §4.1 and
-[`docs/benchmarks.md`](../benchmarks.md) already pins it; only rows taken
+[`docs/reference/benchmarks.md`](../reference/benchmarks.md) already pins it; only rows taken
 on a different box need a CPU-model override in the footnote.
 
 ---
@@ -329,7 +329,7 @@ of the decision matrix.
 | Track B fails any D05 criterion | Both bundlers fail §5 gates | **Escalate.** Options: (a) drop a hazard from v2 scope to pass Track B, (b) revisit Track C with online-only degraded mode, (c) fund Nuitka enterprise / commercial support to debug the bundler failure. Decision belongs to the maintainer + GIZ, not to this spike. |
 
 The lama engine spike writes the matching row from its side in
-`docs/architecture-decisions/adr-lama-engine.md`. Both ADRs must agree on
+`docs/spikes/adr-lama-engine.md`. Both ADRs must agree on
 their corner of this table before Phase 4 Area 4 executes.
 
 ---

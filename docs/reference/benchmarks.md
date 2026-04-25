@@ -2,7 +2,7 @@
 
 Where RISK WISE v2's measurable performance targets live, plus the reference
 hardware they are measured against. The Phase 0 bundler spike
-([`adr-bundling.md`](architecture-decisions/adr-bundling.md)) fills the
+([`adr-bundling.md`](../spikes/adr-bundling.md)) fills the
 bundler-specific rows; every subsequent release gates on the same table.
 
 A target is binding only when it appears here. "Significantly smaller"
@@ -10,7 +10,7 @@ and similar prose do not count.
 
 ## Targets
 
-Source: [`ARCHITECTURE.md § Performance Benchmark Targets`](ARCHITECTURE.md#performance-benchmark-targets).
+Source: [`ARCHITECTURE.md § Performance Benchmark Targets`](../ARCHITECTURE.md#performance-benchmark-targets).
 
 | Metric | Target | Notes |
 |---|---|---|

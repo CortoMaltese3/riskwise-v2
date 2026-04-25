@@ -46,7 +46,7 @@ scripts/*
 # Tracked helper to (re)build the shipped data-manifest SHA map (#55).
 !scripts/generate_manifest.py
 # Phase 4 Area 4 — Python engine bundling + measurement scripts (issue #113,
-# ADR docs/architecture-decisions/adr-bundling.md).
+# ADR docs/spikes/adr-bundling.md).
 !scripts/build_engine.ps1
 !scripts/build_engine_pyinstaller.ps1
 !scripts/measure_engine.ps1

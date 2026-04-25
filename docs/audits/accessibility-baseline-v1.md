@@ -48,7 +48,7 @@ None identified through static analysis.
 ### 2.2 Serious
 
 #### S-1 — Language attribute not updated on locale change
-**File:** [index.html](../index.html), [src/components/nav/LanguageButton.jsx](../src/components/nav/LanguageButton.jsx)  
+**File:** [index.html](../../index.html), [src/components/nav/LanguageButton.jsx](../../src/components/nav/LanguageButton.jsx)  
 **Criterion:** WCAG 3.1.1 Language of Page (Level A)  
 **Detail:** `<html lang="en">` is hardcoded. Switching to Arabic or Thai via
 `LanguageButton` calls `i18n.changeLanguage()` but never updates
@@ -56,7 +56,7 @@ None identified through static analysis.
 announce content in the wrong language and RTL layout is never applied.
 
 #### S-2 — Document direction never set for RTL locale
-**File:** [src/components/nav/LanguageButton.jsx](../src/components/nav/LanguageButton.jsx)  
+**File:** [src/components/nav/LanguageButton.jsx](../../src/components/nav/LanguageButton.jsx)  
 **Criterion:** WCAG 1.3.4 Orientation (Level AA); CSS logical-property layout  
 **Detail:** `document.documentElement.dir` is never set to `"rtl"` when the user
 selects Arabic. The `bidiIsolate` post-processor in `i18nConfig.js` inserts Unicode
@@ -64,7 +64,7 @@ BiDi characters around translated strings, but flex/grid layout, icon directions
 progress bar fills, and chart axes all remain in LTR order.
 
 #### S-3 — `LanguageButton` icon button has no accessible name
-**File:** [src/components/nav/LanguageButton.jsx](../src/components/nav/LanguageButton.jsx:8)  
+**File:** [src/components/nav/LanguageButton.jsx](../../src/components/nav/LanguageButton.jsx:8)  
 **Criterion:** WCAG 4.1.2 Name, Role, Value (Level A)  
 **Detail:** `<IconButton>` renders only a `<LanguageIcon>` SVG with no `aria-label`
 or visible label. Screen readers announce it as "button" with no purpose.
@@ -72,7 +72,7 @@ or visible label. Screen readers announce it as "button" with no purpose.
 ### 2.3 Moderate
 
 #### M-1 — `aria-labelledby` IDs do not resolve on `NavigateAlert` dialogs
-**File:** [src/components/alerts/NavigateAlert.jsx](../src/components/alerts/NavigateAlert.jsx:56)  
+**File:** [src/components/alerts/NavigateAlert.jsx](../../src/components/alerts/NavigateAlert.jsx:56)  
 **Criterion:** WCAG 4.1.2 Name, Role, Value  
 **Detail:** Two MUI `<Dialog>` components carry `aria-labelledby` values that
 point to non-existent IDs:
@@ -83,15 +83,15 @@ The dialog role has no accessible name; screen readers fall back to reading the
 full dialog body, which degrades experience but does not silence the dialog.
 
 #### M-2 — Informational images have meaningless alt text
-**File:** [src/components/nav/Header.jsx](../src/components/nav/Header.jsx:38)  
+**File:** [src/components/nav/Header.jsx](../../src/components/nav/Header.jsx:38)  
 **Criterion:** WCAG 1.1.1 Non-text Content  
 **Detail:** Both logos use the filename as alt text (`alt="giz_logo"`,
 `alt="unu_ehs_logo"`). Should be descriptive (`"GIZ — Deutsche Gesellschaft für
 Internationale Zusammenarbeit"`, `"UNU-EHS — United Nations University"`).
 
 #### M-3 — Hardcoded foreground/background colour pairs with unverified contrast
-**Files:** [src/components/nav/Header.jsx](../src/components/nav/Header.jsx),
-[src/components/alerts/NavigateAlert.jsx](../src/components/alerts/NavigateAlert.jsx)  
+**Files:** [src/components/nav/Header.jsx](../../src/components/nav/Header.jsx),
+[src/components/alerts/NavigateAlert.jsx](../../src/components/alerts/NavigateAlert.jsx)  
 **Criterion:** WCAG 1.4.3 Contrast (Minimum, Level AA)  
 **Detail:** Colours are hardcoded without a design-token layer; no contrast was
 systematically verified. High-risk pairs:
@@ -103,7 +103,7 @@ systematically verified. High-risk pairs:
 Full contrast check requires a browser-based axe run (see §1 note).
 
 #### M-4 — Interactive `Card` components not keyboard-operable
-**File:** [src/components/input/Country.jsx](../src/components/input/Country.jsx)  
+**File:** [src/components/input/Country.jsx](../../src/components/input/Country.jsx)  
 **Criterion:** WCAG 2.1.1 Keyboard (Level A)  
 **Detail:** `Country` (and similar input cards: `Hazard`, `Scenario`, `TimeHorizon`)
 attach `onClick` to a MUI `<Card>` which renders as `<div>`. These cards have no
@@ -111,7 +111,7 @@ attach `onClick` to a MUI `<Card>` which renders as `<div>`. These cards have no
 unreachable by keyboard Tab/Enter/Space navigation.
 
 #### M-5 — No skip-navigation link
-**Files:** [index.html](../index.html), [src/App.jsx](../src/App.jsx)  
+**Files:** [index.html](../../index.html), [src/App.jsx](../../src/App.jsx)  
 **Criterion:** WCAG 2.4.1 Bypass Blocks (Level A)  
 **Detail:** There is no "Skip to main content" mechanism. Keyboard users must Tab
 through the entire fixed AppBar and tab bar on every page load.
@@ -119,14 +119,14 @@ through the entire fixed AppBar and tab bar on every page load.
 ### 2.4 Minor
 
 #### Mi-1 — `<Typography variant="h3">` in AppBar disrupts heading hierarchy
-**File:** [src/components/nav/Header.jsx](../src/components/nav/Header.jsx:49)  
+**File:** [src/components/nav/Header.jsx](../../src/components/nav/Header.jsx:49)  
 **Criterion:** WCAG 1.3.1 Info and Relationships  
 **Detail:** The application title uses `variant="h3"` rendered as a `<div>`. Even
 if semantically a heading were intended, there is no `<h1>` on any screen;
 heading order jumps from nothing to h3 / h6.
 
 #### Mi-2 — Loading/progress state not announced to assistive technology
-**Files:** [src/components/loaders/LoadModal.jsx](../src/components/loaders/LoadModal.jsx)  
+**Files:** [src/components/loaders/LoadModal.jsx](../../src/components/loaders/LoadModal.jsx)  
 **Criterion:** WCAG 4.1.3 Status Messages (Level AA)  
 **Detail:** The run-scenario progress modal updates a `progress` value in Zustand
 but no `aria-live` region announces progress to screen-reader users.

@@ -9,7 +9,7 @@ RISK WISE targets **WCAG 2.1 Level AA** conformance. Many government
 procurement contexts in the project's deployment regions require this baseline,
 so accessibility is a release-blocking concern rather than a polish item.
 
-The baseline audit at [`accessibility-baseline.md`](accessibility-baseline.md)
+The baseline audit at [`../audits/accessibility-baseline-v1.md`](../audits/accessibility-baseline-v1.md)
 catalogues the v1 violations. This document records the conformance posture
 established as part of the Phase 3 UI overhaul (Area 16) and the regression
 gate that prevents new violations from merging.
@@ -63,7 +63,7 @@ comment linking to the tracking issue.
 
 - Visible focus rings are applied globally via the MUI v7 theme override
   `MuiButtonBase.styleOverrides.root['&:focus-visible']` in
-  [`src/theme/theme.ts`](../src/theme/theme.ts).
+  [`src/theme/theme.ts`](../../src/theme/theme.ts).
 - All `<Dialog>` instances rely on MUI's built-in focus trap. None override
   `disableEnforceFocus` (verified via `grep`).
 
@@ -93,7 +93,7 @@ number and the offending component.
 ## Out of scope (tracked elsewhere)
 
 - NVDA / JAWS / VoiceOver manual screen-reader walkthroughs — manual step,
-  documented in `accessibility-baseline.md` §4.
+  documented in `../audits/accessibility-baseline-v1.md` §4.
 - Chart accessibility (alt-text equivalents, data tables) — Issue #84 / #97.
 - RTL layout and `lang` attribute updates on locale change — Issue #83.
 - Full Chromium-based axe scan with contrast — follow-up Playwright work.

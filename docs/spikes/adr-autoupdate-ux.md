@@ -210,6 +210,6 @@ When `settings.offlineMode === true`:
 ## 7. Acceptance trace (issue #8)
 
 - Channel naming and tag conventions → §2.1.
-- `engine-manifest.json` schema at `docs/architecture-decisions/engine-manifest-schema.json` → [engine-manifest-schema.json](engine-manifest-schema.json); all four issue-required fields present (`version`, `sha256`, `download_url`, `min_app_version`), plus the Area 13 extensions (`schema_version`, `channel`, `released_at`, `size_bytes`, `max_app_version`, `notes_url`) and signing design in §3.1.
+- `engine-manifest.json` schema at `docs/spikes/engine-manifest-schema.json` → [engine-manifest-schema.json](engine-manifest-schema.json); all four issue-required fields present (`version`, `sha256`, `download_url`, `min_app_version`), plus the Area 13 extensions (`schema_version`, `channel`, `released_at`, `size_bytes`, `max_app_version`, `notes_url`) and signing design in §3.1.
 - Consent dialog UX covering startup + 4 h cadence, install-on-next-restart / remind-me-later, Markdown release notes with `## en` / `## ar` / `## th` sections, Settings downgrade option, offline-mode skip → §4.1–§4.7.
-- ADR saved at `docs/architecture-decisions/adr-autoupdate-ux.md` → this file.
+- ADR saved at `docs/spikes/adr-autoupdate-ux.md` → this file.

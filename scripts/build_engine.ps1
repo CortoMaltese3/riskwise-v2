@@ -1,7 +1,7 @@
 # Build the RISK WISE Python engine with Nuitka (primary / Track A).
 #
 # Implements the exact build command from
-# docs/architecture-decisions/adr-bundling.md §3.2. Run from the repo root
+# docs/spikes/adr-bundling.md §3.2. Run from the repo root
 # inside a venv that has the `bundle` extra installed:
 #
 #     uv sync --extra bundle
@@ -56,7 +56,7 @@ Write-Host "Build complete: dist/nuitka/riskwise-engine.exe"
 
 # Azure Trusted Signing — guarded on AZURE_CLIENT_ID so unsigned dev/fork
 # builds continue to work unchanged. When the six Azure env vars are set
-# (see docs/signing.md § "Activation path B"), this block signs every PE
+# (see docs/reference/signing.md § "Activation path B"), this block signs every PE
 # file in dist/nuitka (the engine onefile .exe plus any sibling DLLs that
 # survive a non-onefile build). Azure.CodeSigning.Dlib.dll is pulled from
 # the Microsoft.Trusted.Signing.Client NuGet package on first use and

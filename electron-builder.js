@@ -10,10 +10,10 @@
 // Code signing is currently disabled (no Azure Trusted Signing
 // credentials available). When that changes, restore the
 // `signtoolOptions` / `azureSignOptions` blocks; the activation pattern
-// is documented in docs/signing.md.
+// is documented in docs/reference/signing.md.
 //
 // Offline-installer variant (bundled tile pack, optional bundled engine)
-// is deferred — tracked in the GitHub issue linked from docs/offline.md.
+// is deferred — tracked in the GitHub issue linked from docs/reference/offline.md.
 
 module.exports = {
   asar: false,

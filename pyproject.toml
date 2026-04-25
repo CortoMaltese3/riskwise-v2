@@ -14,7 +14,7 @@ license = { file = "LICENSE" }
 # justified against one of: (a) core CLIMADA compute path, (b) typed HTTP
 # API (D02 / Area 5), (c) DuckDB scenario store (D03), (d) file formats
 # used by seed data that cannot be replaced. See DECISIONS.md D05 and
-# docs/architecture-decisions/adr-bundling.md for the rationale and for
+# docs/spikes/adr-bundling.md for the rationale and for
 # the removed-package list.
 dependencies = [
     "climada==6.1.0",
@@ -46,7 +46,7 @@ dev = [
 bundle = [
     # Pinned ranges validated against Python 3.12 + CLIMADA 6.1.0.
     # Bumping either side requires re-running the build matrix in
-    # docs/architecture-decisions/adr-bundling.md §5.
+    # docs/spikes/adr-bundling.md §5.
     "nuitka>=2.4,<5",
     # Nuitka ≥ 2.x resolves its own module graph via ordered-set; keep it
     # as an explicit bundle dep so a slim CI env does not fall back to

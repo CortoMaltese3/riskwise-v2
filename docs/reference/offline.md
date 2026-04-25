@@ -1,6 +1,6 @@
 # Offline mode
 
-> **Status: deferred.** See [DECISIONS.md D24](DECISIONS.md#d24--air-gapped-deployment-support-deferred-until-named-customer);
+> **Status: deferred.** See [DECISIONS.md D24](../DECISIONS.md#d24--air-gapped-deployment-support-deferred-until-named-customer);
 > tracked in [issue #134](https://github.com/CortoMaltese3/riskwise-v2/issues/134).
 > The runtime offline toggle, IPC route blocking, MBTiles tile-server
 > scaffold, and `.riskwise-pack` import flow still exist in the codebase,

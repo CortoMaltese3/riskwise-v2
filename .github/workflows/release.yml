@@ -47,7 +47,7 @@ jobs:
       # Signing activates only when Azure Trusted Signing credentials are
       # present (AZURE_CLIENT_ID is the probe). Cert-less runs (forks, PR
       # builds) fall through to the unsigned branch so the release pipeline
-      # keeps working until the Azure account is provisioned. See docs/signing.md.
+      # keeps working until the Azure account is provisioned. See docs/reference/signing.md.
       # The `-c.publish.channel=` override routes the build's `latest*.yml`
       # and installer to the correct channel resolved above.
       - name: Build and publish

@@ -2,12 +2,12 @@
 
 This document describes how Authenticode signing is wired into the RISK WISE
 Windows release pipeline. **Azure Trusted Signing** (per
-[DECISIONS.md D17](DECISIONS.md#d17--code-signing-provider-azure-trusted-signing-primary-sslcom-ev-fallback))
+[DECISIONS.md D17](../DECISIONS.md#d17--code-signing-provider-azure-trusted-signing-primary-sslcom-ev-fallback))
 is the activated provider: it issues short-lived leaf certificates from a
 Microsoft-operated CA that already has Windows SmartScreen reputation, so
 first-install warnings disappear on day one.
 
-Background: [DECISIONS.md D07](DECISIONS.md#d07--code-signing-wire-infrastructure-now-activate-when-cert-available)
+Background: [DECISIONS.md D07](../DECISIONS.md#d07--code-signing-wire-infrastructure-now-activate-when-cert-available)
 and D17.
 
 ---
@@ -22,7 +22,7 @@ Every PE file that ships to users:
 | Uninstaller | Embedded in the NSIS installer | `electron-builder` (`signAndEditExecutable: true`) |
 | Update payload | `*.exe`, `*.blockmap` emitted alongside `latest*.yml` | `electron-builder` |
 | Bundled PE files (e.g. extraResources/engine DLLs) | inside the installer tree | `electron-builder` |
-| Python engine onefile | `dist/nuitka/riskwise-engine.exe` | [`scripts/build_engine.ps1`](../scripts/build_engine.ps1) signtool step |
+| Python engine onefile | `dist/nuitka/riskwise-engine.exe` | [`scripts/build_engine.ps1`](../../scripts/build_engine.ps1) signtool step |
 
 The engine onefile is a self-extracting executable — signing the outer `.exe`
 covers the embedded DLLs it decompresses at runtime. When Nuitka is invoked
@@ -30,7 +30,7 @@ without `--onefile`, the signing step also picks up the sibling DLLs under
 `dist/nuitka/`.
 
 The engine is also protected out-of-band by the minisign-based
-`engine-manifest.json` signature ([ARCHITECTURE.md § Area 13](ARCHITECTURE.md#area-13--auto-update--release-channels-high))
+`engine-manifest.json` signature ([ARCHITECTURE.md § Area 13](../ARCHITECTURE.md#area-13--auto-update--release-channels-high))
 so the first-launch download path verifies even before Authenticode is
 consulted.
 
@@ -79,7 +79,7 @@ short-lived leaf certificates, so there is nothing to rotate manually.
 ## How activation flows through the codebase
 
 `package.json` does not carry the `build` block directly — electron-builder
-config lives in [electron-builder.js](../electron-builder.js).
+config lives in [electron-builder.js](../../electron-builder.js).
 The config is a small conditional:
 
 ```js
@@ -102,7 +102,7 @@ win: {
   empty it falls back to `CSC_IDENTITY_AUTO_DISCOVERY=false` + unsigned.
 - The **`build-engine`** job (Nuitka) sets the same six Azure env vars
   (minus `AZURE_PUBLISHER_NAME`, which the engine signer does not use) so
-  that [`scripts/build_engine.ps1`](../scripts/build_engine.ps1) can invoke
+  that [`scripts/build_engine.ps1`](../../scripts/build_engine.ps1) can invoke
   `signtool` with `Azure.CodeSigning.Dlib.dll`.
 
 The Electron main process (`public/electron.js`, copied to

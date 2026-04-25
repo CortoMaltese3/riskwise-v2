@@ -374,7 +374,7 @@ Replaces folder-copy save/restore with DuckDB-backed workspace:
 
 **Workspace backup/restore**: Air-gapped users need to move their scenario history between machines. Add "Export workspace" (produces a `.riskwise-workspace` ZIP: `riskwise.db` + referenced parquet files + snapshots) and "Import workspace" (validates, merges into existing DB without overwriting). Critical for the offline-installer target audience.
 
-**Uninstall UX policy**: Two locations contain user data. Define the contract: NSIS uninstaller removes `%LOCALAPPDATA%/RiskWiseEngine/` (engine, ~500MB) by default. `%APPDATA%/RISK WISE/` (scenarios, reports, logs) is **kept by default** with a "Remove all user data" opt-in checkbox. Document this in the installer and in `docs/offline.md`.
+**Uninstall UX policy**: Two locations contain user data. Define the contract: NSIS uninstaller removes `%LOCALAPPDATA%/RiskWiseEngine/` (engine, ~500MB) by default. `%APPDATA%/RISK WISE/` (scenarios, reports, logs) is **kept by default** with a "Remove all user data" opt-in checkbox. Document this in the installer and in `docs/reference/offline.md`.
 
 **Files**: Frontend workspace components, backend report handler, DuckDB schema
 
@@ -446,7 +446,7 @@ Core computation already works offline; these fail: engine download, update chec
 - Status bar indicator when offline mode active
 - **Workspace export/import** (see Area 11) doubles as the air-gapped machine migration path
 
-**Files**: `build/electron.js`, `src/components/Settings/OfflineSection.jsx`, `src/store.js`, `docs/offline.md`
+**Files**: `build/electron.js`, `src/components/Settings/OfflineSection.jsx`, `src/store.js`, `docs/reference/offline.md`
 
 ---
 
@@ -469,7 +469,7 @@ Current: `CSC_IDENTITY_AUTO_DISCOVERY=false` — effectively unsigned. SmartScre
 - **Guard in CI**: `if [ -n "$CSC_LINK" ]` — unsigned fallback for dev builds, signed for releases
 - **Sign everything**: installer, uninstaller, update payloads, Python engine executable, DLLs
 
-**Files**: `package.json`, `.github/workflows/release.yml`, `build/electron.js`, `docs/signing.md`
+**Files**: `package.json`, `.github/workflows/release.yml`, `build/electron.js`, `docs/reference/signing.md`
 
 ---
 
@@ -484,7 +484,7 @@ Target: WCAG 2.1 AA (mandatory in many government procurement contexts).
 - RTL layout audit: CI screenshot test in Arabic — icons, progress bars, chart axes must mirror
 - NVDA screen reader smoke test on golden path
 - `axe-core` via `@axe-core/react` in Vitest; CI fails on new violations
-- Conformance statement: `docs/accessibility.md`
+- Conformance statement: `docs/reference/accessibility.md`
 
 **i18n beyond string translation** (in scope for this area):
 - **Numerals**: Arabic locale uses Arabic-Indic digits (٠١٢٣) by default. Decide once: use Western digits throughout (consistent with scientific data display) or follow locale. Document the decision; enforce it in the number formatter utility.
@@ -493,7 +493,7 @@ Target: WCAG 2.1 AA (mandatory in many government procurement contexts).
 - **Pluralization**: i18next supports `_one`/`_other` plural keys — use them for counts ("1 scenario" vs "3 scenarios"). Thai has no grammatical plural; Arabic has six plural forms. Add plural keys from day one, not as a retrofit.
 - **BiDi in chart labels**: dataset labels in Chart.js are plain strings — they don't inherit the Unicode BiDi isolation applied to i18next strings. Apply the same isolation logic to chart label strings before passing to Chart.js.
 
-**Files**: `src/theme/theme.js`, every component (ARIA), `tests/a11y/`, `docs/accessibility.md`
+**Files**: `src/theme/theme.js`, every component (ARIA), `tests/a11y/`, `docs/reference/accessibility.md`
 
 ---
 
@@ -588,10 +588,10 @@ Auto-scan `%APPDATA%/RISK WISE/user-data/` at startup for:
 - Strict schema validation with actionable error messages
 - Namespace isolation: built-in vs "Custom" labeled in dropdowns
 - Settings > Custom Data: import (drag-and-drop ZIP), validate, delete
-- `docs/extending.md`: full schema docs with Egypt/Thailand as canonical examples
+- `docs/reference/extending.md`: full schema docs with Egypt/Thailand as canonical examples
 - `.riskwise-country-pack` export format (shareable, signed)
 
-**Files**: `backend/plugins/`, `src/components/Settings/CustomDataSection.jsx`, `docs/extending.md`
+**Files**: `backend/plugins/`, `src/components/Settings/CustomDataSection.jsx`, `docs/reference/extending.md`
 
 ---
 
@@ -691,7 +691,7 @@ Phase 0 spike must produce measured results against these targets. "Significantl
 | Scenario restore from DuckDB | ≤ 1 s | Query only, no recomputation |
 | CRED chart render | ≤ 500 ms | Data fetch + Chart.js render |
 
-Reference hardware for benchmarks: Windows 11, Intel i5 (4 cores), 16 GB RAM, SSD. Document this in `docs/benchmarks.md`.
+Reference hardware for benchmarks: Windows 11, Intel i5 (4 cores), 16 GB RAM, SSD. Document this in `docs/reference/benchmarks.md`.
 
 ---
 
@@ -709,7 +709,7 @@ Reference hardware for benchmarks: Windows 11, Intel i5 (4 cores), 16 GB RAM, SS
 - [ ] Accessibility baseline: axe-core violation count on v1, NVDA walkthrough
 - [ ] Security baseline: webPreferences audit, CSP inventory, preload surface
 
-**Deliverable**: `docs/architecture-decisions/` decision documents with measured results
+**Deliverable**: `docs/spikes/` decision documents with measured results
 
 ### Phase 1: Foundation (Weeks 3-7)
 *Replace the communication backbone, add resilience*
@@ -838,13 +838,13 @@ Reference hardware for benchmarks: Windows 11, Intel i5 (4 cores), 16 GB RAM, SS
 | `data/manifest.json` | Built-in data registry with SHA-256 |
 | `engine-manifest.json` | Engine version + download URL (published to Releases) |
 | `docs/adr/` | Architectural Decision Records |
-| `docs/accessibility.md` | WCAG conformance statement |
+| `docs/reference/accessibility.md` | WCAG conformance statement |
 | `docs/privacy.md` | What's logged, what's transmitted |
-| `docs/offline.md` | Offline capabilities guide + uninstall UX policy |
-| `docs/signing.md` | How to activate signing when cert available |
-| `docs/extending.md` | Custom data schema docs |
+| `docs/reference/offline.md` | Offline capabilities guide + uninstall UX policy |
+| `docs/reference/signing.md` | How to activate signing when cert available |
+| `docs/reference/extending.md` | Custom data schema docs |
 | `docs/errors.md` | Error-code catalogue (1000–6999) |
-| `docs/benchmarks.md` | Performance targets and reference hardware |
+| `docs/reference/benchmarks.md` | Performance targets and reference hardware |
 | `SECURITY.md` | Vulnerability disclosure |
 | `NOTICES.txt` | Third-party attribution (auto-generated from SBOM) |
 | `CONTRIBUTING.md` | Dev setup, style guides, PR process, CLA clause |
@@ -922,7 +922,7 @@ These are the "done means" definitions for each phase. Use them as acceptance cr
 If picking this up fresh:
 
 1. **Read this document** and `docs/decisions.md` — they are the two canonical references.
-2. **Check Phase 0 status** — have the research spikes been done? Look in `docs/architecture-decisions/`.
+2. **Check Phase 0 status** — have the research spikes been done? Look in `docs/spikes/`.
 3. **Check Phase 1 status** — has FastAPI replaced stdin/stdout? Check `backend/app.py`.
 4. **Run the app** — `npm run quickstart` (needs conda env active). Current entry: `build/electron.js` spawns `backend/app.py`.
 5. **Pick the next unchecked Phase item** and implement it, using the Verification Criteria table above as the acceptance test.

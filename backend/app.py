@@ -27,7 +27,7 @@ Error handling (issue #12):
       anything so the OS does not OOM-kill the worker mid-run.
 
 See ``docs/DECISIONS.md`` D02 and D16 and
-``docs/architecture-decisions/adr-fastapi-poc.md``.
+``docs/spikes/adr-fastapi-poc.md``.
 """
 
 from __future__ import annotations

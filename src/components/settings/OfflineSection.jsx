@@ -132,7 +132,7 @@ const OfflineSection = () => {
           </AlertTitle>
           {t("settings_offline_tiles_missing_body", {
             defaultValue:
-              "This is the lean (online) installer. Maps will fall back to the remote CDN until you install the offline tile pack — see docs/offline.md for the download URL and expected SHA-256.",
+              "This is the lean (online) installer. Maps will fall back to the remote CDN until you install the offline tile pack — see docs/reference/offline.md for the download URL and expected SHA-256.",
           })}
         </Alert>
       ) : null}

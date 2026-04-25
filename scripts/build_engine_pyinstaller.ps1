@@ -1,7 +1,7 @@
 # Build the RISK WISE Python engine with PyInstaller (fallback / baseline).
 #
 # Implements the exact build command from
-# docs/architecture-decisions/adr-bundling.md §3.3. Kept alongside the
+# docs/spikes/adr-bundling.md §3.3. Kept alongside the
 # Nuitka script so the measurement harness can run both bundlers from a
 # single CI invocation and produce apples-to-apples §4.4 rows.
 #

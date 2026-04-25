@@ -20,7 +20,7 @@ Consequence:
   one-screen migration — is the valuable part.
 - `@mui/lab` is **still pinned at `5.0.0-alpha.177`**, which no longer matches
   the v9 core API for shared internals. Only `LoadingButton` is imported from
-  it ([RunScenarioButton.jsx:5](../src/components/nav/RunScenarioButton.jsx#L5)).
+  it ([RunScenarioButton.jsx:5](../../src/components/nav/RunScenarioButton.jsx#L5)).
   `LoadingButton` was promoted to `@mui/material` around v6.4 as `Button`'s
   `loading` prop; Phase 1 should drop `@mui/lab` and switch to
   `<Button loading loadingPosition="end">…</Button>`. Not done in this spike
@@ -32,11 +32,11 @@ Consequence:
 
 | File | Change |
 |---|---|
-| [src/theme/theme.ts](../src/theme/theme.ts) | New. `createTheme` with `cssVariables: true`, Inter font stack, primary palette (teal `#45ABB9`), `shape.borderRadius: 12`, and a custom `palette.inputCard` namespace carrying the legacy card-state colours. Includes a TypeScript module-augmentation block for the custom palette key; until a `tsconfig.json` lands it is stripped at build time but documents the intended shape for Phase 1. |
-| [src/App.jsx](../src/App.jsx) | Wraps the tree in `<ThemeProvider theme={theme}>` + `<CssBaseline />`. |
-| [src/components/input/inputCardStyles.js](../src/components/input/inputCardStyles.js) | New. `getInputCardSx(state, { clicked })` and `disabledFieldSx` resolve colours via `theme.palette.inputCard.*` callbacks; removes duplication across the seven card components. |
+| [src/theme/theme.ts](../../src/theme/theme.ts) | New. `createTheme` with `cssVariables: true`, Inter font stack, primary palette (teal `#45ABB9`), `shape.borderRadius: 12`, and a custom `palette.inputCard` namespace carrying the legacy card-state colours. Includes a TypeScript module-augmentation block for the custom palette key; until a `tsconfig.json` lands it is stripped at build time but documents the intended shape for Phase 1. |
+| [src/App.jsx](../../src/App.jsx) | Wraps the tree in `<ThemeProvider theme={theme}>` + `<CssBaseline />`. |
+| [src/components/input/inputCardStyles.js](../../src/components/input/inputCardStyles.js) | New. `getInputCardSx(state, { clicked })` and `disabledFieldSx` resolve colours via `theme.palette.inputCard.*` callbacks; removes duplication across the seven card components. |
 | `src/components/input/DataInput.jsx`, `Country.jsx`, `Hazard.jsx`, `Scenario.jsx`, `TimeHorizon.jsx`, `ExposureEconomic.jsx`, `ExposureNonEconomic.jsx`, `AnnualGrowth.jsx`, `AdaptationMeasuresInput.jsx` | Hex literals removed. Local `bgColor` string state replaced with a four-value token state (`"default" | "valid" | "invalid" | "neutral"`) so the concern becomes semantic, not colour-specific. |
-| [docs/mui-v7-spike-notes.md](./mui-v7-spike-notes.md) | This document. |
+| [docs/spikes/mui-v7-spike-notes.md](./mui-v7-spike-notes.md) | This document. |
 
 Grep audit confirms the migrated screen is clean:
 
@@ -72,7 +72,7 @@ Phase 1.
 - **`Grid` API.** v5 took `<Grid item xs={12} md={2}>`. v7 deprecated that in
   favour of `<Grid size={{ xs: 12, md: 2 }}>` (the old "Grid2" was promoted).
   v9 still accepts the legacy props with a console warning (not an error).
-  [App.jsx:47](../src/App.jsx#L47), `DataInput.jsx`, and most layout files use
+  [App.jsx:47](../../src/App.jsx#L47), `DataInput.jsx`, and most layout files use
   the old API. Phase 1 task: migrate all `<Grid item xs/md/...>` to the
   `size={{ … }}` form, then drop the compat shim.
 - **`InputProps` → `slotProps.input`.** v7 moved most component overrides to
@@ -82,7 +82,7 @@ Phase 1.
   Phase 1 does in one pass across every `TextField`.
 - **`@mui/lab` mismatch.** As above, `LoadingButton` needs to come from
   `@mui/material` as `<Button loading>`. One import to change
-  ([RunScenarioButton.jsx:5](../src/components/nav/RunScenarioButton.jsx#L5)),
+  ([RunScenarioButton.jsx:5](../../src/components/nav/RunScenarioButton.jsx#L5)),
   plus removing `@mui/lab` from `package.json`.
 - **`makeStyles` / `@mui/styles`.** Removed in v6. Grep confirms this
   codebase never used `@mui/styles`, so there is nothing to migrate — all
@@ -99,10 +99,10 @@ Phase 1.
 ### 4.1 Leaflet
 
 - Map overlays pin `zIndex: 1000`
-  ([RiskMap.jsx:181](../src/components/map/RiskMap.jsx#L181),
-   [ExposureMap.jsx:84](../src/components/map/ExposureMap.jsx#L84),
-   [HazardMap.jsx:169](../src/components/map/HazardMap.jsx#L169),
-   [Legend.css:6](../src/components/map/Legend.css#L6)).
+  ([RiskMap.jsx:181](../../src/components/map/RiskMap.jsx#L181),
+   [ExposureMap.jsx:84](../../src/components/map/ExposureMap.jsx#L84),
+   [HazardMap.jsx:169](../../src/components/map/HazardMap.jsx#L169),
+   [Legend.css:6](../../src/components/map/Legend.css#L6)).
 - MUI defaults: AppBar 1100, Drawer 1200, Modal 1300, Snackbar 1400,
   Tooltip 1500. Leaflet's 1000 sits beneath all of those, which matches the
   v1 layering — `<CssBaseline />` does not touch map z-indexes.
@@ -115,11 +115,11 @@ Phase 1.
 
 ### 4.2 i18n
 
-- Initialisation runs at [main.jsx:5](../src/main.jsx#L5) via
+- Initialisation runs at [main.jsx:5](../../src/main.jsx#L5) via
   `import "./i18nConfig"` before `<App />` renders, unchanged by this spike.
 - Every migrated input component still uses `useTranslation`, so translation
   keys continue to resolve the same way.
-- [i18nConfig.js:37–58](../src/i18nConfig.js#L37-L58) installs a BiDi-isolate
+- [i18nConfig.js:37–58](../../src/i18nConfig.js#L37-L58) installs a BiDi-isolate
   post-processor that wraps LTR runs inside RTL strings with U+2066 /
   U+2069 control characters. The theme does **not** set `direction`, so MUI
   still emits LTR defaults — which mirrors v1 behaviour. Phase 1 must add a

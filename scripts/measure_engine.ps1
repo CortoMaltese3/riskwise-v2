@@ -1,5 +1,5 @@
 # Measure a bundled engine against the protocol in
-# docs/architecture-decisions/adr-bundling.md §4.3.
+# docs/spikes/adr-bundling.md §4.3.
 #
 # Emits one JSON row (single line, stdout) matching the schema scaffolded
 # in ADR §4.4. Fields that require the Egypt flood scenario (the ADR's

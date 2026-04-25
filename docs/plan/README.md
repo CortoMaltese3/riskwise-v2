@@ -67,7 +67,7 @@ For quick navigation without reading every file:
 - **Phase 1 cannot start** until spike **#5 (FastAPI PoC)** passes. See [phase-0 § #5 note](phase-0-research-spikes.md#5-fastapi--electron-loopback-poc).
 - **Phase 2 cannot start** until FastAPI + Pydantic types + CI gates are live from Phase 1.
 - **Phase 3 workspace UI** depends on DuckDB scenario store from Phase 2 Area 3.
-- **Phase 4 Area 4 (lean backend execute)** depends on the Track A/B decision from Phase 0 spikes **#3 + #4**, which is only final once both ADRs are filled in. Design-only state of #3 is captured at [`docs/architecture-decisions/adr-bundling.md`](../architecture-decisions/adr-bundling.md).
+- **Phase 4 Area 4 (lean backend execute)** depends on the Track A/B decision from Phase 0 spikes **#3 + #4**, which is only final once both ADRs are filled in. Design-only state of #3 is captured at [`docs/spikes/adr-bundling.md`](../spikes/adr-bundling.md).
 - **Phase 4 signing activation** depends on the cert obtained per DECISIONS.md D17 (Azure Trusted Signing primary, SSL.com EV fallback).
 
 ---
@@ -76,7 +76,7 @@ For quick navigation without reading every file:
 
 - [`ARCHITECTURE.md`](../ARCHITECTURE.md) — canonical Area specs (Areas 1–24), target architecture, performance benchmarks, error-code taxonomy, critical files to modify, verification criteria per phase.
 - [`DECISIONS.md`](../DECISIONS.md) — D01–D17 rationale, rejected alternatives, consequences.
-- [`docs/architecture-decisions/`](../architecture-decisions/) — per-spike ADR output directory.
-- [`docs/security-baseline.md`](../security-baseline.md) — Phase 0 spike #10 output.
-- [`docs/accessibility-baseline.md`](../accessibility-baseline.md) — Phase 0 spike #9 output.
-- [`docs/mui-v7-spike-notes.md`](../mui-v7-spike-notes.md) — Phase 0 spike #6 working notes.
+- [`docs/spikes/`](../spikes/) — per-spike research and ADR-style design docs.
+- [`docs/audits/security-baseline-v1.md`](../audits/security-baseline-v1.md) — Phase 0 spike #10 output.
+- [`docs/audits/accessibility-baseline-v1.md`](../audits/accessibility-baseline-v1.md) — Phase 0 spike #9 output.
+- [`docs/spikes/mui-v7-spike-notes.md`](../spikes/mui-v7-spike-notes.md) — Phase 0 spike #6 working notes.
