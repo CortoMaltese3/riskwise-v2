@@ -75,15 +75,18 @@ const MainSubTabs = () => {
         centered
         sx={{
           minHeight: 24,
+          // Selected tab keeps white-on-primary.main; primary.main was darkened
+          // in #121 (now 4.94:1 with white). Unselected tab switched from white
+          // to text.primary because white-on-primary.light was 1.87:1.
           ".Mui-selected": { bgcolor: "primary.main", color: "common.white" },
           ".MuiTab-root": {
-            color: "common.white",
-            fontSize: "0.875rem", // Smaller text
-            minHeight: 24, // Reduce the height of the tabs
-            padding: "6px 12px", // Reduce the padding around the text
+            color: "text.primary",
+            fontSize: "0.875rem",
+            minHeight: 24,
+            padding: "6px 12px",
           },
           ".MuiTabs-indicator": {
-            height: 2, // Smaller indicator height
+            height: 2,
           },
           ".MuiTab-root:not(.Mui-selected)": { bgcolor: "primary.light" },
         }}

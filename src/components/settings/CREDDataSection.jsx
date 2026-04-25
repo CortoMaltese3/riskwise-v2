@@ -222,8 +222,9 @@ const CREDDataSection = () => {
       </Stack>
 
       <Box
-        role="button"
-        tabIndex={0}
+        // Drop zone is a pointer-only enhancement; the inner Browse button
+        // owns keyboard activation. Removing role="button"/tabIndex avoids
+        // a nested-interactive WCAG violation (issue #121).
         aria-label={t("settings_cred_data_dropzone_aria")}
         sx={dropZoneSx}
         onDragOver={(e) => {
@@ -232,13 +233,6 @@ const CREDDataSection = () => {
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        onClick={handleBrowse}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleBrowse();
-          }
-        }}
       >
         <CloudUploadIcon sx={{ fontSize: 40, color: "text.secondary" }} />
         <Typography variant="body1" sx={{ mt: 1 }}>

@@ -190,8 +190,11 @@ const CustomDataSection = () => {
       </Stack>
 
       <Box
-        role="button"
-        tabIndex={0}
+        // The drop zone container is decorative: the inner <Button> handles
+        // both keyboard activation and screen-reader access to the browse
+        // action. Giving the container its own `role="button"` produced a
+        // nested-interactive WCAG violation (issue #121). Drag/drop is a
+        // pointer-only enhancement; keyboard users use the inner button.
         aria-label={t("settings_custom_data_dropzone_aria")}
         sx={dropZoneSx}
         onDragOver={(e) => {
@@ -200,13 +203,6 @@ const CustomDataSection = () => {
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        onClick={handleBrowse}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleBrowse();
-          }
-        }}
       >
         <CloudUploadIcon sx={{ fontSize: 40, color: "text.secondary" }} />
         <Typography variant="body1" sx={{ mt: 1 }}>
