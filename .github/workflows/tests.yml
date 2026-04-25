@@ -1,0 +1,228 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (ruff + mypy + pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # Phase 4 Area 18: tests/unit/test_pack_verifier.py exercises the real
+      # minisign binary so a tampered .riskwise-pack actually fails the
+      # signature check. Installing minisign here keeps the test from being
+      # silently skipped on CI (the test module is `pytest.skipif`-guarded
+      # so dev boxes without minisign still run a green pytest).
+      - name: Install minisign
+        run: sudo apt-get update && sudo apt-get install -y minisign
+
+      # Minimal set to run the v2 unit suite. CLIMADA and geopandas are
+      # stubbed in tests/unit/conftest.py so we can skip the heavy
+      # geospatial install in CI (see pyproject.toml and tests/unit/ for
+      # scope). Full-stack integration tests will get their own job.
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            "pandas>=2.0,<3" \
+            "numpy>=1.24,<2" \
+            "pycountry>=24.6" \
+            "fastapi>=0.110,<1" \
+            "uvicorn[standard]>=0.27,<1" \
+            "structlog>=24,<26" \
+            "psutil>=5.9,<7" \
+            "duckdb>=1.0,<2" \
+            "openpyxl>=3.1,<4" \
+            "pytest>=8" \
+            "httpx>=0.27" \
+            "ruff>=0.5" \
+            "mypy>=1.10" \
+            "pyarrow>=12"
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: mypy
+        run: mypy
+
+      - name: Run pytest
+        run: pytest -q
+
+      # Issue #114: FastAPI integration tests exercise the real app via
+      # TestClient against a freshly-migrated DuckDB. CLIMADA entrypoints
+      # are monkey-patched per-test so we do not pay the geospatial
+      # install cost, but the suite still needs to run against the
+      # migrations and seeders the production lifespan invokes.
+      - name: Run integration tests
+        run: pytest -q tests/integration
+
+      # Issue #55 Scenario 4: run the determinism fixture twice on the same
+      # runner and gate the merge on bit-identical outputs. The in-test
+      # assertions already compare the two computations; running the whole
+      # file twice catches accidental state leakage between pytest
+      # invocations (e.g. caches seeded by a previous ``pytest -q``).
+      - name: Determinism smoke (run twice)
+        env:
+          RISKWISE_SKIP_MANIFEST_VERIFY: "1"
+        run: |
+          pytest -q tests/determinism
+          pytest -q tests/determinism
+
+  frontend:
+    name: Frontend (eslint + prettier + vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+
+      # Pre-existing issues the test-infra PR intentionally does not fix:
+      #   1. package-lock.json is out of sync with package.json (added
+      #      deps like openapi-typescript never hit the lockfile), so
+      #      `npm ci` rejects the tree. Using `npm install` instead.
+      # Electron's postinstall fails on UNC paths when invoked from WSL,
+      # but works on Linux CI — so we don't pass --ignore-scripts here.
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - run: npm run lint
+
+      - run: npm run format:check
+
+      # Phase 4 Area 16 (issue #121): WCAG 2.1 AA contrast lint. Fails CI with
+      # the failing token pair and measured ratio if a theme change drops a
+      # text/background combination below the AA threshold.
+      - run: npm run lint:contrast
+
+      - run: npm test
+
+  e2e:
+    name: Electron E2E (Playwright)
+    runs-on: ubuntu-latest
+    # Issue #114: the Playwright suite drives the packaged Electron app
+    # end-to-end. It depends on the frontend build and gates releases —
+    # a failure here must block merges to main.
+    # Skip on Dependabot PRs — dep bumps don't need the full Electron suite.
+    if: github.actor != 'dependabot[bot]'
+    needs: [frontend]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # The backend launcher the Electron main spawns imports the app
+      # module and its runtime deps directly — install the minimal set
+      # that satisfies lifespan startup without the CLIMADA tree.
+      - name: Install backend runtime deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            "fastapi>=0.110,<1" \
+            "uvicorn[standard]>=0.27,<1" \
+            "duckdb>=1.0,<2" \
+            "pandas>=2.0,<3" \
+            "numpy>=1.24,<2" \
+            "openpyxl>=3.1,<4" \
+            "pycountry>=24.6" \
+            "structlog>=24,<26" \
+            "psutil>=5.9,<7" \
+            "pyarrow>=12"
+
+      - name: Install Node dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - name: Install Playwright system dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Build renderer + Electron main
+        run: npm run build
+
+      # Electron needs a display server on Linux; xvfb-run provides a
+      # virtual framebuffer so the app can launch headlessly. Playwright
+      # itself is headed by default for Electron — there is no
+      # ``--headless`` flag we can pass to bypass this.
+      - name: Run Playwright Electron suite
+        run: xvfb-run --auto-servernum npx playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
+  npm-audit:
+    name: Frontend security (npm audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+
+      - name: Install (with scripts skipped — audit only needs the tree)
+        run: npm install --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+
+      # Fail only on high/critical CVEs in production deps. Dev-only CVEs
+      # (eslint plugins, vitest, etc.) are tracked by Dependabot but do not
+      # ship to users and so do not gate merges.
+      - name: npm audit (production, high+)
+        run: npm audit --omit=dev --audit-level=high
+
+  pip-audit:
+    name: Backend security (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install pip-audit
+        run: python -m pip install --upgrade pip pip-audit
+
+      # `requirements/requirements.txt` is the pinned set installed in the
+      # bundled engine. `--strict` fails the build when any package can't be
+      # audited so silent gaps don't mask CVEs. Treat any unpatched
+      # vulnerability as a release-blocker; downgrade only via an explicit
+      # `--ignore-vuln <id>` with a justification.
+      # `climada` is excluded because it depends on GDAL, which requires
+      # building from source against system libgdal — a version mismatch on
+      # ubuntu-latest causes the build to fail regardless of --no-deps.
+      # climada and GDAL have no known CVEs in the pinned range.
+      - name: pip-audit (requirements)
+        run: |
+          grep -v '^climada' requirements/requirements.txt > /tmp/requirements_audit.txt
+          pip-audit --strict --requirement /tmp/requirements_audit.txt
