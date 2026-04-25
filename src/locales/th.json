@@ -829,6 +829,7 @@
     "settings_tab_measures": "มาตรการปรับตัว",
     "settings_tab_about": "เกี่ยวกับ",
     "settings_tab_offline": "ออฟไลน์",
+    "settings_tab_diagnostics": "การวินิจฉัย",
     "settings_offline_title": "โหมดออฟไลน์",
     "settings_offline_subtitle": "ใช้งาน RISK WISE โดยไม่ต้องเชื่อมต่ออินเทอร์เน็ต การตรวจสอบอัปเดตของแอป CLIMADA Client API และแผนที่ระยะไกลจะถูกปิดใช้งานเมื่อเปิดใช้งานนี้",
     "settings_offline_toggle_label": "โหมดออฟไลน์",

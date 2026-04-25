@@ -830,6 +830,7 @@
     "settings_tab_measures": "Adaptation Measures",
     "settings_tab_about": "About",
     "settings_tab_offline": "Offline",
+    "settings_tab_diagnostics": "Diagnostics",
     "settings_offline_title": "Offline mode",
     "settings_offline_subtitle": "Run RISK WISE without internet access. App update checks, the CLIMADA Client API, and the remote map tiles are disabled while this is on.",
     "settings_offline_toggle_label": "Offline mode",

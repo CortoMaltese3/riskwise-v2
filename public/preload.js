@@ -113,6 +113,17 @@ contextBridge.exposeInMainWorld("electron", {
     getStatus: () => ipcRenderer.invoke("data-packs:get-status"),
     rescan: () => ipcRenderer.invoke("data-packs:rescan"),
   },
+
+  // Diagnostics + Sentry consent (issue #119, Area 17). `exportZip` opens
+  // a native save dialog and writes a local ZIP (no upload). The Sentry
+  // helpers expose the three-gate decision (DSN / consent / offline) so
+  // the Settings panel can show "disabled in offline mode" without ever
+  // seeing the DSN itself.
+  diagnostics: {
+    exportZip: () => ipcRenderer.invoke("diagnostics:export"),
+    getSentryStatus: () => ipcRenderer.invoke("diagnostics:get-sentry-status"),
+    setSentryConsent: (optIn) => ipcRenderer.invoke("diagnostics:set-sentry-consent", { optIn }),
+  },
 });
 
 contextBridge.exposeInMainWorld("api", {

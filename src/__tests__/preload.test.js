@@ -40,6 +40,9 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "offline:set-enabled",
   "data-packs:get-status",
   "data-packs:rescan",
+  "diagnostics:export",
+  "diagnostics:get-sentry-status",
+  "diagnostics:set-sentry-consent",
 ]);
 
 const ALLOWED_SEND_CHANNELS = new Set(["shutdown", "minimize", "reload", "log:renderer"]);
@@ -136,6 +139,9 @@ describe("preload bridge surface", () => {
     exposed.electron.offline.setEnabled(true);
     exposed.electron.dataPacks.getStatus();
     exposed.electron.dataPacks.rescan();
+    exposed.electron.diagnostics.exportZip();
+    exposed.electron.diagnostics.getSentryStatus();
+    exposed.electron.diagnostics.setSentryConsent(true);
     exposed.api.http.request("GET", "/", null, "rid");
     exposed.api.http.runScenario({}, "rid");
     exposed.api.http.cancelScenario("job", "rid");

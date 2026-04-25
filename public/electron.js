@@ -14,6 +14,8 @@ const {
 const { scanAndImportPacks } = require("./dataPacks");
 const { startTileServer } = require("./tileServer");
 const { TILES_FILENAME } = require("./offlineConstants");
+const { buildDiagnosticsZip, sanitizeScenarioRow } = require("./diagnostics");
+const os = require("node:os");
 
 global.pythonProcess = null;
 
@@ -444,6 +446,14 @@ app.whenReady().then(async () => {
   } catch (error) {
     log.error("[electron] failed to initialize update store:", error);
   }
+
+  // Sentry crash reporting (issue #119, Area 17). Three independent gates,
+  // *all* of which must hold for Sentry to initialize: (1) build embedded
+  // a non-empty `SENTRY_DSN` (dev/fork builds skip this entirely);
+  // (2) the user opted in on first launch (or post-factory-reset); and
+  // (3) offline mode is not active (Area 14). The renderer never sees the
+  // DSN — it only sees the resolved boolean status via `diagnostics:*`.
+  initializeSentry();
 
   // Configure auto-updater BEFORE any other startup logic
   if (!isDevelopmentEnv()) {
@@ -1440,6 +1450,215 @@ const importStartupDataPacks = () => {
   return importedPacks;
 };
 
+// ---------------------------------------------------------------------------
+// Sentry + diagnostics (issue #119, Area 17)
+// ---------------------------------------------------------------------------
+
+let sentryInitialized = false;
+let sentryStatusReason = "not_configured";
+let cachedSentryDsn;
+
+// CI runs `scripts/write-sentry-dsn.js` after `vite build` to write a
+// sidecar `sentry-dsn.json` with the GitHub Actions secret. We read
+// from there first so packaged builds carry the DSN exactly once, in a
+// place that's trivial to rotate or inspect; falling back to
+// `process.env.SENTRY_DSN` keeps `npm run start:electron` working in
+// dev when an engineer wants to test Sentry locally.
+const resolveSentryDsn = () => {
+  if (cachedSentryDsn !== undefined) return cachedSentryDsn;
+  try {
+    const sidecarPath = path.join(basePath, "build", "sentry-dsn.json");
+    const text = fs.readFileSync(sidecarPath, "utf8");
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed.dsn === "string" && parsed.dsn.length > 0) {
+      cachedSentryDsn = parsed.dsn;
+      return cachedSentryDsn;
+    }
+  } catch {
+    // Missing or malformed sidecar → fall through to env var.
+  }
+  cachedSentryDsn = process.env.SENTRY_DSN || "";
+  return cachedSentryDsn;
+};
+
+// Sentry init runs in the Electron main process only — issue #119 forbids
+// adding it to the renderer because that would couple Sentry to the React
+// build and risk leaking renderer-side strings (URLs, scenario params)
+// that the renderer is not allowed to send. CI bakes the DSN into the
+// build via `scripts/write-sentry-dsn.js`; dev/fork builds without the
+// secret simply skip the import entirely.
+const initializeSentry = () => {
+  const dsn = resolveSentryDsn();
+  if (!dsn) {
+    sentryStatusReason = "no_dsn";
+    log.info("[electron] Sentry not initialized (no SENTRY_DSN configured)");
+    return;
+  }
+  if (isOfflineMode()) {
+    sentryStatusReason = "offline_mode";
+    log.info("[electron] Sentry not initialized (offline mode active)");
+    return;
+  }
+  if (!updateStore) {
+    sentryStatusReason = "no_store";
+    log.warn("[electron] Sentry not initialized (electron-store unavailable)");
+    return;
+  }
+  const consent = updateStore.get("sentryConsent");
+  if (consent !== "opted_in") {
+    sentryStatusReason = consent === "opted_out" ? "opted_out" : "no_consent";
+    log.info(`[electron] Sentry not initialized (consent=${consent || "unset"})`);
+    return;
+  }
+  try {
+    const Sentry = require("@sentry/electron/main");
+    Sentry.init({
+      dsn,
+      release: app.getVersion(),
+      environment: app.isPackaged ? "production" : "development",
+    });
+    sentryInitialized = true;
+    sentryStatusReason = "active";
+    log.info("[electron] Sentry initialized for crash reporting");
+  } catch (err) {
+    sentryStatusReason = "init_failed";
+    log.error("[electron] Sentry init failed:", err.message);
+  }
+};
+
+const getSentryStatus = () => ({
+  initialized: sentryInitialized,
+  reason: sentryStatusReason,
+  dsnConfigured: Boolean(resolveSentryDsn()),
+  consent: updateStore?.get("sentryConsent") || null,
+  offline: isOfflineMode(),
+});
+
+const setSentryConsent = (optIn) => {
+  if (!updateStore) return { error: "update store not initialized" };
+  updateStore.set("sentryConsent", optIn ? "opted_in" : "opted_out");
+  // Re-evaluate init: opting in mid-session should arm Sentry; opting out
+  // mid-session leaves the existing client running but stops future inits
+  // on next launch — `@sentry/electron` does not expose a clean shutdown
+  // we can rely on, so the simplest contract is "consent change takes full
+  // effect on next launch", which we also document in docs/privacy.md.
+  if (optIn && !sentryInitialized) initializeSentry();
+  return getSentryStatus();
+};
+
+// First-launch consent gate. The actual UX lives in the renderer (a MUI
+// dialog matching the rest of the app, mirroring the auto-update consent
+// pattern in #115). This helper just decides whether to *prompt* — the
+// renderer reads the result via `diagnostics:get-sentry-status` and
+// commits the user's choice via `diagnostics:set-sentry-consent`.
+const shouldPromptForSentryConsent = () => {
+  if (!updateStore) return false;
+  if (!resolveSentryDsn()) return false; // No DSN → never prompt
+  if (isOfflineMode()) return false;
+  return updateStore.get("sentryConsent") === undefined;
+};
+
+const collectSystemInfo = () => {
+  const cpus = os.cpus() || [];
+  let diskFree = null;
+  try {
+    // Node ≥18.15 added `fs.statfsSync`; fall back to null on older runtimes
+    // rather than failing the whole diagnostics export.
+    if (typeof fs.statfsSync === "function") {
+      const stat = fs.statfsSync(userDataDir || os.homedir());
+      diskFree = stat.bavail * stat.bsize;
+    }
+  } catch (err) {
+    log.warn("[electron] statfs failed for diagnostics:", err.message);
+  }
+  return {
+    generated_at: new Date().toISOString(),
+    app_version: app.getVersion(),
+    engine_version: updateStore?.get("engine.version") || null,
+    release_channel: releaseChannel,
+    offline_mode: isOfflineMode(),
+    sentry: getSentryStatus(),
+    os: {
+      platform: process.platform,
+      release: os.release(),
+      version: typeof os.version === "function" ? os.version() : null,
+      arch: process.arch,
+    },
+    cpu: {
+      model: cpus[0]?.model || null,
+      cores: cpus.length,
+    },
+    memory: {
+      total_bytes: os.totalmem(),
+      free_bytes: os.freemem(),
+    },
+    disk: {
+      free_bytes: diskFree,
+    },
+  };
+};
+
+const fetchRecentScenarioRows = async () => {
+  if (!backendBaseUrl) return [];
+  try {
+    const result = await httpRequest("GET", "/api/v1/scenarios", null, null);
+    // The backend wraps every list response in `{data: [...], status: ...}`.
+    // `list_scenarios` returns rows ordered by `created_at DESC`, so the
+    // first 5 are the most recently computed.
+    const rows = Array.isArray(result?.data)
+      ? result.data
+      : Array.isArray(result?.scenarios)
+        ? result.scenarios
+        : Array.isArray(result)
+          ? result
+          : [];
+    return rows.slice(0, 5).map(sanitizeScenarioRow).filter(Boolean);
+  } catch (err) {
+    log.warn("[electron] diagnostics scenario fetch failed:", err.message);
+    return [];
+  }
+};
+
+const exportDiagnostics = async () => {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const defaultName = `riskwise-diagnostics-${timestamp}.zip`;
+  const desktopPath = path.join(app.getPath("desktop"), defaultName);
+
+  const dialogResult = await dialog.showSaveDialog({
+    title: "Save diagnostics ZIP",
+    defaultPath: desktopPath,
+    filters: [{ name: "ZIP archive", extensions: ["zip"] }],
+  });
+  if (dialogResult.canceled || !dialogResult.filePath) {
+    return { canceled: true };
+  }
+
+  const electronLogDir = userLogDir || path.join(app.getPath("userData"), "logs");
+  // The Python backend writes to %APPDATA%/RISK WISE/logs/, which on Windows
+  // resolves to the same `userData` parent that electron-log uses. Both dirs
+  // can coincide; collectRecentLogs dedupes by filename via separate ZIP
+  // subdirs, so an overlap surfaces files in both folders deliberately.
+  const pythonLogDir = path.join(app.getPath("userData"), "logs");
+
+  const systemInfo = collectSystemInfo();
+  const scenarioRows = await fetchRecentScenarioRows();
+
+  try {
+    const result = buildDiagnosticsZip({
+      outPath: dialogResult.filePath,
+      electronLogDir,
+      pythonLogDir,
+      systemInfo,
+      scenarioRows,
+    });
+    log.info(`[electron] diagnostics ZIP written: ${result.outPath} entries=${result.entryCount}`);
+    return { ok: true, filePath: result.outPath, entryCount: result.entryCount };
+  } catch (err) {
+    log.error("[electron] diagnostics export failed:", err.message);
+    return { error: err.message };
+  }
+};
+
 const checkForAppUpdates = async (reason) => {
   if (isDevelopmentEnv()) {
     log.info(`[electron] update check skipped (dev env) reason=${reason}`);
@@ -1792,6 +2011,17 @@ ipcMain.handle("data-packs:rescan", () => {
   const results = importStartupDataPacks();
   broadcastOfflineStatus();
   return results;
+});
+
+// Diagnostics + Sentry consent (issue #119, Area 17). The diagnostics ZIP
+// is local-only — no remote upload, even if Sentry is opted in.
+ipcMain.handle("diagnostics:export", () => exportDiagnostics());
+ipcMain.handle("diagnostics:get-sentry-status", () => ({
+  ...getSentryStatus(),
+  shouldPromptConsent: shouldPromptForSentryConsent(),
+}));
+ipcMain.handle("diagnostics:set-sentry-consent", (_evt, payload) => {
+  return setSentryConsent(Boolean(payload?.optIn));
 });
 
 ipcMain.handle("engine:download-update", async () => {

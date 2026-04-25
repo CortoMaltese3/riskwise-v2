@@ -834,6 +834,7 @@
     "settings_tab_measures": "إجراءات التكيف",
     "settings_tab_about": "حول",
     "settings_tab_offline": "غير متصل",
+    "settings_tab_diagnostics": "التشخيص",
     "settings_offline_title": "وضع عدم الاتصال",
     "settings_offline_subtitle": "تشغيل RISK WISE بدون اتصال بالإنترنت. يتم تعطيل فحص التحديثات وواجهة CLIMADA Client وخرائط الإنترنت أثناء التفعيل.",
     "settings_offline_toggle_label": "وضع عدم الاتصال",
