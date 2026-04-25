@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Joyride, STATUS } from "react-joyride";
+import { Joyride, ACTIONS, EVENTS, STATUS } from "react-joyride";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 
@@ -48,9 +48,13 @@ const Walkthrough = () => {
 
   if (!walkthroughActive) return null;
 
-  const handleCallback = ({ status }) => {
-    const terminal = [STATUS.FINISHED, STATUS.SKIPPED];
-    if (terminal.includes(status)) {
+  const handleCallback = ({ action, status, type }) => {
+    if (
+      status === STATUS.FINISHED ||
+      status === STATUS.SKIPPED ||
+      action === ACTIONS.CLOSE ||
+      type === EVENTS.TARGET_NOT_FOUND
+    ) {
       finishWalkthrough();
     }
   };

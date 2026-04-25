@@ -35,7 +35,7 @@ const CSP_DIRECTIVES = [
   // `tileServer.js`). Keep in sync with the meta tag in `index.html`.
   "img-src 'self' data: blob: file: http://127.0.0.1:* https://*.basemaps.cartocdn.com",
   "font-src 'self' data:",
-  "connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*",
+  "connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* file:",
   "worker-src 'self' blob:",
 ].join("; ");
 const CSP_HEADER = [CSP_DIRECTIVES];
