@@ -107,6 +107,11 @@ jobs:
 
       - run: npm run format:check
 
+      # Phase 4 Area 16 (issue #121): WCAG 2.1 AA contrast lint. Fails CI with
+      # the failing token pair and measured ratio if a theme change drops a
+      # text/background combination below the AA threshold.
+      - run: npm run lint:contrast
+
       - run: npm test
 
   e2e:

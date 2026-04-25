@@ -23,6 +23,7 @@
     "test:e2e": "playwright test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "lint:contrast": "node scripts/check-color-contrast.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",

@@ -56,6 +56,8 @@ scripts/*
 !scripts/write-sentry-dsn.js
 # Phase 4 Area 18 — NOTICES.txt regeneration from CycloneDX SBOM (issue #120).
 !scripts/generate_notices.py
+# Phase 4 Area 16 — WCAG 2.1 AA contrast lint (issue #121).
+!scripts/check-color-contrast.js
 notes.txt
 
 #certificates

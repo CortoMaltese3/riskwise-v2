@@ -39,17 +39,21 @@ const cardColors = {
 };
 
 // Muted neutral surface used for "remarks" sections and secondary text lines.
+// `mutedText` darkened from `#6F6F6F` → `#5F5F5F` in #121 to clear WCAG AA
+// 4.5:1 against `muted` (was 4.49:1 — one hundredth shy of AA).
 const surfaceColors = {
   muted: "#F2F2F2",
-  mutedText: "#6F6F6F",
+  mutedText: "#5F5F5F",
   border: "#AAAAAA",
   borderLight: "#CCCCCC",
 };
 
-// Top-level navigation tab strip.
+// Top-level navigation tab strip. `contrastText` flipped from white to the
+// project's dark slate in #121: white-on-`#70ADB5` was 2.52:1 (failing AA at
+// 14px); dark slate is 7.08:1.
 const tabColors = {
   main: "#70ADB5",
-  contrastText: "#FFFFFF",
+  contrastText: "#0F172A",
 };
 
 // Map layer-switcher buttons (hazard/exposure/risk maps).
@@ -106,9 +110,14 @@ export const theme = createTheme({
   cssVariables: true,
   palette: {
     mode: "light",
+    // Primary teal darkened in #121 for WCAG 2.1 AA compliance:
+    //   - `main`  #45ABB9 → #2F7A86 (white-on-main was 2.70:1, now 4.94:1)
+    //   - `dark`  #3B919D → #0E5A66 (white-on-dark was 3.67:1, now 7.86:1)
+    // `light` stays as the tinted-surface swatch and is intended to pair with
+    // dark text rather than white (see MainSubTabs unselected-tab fix).
     primary: {
-      main: "#45ABB9",
-      dark: "#3B919D",
+      main: "#2F7A86",
+      dark: "#0E5A66",
       light: "#8AC8D0",
       contrastText: "#ffffff",
     },
