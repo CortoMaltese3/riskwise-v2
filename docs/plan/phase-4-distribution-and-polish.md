@@ -1,7 +1,7 @@
 # Phase 4 — Environment, Distribution & Polish
 
 > **Weeks**: 18–20 (3 weeks)
-> **Status**: ⏳ Pending Phase 3 exit
+> **Status**: 🔄 Implementation complete (issues #113–#123 merged); release-readiness verification pending against the v2.0.0 candidate build.
 > **Goal**: Ship a lean, signed, auto-updating Windows installer with a first-class offline variant; close the audit items (WCAG, SBOM, signing, provenance); and deliver the hardened test suite that makes every subsequent release defensible.
 > **Canonical references**: [ARCHITECTURE.md § Phase 4](../ARCHITECTURE.md#phase-4-environment--polish-weeks-18-20), [DECISIONS.md](../DECISIONS.md) D05, D07, D09, D15, D17
 > **Hard predecessor**: [phase-3-ui-overhaul.md](phase-3-ui-overhaul.md) — the UI, workspace, i18n, and accessibility must be baseline-complete before release-hardening work.
@@ -49,25 +49,25 @@ Full specifications live in [ARCHITECTURE.md](../ARCHITECTURE.md).
 
 From [ARCHITECTURE.md § Verification Criteria](../ARCHITECTURE.md#verification-criteria-acceptance-tests-per-phase):
 
-- [ ] Online installer ≤ 150 MB; offline installer ≤ 900 MB.
-- [ ] Playwright E2E passes: launch → Egypt + Flood → run → Leaflet renders → save → restore.
-- [ ] All 3 languages complete (en, ar, th) on every user-visible screen.
-- [ ] Install v2.0.0; release v2.0.1 to beta channel; app detects update, shows consent dialog, installs on restart.
-- [ ] Change engine version in `engine-manifest.json`; app prompts for engine re-download and applies it.
-- [ ] Tamper with `engine-manifest.json`; app rejects it with a signature-mismatch error.
-- [ ] `engine-manifest.json` and engine ZIP served from v2 release pipeline, not v1 public repo.
-- [ ] Install on airplane-mode Windows VM: app launches, runs Egypt flood scenario, shows clear errors for network actions.
-- [ ] Enable "Offline mode" in Settings: update checks stop, Leaflet switches to cached tiles, CLIMADA Client blocked.
-- [ ] Drop signed `.riskwise-pack` into designated folder → change takes effect after restart.
-- [ ] Import `.riskwise-pack` with invalid signature → import fails with clear error.
-- [ ] Install on clean Windows VM: SmartScreen passes immediately (EV) or reputation path is understood (OV).
-- [ ] Introduce a known accessibility violation in a branch → CI fails with a clear message.
-- [ ] Start NVDA; complete golden-path scenario flow with no blocker issues.
-- [ ] "Export Diagnostics" produces a ZIP containing logs from all three layers + version info + scenario state.
-- [ ] SBOM attached as a release artifact and lists every dependency.
-- [ ] `NOTICES.txt` attached to release; covers all npm + pip deps.
-- [ ] Egypt flood ERA scenario completes in ≤ 90 s on reference hardware (16 GB, 4-core).
-- [ ] Simulate low memory → app returns error 5002 before starting computation.
+- [ ] Online installer ≤ 150 MB; offline installer ≤ 900 MB. _Pending — record from `release-please` artifact; see [`docs/reference/benchmarks.md` § v2.0.0 release measurements](../reference/benchmarks.md#v200-release-measurements)._
+- [x] Playwright E2E passes: launch → Egypt + Flood → run → Leaflet renders → save → restore. _Issue #114, `tests/e2e/golden_path.spec.ts`, gated in `.github/workflows/tests.yml`._
+- [x] All 3 languages complete (en, ar, th) on every user-visible screen. _Issue #123, `src/locales/{en,ar,th}.json` enforced by `npm run lint:locales` in CI._
+- [ ] Install v2.0.0; release v2.0.1 to beta channel; app detects update, shows consent dialog, installs on restart. _Pending — exercise on first v2.0.0 → v2.0.1-beta.1 cut._
+- [ ] Change engine version in `engine-manifest.json`; app prompts for engine re-download and applies it. _Pending — manual verification on v2.0.0 candidate build._
+- [ ] Tamper with `engine-manifest.json`; app rejects it with a signature-mismatch error. _Pending — manual verification on v2.0.0 candidate build._
+- [x] `engine-manifest.json` and engine ZIP served from v2 release pipeline, not v1 public repo. _Issue #117._
+- [ ] Install on airplane-mode Windows VM: app launches, runs Egypt flood scenario, shows clear errors for network actions. _Pending — manual VM verification on v2.0.0 candidate build._
+- [x] Enable "Offline mode" in Settings: update checks stop, Leaflet switches to cached tiles, CLIMADA Client blocked. _Issue #116._
+- [x] Drop signed `.riskwise-pack` into designated folder → change takes effect after restart. _Issue #116._
+- [x] Import `.riskwise-pack` with invalid signature → import fails with clear error. _Issue #120, `tests/unit/test_pack_verifier.py`._
+- [ ] Install on clean Windows VM: SmartScreen passes immediately (EV) or reputation path is understood (OV). _Pending — manual VM verification on v2.0.0 candidate build._
+- [x] Introduce a known accessibility violation in a branch → CI fails with a clear message. _Issue #121, `npm run lint:contrast` in CI._
+- [ ] Start NVDA; complete golden-path scenario flow with no blocker issues. _Pending — NVDA smoke test recorded in [`docs/reference/accessibility.md`](../reference/accessibility.md) once a v2.0.0 candidate build is available._
+- [x] "Export Diagnostics" produces a ZIP containing logs from all three layers + version info + scenario state. _Issue #119._
+- [x] SBOM attached as a release artifact and lists every dependency. _Issue #120, `sbom.json` at repo root._
+- [x] `NOTICES.txt` attached to release; covers all npm + pip deps. _Issue #120, `NOTICES.txt` at repo root._
+- [ ] Egypt flood ERA scenario completes in ≤ 90 s on reference hardware (16 GB, 4-core). _Pending — see [`docs/reference/benchmarks.md` § v2.0.0 release measurements](../reference/benchmarks.md#v200-release-measurements)._
+- [x] Simulate low memory → app returns error 5002 before starting computation. _Phase 1 Area 2 / `tests/integration`._
 
 ---
 
@@ -78,4 +78,4 @@ From [ARCHITECTURE.md § Verification Criteria](../ARCHITECTURE.md#verification-
 3. Confirm signing certificate is obtained (Azure Trusted Signing or SSL.com EV per D17) before starting Area 15 activation.
 4. Read ARCHITECTURE.md Areas 4, 13, 14 together — they share the release and update pipeline.
 5. Start with Area 4 (bundler execution) — it's the longest pole and gates the installer size targets.
-6. Phase 4 issues are not yet created as of 2026-04-18.
+6. Phase 4 implementation issues (#113–#123) all merged as of 2026-04-25; remaining exit-criteria items require a v2.0.0 candidate build for VM and reference-hardware verification.

@@ -56,3 +56,44 @@ the above profile is the fallback when a CI runner is not available.
 
 Accuracy floor: ±2 %. Anything tighter than that is noise — do not let it
 drive a decision.
+
+## v2.0.0 release measurements
+
+Issue #123 is the final pre-release sweep. Every target above is recorded
+here against either a measured value on reference hardware or the
+GitHub Actions `windows-latest` runner used by `tests.yml` and the
+release CI pipeline.
+
+If a target does not pass, the row carries the measured value, a
+root-cause line, and an explicit decision: **accept** (within tolerance
+or non-blocking), **defer** (tracked for a v2.0.x patch), or **fix
+now** (release-blocker, must land before tag).
+
+| Metric | Target | Measured | Hardware | Decision | Notes |
+|---|---|---|---|---|---|
+| Online installer size | ≤ 150 MB | _pending — record from CI release artifact_ | release CI | — | Record on first `release-please` cut from `dist/RISK-WISE-Setup-*.exe`. |
+| Offline installer size | ≤ 900 MB | _pending — record from CI release artifact_ | release CI | — | Includes engine + EGY/THA tile pack. |
+| App cold-start to ready | ≤ 5 s | _pending — measure on reference hardware_ | reference dev box | — | Wall-clock from process spawn to engine `ready` event (see Measurement protocol). First run after reboot. |
+| Egypt flood ERA scenario | ≤ 90 s | _pending — measure on reference hardware_ | reference dev box | — | Median of five runs via `scripts/measure_engine.ps1`. |
+| Thailand heatwave ERA scenario | ≤ 120 s | _pending — measure on reference hardware_ | reference dev box | — | Larger raster than Egypt flood. |
+| Scenario restore from DuckDB | ≤ 1 s | _pending — measure on reference hardware_ | reference dev box | — | Query only, no recomputation. |
+| CRED chart render | ≤ 500 ms | _pending — measure on reference hardware_ | reference dev box | — | Data fetch + Chart.js render. |
+
+The "_pending_" rows are placeholders pending the dedicated measurement
+session against a clean Windows 11 install of the v2.0.0 candidate
+build on the reference hardware listed above. Issue #123 unblocks the
+v2.0.0 release once each row is populated; rows that miss their target
+move from "_pending_" to a `defer` or `fix now` decision before the
+release is tagged.
+
+CI cannot fully substitute for the dev-box runs:
+
+- Bundle-size rows can be measured on `windows-latest` against the
+  `release-please` artifact and copied into this table verbatim.
+- Cold-start and scenario-runtime rows depend on local SSD + 4-core CPU
+  characteristics that GitHub-hosted runners do not match closely
+  enough for the ±2 % accuracy floor; record those rows from the
+  reference dev box.
+- The chart-render row is browser-render-bound; measure in the
+  packaged Electron app, not in vitest, since `jsdom` does not exercise
+  the Chart.js raster path.

@@ -5,13 +5,12 @@
 
 ---
 
-## Current state (as of 2026-04-18)
+## Current state (as of 2026-04-25)
 
-**Active phase**: **Phase 0 — Research Spikes**.
-**Week**: 1 of 2 (Phase 0 start window).
-**Progress snapshot**: design-only ADRs landed for #3 (bundling), #6 (MUI v7), #7 (signing → D17), #8 (auto-update UX). Security baseline for #10 committed. Spikes #4, #5, #9 not started.
+**Active phase**: **Phase 4 — Environment, Distribution & Polish** (release-readiness sweep).
+**Progress snapshot**: implementation issues for Phases 0–4 (#113–#123) all merged. Remaining work before tagging v2.0.0 is the release-readiness verification listed in [phase-4-distribution-and-polish.md § Exit criteria](phase-4-distribution-and-polish.md#exit-criteria) — VM installs (signing/SmartScreen, airplane-mode, beta-channel update), NVDA smoke test, and reference-hardware benchmark capture per [`docs/reference/benchmarks.md` § v2.0.0 release measurements](../reference/benchmarks.md#v200-release-measurements). Phase 5 is next.
 
-For full per-spike status see [phase-0-research-spikes.md § Spike status](phase-0-research-spikes.md#spike-status).
+For per-phase exit-criteria status see each phase file's `Exit criteria` section.
 
 ---
 
@@ -19,11 +18,11 @@ For full per-spike status see [phase-0-research-spikes.md § Spike status](phase
 
 | Phase | File | Weeks | Status |
 |-------|------|-------|--------|
-| 0 — Research Spikes | [phase-0-research-spikes.md](phase-0-research-spikes.md) | 1–2 | 🔄 In progress |
-| 1 — Foundation | [phase-1-foundation.md](phase-1-foundation.md) | 3–7 | ⏳ Pending Phase 0 |
-| 2 — Data & Backend Cleanup | [phase-2-data-backend-cleanup.md](phase-2-data-backend-cleanup.md) | 8–12 | ⏳ Pending Phase 1 |
-| 3 — UI Overhaul | [phase-3-ui-overhaul.md](phase-3-ui-overhaul.md) | 13–17 | ⏳ Pending Phase 2 |
-| 4 — Environment, Distribution & Polish | [phase-4-distribution-and-polish.md](phase-4-distribution-and-polish.md) | 18–20 | ⏳ Pending Phase 3 |
+| 0 — Research Spikes | [phase-0-research-spikes.md](phase-0-research-spikes.md) | 1–2 | ✅ Done |
+| 1 — Foundation | [phase-1-foundation.md](phase-1-foundation.md) | 3–7 | ✅ Done |
+| 2 — Data & Backend Cleanup | [phase-2-data-backend-cleanup.md](phase-2-data-backend-cleanup.md) | 8–12 | ✅ Done |
+| 3 — UI Overhaul | [phase-3-ui-overhaul.md](phase-3-ui-overhaul.md) | 13–17 | ✅ Done |
+| 4 — Environment, Distribution & Polish | [phase-4-distribution-and-polish.md](phase-4-distribution-and-polish.md) | 18–20 | 🔄 Implementation complete; release-readiness verification pending |
 | 5 — Optional / Later | [phase-5-optional.md](phase-5-optional.md) | post-v2.0 | ⏳ Unstarted (non-blocking) |
 
 Status legend: 🔄 in progress · ✅ done · ⏳ pending · 🔲 not started · ❌ blocked.

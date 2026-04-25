@@ -24,6 +24,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:contrast": "node scripts/check-color-contrast.js",
+    "lint:locales": "node scripts/check-locales.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",
