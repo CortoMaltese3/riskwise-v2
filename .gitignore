@@ -54,6 +54,8 @@ scripts/*
 !scripts/sign_manifest.ps1
 # Phase 4 Area 17 — Sentry DSN injection at build time (issue #119).
 !scripts/write-sentry-dsn.js
+# Phase 4 Area 18 — NOTICES.txt regeneration from CycloneDX SBOM (issue #120).
+!scripts/generate_notices.py
 notes.txt
 
 #certificates

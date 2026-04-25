@@ -153,6 +153,36 @@ Resolves #42
 
 ---
 
+## Regenerating NOTICES.txt
+
+`NOTICES.txt` is auto-generated from the project SBOM (`sbom.json`) by
+[`scripts/generate_notices.py`](scripts/generate_notices.py). The committed
+file is the source of truth for downstream attribution; CI fails the release
+job if the regenerated output does not match the checked-in copy.
+
+After bumping a dependency or editing the static-asset table in the script:
+
+```bash
+# 1. (CI does this on every tag) regenerate the SBOM with cyclonedx-npm + cyclonedx-py
+#    Locally, you can either reuse a prior `sbom.json` or skip this step
+#    if you only changed the static-asset block in the script itself.
+
+# 2. Regenerate NOTICES.txt and commit the result.
+python scripts/generate_notices.py
+git add NOTICES.txt
+```
+
+To verify locally that your committed copy matches the SBOM (the same check
+CI runs):
+
+```bash
+python scripts/generate_notices.py --check
+```
+
+Never edit `NOTICES.txt` by hand — the next regeneration will overwrite it.
+
+---
+
 ## Tooling & quality gates
 
 - **Ruff** handles Python lint + format (replaces flake8, isort, and black).
