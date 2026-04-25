@@ -306,7 +306,7 @@ Track A (CLIMADA + Nuitka) is selected by default if Track B fails any of the ab
 
 **Migration status (2026-04-24, issue #117)**: Complete. `public/electron.js`
 (`RELEASE_OWNER` / `RELEASE_REPO` and the first-launch engine download),
-`installer/installer.nsh`, and `electron-builder.config.js` (auto-updater
+`installer/installer.nsh`, and `electron-builder.js` (auto-updater
 `publish` target) no longer reference the v1 public repo. The engine URL is
 driven entirely by the `download_url` field of the signed
 `engine-manifest.json` published by `.github/workflows/release.yml`; no
@@ -437,5 +437,74 @@ is committed to `resources/engine-manifest.pub` and ships inside the app
 bundle so `public/engineManifest.js` can verify a manifest offline.
 Generate the keypair with `minisign -G -p engine-manifest.pub -s engine-manifest.key`;
 never commit the private half.
+
+---
+
+## D24 — Air-gapped deployment support: deferred until named customer
+
+**Status**: Accepted
+**Date**: 2026-04-25
+
+**Decision**: Defer the offline-installer variant and the broader
+air-gapped deployment story. The runtime offline toggle, IPC route
+guards, MBTiles tile-server scaffold, and signed `.riskwise-pack`
+import flow remain in the codebase. The build-pipeline pieces — the
+`OFFLINE_INSTALLER=1` branching in `electron-builder.js`, the
+`dist:offline` / `publish:offline` npm scripts, and the build-time
+import of `public/offlineConstants.js` — were removed.
+
+**Why**:
+- No named customer requires it today. Implementing speculatively
+  produces the wrong requirements, and the audit guarantees ("offline
+  = no network traffic") cannot be verified without a deployment to
+  measure them against.
+- Engine bundling at install time is impractical with current CLIMADA
+  weight: ~750 MB on top of the base installer for a 2.5 GB on-disk
+  engine tree. The trigger to revisit will likely co-occur with a
+  switch to a leaner engine (climate-lama-engine, slim CLIMADA fork).
+- The offline IPC guard (`CLIMADA_CLIENT_ROUTE_PREFIXES` in
+  `public/electron.js`) currently protects routes that do not exist
+  on the FastAPI app — the `/api/v1/climada-client/` and
+  `/api/v1/hazard/fetch-from-client` routes were never wired up.
+  Backend fetcher methods (`get_litpop`, `_get_hazard_from_client`)
+  are reachable only from internal scenario flows, with no UI toggle
+  to opt out. The guard is dead code defending dead routes; resuming
+  this work means reconciling that.
+- D09 ("Offline mode: first-class user-selectable option, not the
+  default") still stands as the design target. This decision defers
+  the *implementation*, not the design.
+
+**Trigger to revisit**: either of —
+- A named GIZ / UNU / other gov-NGO deployment that requires the app
+  to operate without internet access.
+- A switch to a leaner engine that makes installer-time engine
+  bundling viable on size grounds.
+
+**Open questions** (carried forward to the implementation issue):
+1. Engine pre-stage strategy — installer-bundled, `RISKWISE_ENGINE_DIR`
+   env, or IT-pushed `%LOCALAPPDATA%\RiskWiseEngine\`. Depends on
+   whether a leaner engine is available by then.
+2. UI behavior for CLIMADA-API-dependent controls when offline:
+   confirmed → **disable** with tooltip, do not hide.
+3. Code signing must be live before this work resumes — an unsigned
+   NSIS installer plus an air-gapped audit is an unacceptable
+   combination.
+4. Tile-pack publishing process — who holds the minisign key, what is
+   the rotation cadence, where is the pack hosted.
+5. Any future telemetry / Sentry / crash reporting must gate on
+   `isOfflineMode()` from day one. Easy to forget.
+
+**Rejected**:
+- Implementing speculatively — see "Why" above.
+- Removing the runtime offline toggle, MBTiles scaffold, and signed
+  pack flow — they are useful in their own right (flaky-network
+  resilience, sideloaded data) and removing them costs more than
+  keeping them dormant.
+
+**Consequence**: `docs/offline.md` carries a deferred banner. The
+implementation work and the discovered mismatches above are tracked in
+[GitHub issue #134](https://github.com/CortoMaltese3/riskwise-v2/issues/134).
+A separate cleanup issue ([#135](https://github.com/CortoMaltese3/riskwise-v2/issues/135))
+addresses the dead IPC guard and the orphan fetcher methods.
 
 ---

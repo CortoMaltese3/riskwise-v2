@@ -123,6 +123,16 @@ export default [
     },
   },
   {
+    // electron-builder auto-detects this exact filename (not
+    // electron-builder.config.js — see DECISIONS.md and the file's
+    // header comment). It's CommonJS and runs under Node.
+    files: ["electron-builder.js"],
+    languageOptions: {
+      sourceType: "commonjs",
+      globals: { ...globals.node },
+    },
+  },
+  {
     // Build/packaging scripts run under Node directly (e.g. electron-builder
     // afterPack hooks). They aren't part of the renderer source tree but
     // need Node globals like `require`, `module`, and `console`.

@@ -1,5 +1,21 @@
 # Offline mode
 
+> **Status: deferred.** See [DECISIONS.md D24](DECISIONS.md#d24--air-gapped-deployment-support-deferred-until-named-customer);
+> tracked in [issue #134](https://github.com/CortoMaltese3/riskwise-v2/issues/134).
+> The runtime offline toggle, IPC route blocking, MBTiles tile-server
+> scaffold, and `.riskwise-pack` import flow still exist in the codebase,
+> but the **offline installer variant** (`npm run dist:offline`, MBTiles
+> tile pack bundled via `extraResources`, optional pre-extracted engine)
+> has been removed from the build pipeline pending a real deployment
+> need. The `OFFLINE_INSTALLER` branching was deleted from
+> `electron-builder.js`. Restore it when the trigger conditions in D24
+> are met. The sections below describe the design as originally
+> implemented.
+>
+> A separate cleanup issue ([#135](https://github.com/CortoMaltese3/riskwise-v2/issues/135))
+> addresses the dead IPC guard and orphan CLIMADA fetcher methods that
+> the audit in D24 surfaced.
+
 RISK WISE supports air-gapped operation through three independent
 mechanisms: a runtime offline toggle, a bundled MBTiles tile pack, and
 signed `.riskwise-pack` data imports. This document covers how each one
@@ -43,7 +59,7 @@ rest of the source tree. Instead:
 - **Tile format**: PNG, derived from OpenStreetMap
 
 Drop the file at the path above before running `npm run dist:offline`.
-The offline installer's `electron-builder.config.js` adds it to
+The offline installer's `electron-builder.js` adds it to
 `extraResources`; the online installer omits it.
 
 The runtime tile server uses [`@mapbox/mbtiles`](https://www.npmjs.com/package/@mapbox/mbtiles),
@@ -100,7 +116,7 @@ inside the installer — only `engine-manifest.pub` is bundled.
 | Offline | `npm run dist:offline` | ≤ 900 MB     | Bundled if `RISKWISE_ENGINE_DIR` is set | Local MBTiles |
 
 The split is driven by the `OFFLINE_INSTALLER=1` environment variable
-read inside `electron-builder.config.js`. When set:
+read inside `electron-builder.js`. When set:
 
 - `extraResources` adds `data/tiles/<pack>.mbtiles`.
 - `extraResources` also adds the engine tree pointed to by

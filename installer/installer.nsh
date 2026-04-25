@@ -13,14 +13,11 @@
   ShowInstDetails show
 !macroend
 
-; The RISK WISE engine is no longer downloaded during install. The app
+; The RISK WISE engine is not downloaded during install. The app
 ; fetches the signed engine-manifest.json on first launch and downloads
 ; the engine from `manifest.download_url` into
 ; `%LOCALAPPDATA%\RiskWiseEngine` (see `downloadAndInstallEngine` in
-; `public/electron.js` and DECISIONS.md D15). The offline installer
-; variant bundles the engine via `extraResources` instead (see
-; `electron-builder.config.js`), so no installer-time download is
-; required in either variant.
+; `public/electron.js` and DECISIONS.md D15).
 
 !macro customInstall
   DetailPrint "=========================================="

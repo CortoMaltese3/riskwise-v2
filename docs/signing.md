@@ -79,7 +79,7 @@ short-lived leaf certificates, so there is nothing to rotate manually.
 ## How activation flows through the codebase
 
 `package.json` does not carry the `build` block directly — electron-builder
-config lives in [electron-builder.config.js](../electron-builder.config.js).
+config lives in [electron-builder.js](../electron-builder.js).
 The config is a small conditional:
 
 ```js
@@ -189,5 +189,5 @@ D17's fallback clause). That path is no longer wired in
 `.github/workflows/release.yml` — the `AZURE_CLIENT_ID` guard replaced it.
 If Azure Trusted Signing ever has to be rolled back to a PFX provider,
 restore the old `if [ -n "$CSC_LINK" ]` branch, revert
-`electron-builder.config.js`'s conditional to set `signtool` options, and
+`electron-builder.js`'s conditional to set `signtool` options, and
 repopulate `WINDOWS_CERTIFICATE` / `WINDOWS_CERTIFICATE_PASSWORD`.
