@@ -690,3 +690,80 @@ class TestClientDisconnectCancellation:
                 if app_module._active_job_id is None:
                     break
                 time.sleep(0.05)
+
+
+class TestScenarioBundleEndpoints:
+    """``GET /scenario/{id}/export`` + ``POST /scenario/import`` (#122)."""
+
+    def test_export_streams_zip_with_attachment_disposition(
+        self, client: TestClient, tmp_path
+    ) -> None:
+        zip_path = tmp_path / "fake.riskwise-scenario"
+        # Minimal but well-formed ZIP body so FileResponse can serve it.
+        import zipfile
+
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("provenance.json", "{}")
+
+        with patch(
+            "export_handler.build_export_to_temp",
+            return_value=(zip_path, "Egypt_flood.riskwise-scenario"),
+        ):
+            response = client.get("/api/v1/scenario/scen-1/export")
+
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/zip"
+        disposition = response.headers["content-disposition"]
+        assert "attachment" in disposition
+        assert "Egypt_flood.riskwise-scenario" in disposition
+
+    def test_export_404_when_scenario_missing(self, client: TestClient) -> None:
+        from export_handler import ScenarioExportError
+
+        with patch(
+            "export_handler.build_export_to_temp",
+            side_effect=ScenarioExportError("Scenario not found: scen-x"),
+        ):
+            response = client.get("/api/v1/scenario/scen-x/export")
+        assert response.status_code == 404
+
+    def test_export_data_returns_path_envelope(self, client: TestClient, tmp_path) -> None:
+        output = tmp_path / "out.riskwise-scenario"
+        output.write_bytes(b"PK\x03\x04stub")
+        with patch(
+            "export_handler.build_export_to_temp",
+            return_value=(output, "scenario.riskwise-scenario"),
+        ):
+            response = client.get("/api/v1/scenario/scen-1/export-data")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["data"]["filename"] == "scenario.riskwise-scenario"
+        assert body["data"]["scenario_id"] == "scen-1"
+        assert body["status"]["code"] == 2000
+
+    def test_import_returns_new_scenario_id(self, client: TestClient) -> None:
+        with patch(
+            "export_handler.import_scenario",
+            return_value={"scenario_id": "new-uuid", "name": "Egypt flood"},
+        ):
+            response = client.post(
+                "/api/v1/scenario/import",
+                json={"import_path": "C:/tmp/fake.riskwise-scenario"},
+            )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["data"]["scenario_id"] == "new-uuid"
+        assert body["data"]["name"] == "Egypt flood"
+
+    def test_import_400_on_invalid_archive(self, client: TestClient) -> None:
+        from export_handler import ScenarioImportError
+
+        with patch(
+            "export_handler.import_scenario",
+            side_effect=ScenarioImportError("Archive is missing provenance.json"),
+        ):
+            response = client.post(
+                "/api/v1/scenario/import",
+                json={"import_path": "C:/tmp/bad.zip"},
+            )
+        assert response.status_code == 400

@@ -54,6 +54,12 @@ contextBridge.exposeInMainWorld("electron", {
   exportWorkspace: () => ipcRenderer.invoke("export-workspace"),
   importWorkspace: () => ipcRenderer.invoke("import-workspace"),
 
+  // Single-scenario .riskwise-scenario export/import (issue #122). Same
+  // dialog → backend pattern as the workspace flow above; the renderer
+  // never sees the binary.
+  exportScenario: (scenarioId) => ipcRenderer.invoke("export-scenario", { scenarioId }),
+  importScenario: () => ipcRenderer.invoke("import-scenario"),
+
   // Custom data pack selection (issue #90). The renderer either drops a
   // ZIP (path resolved via ``webUtils.getPathForFile``) or clicks Browse
   // (main process opens a native ``dialog.showOpenDialog``). Validation /

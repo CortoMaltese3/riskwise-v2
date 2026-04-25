@@ -5,12 +5,14 @@ import { Box, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
 import CustomDataSection from "./CustomDataSection";
 import CREDDataSection from "./CREDDataSection";
 import DiagnosticsSection from "./DiagnosticsSection";
+import ImportScenarioSection from "./ImportScenarioSection";
 import MeasuresSection from "./MeasuresSection";
 import OfflineSection from "./OfflineSection";
 import UpdatesPanel from "./UpdatesPanel";
 
 const TABS = [
   { id: "custom-data", labelKey: "settings_tab_custom_data" },
+  { id: "import-scenario", labelKey: "settings_tab_import_scenario" },
   { id: "cred-data", labelKey: "settings_tab_cred_data" },
   { id: "measures", labelKey: "settings_tab_measures" },
   { id: "updates", labelKey: "settings_tab_updates" },
@@ -59,6 +61,7 @@ const SettingsView = () => {
         </Tabs>
         <Box role="tabpanel" sx={{ p: 3, flexGrow: 1, overflow: "auto" }}>
           {activeTab === "custom-data" && <CustomDataSection />}
+          {activeTab === "import-scenario" && <ImportScenarioSection />}
           {activeTab === "cred-data" && <CREDDataSection />}
           {activeTab === "measures" && <MeasuresSection />}
           {activeTab === "updates" && <UpdatesPanel />}

@@ -27,6 +27,18 @@ class ScenarioWorkspaceItem(BaseModel):
     app_option: str | None = None
     status: str | None = None
     created_at: datetime | None = None
+    # Provenance fields surfaced for the print view, Excel report, and the
+    # ".riskwise-scenario" export. Optional so older rows without provenance
+    # still serialise.
+    app_version: str | None = None
+    engine_version: str | None = None
+    climada_version: str | None = None
+    entity_data_sha256: str | None = None
+    hazard_data_sha256: str | None = None
+    country_config_sha256: str | None = None
+    random_seed: int | None = None
+    computed_at: datetime | None = None
+    is_imported: bool = False
 
 
 class ScenarioDetailPayload(BaseModel):
@@ -119,4 +131,46 @@ class ExportReportData(BaseModel):
 
 class ExportReportResponse(BaseModel):
     data: ExportReportData
+    status: Status
+
+
+class ScenarioExportData(BaseModel):
+    """Shape returned by ``GET /api/v1/scenario/{id}/export-data`` (#122).
+
+    The endpoint that streams the binary uses ``FileResponse`` directly and
+    does not return JSON; this model exists so the matching "build the ZIP
+    at a temp path" helper used by Electron has a typed envelope to mirror
+    the workspace export flow.
+    """
+
+    export_path: str
+    filename: str
+    scenario_id: str
+
+
+class ScenarioExportResponse(BaseModel):
+    data: ScenarioExportData
+    status: Status
+
+
+class ScenarioImportRequest(BaseModel):
+    """Body posted to ``POST /api/v1/scenario/import`` (#122).
+
+    The renderer never reads the ZIP bytes; Electron's open dialog hands
+    the absolute path to the backend, which validates ``provenance.json``
+    and inserts the scenario as read-only (``is_imported = TRUE``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    import_path: str = Field(..., min_length=1)
+
+
+class ScenarioImportData(BaseModel):
+    scenario_id: str
+    name: str | None = None
+
+
+class ScenarioImportResponse(BaseModel):
+    data: ScenarioImportData
     status: Status

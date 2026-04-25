@@ -1249,6 +1249,102 @@
         "title": "ScenarioDetailResponse",
         "type": "object"
       },
+      "ScenarioExportData": {
+        "description": "Shape returned by ``GET /api/v1/scenario/{id}/export-data`` (#122).\n\nThe endpoint that streams the binary uses ``FileResponse`` directly and\ndoes not return JSON; this model exists so the matching \"build the ZIP\nat a temp path\" helper used by Electron has a typed envelope to mirror\nthe workspace export flow.",
+        "properties": {
+          "export_path": {
+            "title": "Export Path",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "scenario_id": {
+            "title": "Scenario Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "export_path",
+          "filename",
+          "scenario_id"
+        ],
+        "title": "ScenarioExportData",
+        "type": "object"
+      },
+      "ScenarioExportResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ScenarioExportData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "ScenarioExportResponse",
+        "type": "object"
+      },
+      "ScenarioImportData": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "scenario_id": {
+            "title": "Scenario Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scenario_id"
+        ],
+        "title": "ScenarioImportData",
+        "type": "object"
+      },
+      "ScenarioImportRequest": {
+        "additionalProperties": false,
+        "description": "Body posted to ``POST /api/v1/scenario/import`` (#122).\n\nThe renderer never reads the ZIP bytes; Electron's open dialog hands\nthe absolute path to the backend, which validates ``provenance.json``\nand inserts the scenario as read-only (``is_imported = TRUE``).",
+        "properties": {
+          "import_path": {
+            "minLength": 1,
+            "title": "Import Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "import_path"
+        ],
+        "title": "ScenarioImportRequest",
+        "type": "object"
+      },
+      "ScenarioImportResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ScenarioImportData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "ScenarioImportResponse",
+        "type": "object"
+      },
       "ScenarioListResponse": {
         "properties": {
           "data": {
@@ -1418,6 +1514,40 @@
             ],
             "title": "App Option"
           },
+          "app_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Version"
+          },
+          "climada_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Climada Version"
+          },
+          "computed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computed At"
+          },
           "country": {
             "anyOf": [
               {
@@ -1428,6 +1558,17 @@
               }
             ],
             "title": "Country"
+          },
+          "country_config_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Config Sha256"
           },
           "created_at": {
             "anyOf": [
@@ -1440,6 +1581,28 @@
               }
             ],
             "title": "Created At"
+          },
+          "engine_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Version"
+          },
+          "entity_data_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Data Sha256"
           },
           "exposure_economic": {
             "anyOf": [
@@ -1474,6 +1637,17 @@
             ],
             "title": "Future Year"
           },
+          "hazard_data_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hazard Data Sha256"
+          },
           "hazard_type": {
             "anyOf": [
               {
@@ -1500,6 +1674,11 @@
             ],
             "title": "Is Era"
           },
+          "is_imported": {
+            "default": false,
+            "title": "Is Imported",
+            "type": "boolean"
+          },
           "name": {
             "anyOf": [
               {
@@ -1521,6 +1700,17 @@
               }
             ],
             "title": "Notes"
+          },
+          "random_seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Random Seed"
           },
           "ref_year": {
             "anyOf": [
@@ -2484,6 +2674,44 @@
         "summary": "Scenario Cost Benefit"
       }
     },
+    "/api/v1/scenario/import": {
+      "post": {
+        "operationId": "scenario_import_api_v1_scenario_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioImportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scenario Import"
+      }
+    },
     "/api/v1/scenario/run": {
       "post": {
         "operationId": "scenario_run_api_v1_scenario_run_post",
@@ -2616,6 +2844,84 @@
           }
         },
         "summary": "Scenario Stream"
+      }
+    },
+    "/api/v1/scenario/{scenario_id}/export": {
+      "get": {
+        "description": "Stream the ``.riskwise-scenario`` ZIP for direct download.\n\nCleanup runs via Starlette's ``BackgroundTask`` after the response\ncompletes successfully. A client that drops mid-download leaves the\ntemp dir behind \u2014 acceptable for a manually-triggered single-scenario\nexport at this scale; a periodic sweep can reap stragglers if needed.",
+        "operationId": "scenario_export_stream_api_v1_scenario__scenario_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scenario Export Stream"
+      }
+    },
+    "/api/v1/scenario/{scenario_id}/export-data": {
+      "get": {
+        "description": "Build a ``.riskwise-scenario`` at a temp path and return its location.",
+        "operationId": "scenario_export_data_api_v1_scenario__scenario_id__export_data_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioExportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scenario Export Data"
       }
     },
     "/api/v1/scenarios": {

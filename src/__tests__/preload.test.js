@@ -20,6 +20,8 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "export-pdf",
   "export-workspace",
   "import-workspace",
+  "export-scenario",
+  "import-scenario",
   "select-custom-data-pack",
   "select-cred-dataset",
   "select-measures-dataset",
@@ -123,6 +125,8 @@ describe("preload bridge surface", () => {
     exposed.electron.exportPdf("scenario-id");
     exposed.electron.exportWorkspace();
     exposed.electron.importWorkspace();
+    exposed.electron.exportScenario("scenario-id");
+    exposed.electron.importScenario();
     exposed.electron.selectCustomDataPack();
     exposed.electron.selectCredDataset();
     exposed.electron.updates.check();
