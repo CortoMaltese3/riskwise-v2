@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Box, Table, TableBody, TableCell, TableRow, Typography } from "@mui/material";
 
@@ -27,6 +27,14 @@ interface ScenarioMeta {
   exposure_economic: string | null;
   exposure_non_economic: string | null;
   created_at: string | null;
+  app_version?: string | null;
+  engine_version?: string | null;
+  climada_version?: string | null;
+  entity_data_sha256?: string | null;
+  hazard_data_sha256?: string | null;
+  country_config_sha256?: string | null;
+  random_seed?: number | null;
+  computed_at?: string | null;
 }
 
 interface WaterfallCategory {
@@ -57,15 +65,30 @@ interface CostBenefitData {
   measures: CostBenefitMeasure[];
 }
 
-interface Provenance {
-  app_version?: string;
-  engine_version?: string;
-  climada_version?: string;
-  entity_data_sha256?: string;
-  hazard_data_sha256?: string;
-  country_config_sha256?: string;
-  random_seed?: number;
-}
+const SHA_PREFIX_LEN = 8;
+
+const REPRODUCIBILITY_NOTE =
+  "Results are reproducible on the same OS/hardware with the same seed. " +
+  "Cross-platform results may differ by ≤0.01% in AAL.";
+
+const shortSha = (value?: string | null): string | undefined => {
+  if (!value) return undefined;
+  return value.slice(0, SHA_PREFIX_LEN);
+};
+
+const buildBibtex = (appVersion?: string | null, climadaVersion?: string | null): string => {
+  const year = new Date().getFullYear();
+  const app = appVersion ?? "?";
+  const climada = climadaVersion ?? "?";
+  return [
+    `@techreport{riskwise${year},`,
+    `  title={RISK WISE v2 Scenario Report},`,
+    `  institution={UNU-EHS / GIZ},`,
+    `  year={${year}},`,
+    `  note={App v${app}, CLIMADA v${climada}}`,
+    `}`,
+  ].join("\n");
+};
 
 const formatDate = (iso: string | null, locale: string) => {
   if (!iso) return "—";
@@ -99,7 +122,6 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
   const [meta, setMeta] = useState<ScenarioMeta | null>(null);
   const [waterfallData, setWaterfallData] = useState<WaterfallData | null>(null);
   const [costbenData, setCostbenData] = useState<CostBenefitData | null>(null);
-  const [provenance, setProvenance] = useState<Provenance>({});
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -123,11 +145,6 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
           parseJsonResult<WaterfallData>(payload.results.waterfall_data, setWaterfallData);
         if (payload.results.costben_data)
           parseJsonResult<CostBenefitData>(payload.results.costben_data, setCostbenData);
-        if (payload.results.impact_summary) {
-          parseJsonResult<{ provenance?: Provenance }>(payload.results.impact_summary, (s) =>
-            setProvenance(s.provenance ?? {})
-          );
-        }
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -157,18 +174,26 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
     );
   }
 
-  const provenanceRows: Array<[string, string]> = (
-    [
-      ["App Version", provenance.app_version],
-      ["Engine Version", provenance.engine_version],
-      ["CLIMADA Version", provenance.climada_version],
-      ["Computed At", meta.created_at ? formatDate(meta.created_at, locale) : undefined],
-      ["Entity Data SHA-256", provenance.entity_data_sha256],
-      ["Hazard Data SHA-256", provenance.hazard_data_sha256],
-      ["Country Config SHA-256", provenance.country_config_sha256],
-      ["Random Seed", provenance.random_seed != null ? String(provenance.random_seed) : undefined],
-    ] as Array<[string, string | undefined]>
-  ).filter((row): row is [string, string] => Boolean(row[1]));
+  const provenanceRows = useMemo<Array<[string, string]>>(() => {
+    const computedAt = meta.computed_at ?? meta.created_at;
+    return (
+      [
+        ["App Version", meta.app_version],
+        ["Engine Version", meta.engine_version],
+        ["CLIMADA Version", meta.climada_version],
+        ["Computed At", computedAt ? formatDate(computedAt, locale) : undefined],
+        ["Entity Data SHA-256 (8-char prefix)", shortSha(meta.entity_data_sha256)],
+        ["Hazard Data SHA-256 (8-char prefix)", shortSha(meta.hazard_data_sha256)],
+        ["Country Config SHA-256 (8-char prefix)", shortSha(meta.country_config_sha256)],
+        ["Random Seed", meta.random_seed != null ? String(meta.random_seed) : undefined],
+      ] as Array<[string, string | undefined]>
+    ).filter((row): row is [string, string] => Boolean(row[1]));
+  }, [meta, locale]);
+
+  const bibtex = useMemo(
+    () => buildBibtex(meta.app_version, meta.climada_version),
+    [meta.app_version, meta.climada_version]
+  );
 
   return (
     <>
@@ -243,16 +268,16 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
           </Typography>
         </Box>
 
-        <Box sx={{ "@media print": { pageBreakInside: "avoid" } }}>
+        <Box sx={{ "@media print": { pageBreakInside: "avoid", pageBreakBefore: "always" } }}>
           <Typography variant="h5" gutterBottom>
             Provenance
           </Typography>
-          <Table size="small">
+          <Table size="small" sx={{ mb: 2 }}>
             <TableBody>
               {provenanceRows.map(([label, value]) => (
                 <TableRow key={label}>
                   <TableCell
-                    sx={{ fontWeight: "bold", border: "1px solid #ddd", width: 200, py: 0.75 }}
+                    sx={{ fontWeight: "bold", border: "1px solid #ddd", width: 260, py: 0.75 }}
                   >
                     {label}
                   </TableCell>
@@ -271,6 +296,31 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
               ))}
             </TableBody>
           </Table>
+          <Typography
+            variant="body2"
+            sx={{ fontStyle: "italic", mb: 2 }}
+            data-testid="reproducibility-note"
+          >
+            {REPRODUCIBILITY_NOTE}
+          </Typography>
+          <Typography variant="subtitle2" gutterBottom>
+            Citation (BibTeX)
+          </Typography>
+          <Box
+            component="pre"
+            data-testid="bibtex-snippet"
+            sx={{
+              fontFamily: "Consolas, monospace",
+              fontSize: "0.75rem",
+              backgroundColor: "#f5f5f5",
+              border: "1px solid #ddd",
+              p: 1.5,
+              m: 0,
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {bibtex}
+          </Box>
         </Box>
       </Box>
     </>

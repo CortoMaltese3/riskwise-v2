@@ -61,6 +61,17 @@ class ScenarioRow:
     app_option: str | None
     status: str | None
     created_at: datetime | None
+    # Provenance fields surfaced for the print view, Excel sheet, and
+    # the .riskwise-scenario export so all three read from one source.
+    app_version: str | None = None
+    engine_version: str | None = None
+    climada_version: str | None = None
+    entity_data_sha256: str | None = None
+    hazard_data_sha256: str | None = None
+    country_config_sha256: str | None = None
+    random_seed: int | None = None
+    computed_at: datetime | None = None
+    is_imported: bool = False
 
 
 @dataclass
@@ -81,14 +92,24 @@ def insert_scenario(
     tags: str | None = None,
     notes: str | None = None,
     status: str = "completed",
+    computed_at: datetime | None = None,
+    is_imported: bool = False,
+    snapshots: list[dict[str, Any]] | None = None,
 ) -> None:
-    """Persist a freshly-finished run: one ``scenarios`` row + N result blobs.
+    """Persist a finished run: one ``scenarios`` row + N result blobs (+ optional snapshots).
 
     ``provenance`` is mandatory: every scenario row must carry a complete
     set of reproducibility fields (see migration ``0002_provenance.sql``).
     A missing field is a handler-level error — the DB would also reject
     the insert via its NOT NULL constraint, but raising here gives the
     caller a clearer traceback pointing at the offending key.
+
+    Two modes share this writer. The default (``is_imported=False``,
+    ``computed_at=None``, ``snapshots=None``) is the fresh-run path used
+    by the scenario runner. The ``.riskwise-scenario`` import path passes
+    ``is_imported=True`` plus the original ``computed_at`` (so the row
+    keeps its original timestamp instead of "now") and a list of snapshot
+    dicts to embed verbatim.
     """
     missing = [f for f in _PROVENANCE_FIELDS if provenance.get(f) is None]
     if missing:
@@ -104,9 +125,9 @@ def insert_scenario(
                 future_year, annual_growth, is_era, app_option, status,
                 app_version, engine_version, climada_version,
                 entity_data_sha256, hazard_data_sha256, country_config_sha256,
-                config_version, random_seed
+                config_version, random_seed, computed_at, is_imported
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                      ?, ?, ?, ?, ?, ?, ?, ?)
+                      ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?)
             """,
             [
                 scenario_id,
@@ -132,6 +153,8 @@ def insert_scenario(
                 provenance["country_config_sha256"],
                 provenance["config_version"],
                 provenance["random_seed"],
+                computed_at,
+                is_imported,
             ],
         )
         for result_type, blob in results.items():
@@ -144,8 +167,54 @@ def insert_scenario(
                 """,
                 [f"{scenario_id}:{result_type}", scenario_id, result_type, blob],
             )
+        if snapshots:
+            for snap in snapshots:
+                conn.execute(
+                    """
+                    INSERT INTO snapshots (id, scenario_id, snapshot_type, image, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    [
+                        snap["id"],
+                        scenario_id,
+                        snap["snapshot_type"],
+                        snap.get("image"),
+                        snap.get("created_at"),
+                    ],
+                )
     finally:
         conn.close()
+
+
+def get_scenario_snapshots_with_image(scenario_id: str) -> list[dict[str, Any]]:
+    """Return every snapshot for a scenario including the image bytes.
+
+    The list endpoint :func:`list_snapshots` deliberately omits the image
+    blob (cheap metadata for the drawer); the export path needs the bytes
+    to embed into the ``.riskwise-scenario`` ZIP.
+    """
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT id, scenario_id, snapshot_type, image, created_at
+            FROM snapshots WHERE scenario_id = ?
+            ORDER BY created_at ASC
+            """,
+            [scenario_id],
+        ).fetchall()
+    finally:
+        conn.close()
+    return [
+        {
+            "id": r[0],
+            "scenario_id": r[1],
+            "snapshot_type": r[2],
+            "image": bytes(r[3]) if r[3] is not None else None,
+            "created_at": r[4],
+        }
+        for r in rows
+    ]
 
 
 def patch_scenario_metadata(
@@ -181,10 +250,7 @@ def patch_scenario_metadata(
         row = conn.execute(
             f"""
             UPDATE scenarios SET {", ".join(updates)} WHERE id = ?
-            RETURNING id, name, tags, notes, country, hazard_type, scenario,
-                      exposure_economic, exposure_non_economic, ref_year,
-                      future_year, annual_growth, is_era, app_option, status,
-                      created_at
+            RETURNING {_SCENARIO_SELECT_COLUMNS}
             """,
             values,
         ).fetchone()
@@ -209,12 +275,9 @@ def update_scenario_metadata(
     conn = get_connection()
     try:
         row = conn.execute(
-            """
+            f"""
             UPDATE scenarios SET name = ?, tags = ?, notes = ? WHERE id = ?
-            RETURNING id, name, tags, notes, country, hazard_type, scenario,
-                      exposure_economic, exposure_non_economic, ref_year,
-                      future_year, annual_growth, is_era, app_option, status,
-                      created_at
+            RETURNING {_SCENARIO_SELECT_COLUMNS}
             """,
             [name, tags, notes, scenario_id],
         ).fetchone()
@@ -227,11 +290,8 @@ def list_scenarios() -> list[ScenarioRow]:
     conn = get_connection()
     try:
         rows = conn.execute(
-            """
-            SELECT id, name, tags, notes, country, hazard_type, scenario,
-                   exposure_economic, exposure_non_economic, ref_year,
-                   future_year, annual_growth, is_era, app_option, status,
-                   created_at
+            f"""
+            SELECT {_SCENARIO_SELECT_COLUMNS}
             FROM scenarios
             ORDER BY created_at DESC
             """
@@ -245,11 +305,8 @@ def get_scenario(scenario_id: str) -> ScenarioDetail | None:
     conn = get_connection()
     try:
         row = conn.execute(
-            """
-            SELECT id, name, tags, notes, country, hazard_type, scenario,
-                   exposure_economic, exposure_non_economic, ref_year,
-                   future_year, annual_growth, is_era, app_option, status,
-                   created_at
+            f"""
+            SELECT {_SCENARIO_SELECT_COLUMNS}
             FROM scenarios WHERE id = ?
             """,
             [scenario_id],
@@ -342,6 +399,17 @@ def read_result_blobs(temp_dir: Path) -> dict[str, bytes]:
     return blobs
 
 
+_SCENARIO_SELECT_COLUMNS = """
+    id, name, tags, notes, country, hazard_type, scenario,
+    exposure_economic, exposure_non_economic, ref_year,
+    future_year, annual_growth, is_era, app_option, status,
+    created_at,
+    app_version, engine_version, climada_version,
+    entity_data_sha256, hazard_data_sha256, country_config_sha256,
+    random_seed, computed_at, is_imported
+"""
+
+
 def _row_to_scenario(row: tuple) -> ScenarioRow:
     return ScenarioRow(
         id=row[0],
@@ -360,4 +428,13 @@ def _row_to_scenario(row: tuple) -> ScenarioRow:
         app_option=row[13],
         status=row[14],
         created_at=row[15],
+        app_version=row[16],
+        engine_version=row[17],
+        climada_version=row[18],
+        entity_data_sha256=row[19],
+        hazard_data_sha256=row[20],
+        country_config_sha256=row[21],
+        random_seed=row[22],
+        computed_at=row[23],
+        is_imported=bool(row[24]) if row[24] is not None else False,
     )

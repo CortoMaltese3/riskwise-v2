@@ -68,6 +68,18 @@ export interface ElectronBridge {
     skipped?: number;
     reason?: string;
   }>;
+  exportScenario: (scenarioId: string) => Promise<{
+    success: boolean;
+    filePath?: string;
+    scenarioId?: string;
+    reason?: string;
+  }>;
+  importScenario: () => Promise<{
+    success: boolean;
+    scenarioId?: string;
+    name?: string;
+    reason?: string;
+  }>;
 }
 
 declare global {

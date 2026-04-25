@@ -35,6 +35,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import shutil
 import socket
 import sys
 import threading
@@ -48,7 +49,7 @@ from cancellation import CancelRequested, cancel_event_var
 from db import run_startup_migrations
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from logging_config import (
     bind_request_id,
     configure_logging,
@@ -90,6 +91,9 @@ from models import (
     SaveScenarioRequest,
     SaveScenarioResponse,
     ScenarioDetailResponse,
+    ScenarioExportResponse,
+    ScenarioImportRequest,
+    ScenarioImportResponse,
     ScenarioListResponse,
     ScenarioRunRequest,
     SnapshotListResponse,
@@ -101,6 +105,7 @@ from models import (
 )
 from progress import ProgressEvent, progress_callback_var
 from provenance import ManifestError, verify_manifest
+from starlette.background import BackgroundTask
 
 API_PREFIX = "/api/v1"
 
@@ -662,6 +667,74 @@ async def delete_scenario_endpoint(scenario_id: str) -> dict:
     if not removed:
         raise HTTPException(status_code=404, detail="Scenario not found")
     return {"data": {"id": scenario_id}, "status": _status_ok()}
+
+
+# Two flavours of the scenario export endpoint live side by side:
+#   - GET /scenario/{id}/export streams the ZIP with Content-Disposition:
+#     attachment — the literal acceptance criterion, and what a curl-driven
+#     integration test sees.
+#   - GET /scenario/{id}/export-data returns a tempfile path so the Electron
+#     main process can copy the bundle to the user-chosen save location and
+#     unlink the source.
+
+
+async def _build_scenario_export(scenario_id: str) -> tuple[Path, str]:
+    """Run :func:`build_export_to_temp` off the loop and translate not-found to 404."""
+    from export_handler import ScenarioExportError, build_export_to_temp
+
+    try:
+        return await asyncio.to_thread(build_export_to_temp, scenario_id)
+    except ScenarioExportError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get(f"{API_PREFIX}/scenario/{{scenario_id}}/export")
+async def scenario_export_stream(scenario_id: str) -> FileResponse:
+    """Stream the ``.riskwise-scenario`` ZIP for direct download.
+
+    Cleanup runs via Starlette's ``BackgroundTask`` after the response
+    completes successfully. A client that drops mid-download leaves the
+    temp dir behind — acceptable for a manually-triggered single-scenario
+    export at this scale; a periodic sweep can reap stragglers if needed.
+    """
+    output_path, suggested_filename = await _build_scenario_export(scenario_id)
+
+    def _cleanup() -> None:
+        shutil.rmtree(output_path.parent, ignore_errors=True)
+
+    return FileResponse(
+        path=str(output_path),
+        media_type="application/zip",
+        filename=suggested_filename,
+        background=BackgroundTask(_cleanup),
+    )
+
+
+@app.get(
+    f"{API_PREFIX}/scenario/{{scenario_id}}/export-data", response_model=ScenarioExportResponse
+)
+async def scenario_export_data(scenario_id: str) -> dict:
+    """Build a ``.riskwise-scenario`` at a temp path and return its location."""
+    output_path, suggested_filename = await _build_scenario_export(scenario_id)
+    return {
+        "data": {
+            "export_path": str(output_path),
+            "filename": suggested_filename,
+            "scenario_id": scenario_id,
+        },
+        "status": _status_ok(),
+    }
+
+
+@app.post(f"{API_PREFIX}/scenario/import", response_model=ScenarioImportResponse)
+async def scenario_import(payload: ScenarioImportRequest) -> dict:
+    from export_handler import ScenarioImportError, import_scenario
+
+    try:
+        result = await asyncio.to_thread(import_scenario, Path(payload.import_path))
+    except ScenarioImportError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"data": result, "status": _status_ok()}
 
 
 @app.get(f"{API_PREFIX}/macro/datasets", response_model=CredDatasetsResponse)

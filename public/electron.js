@@ -1281,6 +1281,88 @@ ipcMain.handle("import-workspace", async () => {
   }
 });
 
+// Single-scenario .riskwise-scenario export/import (issue #122).
+//
+// Mirrors the workspace ZIP flow above: backend writes the archive at a
+// temp path, returns the path; main moves it to the user-chosen
+// destination, unlinks the source. Import: open dialog → POST path →
+// backend validates and inserts the scenario as read-only.
+ipcMain.handle("export-scenario", async (_event, { scenarioId }) => {
+  if (!scenarioId) {
+    return { success: false, reason: "Missing scenarioId" };
+  }
+  try {
+    const response = await httpRequest(
+      "GET",
+      `/api/v1/scenario/${encodeURIComponent(scenarioId)}/export-data`,
+      null
+    );
+    const exportPath = response?.data?.export_path;
+    const filename = response?.data?.filename;
+    if (!exportPath || !filename) {
+      return { success: false, reason: "Backend did not return an export path" };
+    }
+
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      title: "Export Scenario",
+      defaultPath: filename,
+      filters: [{ name: "RISK WISE Scenario", extensions: ["riskwise-scenario"] }],
+    });
+
+    if (canceled || !filePath) {
+      try {
+        fs.unlinkSync(exportPath);
+        fs.rmdirSync(path.dirname(exportPath));
+      } catch (err) {
+        log.warn("[electron] cleanup after cancelled scenario export failed:", err.message);
+      }
+      return { success: false, reason: "cancelled" };
+    }
+
+    fs.copyFileSync(exportPath, filePath);
+    try {
+      fs.unlinkSync(exportPath);
+      fs.rmdirSync(path.dirname(exportPath));
+    } catch (err) {
+      log.warn("[electron] failed to remove scenario export temp file:", err.message);
+    }
+
+    log.info("[electron] scenario exported:", filePath);
+    return { success: true, filePath, scenarioId };
+  } catch (error) {
+    const message = error instanceof BackendError ? error.envelope.message : error.message;
+    log.error("[electron] scenario export failed:", message);
+    return { success: false, reason: message };
+  }
+});
+
+ipcMain.handle("import-scenario", async () => {
+  try {
+    const { filePaths, canceled } = await dialog.showOpenDialog({
+      title: "Import Scenario",
+      properties: ["openFile"],
+      filters: [{ name: "RISK WISE Scenario", extensions: ["riskwise-scenario"] }],
+    });
+
+    if (canceled || !filePaths || filePaths.length === 0) {
+      return { success: false, reason: "cancelled" };
+    }
+
+    const importPath = filePaths[0];
+    const response = await httpRequest("POST", "/api/v1/scenario/import", {
+      import_path: importPath,
+    });
+    const scenarioId = response?.data?.scenario_id;
+    const name = response?.data?.name;
+    log.info("[electron] scenario imported:", { scenarioId, name });
+    return { success: true, scenarioId, name };
+  } catch (error) {
+    const message = error instanceof BackendError ? error.envelope.message : error.message;
+    log.error("[electron] scenario import failed:", message);
+    return { success: false, reason: message };
+  }
+});
+
 // Custom data pack selection (issue #90). The Settings > Custom Data tab
 // either gets the path from a dropped File (via ``webUtils.getPathForFile``
 // in preload) or asks the main process to open a native file picker here.

@@ -45,6 +45,27 @@ REPRODUCIBILITY_NOTE = (
     "BLAS/CPU tolerance (~1e-9 relative)."
 )
 
+# User-facing reproducibility caveat shown in the PDF/Excel reports and
+# the .riskwise-scenario README. Wording is fixed by the issue spec — the
+# numeric tolerance ("<=0.01% in AAL") is the contract end-users see.
+REPORT_REPRODUCIBILITY_NOTE = (
+    "Results are reproducible on the same OS/hardware with the same seed. "
+    "Cross-platform results may differ by <=0.01% in AAL."
+)
+
+# 8-character SHA prefix used in the human-readable provenance blocks
+# (PDF, Excel, print view). Keeps Python and JS surfaces in lock-step;
+# the JS side mirrors this constant in ScenarioPrintView.tsx.
+SHA_PREFIX_LEN = 8
+
+
+def short_sha(value: str | None) -> str:
+    """Return the first ``SHA_PREFIX_LEN`` chars of a SHA, or ``-`` if missing."""
+    if not value:
+        return "-"
+    return value[:SHA_PREFIX_LEN]
+
+
 _MANIFEST_SKIP_FLAG = "RISKWISE_SKIP_MANIFEST_VERIFY"
 
 

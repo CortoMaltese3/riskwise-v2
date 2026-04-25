@@ -7,8 +7,32 @@ import pandas as pd
 import xlsxwriter
 
 from constants import DATA_TEMP_DIR, REPORTS_DIR
-from base_handler import BaseHandler
 from logger_config import LoggerConfig
+from provenance import REPORT_REPRODUCIBILITY_NOTE, short_sha
+
+# ``BaseHandler`` is imported lazily inside ``__init__`` because importing it
+# at module top pulls in CLIMADA (and CLIMADA's optional deps like fiona),
+# which the lightweight unit tests for the Provenance tab + BibTeX helpers
+# do not need and may not have installed.
+
+
+def build_bibtex_snippet(app_version: Optional[str], climada_version: Optional[str]) -> str:
+    """Return the BibTeX snippet stamped on every PDF and Excel export.
+
+    The current year is captured at call time so a report regenerated in a
+    new calendar year cites that year.
+    """
+    year = datetime.now().year
+    app = app_version or "?"
+    climada = climada_version or "?"
+    return (
+        f"@techreport{{riskwise{year},\n"
+        f"  title={{RISK WISE v2 Scenario Report}},\n"
+        f"  institution={{UNU-EHS / GIZ}},\n"
+        f"  year={{{year}}},\n"
+        f"  note={{App v{app}, CLIMADA v{climada}}}\n"
+        f"}}"
+    )
 
 
 @dataclass
@@ -28,6 +52,8 @@ class ReportParameters:
 
 class ReportHandler:
     def __init__(self, report_parameters: ReportParameters) -> None:
+        from base_handler import BaseHandler
+
         self.report_parameters = report_parameters
         self.target_dir = REPORTS_DIR / self.report_parameters.scenario_id or DATA_TEMP_DIR
         self.logger = LoggerConfig(logger_types=["file"])
@@ -165,6 +191,78 @@ class ReportHandler:
             for col_num, cell_data in enumerate(row_data):
                 ws.write(row_num, col_num, cell_data)
 
+    def _generate_provenance_tab(self, workbook) -> None:
+        """Write a Provenance sheet sourced from the DuckDB scenarios row (#122).
+
+        Skips silently when the scenario id does not resolve — e.g. legacy
+        report flows that bypassed the DB or unit tests that exercise the
+        non-provenance tabs in isolation. The caller still gets a valid
+        workbook so legacy flows do not regress.
+        """
+        from db import get_scenario
+
+        scenario_id = self.report_parameters.scenario_id
+        if not scenario_id:
+            return
+        detail = get_scenario(scenario_id)
+        if detail is None:
+            return
+        row = detail.scenario
+
+        ws = workbook.add_worksheet("Provenance")
+        ws.hide_gridlines(option=2)
+        bold_20 = workbook.add_format({"bold": True, "font_size": 20})
+        bold_11 = workbook.add_format({"bold": True, "font_size": 11})
+        normal_11 = workbook.add_format({"font_size": 11})
+        mono_11 = workbook.add_format({"font_name": "Consolas", "font_size": 11})
+        wrap_11 = workbook.add_format({"font_size": 11, "text_wrap": True, "italic": True})
+
+        ws.write("B2", "Scientific Reproducibility", bold_20)
+
+        computed_at_str = row.computed_at.isoformat() if row.computed_at else "-"
+        fields: list[tuple[str, str, object]] = [
+            ("App version", row.app_version or "-", normal_11),
+            ("Engine version", row.engine_version or "-", normal_11),
+            ("CLIMADA version", row.climada_version or "-", normal_11),
+            ("Entity data SHA-256 (8-char prefix)", short_sha(row.entity_data_sha256), mono_11),
+            ("Hazard data SHA-256 (8-char prefix)", short_sha(row.hazard_data_sha256), mono_11),
+            (
+                "Country config SHA-256 (8-char prefix)",
+                short_sha(row.country_config_sha256),
+                mono_11,
+            ),
+            (
+                "Random seed",
+                str(row.random_seed) if row.random_seed is not None else "-",
+                normal_11,
+            ),
+            ("Computed at", computed_at_str, normal_11),
+        ]
+        for offset, (label, value, value_fmt) in enumerate(fields):
+            r = 4 + offset
+            ws.write(r, 1, label, bold_11)
+            ws.write(r, 2, value, value_fmt)
+
+        note_row = 4 + len(fields) + 2
+        ws.write(note_row, 1, "Reproducibility note:", bold_11)
+        ws.merge_range(
+            note_row + 1,
+            1,
+            note_row + 3,
+            7,
+            REPORT_REPRODUCIBILITY_NOTE,
+            wrap_11,
+        )
+
+        bibtex_row = note_row + 5
+        ws.write(bibtex_row, 1, "Citation (BibTeX):", bold_11)
+        bibtex = build_bibtex_snippet(row.app_version, row.climada_version)
+        for line_offset, line in enumerate(bibtex.splitlines()):
+            ws.write(bibtex_row + 1 + line_offset, 1, line, mono_11)
+
+        ws.set_column("B:B", 42)
+        ws.set_column("C:C", 60)
+
     def _save_report(self, workbook):
         workbook.close()
 
@@ -175,4 +273,5 @@ class ReportHandler:
         self._generate_hazard_tab(workbook)
         self._generate_exposure_tab(workbook)
         self._generate_impact_tab(workbook)
+        self._generate_provenance_tab(workbook)
         self._save_report(workbook)

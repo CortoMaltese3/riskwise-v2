@@ -105,6 +105,25 @@ const RiskWiseClient = {
   exportReport: (id: string, body: ExportReportRequest) =>
     post<ExportReportResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}/export`, body),
 
+  // .riskwise-scenario shareable export/import (issue #122). The renderer
+  // never touches the binary — Electron's main process opens the
+  // save/open dialog and brokers the path-based handoff with the backend.
+  exportScenarioBundle: (id: string) =>
+    window.electron.exportScenario(id) as Promise<{
+      success: boolean;
+      filePath?: string;
+      scenarioId?: string;
+      reason?: string;
+    }>,
+
+  importScenarioBundle: () =>
+    window.electron.importScenario() as Promise<{
+      success: boolean;
+      scenarioId?: string;
+      name?: string;
+      reason?: string;
+    }>,
+
   saveScenario: (id: string, body: SaveScenarioRequest) =>
     post<SaveScenarioResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}/save`, body),
 

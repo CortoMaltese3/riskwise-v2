@@ -293,6 +293,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/scenario/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Scenario Import */
+        post: operations["scenario_import_api_v1_scenario_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/scenario/run": {
         parameters: {
             query?: never;
@@ -353,6 +370,51 @@ export interface paths {
         };
         /** Scenario Stream */
         get: operations["scenario_stream_api_v1_scenario__job_id__stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scenario/{scenario_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Scenario Export Stream
+         * @description Stream the ``.riskwise-scenario`` ZIP for direct download.
+         *
+         *     Cleanup runs via Starlette's ``BackgroundTask`` after the response
+         *     completes successfully. A client that drops mid-download leaves the
+         *     temp dir behind — acceptable for a manually-triggered single-scenario
+         *     export at this scale; a periodic sweep can reap stragglers if needed.
+         */
+        get: operations["scenario_export_stream_api_v1_scenario__scenario_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scenario/{scenario_id}/export-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Scenario Export Data
+         * @description Build a ``.riskwise-scenario`` at a temp path and return its location.
+         */
+        get: operations["scenario_export_data_api_v1_scenario__scenario_id__export_data_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1000,6 +1062,52 @@ export interface components {
             data: components["schemas"]["ScenarioDetailPayload"];
             status: components["schemas"]["Status"];
         };
+        /**
+         * ScenarioExportData
+         * @description Shape returned by ``GET /api/v1/scenario/{id}/export-data`` (#122).
+         *
+         *     The endpoint that streams the binary uses ``FileResponse`` directly and
+         *     does not return JSON; this model exists so the matching "build the ZIP
+         *     at a temp path" helper used by Electron has a typed envelope to mirror
+         *     the workspace export flow.
+         */
+        ScenarioExportData: {
+            /** Export Path */
+            export_path: string;
+            /** Filename */
+            filename: string;
+            /** Scenario Id */
+            scenario_id: string;
+        };
+        /** ScenarioExportResponse */
+        ScenarioExportResponse: {
+            data: components["schemas"]["ScenarioExportData"];
+            status: components["schemas"]["Status"];
+        };
+        /** ScenarioImportData */
+        ScenarioImportData: {
+            /** Name */
+            name?: string | null;
+            /** Scenario Id */
+            scenario_id: string;
+        };
+        /**
+         * ScenarioImportRequest
+         * @description Body posted to ``POST /api/v1/scenario/import`` (#122).
+         *
+         *     The renderer never reads the ZIP bytes; Electron's open dialog hands
+         *     the absolute path to the backend, which validates ``provenance.json``
+         *     and inserts the scenario as read-only (``is_imported = TRUE``).
+         */
+        ScenarioImportRequest: {
+            /** Import Path */
+            import_path: string;
+        };
+        /** ScenarioImportResponse */
+        ScenarioImportResponse: {
+            data: components["schemas"]["ScenarioImportData"];
+            status: components["schemas"]["Status"];
+        };
         /** ScenarioListResponse */
         ScenarioListResponse: {
             /** Data */
@@ -1047,26 +1155,47 @@ export interface components {
             annual_growth?: number | null;
             /** App Option */
             app_option?: string | null;
+            /** App Version */
+            app_version?: string | null;
+            /** Climada Version */
+            climada_version?: string | null;
+            /** Computed At */
+            computed_at?: string | null;
             /** Country */
             country?: string | null;
+            /** Country Config Sha256 */
+            country_config_sha256?: string | null;
             /** Created At */
             created_at?: string | null;
+            /** Engine Version */
+            engine_version?: string | null;
+            /** Entity Data Sha256 */
+            entity_data_sha256?: string | null;
             /** Exposure Economic */
             exposure_economic?: string | null;
             /** Exposure Non Economic */
             exposure_non_economic?: string | null;
             /** Future Year */
             future_year?: number | null;
+            /** Hazard Data Sha256 */
+            hazard_data_sha256?: string | null;
             /** Hazard Type */
             hazard_type?: string | null;
             /** Id */
             id: string;
             /** Is Era */
             is_era?: boolean | null;
+            /**
+             * Is Imported
+             * @default false
+             */
+            is_imported: boolean;
             /** Name */
             name?: string | null;
             /** Notes */
             notes?: string | null;
+            /** Random Seed */
+            random_seed?: number | null;
             /** Ref Year */
             ref_year?: number | null;
             /** Scenario */
@@ -1708,6 +1837,39 @@ export interface operations {
             };
         };
     };
+    scenario_import_api_v1_scenario_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioImportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     scenario_run_api_v1_scenario_run_post: {
         parameters: {
             query?: never;
@@ -1812,6 +1974,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scenario_export_stream_api_v1_scenario__scenario_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scenario_export_data_api_v1_scenario__scenario_id__export_data_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioExportResponse"];
                 };
             };
             /** @description Validation Error */
