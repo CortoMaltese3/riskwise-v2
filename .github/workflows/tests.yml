@@ -112,6 +112,11 @@ jobs:
       # text/background combination below the AA threshold.
       - run: npm run lint:contrast
 
+      # Issue #123: keep en/ar/th locale files in lockstep before each release.
+      # Fails the build if a key is added to en.json without a matching entry
+      # in ar.json or th.json (or vice versa).
+      - run: npm run lint:locales
+
       - run: npm test
 
   e2e:
