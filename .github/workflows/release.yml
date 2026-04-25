@@ -200,3 +200,72 @@ jobs:
       - name: Attach signed manifest to release
         shell: bash
         run: gh release upload "${GITHUB_REF_NAME}" engine-manifest.json --clobber
+
+  # Phase 4 Area 18 — emit a CycloneDX SBOM covering both the npm and pip
+  # dependency trees, attach it to the GitHub release, and verify that the
+  # checked-in NOTICES.txt still matches the SBOM-derived attribution. The
+  # job runs on Ubuntu so it can install both ecosystems' CycloneDX
+  # generators without dragging the Windows installer toolchain in.
+  sbom:
+    name: Generate SBOM and verify NOTICES.txt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install npm dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install CycloneDX generators
+        run: |
+          npm install --no-save @cyclonedx/cyclonedx-npm@^1.19.0
+          python -m pip install --upgrade pip
+          python -m pip install "cyclonedx-bom>=4.4,<6"
+
+      - name: Generate npm SBOM
+        run: npx --yes @cyclonedx/cyclonedx-npm --spec-version 1.5 --output-format JSON --output-file sbom-npm.json
+
+      - name: Generate pip SBOM
+        run: cyclonedx-py environment --spec-version 1.5 --outfile sbom-pip.json
+
+      - name: Merge SBOMs
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          npm = json.loads(Path("sbom-npm.json").read_text(encoding="utf-8"))
+          pip = json.loads(Path("sbom-pip.json").read_text(encoding="utf-8"))
+
+          merged = {
+              "bomFormat": "CycloneDX",
+              "specVersion": "1.5",
+              "version": 1,
+              "metadata": {
+                  "component": {
+                      "type": "application",
+                      "name": "riskwise",
+                      "version": "${{ github.ref_name }}",
+                  }
+              },
+              "components": (npm.get("components") or []) + (pip.get("components") or []),
+          }
+          Path("sbom.json").write_text(json.dumps(merged, indent=2), encoding="utf-8")
+          print(f"merged sbom: {len(merged['components'])} components")
+          PY
+
+      - name: Verify NOTICES.txt is up to date
+        run: python scripts/generate_notices.py --sbom sbom.json --check
+
+      - name: Attach SBOM to release
+        shell: bash
+        run: gh release upload "${GITHUB_REF_NAME}" sbom.json --clobber

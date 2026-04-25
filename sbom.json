@@ -1,0 +1,19 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "riskwise",
+      "version": "2.0.0-dev"
+    },
+    "properties": [
+      {
+        "name": "riskwise:placeholder",
+        "value": "Bootstrap SBOM committed alongside the NOTICES generator; the release.yml `sbom` job overwrites this artifact on every tagged build."
+      }
+    ]
+  },
+  "components": []
+}

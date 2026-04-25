@@ -21,6 +21,14 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      # Phase 4 Area 18: tests/unit/test_pack_verifier.py exercises the real
+      # minisign binary so a tampered .riskwise-pack actually fails the
+      # signature check. Installing minisign here keeps the test from being
+      # silently skipped on CI (the test module is `pytest.skipif`-guarded
+      # so dev boxes without minisign still run a green pytest).
+      - name: Install minisign
+        run: sudo apt-get update && sudo apt-get install -y minisign
+
       # Minimal set to run the v2 unit suite. CLIMADA and geopandas are
       # stubbed in tests/unit/conftest.py so we can skip the heavy
       # geospatial install in CI (see pyproject.toml and tests/unit/ for
