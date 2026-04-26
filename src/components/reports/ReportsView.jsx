@@ -6,6 +6,7 @@ import ReportCard from "./ReportCard";
 import useStore from "../../store";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
+import logger from "../../lib/logger.ts";
 
 const ReportsView = () => {
   const {
@@ -53,7 +54,9 @@ const ReportsView = () => {
         await removeReport(report.id); // Update store after success
       }
     } catch (error) {
-      console.log(error);
+      logger.error("ReportsView: removeReport failed", {
+        error: error?.message ?? String(error),
+      });
       setAlertMessage(t("alert_message_report_view_error_delete"));
       setAlertSeverity("error");
       setAlertShowMessage(true);

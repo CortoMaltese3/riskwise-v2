@@ -13,6 +13,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
+import logger from "../../lib/logger.ts";
 import useStore from "../../store";
 
 const hazardDict = {
@@ -110,7 +111,9 @@ const HazardCard = () => {
         setIsValidHazard(response.result.status.code === 2000);
       })
       .catch((error) => {
-        console.log(error);
+        logger.error("HazardCard: fetchHazardData failed", {
+          error: error?.message ?? String(error),
+        });
       });
   };
 
