@@ -17,6 +17,8 @@ license = { file = "LICENSE" }
 # docs/spikes/adr-bundling.md for the rationale and for
 # the removed-package list.
 dependencies = [
+    # Canonical CLIMADA pin — requirements/requirements.txt and
+    # requirements/environment.yml must match this version (see DECISIONS.md D05).
     "climada==6.1.0",
     "geopandas>=0.14,<2",
     "numpy>=1.24,<3",

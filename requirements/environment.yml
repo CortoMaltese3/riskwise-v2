@@ -25,7 +25,8 @@ dependencies:
   - xlsxwriter=3.0.8
   - xyzservices=2022.9.0 # Downgrade to avoid issues with pyinstaller
   - pip:
-      - climada==4.1.1
+      # v2 canonical CLIMADA pin is pyproject.toml; keep this legacy v1 env in sync.
+      - climada==6.1.0
       - docx2pdf==0.1.8
       - docxtpl==0.16.7
       - h5py==3.10.0

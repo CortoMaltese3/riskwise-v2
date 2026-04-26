@@ -1862,6 +1862,7 @@ dependencies = [
 [package.optional-dependencies]
 bundle = [
     { name = "nuitka" },
+    { name = "ordered-set" },
     { name = "pyinstaller" },
 ]
 dev = [
@@ -1884,6 +1885,7 @@ requires-dist = [
     { name = "nuitka", marker = "extra == 'bundle'", specifier = ">=2.4,<5" },
     { name = "numpy", specifier = ">=1.24,<3" },
     { name = "openpyxl", specifier = ">=3.1,<4" },
+    { name = "ordered-set", marker = "extra == 'bundle'", specifier = ">=4,<5" },
     { name = "pandas", specifier = ">=2.0,<4" },
     { name = "psutil", specifier = ">=5.9,<8" },
     { name = "pyarrow", specifier = ">=15,<25" },
