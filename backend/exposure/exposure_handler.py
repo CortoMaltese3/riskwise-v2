@@ -2,37 +2,29 @@
 Module for handling exposure data and operations.
 
 This module contains the `ExposureHandler` class, which manages exposure-related operations such as
-fetching exposure data from an API, calculating exposure growth, retrieving administrative data, 
-and generating exposure GeoJSON files.
+calculating exposure growth, retrieving administrative data, and generating exposure GeoJSON files.
 
 Classes:
 
-- `ExposureHandler`: 
+- `ExposureHandler`:
     Class for handling exposure data and operations.
 
 Methods:
 
-- `get_exposure_from_api`: 
-    Retrieve exposure data from an API for a specific country.
-- `get_growth_exposure`: 
+- `get_growth_exposure`:
     Calculate exposure growth based on annual growth rate and future year.
-- `generate_exposure_geojson`: 
+- `generate_exposure_geojson`:
     Generate GeoJSON files for exposure data.
 """
 
-from copy import deepcopy
 import json
-from time import time
+from copy import deepcopy
 
 import geopandas as gpd
 import pandas as pd
-
-from climada.entity import Exposures
-from climada.util.api_client import Client
-
-
 from base_handler import BaseHandler
-from constants import DATA_EXPOSURES_DIR, DATA_TEMP_DIR
+from climada.entity import Exposures
+from constants import DATA_TEMP_DIR
 from logger_config import LoggerConfig
 
 logger = LoggerConfig(logger_types=["file"])
@@ -47,35 +39,7 @@ class ExposureHandler:
     """
 
     def __init__(self):
-        self.client = Client()
         self.base_handler = BaseHandler()
-
-    def get_exposure_from_api(self, country: str) -> Exposures:
-        """
-        Retrieves exposure data from an API for a specified country.
-
-        Fetches exposure data for the given country from CLIMADA's API. If any errors occur
-        during the process, it logs an error message and raises a ValueError with details.
-
-        :param country: The name of the country for which exposure data is requested.
-        :type country: str
-        :return: An Exposures object containing exposure data for the specified country.
-        :rtype: Exposures
-        :raises ValueError: If an error occurs during the exposure data retrieval process.
-        """
-        start_time = time()
-        try:
-            exposure = self.client.get_litpop(
-                country=country, exponents=(1, 1), dump_dir=DATA_EXPOSURES_DIR
-            )
-            status_message = f"Finished fetching exposure from client in {time() - start_time}sec."
-            logger.log("info", status_message)
-            return exposure
-
-        except Exception as exc:
-            status_message = f"Error while trying to fetch exposure for {country}. More info: {exc}"
-            logger.log("error", status_message)
-            raise ValueError(status_message) from exc
 
     def get_growth_exposure(
         self, exposure: Exposures, annual_growth: float, future_year: int

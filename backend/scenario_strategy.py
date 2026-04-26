@@ -9,9 +9,10 @@ Two concrete strategies:
 
 - :class:`EraDataStrategy` loads entity/hazard from the country-keyed
   predefined seed files (``countries/<ISO3>/...``).
-- :class:`CustomDataStrategy` loads entity/hazard from user-uploaded files
-  or the CLIMADA API, falling back to the ERA historical hazard file when
-  the user uploads only a future-scenario hazard.
+- :class:`CustomDataStrategy` loads entity/hazard from user-uploaded files,
+  falling back to the ERA historical hazard file when the user uploads only
+  a future-scenario hazard. Runs that supply no upload raise ``ValueError``
+  directing the user to the custom-data import flow.
 """
 
 from __future__ import annotations
@@ -43,12 +44,7 @@ class ScenarioDataStrategy(ABC):
         entity_handler: Any,
         exposure_handler: Any,
     ) -> tuple[Any, Any]:
-        """Load the present-day entity and exposure objects.
-
-        Returns a ``(entity, exposure)`` pair. ``entity`` may be ``None`` for
-        the custom API-only branch; in that case ``exposure`` is fetched
-        directly from the CLIMADA API.
-        """
+        """Load the present-day entity and exposure objects as an ``(entity, exposure)`` pair."""
 
     @abstractmethod
     def load_hazard_present(
@@ -135,12 +131,18 @@ class EraDataStrategy(ScenarioDataStrategy):
         return hazard
 
 
+_MISSING_UPLOAD_MSG = (
+    "Custom scenarios require an uploaded dataset. "
+    "Upload the file via the custom-data import flow before running the scenario."
+)
+
+
 class CustomDataStrategy(ScenarioDataStrategy):
-    """Load entity/hazard from user uploads or the CLIMADA API.
+    """Load entity/hazard from user-uploaded files.
 
     When the user uploads only a future-scenario hazard file but asks for a
     non-historical run, the *historical* hazard still falls back to the ERA
-    seed file for that country — matching pre-refactor behaviour.
+    seed file for that country.
     """
 
     entity_progress_message = "Setting up Entity objects from custom datasets..."
@@ -158,7 +160,7 @@ class CustomDataStrategy(ScenarioDataStrategy):
         if request_data.entity_filename:
             entity = entity_handler.get_entity_from_xlsx(request_data.entity_filename)
             return entity, entity.exposures
-        return None, exposure_handler.get_exposure_from_api(request_data.country_name)
+        raise ValueError(_MISSING_UPLOAD_MSG)
 
     def load_hazard_present(
         self,
@@ -167,33 +169,27 @@ class CustomDataStrategy(ScenarioDataStrategy):
         base_handler: Any,
         hazard_intensity_unit: str,
     ) -> Any:
-        if request_data.hazard_filename:
-            file_type = base_handler.check_file_type(request_data.hazard_filename)
-            if request_data.scenario == "historical":
-                hazard = hazard_handler.get_hazard(
-                    hazard_type=request_data.hazard_type,
-                    filepath=request_data.hazard_filename,
-                    source=file_type,
-                )
-            else:
-                historical_filename = hazard_handler.get_hazard_filename(
-                    request_data.hazard_code,
-                    request_data.country_code,
-                    "historical",
-                )
-                hazard = hazard_handler.get_hazard(
-                    hazard_type=request_data.hazard_type,
-                    filepath=historical_filename,
-                )
-            hazard.units = hazard_intensity_unit
-            return hazard
-        return hazard_handler.get_hazard(
-            hazard_type=request_data.hazard_type,
-            source="climada_api",
-            scenario=request_data.scenario,
-            time_horizon=request_data.time_horizon,
-            country=request_data.country_name,
-        )
+        if not request_data.hazard_filename:
+            raise ValueError(_MISSING_UPLOAD_MSG)
+        file_type = base_handler.check_file_type(request_data.hazard_filename)
+        if request_data.scenario == "historical":
+            hazard = hazard_handler.get_hazard(
+                hazard_type=request_data.hazard_type,
+                filepath=request_data.hazard_filename,
+                source=file_type,
+            )
+        else:
+            historical_filename = hazard_handler.get_hazard_filename(
+                request_data.hazard_code,
+                request_data.country_code,
+                "historical",
+            )
+            hazard = hazard_handler.get_hazard(
+                hazard_type=request_data.hazard_type,
+                filepath=historical_filename,
+            )
+        hazard.units = hazard_intensity_unit
+        return hazard
 
     def load_hazard_future(
         self,
@@ -202,22 +198,16 @@ class CustomDataStrategy(ScenarioDataStrategy):
         base_handler: Any,
         hazard_intensity_unit: str,
     ) -> Any:
-        if request_data.hazard_filename:
-            file_type = base_handler.check_file_type(request_data.hazard_filename)
-            hazard = hazard_handler.get_hazard(
-                hazard_type=request_data.hazard_type,
-                filepath=request_data.hazard_filename,
-                source=file_type,
-            )
-            hazard.units = hazard_intensity_unit
-            return hazard
-        return hazard_handler.get_hazard(
+        if not request_data.hazard_filename:
+            raise ValueError(_MISSING_UPLOAD_MSG)
+        file_type = base_handler.check_file_type(request_data.hazard_filename)
+        hazard = hazard_handler.get_hazard(
             hazard_type=request_data.hazard_type,
-            source="climada_api",
-            scenario=request_data.scenario,
-            time_horizon=request_data.time_horizon,
-            country=request_data.country_name,
+            filepath=request_data.hazard_filename,
+            source=file_type,
         )
+        hazard.units = hazard_intensity_unit
+        return hazard
 
 
 def make_strategy(is_era: bool) -> ScenarioDataStrategy:

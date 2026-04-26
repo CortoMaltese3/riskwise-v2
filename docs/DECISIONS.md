@@ -472,14 +472,17 @@ import of `public/offlineConstants.js` — were removed.
   weight: ~750 MB on top of the base installer for a 2.5 GB on-disk
   engine tree. The trigger to revisit will likely co-occur with a
   switch to a leaner engine (climate-lama-engine, slim CLIMADA fork).
-- The offline IPC guard (`CLIMADA_CLIENT_ROUTE_PREFIXES` in
-  `public/electron.js`) currently protects routes that do not exist
-  on the FastAPI app — the `/api/v1/climada-client/` and
-  `/api/v1/hazard/fetch-from-client` routes were never wired up.
-  Backend fetcher methods (`get_litpop`, `_get_hazard_from_client`)
-  are reachable only from internal scenario flows, with no UI toggle
-  to opt out. The guard is dead code defending dead routes; resuming
-  this work means reconciling that.
+- The audit surfaced an offline IPC guard in `public/electron.js`
+  protecting `/api/v1/climada-client/` and
+  `/api/v1/hazard/fetch-from-client` routes that were never wired up,
+  alongside backend fetcher methods reachable only from internal
+  scenario flows with no UI toggle to opt out. **Resolved in
+  [#135](https://github.com/CortoMaltese3/riskwise-v2/issues/135)
+  (Option B — remove)**: the guard, the orphan fetcher methods, and
+  the `climada_api` source branch are all gone; custom-data uploads
+  are now the only supported path. If online fetches return for a
+  named deployment, both the routes and a matching IPC guard must be
+  introduced together.
 - D09 ("Offline mode: first-class user-selectable option, not the
   default") still stands as the design target. This decision defers
   the *implementation*, not the design.

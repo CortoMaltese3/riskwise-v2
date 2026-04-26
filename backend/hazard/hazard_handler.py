@@ -1,44 +1,37 @@
 """
 Module for handling hazard-related operations.
 
-This module contains classes and functions for handling various types of hazards, such as 
+This module contains classes and functions for handling various types of hazards, such as
 tropical cyclones, river floods, earthquakes, wildfires, floods, and droughts. It includes
-methods for fetching hazard data from different sources, processing hazard datasets, 
+methods for loading hazard data from local files, processing hazard datasets,
 and generating hazard GeoJSON files.
 
 Classes:
 
-- `HazardHandler`: 
+- `HazardHandler`:
     Class for handling hazard-related operations.
 
 Methods:
 
-- `get_hazard_time_horizon`: 
-    Retrieves the time horizon for a given hazard type, scenario, and time horizon.
-- `get_hazard_dataset_properties`: 
-    Retrieves hazard dataset properties based on hazard type, scenario, time horizon, and country.
-- `get_hazard`: 
-    Retrieves hazard data based on various parameters, including hazard type, 
-    source, scenario, time horizon, country, and file path.
-- `_get_hazard_from_client`: 
-    Retrieves hazard data from an external API client.
-- `_get_hazard_from_raster`: 
+- `get_hazard`:
+    Retrieves hazard data from a local file based on hazard type, source, and file path.
+- `_get_hazard_from_raster`:
     Retrieves hazard data from a raster file.
-- `_get_hazard_from_mat`: 
+- `_get_hazard_from_mat`:
     Retrieves hazard data from a MATLAB file.
-- `get_hazard_intensity_thres`: 
+- `get_hazard_intensity_thres`:
     Retrieves the intensity threshold for a given hazard type.
-- `get_circle_radius`: 
+- `get_circle_radius`:
     Retrieves the radius for generating hazard circles.
-- `generate_hazard_geojson`: 
+- `generate_hazard_geojson`:
     Generates a GeoJSON file containing hazard data.
-- `_get_hazard_from_hdf5`: 
+- `_get_hazard_from_hdf5`:
     Retrieves hazard data from an HDF5 file.
-- `get_hazard_from_xlsx`: 
+- `get_hazard_from_xlsx`:
     Retrieves hazard data from an Excel file.
-- `get_hazard_code`: 
+- `get_hazard_code`:
     Retrieves the hazard code corresponding to a given hazard type.
-- `get_hazard_type`: 
+- `get_hazard_type`:
     Retrieves the hazard type corresponding to a given hazard code.
 """
 
@@ -48,18 +41,15 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from shapely.geometry import Point
-
+from base_handler import BaseHandler
 from climada.entity import Entity
 from climada.hazard import Hazard
-from climada.util.api_client import Client
-
-from base_handler import BaseHandler
 from constants import (
     DATA_HAZARDS_DIR,
     DATA_TEMP_DIR,
 )
 from logger_config import LoggerConfig
+from shapely.geometry import Point
 
 logger = LoggerConfig(logger_types=["file"])
 
@@ -73,166 +63,34 @@ class HazardHandler:
     """
 
     def __init__(self):
-        self.client = Client()
         self.base_handler = BaseHandler()
-
-    # TODO: Needs to be refactored
-    def get_hazard_time_horizon(self, hazard_type: str, scenario: str, time_horizon: str) -> str:
-        """
-        Get the time horizon for a specific hazard type and scenario.
-
-        This method retrieves the time horizon for a specified hazard type and scenario.
-        It uses predefined mappings for historical data and future projections. If the scenario
-        is historical, it returns the corresponding time horizon from the historical dataset.
-        For future scenarios, it maps the time horizon based on the hazard type and provided
-        time horizon. If no match is found, it returns an empty string.
-
-        :param hazard_type: The type of hazard for which to retrieve the time horizon.
-        :type hazard_type: str
-        :param scenario: The scenario type, either "historical" or "future".
-        :type scenario: str
-        :param time_horizon: The time horizon for future scenarios.
-        :type time_horizon: str
-        :return: The time horizon corresponding to the specified hazard type and scenario.
-        :rtype: str
-        """
-        try:
-            historical_time_horizons = {
-                "storm_europe": "1940_2014",
-                "river_flood": "1980_2000",
-                "tropical_cyclone": "1980_2000",
-                "earthquake": "",
-                "flood": "2002_2019",
-                "wildfire": "2001_2020",
-            }
-
-            tropical_cyclone_future_mapping = {
-                "2010_2030": "2020",
-                "2030_2050": "2040",
-                "2050_2070": "2060",
-                "2070_2090": "2080",
-            }
-
-            # Check if the scenario is historical
-            if scenario == "historical":
-                # Return the time horizon for historical scenarios, if available for the
-                # given hazard type
-                return historical_time_horizons.get(hazard_type, "")
-
-            # Check if the hazard type is river flood
-            if hazard_type == "river_flood":
-                # Return the provided time horizon for river flood hazards
-                return time_horizon
-
-            # Check if the hazard type is tropical cyclone
-            if hazard_type == "tropical_cyclone":
-                # Return the mapped time horizon for future tropical cyclone scenarios,
-                # if available
-                return tropical_cyclone_future_mapping.get(time_horizon, "")
-
-            # Default return if no match found
-            return ""
-
-        except Exception as exception:
-            logger.log(
-                "error",
-                f"Error while trying to match hazard time horizon datasets. More info: {exception}",
-            )
-            return ""
-
-    def get_hazard_dataset_properties(
-        self, hazard_type: str, scenario: str, time_horizon: str, country: str
-    ) -> dict:
-        """
-        Get the properties of a hazard dataset based on its type, scenario, time horizon,
-        and country, to be used as search parameters in the CLIMADA API Client
-
-        This method retrieves the properties of a hazard dataset based on its type, scenario,
-        time horizon, and country. It determines the appropriate properties based on the provided
-        parameters and returns them as a dictionary, to be used as search parameters in the
-        CLIMADA API Client.
-
-        :param hazard_type: The type of hazard for which to retrieve the dataset properties.
-        :type hazard_type: str
-        :param scenario: The scenario type, either "historical" or "future".
-        :type scenario: str
-        :param time_horizon: The time horizon for future scenarios.
-        :type time_horizon: str
-        :param country: The name of the country for which to retrieve the dataset properties.
-        :type country: str
-        :return: A dictionary containing the properties of the hazard dataset.
-        :rtype: dict
-        """
-        hazard_properties = {}
-        time_horizon = self.get_hazard_time_horizon(hazard_type, scenario, time_horizon)
-        if hazard_type == "river_flood":
-            hazard_properties = {
-                "country_name": country,
-                "climate_scenario": scenario,
-                "year_range": time_horizon,
-            }
-        if hazard_type == "tropical_cyclone":
-            hazard_properties = {
-                "country_name": country,
-                "climate_scenario": scenario if scenario != "historical" else None,
-                "ref_year": time_horizon,
-            }
-        if hazard_type == "wildfire":
-            hazard_properties = {
-                "country_name": country,
-                "climate_scenario": "histocial",
-                "year_range": time_horizon,
-            }
-        if hazard_type == "earthquake":
-            hazard_properties = {
-                "country_name": country,
-            }
-        if hazard_type == "flood":
-            hazard_properties = {
-                "country_name": country,
-                "year_range": time_horizon,
-            }
-
-        return hazard_properties
 
     def get_hazard(
         self,
         hazard_type: str,
         source: str = None,
-        scenario: str = None,
-        time_horizon: str = None,
-        country: str = None,
         filepath: Path = None,
     ) -> Hazard:
         """
         Retrieve a Hazard object.
 
-        This method retrieves a Hazard object based on the specified parameters, including the
-        hazard type, source, scenario, time horizon, country, and filepath. It returns a Hazard
-        object representing the retrieved dataset. Hazard objects can be obtained from external
-        .mat, .hdf5 or raster files, or from the CLIMADA API Client.
+        Loads a Hazard object from a local file (mat, hdf5, or raster). When ``source`` is
+        omitted it defaults from ``hazard_type`` (drought→hdf5, flood→raster, heatwaves→hdf5).
 
         :param hazard_type: The type of hazard dataset to retrieve.
         :type hazard_type: str
-        :param source: The source of the hazard dataset
-            (e.g., "mat", "hdf5", "climada_api", "raster").
+        :param source: The source of the hazard dataset (e.g., "mat", "hdf5", "raster").
         :type source: str, optional
-        :param scenario: The scenario type for future projections.
-        :type scenario: str, optional
-        :param time_horizon: The time horizon for future scenarios.
-        :type time_horizon: str, optional
-        :param country: The name of the country associated with the hazard dataset.
-        :type country: str, optional
         :param filepath: The filepath to the hazard dataset file.
         :type filepath: Path, optional
         :return: A Hazard object representing the retrieved hazard dataset.
         :rtype: Hazard
         :raises ValueError: If the specified source is invalid.
         """
-        if source and source not in ["mat", "hdf5", "climada_api", "raster"]:
+        if source and source not in ["mat", "hdf5", "raster"]:
             status_message = (
                 "Error while trying to create hazard object. "
-                "Source must be chosen from ['mat', 'hdf5', 'climada_api', 'raster']"
+                "Source must be chosen from ['mat', 'hdf5', 'raster']"
             )
             logger.log("error", status_message)
             raise ValueError(status_message)
@@ -243,8 +101,6 @@ class HazardHandler:
                 source = "raster"
             if hazard_type == "heatwaves":
                 source = "hdf5"
-        if source == "climada_api":
-            hazard = self._get_hazard_from_client(hazard_type, scenario, time_horizon, country)
         if source == "raster":
             hazard = self._get_hazard_from_raster(filepath, hazard_type)
         if source == "mat":
@@ -256,47 +112,6 @@ class HazardHandler:
                 hazard.haz_type = "D"
 
         return hazard
-
-    def _get_hazard_from_client(
-        self, hazard_type: str, scenario: str, time_horizon: str, country: str
-    ):
-        """
-        Retrieve a hazard dataset from the Climada API.
-
-        This method retrieves a hazard dataset from the Climada API based on the specified hazard
-        type, scenario, time horizon, and country. It returns a Hazard object representing the
-        retrieved dataset.
-
-        :param hazard_type: The type of hazard dataset to retrieve.
-        :type hazard_type: str
-        :param scenario: The scenario type for future projections.
-        :type scenario: str
-        :param time_horizon: The time horizon for future scenarios.
-        :type time_horizon: str
-        :param country: The name of the country associated with the hazard dataset.
-        :type country: str
-        :return: A Hazard object representing the retrieved hazard dataset.
-        :rtype: Hazard
-        :raises ValueError: If an error occurs while retrieving the hazard dataset.
-        """
-        hazard_properties = self.get_hazard_dataset_properties(
-            hazard_type, scenario, time_horizon, country
-        )
-        try:
-            hazard = self.client.get_hazard(
-                hazard_type=hazard_type,
-                properties=hazard_properties,
-                dump_dir=DATA_HAZARDS_DIR,
-            )
-            hazard.intensity_thres = self.get_hazard_intensity_thres(hazard)
-            status_message = "Finished fetching hazards from client"
-            logger.log("info", status_message)
-            return hazard
-
-        except Exception as exc:
-            status_message = f"Error while trying to create hazard object. More info: {exc}"
-            logger.log("error", status_message)
-            raise ValueError(status_message) from exc
 
     def _get_hazard_from_raster(self, filepath: Path, hazard_type: str) -> Hazard:
         try:
