@@ -5,10 +5,10 @@
 
 ---
 
-## Current state (as of 2026-04-25)
+## Current state (as of 2026-04-26)
 
 **Active phase**: **Phase 4 — Environment, Distribution & Polish** (release-readiness sweep).
-**Progress snapshot**: implementation issues for Phases 0–4 (#113–#123) all merged. Remaining work before tagging v2.0.0 is the release-readiness verification listed in [phase-4-distribution-and-polish.md § Exit criteria](phase-4-distribution-and-polish.md#exit-criteria) — VM installs (signing/SmartScreen, airplane-mode, beta-channel update), NVDA smoke test, and reference-hardware benchmark capture per [`docs/reference/benchmarks.md` § v2.0.0 release measurements](../reference/benchmarks.md#v200-release-measurements). Phase 5 is next.
+**Progress snapshot**: implementation issues for Phases 0–4 (#113–#123) all merged. Remaining work before tagging v2.0.0 is the release-readiness verification listed in [phase-4-distribution-and-polish.md § Exit criteria](phase-4-distribution-and-polish.md#exit-criteria) — VM installs (signing/SmartScreen, airplane-mode, beta-channel update), NVDA smoke test, and reference-hardware benchmark capture per [`docs/reference/benchmarks.md` § v2.0.0 release measurements](../reference/benchmarks.md#v200-release-measurements). Phase 6 (engine migration) is next; Phase 7 (optional / later) runs in parallel post-v2.0.
 
 For per-phase exit-criteria status see each phase file's `Exit criteria` section.
 
@@ -23,7 +23,8 @@ For per-phase exit-criteria status see each phase file's `Exit criteria` section
 | 2 — Data & Backend Cleanup | [phase-2-data-backend-cleanup.md](phase-2-data-backend-cleanup.md) | 8–12 | ✅ Done |
 | 3 — UI Overhaul | [phase-3-ui-overhaul.md](phase-3-ui-overhaul.md) | 13–17 | ✅ Done |
 | 4 — Environment, Distribution & Polish | [phase-4-distribution-and-polish.md](phase-4-distribution-and-polish.md) | 18–20 | 🔄 Implementation complete; release-readiness verification pending |
-| 5 — Optional / Later | [phase-5-optional.md](phase-5-optional.md) | post-v2.0 | ⏳ Unstarted (non-blocking) |
+| 6 — Engine Migration (CLIMADA → climate-lama-engine) | [phase-6-engine-migration.md](phase-6-engine-migration.md) | post-v2.0 | 🔲 Not started — gated on #150 ADR + v2.0.0 tag |
+| 7 — Optional / Later | [phase-7-optional.md](phase-7-optional.md) | post-v2.0 | ⏳ Unstarted (non-blocking) |
 
 Status legend: 🔄 in progress · ✅ done · ⏳ pending · 🔲 not started · ❌ blocked.
 
@@ -66,8 +67,10 @@ For quick navigation without reading every file:
 - **Phase 1 cannot start** until spike **#5 (FastAPI PoC)** passes. See [phase-0 § #5 note](phase-0-research-spikes.md#5-fastapi--electron-loopback-poc).
 - **Phase 2 cannot start** until FastAPI + Pydantic types + CI gates are live from Phase 1.
 - **Phase 3 workspace UI** depends on DuckDB scenario store from Phase 2 Area 3.
-- **Phase 4 Area 4 (lean backend execute)** was unblocked when Track A (CLIMADA + Nuitka) was confirmed as the default by CLIMADA 6.1.0 adoption. Spike #3 (bundling ADR) is at [`docs/spikes/adr-bundling.md`](../spikes/adr-bundling.md); spike #4 (`climate_lama_engine`) was closed as won't-do (superseded by Track A commitment, 2026-04-26).
+- **Phase 4 Area 4 (lean backend execute)** was unblocked when Track A (CLIMADA + Nuitka) was confirmed as the default by CLIMADA 6.1.0 adoption. Spike #3 (bundling ADR) is at [`docs/spikes/adr-bundling.md`](../spikes/adr-bundling.md); spike #4 (`climate_lama_engine`) was initially closed as won't-do (2026-04-26 morning) and **reopened the same day** for post-v2.0 adoption — see [`docs/spikes/adr-climate-lama-engine-adoption.md`](../spikes/adr-climate-lama-engine-adoption.md). Phase 6 operationalises that decision; v2.0 still ships on Track A.
 - **Phase 4 signing activation** depends on the cert obtained per DECISIONS.md D17 (Azure Trusted Signing primary, SSL.com EV fallback).
+- **Phase 6 cannot start** until v2.0.0 is tagged AND #150 (the engine-adoption ADR) merges with the parity smoke recorded.
+- **Phase 7 is independent** of Phase 6; both may run in parallel post-v2.0.
 
 ---
 

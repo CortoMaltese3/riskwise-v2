@@ -1,10 +1,10 @@
-# Phase 5 — Optional / Later
+# Phase 7 — Optional / Later
 
-> **Weeks**: TBD (post-v2.0)
+> **Weeks**: TBD (post-v2.0; renumbered from Phase 5 when Phase 6 — Engine Migration was inserted, see [adr-climate-lama-engine-adoption.md](../spikes/adr-climate-lama-engine-adoption.md))
 > **Status**: ⏳ Unstarted; nothing here blocks v2.0 release.
 > **Goal**: Capture features that are worth doing but are neither required for v2.0 nor bound to a specific timeline. Each item is independent and may ship in its own minor release.
-> **Canonical references**: [ARCHITECTURE.md § Phase 5](../ARCHITECTURE.md#phase-5-optional--later), [ARCHITECTURE.md § Area 10](../ARCHITECTURE.md#area-10--cross-platform-low-phase-5)
-> **Hard predecessor**: v2.0 must have shipped (Phase 4 exit criteria met).
+> **Canonical references**: [ARCHITECTURE.md § Phase 5](../ARCHITECTURE.md#phase-7-optional--later) (anchor name retained for compatibility with existing in-doc links; rename to `phase-7-optional--later` when ARCHITECTURE.md is touched next), [ARCHITECTURE.md § Area 10](../ARCHITECTURE.md#area-10--cross-platform-low-phase-7)
+> **Hard predecessor**: v2.0 must have shipped (Phase 4 exit criteria met). Phase 6 (engine migration) is independent — items here are not gated on Phase 6.
 
 ---
 
@@ -68,9 +68,9 @@ Nothing in this phase is sequenced. Each item is a candidate for a minor release
 
 ## Where to start from cold
 
-Phase 5 items are each a new mini-initiative. If one is picked up:
+Phase 7 items are each a new mini-initiative. If one is picked up:
 
 1. Confirm v2.0 is released and stable (all [Phase 4 exit criteria](phase-4-distribution-and-polish.md#exit-criteria) met).
-2. Open a tracking issue labeled `phase-5` + the item name (e.g. `phase-5/dark-mode`).
+2. Open a tracking issue labeled `phase-7` + the item name (e.g. `phase-7/dark-mode`).
 3. Treat the item as a self-contained mini-phase: write its own prerequisites, scope, and exit criteria in the issue description before writing code.
-4. Update this file's entry with status and issue link; do not let Phase 5 items silently fall out of the plan.
+4. Update this file's entry with status and issue link; do not let Phase 7 items silently fall out of the plan.
