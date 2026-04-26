@@ -5,6 +5,7 @@ import { Box, Card, CardContent, Chip, Stack, Tooltip, Typography } from "@mui/m
 
 import AdaptationMeasuresViewTitle from "../title/AdaptationMeasuresViewTitle";
 import RiskWiseClient from "../../lib/RiskWiseClient";
+import logger from "../../lib/logger.ts";
 import useStore from "../../store";
 
 const AdaptationMeasuresInput = () => {
@@ -34,7 +35,9 @@ const AdaptationMeasuresInput = () => {
         );
       })
       .catch((error) => {
-        console.log(error);
+        logger.error("AdaptationMeasuresInput: fetchAdaptationMeasures failed", {
+          error: error?.message ?? String(error),
+        });
         setMeasures([]);
       });
   };

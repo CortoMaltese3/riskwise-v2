@@ -13,6 +13,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
+import logger from "../../lib/logger.ts";
 import useStore from "../../store";
 
 const exposureNonEconomicDict = {
@@ -124,7 +125,9 @@ const ExposureNonEconomicCard = () => {
         setIsValidExposureNonEconomic(response.result.status.code === 2000);
       })
       .catch((error) => {
-        console.log(error);
+        logger.error("ExposureNonEconomicCard: fetchExposureData failed", {
+          error: error?.message ?? String(error),
+        });
       });
   };
 

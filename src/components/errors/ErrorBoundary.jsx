@@ -2,6 +2,8 @@ import React from "react";
 import PropTypes from "prop-types";
 import { Box, Button, Typography } from "@mui/material";
 
+import logger from "../../lib/logger.ts";
+
 // App-root React error boundary (issue #12, scenario 6). Catches render /
 // lifecycle exceptions in the component tree so a single crashing panel
 // can't take the whole window black. The fallback exposes ``error_id`` so
@@ -19,9 +21,11 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    // Surface to the main process log via the renderer console.
-    // eslint-disable-next-line no-console
-    console.error("[ErrorBoundary]", this.state.errorId, error, info);
+    logger.error("[ErrorBoundary] caught render error", {
+      errorId: this.state.errorId,
+      error: error?.message ?? String(error),
+      componentStack: info?.componentStack,
+    });
   }
 
   handleReload = () => {

@@ -56,6 +56,12 @@ export default [
       "react/prop-types": "off",
       // Vite/React convention: allow unused args that start with `_`.
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      // Phase 1 Area 17: production renderer code must route diagnostics
+      // through src/lib/logger.ts so records reach the Electron main log
+      // (and the structured backend log) instead of dying in DevTools.
+      // `console.warn` / `console.error` stay allowed: they're rare and
+      // remain visible during development without a bridge.
+      "no-console": ["error", { allow: ["warn", "error"] }],
       // `{false && (...)}` is used throughout the v1 cards to gate UI
       // sections pending a product decision (search: "Remove until further
       // notice"). Promoting that pattern from warn to error is out of scope
@@ -72,6 +78,11 @@ export default [
         ...globals.node,
         ...globals.jest,
       },
+    },
+    rules: {
+      // Tests can log freely (e.g. console.table for baseline output);
+      // they don't ship and they're not subject to the Area 17 logger rule.
+      "no-console": "off",
     },
   },
   // theme-tokens-enforced (issue #78): every source file under `src/` must

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Box, Button } from "@mui/material";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
+import logger from "../../lib/logger.ts";
 import useStore from "../../store";
 
 const OutputResultsCard = () => {
@@ -37,7 +38,9 @@ const OutputResultsCard = () => {
           setAlertShowMessage(true);
         })
         .catch((error) => {
-          console.log(error);
+          logger.error("OutputResultsCard: exportReport failed", {
+            error: error?.message ?? String(error),
+          });
           setAlertMessage("An error occurred while exporting the report.");
           setAlertSeverity("error");
           setAlertShowMessage(true);

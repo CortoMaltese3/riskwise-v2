@@ -5,6 +5,7 @@ import "leaflet-simple-map-screenshoter";
 
 import useStore from "../store";
 import RiskWiseClient from "../lib/RiskWiseClient";
+import logger from "../lib/logger.ts";
 
 export const useMapTools = () => {
   const { t } = useTranslation();
@@ -96,7 +97,9 @@ export const useMapTools = () => {
           setAlertShowMessage(true);
         })
         .catch((error) => {
-          console.log(error);
+          logger.error("mapTools: saveScenario failed", {
+            error: error?.message ?? String(error),
+          });
         });
     }
     // Restored scenario (already exists)

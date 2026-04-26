@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import RiskWiseClient from "../lib/RiskWiseClient";
+import logger from "../lib/logger.ts";
 
 import useStore from "../store";
 
@@ -27,7 +28,9 @@ export const useMacroTools = () => {
       })
       .catch((error) => {
         setAlertShowMessage(true);
-        console.log(error);
+        logger.error("macroTools: loadCREDOutputData failed", {
+          error: error?.message ?? String(error),
+        });
       });
   };
 
