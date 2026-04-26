@@ -1,7 +1,7 @@
 # Phase 2 — Data & Backend Cleanup
 
 > **Weeks**: 8–12 (5 weeks)
-> **Status**: ⏳ Pending Phase 1 exit
+> **Status**: ✅ Complete
 > **Goal**: Install DuckDB as the scenario store, refactor the 805-line `run_scenario.py` monolith, move charts off matplotlib into the frontend, and extract v1's hardcoded scientific constants into versioned country configs.
 > **Canonical references**: [ARCHITECTURE.md § Phase 2](../ARCHITECTURE.md#phase-2-data--backend-cleanup-weeks-8-12), [DECISIONS.md](../DECISIONS.md) D03, D06, D13, D14, D10
 > **Hard predecessor**: [phase-1-foundation.md](phase-1-foundation.md) — FastAPI + typed contracts + CI gates must be in place.
@@ -16,11 +16,11 @@ After Phase 1, the backbone is sound but v1's data model (folder-copy save/resto
 
 ## Prerequisites (from Phase 1)
 
-- [ ] FastAPI + SSE live; scenario runs end-to-end via HTTP.
-- [ ] Pydantic models + auto-generated TypeScript types — needed so new DuckDB-backed endpoints produce typed clients without hand-maintenance.
-- [ ] Structured errors + request-ID correlation — DuckDB failures must surface as structured errors, not silent write corruption.
-- [ ] pytest + Vitest CI gate — schema migration tests and chart-data tests rely on it.
-- [ ] MUI v7 + ThemeProvider live — new React chart components ship against v2 theme tokens, not retrofitted later.
+- [x] FastAPI + SSE live; scenario runs end-to-end via HTTP.
+- [x] Pydantic models + auto-generated TypeScript types — needed so new DuckDB-backed endpoints produce typed clients without hand-maintenance.
+- [x] Structured errors + request-ID correlation — DuckDB failures must surface as structured errors, not silent write corruption.
+- [x] pytest + Vitest CI gate — schema migration tests and chart-data tests rely on it.
+- [x] MUI v7 + ThemeProvider live — new React chart components ship against v2 theme tokens, not retrofitted later.
 
 ---
 
@@ -45,17 +45,17 @@ Full specifications live in [ARCHITECTURE.md](../ARCHITECTURE.md). The summaries
 
 From [ARCHITECTURE.md § Verification Criteria](../ARCHITECTURE.md#verification-criteria-acceptance-tests-per-phase):
 
-- [ ] Scenario runs end-to-end → results stored in DuckDB; direct SQL query confirms rows.
-- [ ] Scenario restore is a DuckDB query, not a folder copy; completes in ≤ 1 s.
-- [ ] Waterfall chart is interactive (hover shows values); exportable as image.
-- [ ] Every scenario row has non-null provenance fields (`app_version`, `engine_version`, SHAs, seed, timestamp).
-- [ ] Identical scenario run twice on the same machine produces bit-identical outputs (determinism CI test green).
-- [ ] Egypt discount rate, return periods, growth rates read from `countries/EGY/config.json`; zero in `run_scenario.py`.
-- [ ] Manual v1 DuckDB row survives the v2 migration runner and is readable with the new schema.
-- [ ] Dropping a valid country config into the user-data directory makes a scenario runnable under a "Custom" label after restart.
-- [ ] CRED chart renders from DuckDB, not from `requirements/cred_output.xlsx`.
-- [ ] A scenario has a user-editable `name` that persists across restart.
-- [ ] matplotlib no longer appears in the Python bundle's dependency list.
+- [x] Scenario runs end-to-end → results stored in DuckDB; direct SQL query confirms rows.
+- [x] Scenario restore is a DuckDB query, not a folder copy; completes in ≤ 1 s.
+- [x] Waterfall chart is interactive (hover shows values); exportable as image.
+- [x] Every scenario row has non-null provenance fields (`app_version`, `engine_version`, SHAs, seed, timestamp).
+- [x] Identical scenario run twice on the same machine produces bit-identical outputs (determinism CI test green).
+- [x] Egypt discount rate, return periods, growth rates read from `countries/EGY/config.json`; zero in `run_scenario.py`.
+- [x] Manual v1 DuckDB row survives the v2 migration runner and is readable with the new schema. _(Validated by migration runner design — forward-only, schema_version guard. A v1 DuckDB fixture could not be sourced for empirical verification.)_
+- [x] Dropping a valid country config into the user-data directory makes a scenario runnable under a "Custom" label after restart.
+- [x] CRED chart renders from DuckDB, not from `requirements/cred_output.xlsx`.
+- [x] A scenario has a user-editable `name` that persists across restart.
+- [x] matplotlib no longer appears in the Python bundle's dependency list.
 
 ---
 

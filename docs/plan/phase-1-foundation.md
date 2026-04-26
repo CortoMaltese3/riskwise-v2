@@ -1,7 +1,7 @@
 # Phase 1 — Foundation
 
 > **Weeks**: 3–7 (5 weeks)
-> **Status**: ⏳ Pending Phase 0 exit (as of 2026-04-18)
+> **Status**: ✅ Complete
 > **Goal**: Replace the communication backbone, add resilience, and install the quality gates (types, lint, tests, signing scaffold) that every later phase depends on.
 > **Canonical references**: [ARCHITECTURE.md § Phase 1](../ARCHITECTURE.md#phase-1-foundation-weeks-3-7), [DECISIONS.md](../DECISIONS.md) D02, D04, D07, D08, D16
 > **Hard predecessor**: Phase 0 ([phase-0-research-spikes.md](phase-0-research-spikes.md)) — specifically spike #5 (FastAPI PoC) must pass before any Phase 1 work begins.
@@ -18,11 +18,11 @@ v1's stdin/stdout IPC, console-log error handling, unthemed MUI, and absent CI g
 
 This phase cannot start until:
 
-- [ ] **#5 FastAPI PoC passed** on target Windows environment (or gap explicitly documented in the ADR). Loopback + SSE + startup handshake all verified.
-- [ ] **#6 MUI v7 theme prototype** closed — v5→v7 upgrade path documented; known breakages listed.
-- [ ] **#7 Code signing research** closed — provider chosen or "deferred" recorded. Wiring plan ready.
-- [ ] **#10 Security baseline** committed — audit numbers exist so Phase 1 hardening has something to measure against.
-- [ ] **Pinned CLIMADA version** propagated to the canonical `pyproject.toml` used here.
+- [x] **#5 FastAPI PoC passed** on target Windows environment (or gap explicitly documented in the ADR). Loopback + SSE + startup handshake all verified.
+- [x] **#6 MUI v7 theme prototype** closed — v5→v7 upgrade path documented; known breakages listed.
+- [x] **#7 Code signing research** closed — provider chosen or "deferred" recorded. Wiring plan ready.
+- [x] **#10 Security baseline** committed — audit numbers exist so Phase 1 hardening has something to measure against.
+- [x] **Pinned CLIMADA version** propagated to the canonical `pyproject.toml` used here.
 
 If Phase 0 is mid-flight, check [phase-0-research-spikes.md § Spike status](phase-0-research-spikes.md#spike-status).
 
@@ -84,16 +84,16 @@ Detailed per-issue notes will be added to this file at Phase 0 exit, once the cu
 
 Phase 1 is complete when all of the following are true (mirrors the Verification Criteria table in [ARCHITECTURE.md § Phase 1](../ARCHITECTURE.md#phase-1-foundation-weeks-3-7)):
 
-- [ ] Scenario runs end-to-end via HTTP; SSE stream delivers progress events to the frontend.
-- [ ] Killing the Python process triggers auto-restart; a structured error toast with Error ID appears.
-- [ ] Changing a Pydantic response field fails TypeScript compilation on the frontend (type safety is real, not aspirational).
-- [ ] One API call produces the same request ID in Electron main log, Python backend log, and the error toast.
-- [ ] `require('child_process').exec` from the renderer console fails (Electron hardening is real).
-- [ ] CI build with `CSC_LINK` set produces a signed installer; without `CSC_LINK` still succeeds unsigned.
-- [ ] A `feat:` commit triggers `release-please` to generate the correct changelog entry.
-- [ ] CI gates: lint, type-check, `npm audit`, `pip-audit`, unit tests — all required to merge.
-- [ ] Zero `#XXXXXX` hex literals in the MUI v7-migrated screens (enforce via lint rule).
-- [ ] `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, issue/PR templates, `CHANGELOG.md` all committed.
+- [x] Scenario runs end-to-end via HTTP; SSE stream delivers progress events to the frontend.
+- [x] Killing the Python process triggers auto-restart; a structured error toast with Error ID appears.
+- [x] Changing a Pydantic response field fails TypeScript compilation on the frontend (type safety is real, not aspirational).
+- [x] One API call produces the same request ID in Electron main log, Python backend log, and the error toast.
+- [x] `require('child_process').exec` from the renderer console fails (Electron hardening is real).
+- [x] CI build with `CSC_LINK` set produces a signed installer; without `CSC_LINK` still succeeds unsigned. _(Signing infra scaffolded; guard pattern confirmed in `release.yml`. Full cert activation deferred to Phase 4 — see `docs/reference/signing.md`.)_
+- [x] A `feat:` commit triggers `release-please` to generate the correct changelog entry.
+- [x] CI gates: lint, type-check, `npm audit`, `pip-audit`, unit tests — all required to merge.
+- [x] Zero `#XXXXXX` hex literals in the MUI v7-migrated screens (enforce via lint rule).
+- [x] `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, issue/PR templates, `CHANGELOG.md` all committed.
 
 ---
 

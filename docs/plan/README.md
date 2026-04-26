@@ -66,7 +66,7 @@ For quick navigation without reading every file:
 - **Phase 1 cannot start** until spike **#5 (FastAPI PoC)** passes. See [phase-0 § #5 note](phase-0-research-spikes.md#5-fastapi--electron-loopback-poc).
 - **Phase 2 cannot start** until FastAPI + Pydantic types + CI gates are live from Phase 1.
 - **Phase 3 workspace UI** depends on DuckDB scenario store from Phase 2 Area 3.
-- **Phase 4 Area 4 (lean backend execute)** depends on the Track A/B decision from Phase 0 spikes **#3 + #4**, which is only final once both ADRs are filled in. Design-only state of #3 is captured at [`docs/spikes/adr-bundling.md`](../spikes/adr-bundling.md).
+- **Phase 4 Area 4 (lean backend execute)** was unblocked when Track A (CLIMADA + Nuitka) was confirmed as the default by CLIMADA 6.1.0 adoption. Spike #3 (bundling ADR) is at [`docs/spikes/adr-bundling.md`](../spikes/adr-bundling.md); spike #4 (`climate_lama_engine`) was closed as won't-do (superseded by Track A commitment, 2026-04-26).
 - **Phase 4 signing activation** depends on the cert obtained per DECISIONS.md D17 (Azure Trusted Signing primary, SSL.com EV fallback).
 
 ---
