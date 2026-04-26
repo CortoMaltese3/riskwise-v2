@@ -56,14 +56,14 @@ class TestEraLoadEntityAndExposure:
         assert exposure is fake_entity.exposures
 
     def test_does_not_call_exposure_handler(self, strategy, request_data) -> None:
-        """ERA never fetches from the CLIMADA API; the exposure handler stays untouched."""
+        """ERA reads everything from local seed files; the exposure handler stays untouched."""
         entity_handler = MagicMock()
         entity_handler.get_entity_from_xlsx.return_value = SimpleNamespace(exposures=object())
         exposure_handler = MagicMock()
 
         strategy.load_entity_and_exposure(request_data, entity_handler, exposure_handler)
 
-        exposure_handler.get_exposure_from_api.assert_not_called()
+        assert exposure_handler.method_calls == []
 
 
 class TestEraLoadHazardPresent:

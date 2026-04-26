@@ -12,14 +12,12 @@ Classes:
 
 Methods:
 
-- `setUp`: 
+- `setUp`:
     Set up test environment before each test case.
-- `test_get_hazard_time_horizon`: 
-    Test case for the get_hazard_time_horizon method.
-- `test_get_hazard`: 
+- `test_get_hazard`:
     Test case for the get_hazard method, mocking the external API client's behavior.
-- `test_generate_hazard_geojson`: 
-    Test case for the generate_hazard_geojson method, setting up mock data and responses 
+- `test_generate_hazard_geojson`:
+    Test case for the generate_hazard_geojson method, setting up mock data and responses
     for internal method calls.
 """
 

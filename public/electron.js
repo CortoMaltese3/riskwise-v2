@@ -692,30 +692,7 @@ class BackendError extends Error {
   }
 }
 
-// Path prefixes that hit the CLIMADA Client API on the backend side.
-// When offline mode is active, the IPC layer rejects these so a renderer
-// XSS cannot exfiltrate via "fetch from client" actions even if the UI
-// guard is bypassed. Add new client-bound routes to this list as they
-// are wired up — the renderer surfaces the structured error envelope.
-const CLIMADA_CLIENT_ROUTE_PREFIXES = [
-  "/api/v1/climada-client/",
-  "/api/v1/hazard/fetch-from-client",
-];
-
-const isClimadaClientRoute = (urlPath) =>
-  typeof urlPath === "string" &&
-  CLIMADA_CLIENT_ROUTE_PREFIXES.some((prefix) => urlPath.startsWith(prefix));
-
 const httpRequest = async (method, path, body, requestId) => {
-  if (isOfflineMode() && isClimadaClientRoute(path)) {
-    throw new BackendError({
-      code: "offline_mode_active",
-      message: "CLIMADA Client API is unavailable in offline mode",
-      detail: `Request to ${path} blocked because offline mode is enabled`,
-      error_id: randomErrorId(),
-      request_id: requestId || null,
-    });
-  }
   if (!backendBaseUrl) {
     throw new BackendError({
       code: "backend_unavailable",

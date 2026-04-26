@@ -1,10 +1,10 @@
 """Unit tests for :class:`CustomDataStrategy`.
 
 The custom strategy has four entry points that differ by whether the user
-uploaded an entity file and whether the user uploaded a hazard file. This
-test matrix covers all four branches for hazard loading and both branches
-for entity loading. Behaviour mirrors the pre-refactor
-``_run_custom_scenario`` data loading lines.
+uploaded an entity file and whether the user uploaded a hazard file. The
+no-upload branches raise ``ValueError`` directing the user to the
+custom-data import flow; this matrix covers both the upload paths and the
+fail-loudly paths.
 """
 
 from __future__ import annotations
@@ -53,21 +53,16 @@ class TestCustomLoadEntityAndExposure:
         assert entity is fake_entity
         assert exposure is fake_entity.exposures
 
-    def test_without_entity_file_fetches_exposure_from_api(self, strategy) -> None:
+    def test_without_entity_file_raises_missing_upload(self, strategy) -> None:
+        """No-upload branch fails loudly instead of triggering an online fetch."""
         request_data = _request_data(entity_filename="")
         entity_handler = MagicMock()
         exposure_handler = MagicMock()
-        fake_exposure = object()
-        exposure_handler.get_exposure_from_api.return_value = fake_exposure
 
-        entity, exposure = strategy.load_entity_and_exposure(
-            request_data, entity_handler, exposure_handler
-        )
+        with pytest.raises(ValueError, match="custom-data import flow"):
+            strategy.load_entity_and_exposure(request_data, entity_handler, exposure_handler)
 
         entity_handler.get_entity_from_xlsx.assert_not_called()
-        exposure_handler.get_exposure_from_api.assert_called_once_with("Thailand")
-        assert entity is None
-        assert exposure is fake_exposure
 
 
 class TestCustomLoadHazardPresent:
@@ -115,24 +110,15 @@ class TestCustomLoadHazardPresent:
         assert result is fake_hazard
         assert fake_hazard.units == "m"
 
-    def test_without_hazard_file_fetches_from_climada_api(self, strategy) -> None:
+    def test_without_hazard_file_raises_missing_upload(self, strategy) -> None:
+        """No-upload branch fails loudly instead of triggering an online fetch."""
         request_data = _request_data(scenario="rcp45", hazard_filename="")
         hazard_handler = MagicMock()
-        fake_hazard = SimpleNamespace(units=None)
-        hazard_handler.get_hazard.return_value = fake_hazard
 
-        result = strategy.load_hazard_present(request_data, hazard_handler, MagicMock(), "m")
+        with pytest.raises(ValueError, match="custom-data import flow"):
+            strategy.load_hazard_present(request_data, hazard_handler, MagicMock(), "m")
 
-        hazard_handler.get_hazard.assert_called_once_with(
-            hazard_type="flood",
-            source="climada_api",
-            scenario="rcp45",
-            time_horizon=(2024, 2050),
-            country="Thailand",
-        )
-        # API path does NOT overwrite units — preserved from pre-refactor code.
-        assert fake_hazard.units is None
-        assert result is fake_hazard
+        hazard_handler.get_hazard.assert_not_called()
 
 
 class TestCustomLoadHazardFuture:
@@ -157,22 +143,15 @@ class TestCustomLoadHazardFuture:
         assert result is fake_hazard
         assert fake_hazard.units == "m"
 
-    def test_without_uploaded_file_fetches_future_from_climada_api(self, strategy) -> None:
+    def test_without_uploaded_file_raises_missing_upload(self, strategy) -> None:
+        """No-upload branch fails loudly instead of triggering an online fetch."""
         request_data = _request_data(scenario="rcp85", hazard_filename="")
         hazard_handler = MagicMock()
-        fake_hazard = SimpleNamespace(units=None)
-        hazard_handler.get_hazard.return_value = fake_hazard
 
-        result = strategy.load_hazard_future(request_data, hazard_handler, MagicMock(), "m")
+        with pytest.raises(ValueError, match="custom-data import flow"):
+            strategy.load_hazard_future(request_data, hazard_handler, MagicMock(), "m")
 
-        hazard_handler.get_hazard.assert_called_once_with(
-            hazard_type="flood",
-            source="climada_api",
-            scenario="rcp85",
-            time_horizon=(2024, 2050),
-            country="Thailand",
-        )
-        assert result is fake_hazard
+        hazard_handler.get_hazard.assert_not_called()
 
 
 class TestMakeStrategy:

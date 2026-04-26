@@ -31,10 +31,12 @@ the toggle is on:
 
 - `electron-updater` update checks are skipped (`isOfflineMode()` gate
   in `public/electron.js`).
-- The CLIMADA Client API is unreachable. The IPC layer rejects any
-  request matching `CLIMADA_CLIENT_ROUTE_PREFIXES` with a structured
-  `offline_mode_active` envelope, so a renderer XSS cannot exfiltrate
-  via these routes even if the UI guard is bypassed.
+- The CLIMADA Client API is unreachable. As of #135 the orphan fetcher
+  methods and the matching IPC route guard have been removed; runs that
+  previously relied on online fetches now require a custom-data upload
+  and fail loudly otherwise. If online fetches are reintroduced for a
+  future deployment, the IPC route guard must be reinstated alongside
+  the routes so a renderer XSS cannot exfiltrate via those paths.
 - Leaflet swaps to the local MBTiles tile server (see below). If no tile
   pack is installed the app falls back to the OpenStreetMap CDN and the
   Settings panel shows a warning.
