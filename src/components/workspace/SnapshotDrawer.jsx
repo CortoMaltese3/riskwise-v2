@@ -17,7 +17,7 @@ const formatCreatedAt = (value, locale) => {
 };
 
 const SnapshotDrawer = ({ scenarioId }) => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const locale = i18n.language;
   const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -62,18 +62,19 @@ const SnapshotDrawer = ({ scenarioId }) => {
     }
   };
 
-  if (loading) return <Typography variant="body2">Loading snapshots…</Typography>;
+  if (loading) return <Typography variant="body2">{t("workspace_snapshots_loading")}</Typography>;
   if (error)
     return (
       <Typography role="alert" color="error" variant="body2">
         {error}
       </Typography>
     );
-  if (!snapshots.length) return <Typography variant="body2">No snapshots saved.</Typography>;
+  if (!snapshots.length)
+    return <Typography variant="body2">{t("workspace_snapshots_empty")}</Typography>;
 
   return (
     <Stack spacing={1}>
-      <Typography variant="subtitle2">Snapshots</Typography>
+      <Typography variant="subtitle2">{t("workspace_snapshots_title")}</Typography>
       {snapshots.map((snap) => (
         <Box
           key={snap.id}

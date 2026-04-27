@@ -95,7 +95,7 @@ const AnnualGrowthCard = () => {
                 {t("card_annualgrowth_gdp_subtitle")}
               </Typography>
               <Slider
-                aria-label="GDP selector"
+                aria-label={t("input_gdp_selector_aria")}
                 defaultValue={0}
                 getAriaValueText={valueText}
                 onChange={handleGrowthCardSelect} // Updated to the handleSelect function
@@ -179,7 +179,7 @@ const AnnualGrowthCard = () => {
                 {t("card_annualgrowth_population_subtitle")}
               </Typography>
               <Slider
-                aria-label="Population selector"
+                aria-label={t("input_population_selector_aria")}
                 defaultValue={0}
                 getAriaValueText={valueText}
                 onChange={handleGrowthCardSelect} // Updated to the handleSelect function

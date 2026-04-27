@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import IconButton from "@mui/material/IconButton";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -10,9 +11,10 @@ const onRefreshClick = () => {
 };
 
 const ReloadButton = () => {
+  const { t } = useTranslation();
   return (
     <>
-      <IconButton onClick={onRefreshClick} color="inherit" aria-label="Refresh">
+      <IconButton onClick={onRefreshClick} color="inherit" aria-label={t("nav_refresh_aria")}>
         <RefreshIcon />
       </IconButton>
     </>

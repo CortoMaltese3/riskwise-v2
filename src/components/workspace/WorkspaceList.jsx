@@ -110,14 +110,14 @@ const WorkspaceList = ({ onOpen, items: itemsProp }) => {
     }
   };
 
-  if (loading) return <Typography>Loading...</Typography>;
+  if (loading) return <Typography>{t("workspace_loading")}</Typography>;
   if (error)
     return (
       <Typography role="alert" color="error">
         {error}
       </Typography>
     );
-  if (!items.length) return <Typography>No saved scenarios yet.</Typography>;
+  if (!items.length) return <Typography>{t("workspace_empty")}</Typography>;
 
   return (
     <>

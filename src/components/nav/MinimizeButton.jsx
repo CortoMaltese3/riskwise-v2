@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import IconButton from "@mui/material/IconButton";
 import MinimizeIcon from "@mui/icons-material/Minimize";
@@ -10,9 +11,10 @@ const onMinimizelick = () => {
 };
 
 const ShutdownButton = () => {
+  const { t } = useTranslation();
   return (
     <>
-      <IconButton onClick={onMinimizelick} color="inherit" aria-label="Minimize">
+      <IconButton onClick={onMinimizelick} color="inherit" aria-label={t("nav_minimize_aria")}>
         <MinimizeIcon />
       </IconButton>
     </>

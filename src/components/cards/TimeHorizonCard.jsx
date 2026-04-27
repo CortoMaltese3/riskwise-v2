@@ -66,7 +66,7 @@ const TimeHorizonCard = () => {
             {t("card_timehorizon_subtitle")}
           </Typography>
           <Slider
-            aria-label="Time horizon selector"
+            aria-label={t("input_time_horizon_selector_aria")}
             defaultValue={[2024, 2050]}
             value={value}
             onChange={handleChange}
