@@ -136,7 +136,7 @@ const WorkspaceView = ({ initialScenarios }) => {
     return (
       <Stack spacing={2} sx={{ p: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="h5">Workspace</Typography>
+          <Typography variant="h5">{t("sidebar_workspace")}</Typography>
           <WorkspaceImportExport onImported={loadScenarios} />
         </Stack>
         <EmptyState onStart={() => setActiveSection("risk")} />
@@ -147,13 +147,13 @@ const WorkspaceView = ({ initialScenarios }) => {
   return (
     <Stack spacing={2} sx={{ p: 2 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="h5">Workspace</Typography>
+        <Typography variant="h5">{t("sidebar_workspace")}</Typography>
         <WorkspaceImportExport onImported={loadScenarios} />
       </Stack>
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
         <TextField
-          label="Search"
+          label={t("workspace_search_label")}
           size="small"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -161,15 +161,15 @@ const WorkspaceView = ({ initialScenarios }) => {
           sx={{ minWidth: 220 }}
         />
         <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel id="country-filter-label">Country</InputLabel>
+          <InputLabel id="country-filter-label">{t("country")}</InputLabel>
           <Select
             labelId="country-filter-label"
-            label="Country"
+            label={t("country")}
             value={countryFilter}
             onChange={(e) => setCountryFilter(e.target.value)}
             inputProps={{ "aria-label": "country-filter" }}
           >
-            <MenuItem value="">All</MenuItem>
+            <MenuItem value="">{t("workspace_filter_all")}</MenuItem>
             {countries.map((country) => (
               <MenuItem key={country} value={country}>
                 {country}
@@ -178,15 +178,15 @@ const WorkspaceView = ({ initialScenarios }) => {
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel id="hazard-filter-label">Hazard</InputLabel>
+          <InputLabel id="hazard-filter-label">{t("hazard_title")}</InputLabel>
           <Select
             labelId="hazard-filter-label"
-            label="Hazard"
+            label={t("hazard_title")}
             value={hazardFilter}
             onChange={(e) => setHazardFilter(e.target.value)}
             inputProps={{ "aria-label": "hazard-filter" }}
           >
-            <MenuItem value="">All</MenuItem>
+            <MenuItem value="">{t("workspace_filter_all")}</MenuItem>
             {hazards.map((hazard) => (
               <MenuItem key={hazard} value={hazard}>
                 {hazard}

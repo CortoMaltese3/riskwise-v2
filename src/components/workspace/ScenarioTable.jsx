@@ -43,7 +43,7 @@ const COLUMNS = [
 ];
 
 const ScenarioRow = ({ row, selected, onToggleSelected, onRename, onAction }) => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const locale = i18n.language;
   const rtl = isRtl(locale);
   const [editing, setEditing] = useState(false);
@@ -129,18 +129,22 @@ const ScenarioRow = ({ row, selected, onToggleSelected, onRename, onAction }) =>
             <MoreVertIcon fontSize="small" />
           </IconButton>
           <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
-            <MenuItem onClick={() => handleAction("restore")}>Restore</MenuItem>
+            <MenuItem onClick={() => handleAction("restore")}>
+              {t("workspace_action_restore")}
+            </MenuItem>
             <MenuItem
               onClick={() => {
                 closeMenu();
                 setEditing(true);
               }}
             >
-              Rename
+              {t("workspace_action_rename")}
             </MenuItem>
             <MenuItem onClick={() => handleAction("export-pdf")}>Export PDF</MenuItem>
             <MenuItem onClick={() => handleAction("export-excel")}>Export Excel</MenuItem>
-            <MenuItem onClick={() => handleAction("delete")}>Delete</MenuItem>
+            <MenuItem onClick={() => handleAction("delete")}>
+              {t("workspace_action_delete")}
+            </MenuItem>
           </Menu>
         </TableCell>
       </TableRow>

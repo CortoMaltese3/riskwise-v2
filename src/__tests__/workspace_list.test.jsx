@@ -56,7 +56,7 @@ describe("WorkspaceList", () => {
 
   it("renders an empty-state message when there are no scenarios", () => {
     render(<WorkspaceList items={[]} />);
-    expect(screen.getByText(/no saved scenarios/i)).toBeInTheDocument();
+    expect(screen.getByText("workspace_empty")).toBeInTheDocument();
   });
 
   it("calls onOpen with the row when a scenario is clicked", () => {

@@ -11,9 +11,40 @@
       "jsx": true
     }
   },
-  "plugins": ["react", "react-hooks"],
+  "plugins": ["react", "react-hooks", "i18next"],
   "rules": {
     "react-hooks/exhaustive-deps": "off",
-    "no-console": ["warn", { "allow": ["warn", "error"] }]
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "i18next/no-literal-string": [
+      "error",
+      {
+        "mode": "jsx-only",
+        "ignoreAttribute": [
+          "data-testid",
+          "className",
+          "type",
+          "variant",
+          "size",
+          "color",
+          "edge",
+          "component",
+          "align",
+          "id",
+          "labelId",
+          "key",
+          "role",
+          "direction",
+          "severity",
+          "position",
+          "fontFamily",
+          "fontStyle",
+          "fontWeight",
+          "fontSize",
+          "whiteSpace",
+          "wordBreak"
+        ],
+        "ignore": ["Export PDF", "Export Excel"]
+      }
+    ]
   }
 }

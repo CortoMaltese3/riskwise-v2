@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Dialog,
@@ -13,6 +14,7 @@ import {
 import RiskWiseClient from "../../lib/RiskWiseClient";
 
 const SaveScenarioDialog = ({ open, scenarioId, defaultName, onClose, onSaved }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState(defaultName || "");
   const [tags, setTags] = useState("");
   const [notes, setNotes] = useState("");
@@ -59,11 +61,11 @@ const SaveScenarioDialog = ({ open, scenarioId, defaultName, onClose, onSaved })
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Save scenario</DialogTitle>
+      <DialogTitle>{t("save_scenario_dialog_title")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <TextField
-            label="Name"
+            label={t("save_scenario_name_label")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -72,14 +74,14 @@ const SaveScenarioDialog = ({ open, scenarioId, defaultName, onClose, onSaved })
             inputProps={{ "aria-label": "scenario-name" }}
           />
           <TextField
-            label="Tags (comma-separated)"
+            label={t("save_scenario_tags_label")}
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             fullWidth
             inputProps={{ "aria-label": "scenario-tags" }}
           />
           <TextField
-            label="Notes"
+            label={t("save_scenario_notes_label")}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             multiline
@@ -96,10 +98,10 @@ const SaveScenarioDialog = ({ open, scenarioId, defaultName, onClose, onSaved })
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={submitting}>
-          Cancel
+          {t("cancel")}
         </Button>
         <Button onClick={handleSubmit} variant="contained" disabled={submitting}>
-          Save
+          {t("save_scenario_action")}
         </Button>
       </DialogActions>
     </Dialog>

@@ -117,7 +117,7 @@ const parseJsonResult = <T,>(json: string, setter: (v: T) => void) => {
 };
 
 const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const locale = i18n.language;
   const [meta, setMeta] = useState<ScenarioMeta | null>(null);
   const [waterfallData, setWaterfallData] = useState<WaterfallData | null>(null);
@@ -169,7 +169,7 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
   if (!meta) {
     return (
       <Box sx={{ p: 4 }}>
-        <Typography>Loading scenario data…</Typography>
+        <Typography>{t("print_scenario_loading")}</Typography>
       </Box>
     );
   }
@@ -212,27 +212,30 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
           {meta.name ?? meta.id}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Generated {formatDateTime(new Date(), locale)}
+          {t("print_generated_at", { date: formatDateTime(new Date(), locale) })}
         </Typography>
 
         <Typography variant="h5" gutterBottom>
-          Scenario Parameters
+          {t("print_label_scenario_parameters")}
         </Typography>
         <Table size="small" sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}>
           <TableBody>
-            <LabelRow label="Country" value={meta.country} />
-            <LabelRow label="Hazard" value={meta.hazard_type} />
-            <LabelRow label="Climate Scenario" value={meta.scenario} />
+            <LabelRow label={t("country")} value={meta.country} />
+            <LabelRow label={t("hazard_title")} value={meta.hazard_type} />
+            <LabelRow label={t("print_label_climate_scenario")} value={meta.scenario} />
             <LabelRow
-              label="Time Horizon"
+              label={t("time_horizon_title")}
               value={
                 meta.ref_year && meta.future_year ? `${meta.ref_year} – ${meta.future_year}` : null
               }
             />
-            <LabelRow label="Exposure (Economic)" value={meta.exposure_economic} />
-            <LabelRow label="Exposure (Non-Economic)" value={meta.exposure_non_economic} />
+            <LabelRow label={t("print_label_exposure_economic")} value={meta.exposure_economic} />
+            <LabelRow
+              label={t("print_label_exposure_non_economic")}
+              value={meta.exposure_non_economic}
+            />
             {meta.annual_growth != null && (
-              <LabelRow label="Annual Growth" value={`${meta.annual_growth}%`} />
+              <LabelRow label={t("annual_growth")} value={`${meta.annual_growth}%`} />
             )}
           </TableBody>
         </Table>
@@ -240,7 +243,7 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
         {waterfallData && (
           <Box sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}>
             <Typography variant="h5" gutterBottom>
-              Risk Analysis
+              {t("print_section_risk_analysis")}
             </Typography>
             <Box sx={{ height: 380 }}>
               <WaterfallChartView data={waterfallData} />
@@ -251,7 +254,7 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
         {costbenData && costbenData.measures.length > 0 && (
           <Box sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}>
             <Typography variant="h5" gutterBottom>
-              Cost-Benefit Analysis
+              {t("print_section_cost_benefit")}
             </Typography>
             <Box sx={{ height: 380 }}>
               <CostBenefitChartView data={costbenData} />
@@ -261,16 +264,16 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
 
         <Box sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}>
           <Typography variant="h5" gutterBottom>
-            Impact Map
+            {t("print_section_impact_map")}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            The interactive impact map is available in the Risk Wise application.
+            {t("print_section_impact_map_note")}
           </Typography>
         </Box>
 
         <Box sx={{ "@media print": { pageBreakInside: "avoid", pageBreakBefore: "always" } }}>
           <Typography variant="h5" gutterBottom>
-            Provenance
+            {t("print_section_provenance")}
           </Typography>
           <Table size="small" sx={{ mb: 2 }}>
             <TableBody>
@@ -304,7 +307,7 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
             {REPRODUCIBILITY_NOTE}
           </Typography>
           <Typography variant="subtitle2" gutterBottom>
-            Citation (BibTeX)
+            {t("print_citation_title")}
           </Typography>
           <Box
             component="pre"
