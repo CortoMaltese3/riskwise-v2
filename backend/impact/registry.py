@@ -72,8 +72,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from climada.entity.impact_funcs import ImpactFunc, ImpactFuncSet
-
 
 class ImpactFunctionRegistryError(Exception):
     """Raised when an impact-function JSON file is missing, malformed, or
@@ -110,17 +108,17 @@ class ImpactFunctionRegistry:
     """In-memory registry of impact functions, keyed by ``(exp_type, haz_type)``.
 
     Construction performs all validation. Lookups are O(1) dict reads
-    and return the same cached :class:`~climada.entity.impact_funcs.ImpactFunc`
-    instance for repeated calls with the same key, so callers can rely
-    on identity for caching downstream.
+    and return the same cached engine ``ImpactFunc`` instance for
+    repeated calls with the same key, so callers can rely on identity
+    for caching downstream.
     """
 
     def __init__(self, specs: Iterable[ImpactFunctionSpec]) -> None:
         self._specs: dict[tuple[str, str], ImpactFunctionSpec] = {}
-        # ``ImpactFunc`` instances are built lazily on first ``get()`` so
-        # callers that only inspect specs (tests, validators) don't pull
-        # numpy/CLIMADA into memory eagerly.
-        self._functions: dict[tuple[str, str], ImpactFunc] = {}
+        # Engine ``ImpactFunc`` instances are built lazily on first
+        # ``get()`` so callers that only inspect specs (tests,
+        # validators) don't pull the engine into memory eagerly.
+        self._functions: dict[tuple[str, str], Any] = {}
         triples: dict[tuple[str, str, int], str] = {}
         units_by_haz: dict[str, tuple[str, str]] = {}
 
@@ -184,8 +182,8 @@ class ImpactFunctionRegistry:
                 f"or non-increasing), got {list(values)!r}."
             )
 
-    def get(self, exp_type: str, haz_type: str) -> ImpactFunc:
-        """Return the cached :class:`ImpactFunc` for the given pair.
+    def get(self, exp_type: str, haz_type: str) -> Any:
+        """Return the cached engine ``ImpactFunc`` for the given pair.
 
         Raises :class:`ImpactFunctionRegistryError` if no entry matches.
         """
@@ -202,9 +200,12 @@ class ImpactFunctionRegistry:
         self._functions[key] = built
         return built
 
-    def get_set(self, exp_type: str, haz_type: str) -> ImpactFuncSet:
-        """Return an :class:`ImpactFuncSet` wrapping :py:meth:`get`."""
-        return ImpactFuncSet([self.get(exp_type, haz_type)])
+    def get_set(self, exp_type: str, haz_type: str) -> Any:
+        """Return an engine ``ImpactFuncSet`` containing the function for the given pair."""
+        spec = self.get_spec(exp_type, haz_type)
+        from backend.engine.adapter import build_impfset
+
+        return build_impfset([spec])
 
     def get_spec(self, exp_type: str, haz_type: str) -> ImpactFunctionSpec:
         """Return the validated spec object — useful for tests/introspection."""
@@ -345,21 +346,14 @@ def _require_number_array(value: Any, field: str, where: str) -> tuple[float, ..
     return tuple(out)
 
 
-def _build_impact_func(spec: ImpactFunctionSpec) -> ImpactFunc:
-    # numpy is imported lazily so registry construction (validation only)
-    # does not pull it into memory. The compute path that actually
-    # consumes ImpactFunc objects already imports numpy via CLIMADA.
-    import numpy as np
+def _build_impact_func(spec: ImpactFunctionSpec) -> Any:
+    # The adapter is the only module allowed to import climate_lama_engine
+    # (see scripts/check_engine_imports.py). Importing lazily also breaks
+    # the load-time cycle between this module and backend.engine.types,
+    # which re-exports ImpactFunctionSpec from here.
+    from backend.engine.adapter import build_impfset
 
-    return ImpactFunc(
-        haz_type=spec.haz_type,
-        id=spec.id,
-        intensity=np.array(spec.intensity),
-        mdd=np.array(spec.mdd),
-        paa=np.array(spec.paa),
-        intensity_unit=spec.intensity_unit,
-        name=spec.name,
-    )
+    return build_impfset([spec]).get(spec.id)
 
 
 def _default_root() -> Path:
