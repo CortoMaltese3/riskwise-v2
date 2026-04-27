@@ -156,24 +156,54 @@ This template is written into the engine repo as `.github/PULL_REQUEST_TEMPLATE.
 
 ## 6. Parity gates
 
-Cutover from CLIMADA to engine is gated on a parity test suite (`tests/parity/`) that runs the same input through both libraries and asserts the outputs agree within the following tolerances:
+Parity is enforced at two layers:
 
-| Metric | Tolerance | Rationale |
-|---|---|---|
-| `aai_agg` (Average Annual Loss) | ±2 % | Original D05 / spike #4 gate |
-| Loss at RP 50, 100, 250 | ±5 % per RP | Original D05 / spike #4 gate |
-| Cost-benefit BCR per measure | ±5 % | Same numerical class as RP losses |
-| `n_valid_points`, `n_excluded_points` | exact (=) | Categorical, must match |
-| `frequency_type` round-trip | exact (=) | Contract integrity |
+### 6.1 Compute parity (engine library ↔ CLIMADA library)
 
-Reference scenarios for the parity suite (must all pass):
+The canonical artifact is **`notebooks/08_climada_comparison.ipynb`** in the `climate-lama-engine` repo. It runs both libraries on identical synthetic inputs and asserts agreement at the metric level. The current state and per-scenario results are summarised in [parity-smoke-results.md](parity-smoke-results.md); the underlying numbers live in the notebook itself (commit `a30a6e4`).
+
+Coverage map (12 scenarios; 7 in tree at the time of this ADR's merge, 5 planned):
+
+| Scenario | Engine surface | Tolerance | Status |
+|---|---|---|---|
+| 1. Baseline impact (RP maps) | `Hazard.from_rp_maps`, `ImpactCalc` | `rtol=1e-6` | ✅ |
+| 2. Multiple impact functions | `ImpactFuncSet` routing | `rtol=1e-6` | ✅ |
+| 3. Fraction matrix | `Hazard(fraction=…)` | `rtol=1e-6` | ✅ |
+| 4. Insurance | `Exposures(deductible, cover)` | `rtol=1e-6` | ✅ |
+| 5. Adaptation measure | `Measure.apply` | `rtol=1e-6` | ✅ |
+| 6. Exceedance frequency curve | `cc.calc_freq_curve` | `rtol=1e-4` | ✅ |
+| 7. Larger scale (JRC 6 RP × 20 cen × 10 exp) | numerical stability | `rtol=1e-6` | ✅ |
+| 8. Cost-benefit (single measure, present + future) | `cc.calc_cost_benefit` | `rtol=5e-3` | 🔲 planned |
+| 9. Cost-benefit (multi-measure BCR ranking) | measure list, rank order | `rtol=5e-3` + exact rank | 🔲 planned |
+| 10. Drought-style decreasing impact | non-monotonic `ImpactFunc`, `haz_type="DR"` | `rtol=1e-6` | 🔲 planned |
+| 11. `assign_centroids` | custom-data flow | exact (=) per row | 🔲 planned |
+| 12. `bootstrap_ead_ci` | seeded RNG CI | `rtol=5e-3` | 🔲 planned |
+
+Tolerances replace the original D05 ±2 % / ±5 % bands with tighter `rtol=1e-6` for direct compute metrics — the engine and CLIMADA agree to floating-point noise in practice, so anything looser would mask real divergence. The wider `rtol=5e-3` for cost-benefit and bootstrap CI accounts for legitimate differences in discounting precision and resample order.
+
+### 6.2 Integration parity (riskwise + engine ↔ riskwise + CLIMADA)
+
+The compute parity above validates **that the engine library is correct**. It does not validate **that riskwise's loaders + adapters wire it up correctly**. That second layer is the job of `riskwise-v2/tests/parity/` (Phase 6 Track 4, [#163](https://github.com/CortoMaltese3/riskwise-v2/issues/163)) and runs four reference scenarios end-to-end:
 
 1. **Egypt flood ERA** — present + future, full cost-benefit. The Phase 4 baseline scenario.
-2. **Egypt drought ERA** — present-only. Stresses the decreasing-with-intensity SPI curve (§3.3).
+2. **Egypt drought ERA** — present-only. Stresses the decreasing-with-intensity SPI curve (validated upstream by Scenario 10 of the engine notebook).
 3. **Thailand flood ERA** — present + future. Different country to confirm registry-driven impact functions are engine-portable.
 4. **One custom-data ZIP** — a user-uploaded country pack, end-to-end. Stresses the loader contract for non-curated inputs.
 
-The parity suite runs in CI on every Phase 6 PR and stays in the test tree post-cutover as a regression guard against engine version bumps (per §5.4).
+These integration tests cannot run until riskwise's engine adapter exists (Tracks 1–3); they are not a precondition for ADR ratification. They gate cutover (#163 → #166), not adoption.
+
+### 6.3 Tolerances applied at the integration layer
+
+The integration tests use the wider tolerances inherited from D05 (`±2 %` for `aai_agg`, `±5 %` for RP losses and BCR) because end-to-end runs accumulate rounding through the loaders, sparse-matrix construction, centroid assignment, and projection round-trips. The compute layer (§6.1) catches engine-side regressions; the integration layer catches everything else.
+
+### 6.4 CI integration
+
+Both layers run in CI on every Phase 6 PR:
+
+- **Compute parity**: notebook 08 is executed as part of the engine repo's release pipeline. A `[FAIL]` line or `AssertionError` blocks the PR.
+- **Integration parity**: `riskwise-v2/tests/parity/` runs in `tests.yml` once the adapter scaffold (#151) lands. Same gating semantics.
+
+Both stay in their respective test trees post-cutover as regression guards against engine version bumps (per §5.4).
 
 ---
 
@@ -221,11 +251,21 @@ Legacy scenario blobs retain their `climada_version` field; new blobs carry `eng
 
 ---
 
-## 9. Outstanding work (the only empirical item)
+## 9. Outstanding work
 
-- [ ] **Parity smoke (pre-cutover, gates Phase 6 Track 4)**: run scenarios 1–4 from §6 through both CLIMADA and a hand-rolled engine adapter; record `aai_agg`, RP-50/100/250, cost-benefit BCRs in `docs/spikes/parity-smoke-results.md`. If any row exceeds §6 tolerances, file the gap as an upstream engine issue and gate cutover on its resolution.
+The original "single empirical item" — running the engine library against CLIMADA on real scenarios with a hand-rolled adapter — has been **superseded** by a cleaner two-layer model (see §6.1 and §6.2). The notebook-based compute parity is what the ADR actually needs to ratify direction; the integration parity is correctly Phase 6 Track 4 work that depends on the adapter existing.
 
-This is the only thing this ADR cannot decide on paper. Everything else (capability assessment, contract, roadmap, rollback) is decided here.
+Resolved at this ADR's merge:
+
+- [x] **Compute parity baseline**: 7 of 12 planned scenarios in [`notebooks/08_climada_comparison.ipynb`](https://github.com/gkalomalos/climate-lama-engine/blob/main/notebooks/08_climada_comparison.ipynb) (engine repo commit `a30a6e4`) pass at `rtol=1e-6`. Coverage map and per-scenario status in [parity-smoke-results.md](parity-smoke-results.md). The 7 in tree exercise the riskwise hot path (hazard → exposures → impf → impact, including fraction, insurance, single-measure, and exceedance curve).
+
+Outstanding (planned, do not block adoption):
+
+- [ ] **Five additional notebook scenarios** (8–12 in §6.1) — cost-benefit single, cost-benefit multi-measure ranking, drought-style decreasing impact, `assign_centroids`, `bootstrap_ead_ci`. Prompt drafted in the riskwise-v2 conversation that produced this ADR; the engine maintainer adds them to the same notebook, after which `parity-smoke-results.md` gets a one-line update.
+- [ ] **Integration parity** (`riskwise-v2/tests/parity/`) — depends on the engine adapter existing (Phase 6 Tracks 1–3). Tracked under [#163](https://github.com/CortoMaltese3/riskwise-v2/issues/163). Gates **cutover** (#166), not adoption.
+- [ ] **Notebook in CI** — engine repo's release pipeline executes notebook 08 on every PR. Tracked in §6.4; engine-repo follow-up.
+
+None of the outstanding items block this ADR's merge. The compute layer is validated; the contract is set; the roadmap and rollback are decided. Phase 6 implementation can begin against this baseline.
 
 ---
 
