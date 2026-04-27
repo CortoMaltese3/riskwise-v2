@@ -27,6 +27,9 @@ dependencies:
   - pip:
       # v2 canonical CLIMADA pin is pyproject.toml; keep this legacy v1 env in sync.
       - climada==6.1.0
+      # v2 canonical climate-lama-engine pin is pyproject.toml; keep this in sync.
+      # See DECISIONS.md D26 / adr-climate-lama-engine-adoption.md.
+      - climate-lama-engine==0.4.0
       - docx2pdf==0.1.8
       - docxtpl==0.16.7
       - h5py==3.10.0

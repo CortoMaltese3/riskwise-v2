@@ -19,7 +19,15 @@ license = { file = "LICENSE" }
 dependencies = [
     # Canonical CLIMADA pin — requirements/requirements.txt and
     # requirements/environment.yml must match this version (see DECISIONS.md D05).
+    # Phase 6 (DECISIONS.md D26) adds climate-lama-engine as a parallel install;
+    # CLIMADA stays for the duration of Tracks 1–4 to support side-by-side
+    # parity testing. Track 6 (#166) removes this pin.
     "climada==6.1.0",
+    # Engine compute layer (DECISIONS.md D26 / adr-climate-lama-engine-adoption.md).
+    # Hard-pinned per ADR §5.1 rule 5; requirements/requirements.txt and
+    # requirements/environment.yml must match. Only backend/engine/adapter.py
+    # may import from this package — enforced by scripts/check_engine_imports.py.
+    "climate-lama-engine==0.4.0",
     "geopandas>=0.14,<2",
     "numpy>=1.24,<3",
     "pandas>=2.0,<4",
