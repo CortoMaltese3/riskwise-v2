@@ -521,3 +521,94 @@ A separate cleanup issue ([#135](https://github.com/CortoMaltese3/riskwise-v2/is
 addresses the dead IPC guard and the orphan fetcher methods.
 
 ---
+
+## D25 — Single bundled installer for v2.0; retire two-variant split
+
+**Status**: Accepted
+**Date**: 2026-04-27
+
+**Decision**: For v2.0, ship a **single Windows NSIS installer** that
+bundles the ERA scenario datasets (`data/`) and downloads the engine
+on first launch. Retire the Phase 4 Area 14 commitment to two installer
+variants (`Online ≤ 150 MB` + `Offline all-in-one ≤ 900 MB`). The
+runtime offline toggle, signed `.riskwise-pack` import, and engine
+manifest verification are kept — those are useful regardless of the
+installer story.
+
+D24 (air-gapped variant deferred) and D09 (offline mode as a runtime
+toggle) are unchanged. This decision narrows the *installer* story; it
+does not retract the runtime offline behavior.
+
+**Why**:
+- **The "online" target was incompatible with a hard product
+  constraint**. ERA scenarios (Egypt + Thailand entity files and
+  hazard rasters in `data/`, ~175 MB) must be available at first run —
+  every user needs them. Pretending they could be downloaded
+  out-of-band on first launch was a design assumption that contradicted
+  the product. Discovered when the actual measurement came in at
+  293.1 MB against a 150 MB target.
+- **The split delivered no user value**. A 150 MB "online" installer
+  that pulls a ~1.2 GB engine on first launch shifts when the
+  bandwidth gets spent — it does not reduce it. The user-perceived
+  weight is `installer + engine` combined; optimizing the installer
+  alone never moves that needle.
+- **The real lever is engine size**. That is being attacked by Phase 6
+  (`climate-lama-engine`, slim CLIMADA fork). Until that lands, no
+  amount of installer-variant gymnastics changes the user experience.
+  After it lands, single-installer footprint becomes a tractable target
+  to re-evaluate without inventing a download flow first.
+- **Engineering cost vs benefit**. Implementing first-launch data
+  download (signing, retry, "data not ready" UX, hosting, version
+  management) is multi-day work that ships zero user-facing value
+  given the constraints above. Not a v2.0 priority.
+
+**Trigger to revisit**: any of —
+- Phase 6 (`climate-lama-engine`) lands and the combined
+  installer + engine size becomes small enough that the v2.0 target
+  ("≤ 150 MB online") looks achievable for a single bundled installer.
+- A named customer requires the air-gapped variant — that fires the
+  D24 trigger as well; the work would be shaped around their
+  deployment.
+- An XLSX → DuckDB compression pass on the bundled `data/` shows it can
+  drop from ~165 MB to a small fraction (tracked separately, see
+  Consequence below). If that brings the single installer into the
+  150 MB envelope on its own, the architectural question changes.
+
+**Open questions**:
+1. Post-Phase-6 size target. The ≤ 150 MB / ≤ 900 MB targets in
+   `docs/reference/benchmarks.md` are retired; a single replacement
+   target should be set after the lean engine lands and the combined
+   weight is measured on reference hardware.
+2. Whether to externalize DuckDB / data files outside the install dir
+   in v2.x — security (file permissions), multi-user, and update story
+   are all open. Not part of this decision; flagged for later.
+
+**Rejected**:
+- **Strip `data/` from the bundle and implement first-launch data
+  download for v2.0** — this was the path issue #172 proposed before
+  the constraint surfaced. Closed as won't-fix; problem statement was
+  wrong because ERA data must be present at first run.
+- **Run the XLSX → DuckDB compression refactor on the v2.0 critical
+  path** — promising for installer footprint (loose XLSX files
+  compressed into a single DuckDB file would likely save 60–80 % on
+  the 165 MB), but a multi-day refactor that touches every entity
+  loader. Tracked separately for v2.1+, not v2.0.
+- **Keep the two-variant story but slip the targets** — the targets
+  were the only artifact of that design that mattered; without them,
+  the split has no operative meaning. Cleaner to retire it.
+
+**Consequence**:
+- `docs/plan/phase-4-distribution-and-polish.md` Area 14 row is
+  rewritten: runtime offline toggle and signed-pack flow only, no
+  more two-installer language.
+- `docs/plan/phase-4-distribution-and-polish.md` exit criterion for
+  installer size is rewritten as a single measured row marked
+  `accept` against an explicit "retired target — see D25" note.
+- `docs/reference/benchmarks.md` § v2.0.0 release measurements
+  collapses the two installer rows into one.
+- Issue [#172](https://github.com/CortoMaltese3/riskwise-v2/issues/172)
+  is closed as won't-fix; comment links to this decision.
+- The XLSX → DuckDB compression idea is filed as its own
+  enhancement-labeled issue (no milestone) so it does not get lost.
+
+---
