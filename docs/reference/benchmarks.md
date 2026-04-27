@@ -14,8 +14,7 @@ Source: [`ARCHITECTURE.md § Performance Benchmark Targets`](../ARCHITECTURE.md#
 
 | Metric | Target | Notes |
 |---|---|---|
-| Online installer size | ≤ 150 MB | Engine downloaded post-install. |
-| Offline installer size | ≤ 900 MB | Engine + EGY/THA tile pack + hazard data. |
+| Single installer size | retired — see [D25](../DECISIONS.md#d25--single-bundled-installer-for-v20-retire-two-variant-split) | Single bundled NSIS installer (ERA datasets bundled, engine downloaded on first launch). Replacement target to be set after Phase 6 (`climate-lama-engine`) lands. |
 | App cold-start to ready | ≤ 5 s | From double-click to health endpoint responding. |
 | Egypt flood ERA scenario | ≤ 90 s | End-to-end on reference hardware. |
 | Thailand heatwave ERA scenario | ≤ 120 s | Larger raster. |
@@ -71,8 +70,7 @@ now** (release-blocker, must land before tag).
 
 | Metric | Target | Measured | Hardware | Decision | Notes |
 |---|---|---|---|---|---|
-| Online installer size | ≤ 150 MB | 293.1 MB | Windows 11 local `npm run dist` | defer | `data/` (175 MB ERA scenarios) bundled in violation of Phase 4 Area 14 design — should be downloaded on first launch. Stripping `data/` from `electron-builder.cjs#files` would put the installer at ~125 MB. First-launch data download tracked in #172; re-measure once that lands. |
-| Offline installer size | ≤ 900 MB | n/a — variant deferred | — | defer | Offline installer variant deferred per [DECISIONS.md D24](../DECISIONS.md#d24--air-gapped-deployment-support-deferred-until-named-customer); tracked in #134. Re-measure once the variant lands. |
+| Single installer size | retired — see [D25](../DECISIONS.md#d25--single-bundled-installer-for-v20-retire-two-variant-split) | 293.1 MB | Windows 11 local `npm run dist` | accept | Single bundled NSIS installer (ERA datasets bundled, engine downloaded on first launch). Two-variant `Online ≤ 150 MB` / `Offline ≤ 900 MB` split retired per D25. Replacement target to be set after Phase 6 (`climate-lama-engine`) lands. ERA-data compression (XLSX → DuckDB) is tracked separately as a v2.1+ optimization. The all-in-one offline variant remains deferred per [D24](../DECISIONS.md#d24--air-gapped-deployment-support-deferred-until-named-customer) (#134). |
 | App cold-start to ready | ≤ 5 s | _pending — measure on reference hardware_ | reference dev box | — | Wall-clock from process spawn to engine `ready` event (see Measurement protocol). First run after reboot. |
 | Egypt flood ERA scenario | ≤ 90 s | _pending — measure on reference hardware_ | reference dev box | — | Median of five runs via `scripts/measure_engine.ps1`. |
 | Thailand heatwave ERA scenario | ≤ 120 s | _pending — measure on reference hardware_ | reference dev box | — | Larger raster than Egypt flood. |
