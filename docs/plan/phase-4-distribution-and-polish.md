@@ -49,7 +49,7 @@ Full specifications live in [ARCHITECTURE.md](../ARCHITECTURE.md).
 
 From [ARCHITECTURE.md § Verification Criteria](../ARCHITECTURE.md#verification-criteria-acceptance-tests-per-phase):
 
-- [ ] Online installer ≤ 150 MB; offline installer ≤ 900 MB. _Pending — record from `release-please` artifact; see [`docs/reference/benchmarks.md` § v2.0.0 release measurements](../reference/benchmarks.md#v200-release-measurements)._
+- [ ] Online installer ≤ 150 MB; offline installer ≤ 900 MB. _Deferred — measured 293.1 MB online; root cause is bundled `data/` (175 MB ERA scenarios) which violates Phase 4 Area 14 design and should be downloaded on first launch. Tracked in #172. Offline-installer variant itself is deferred per D24 / #134. See [`docs/reference/benchmarks.md` § v2.0.0 release measurements](../reference/benchmarks.md#v200-release-measurements)._
 - [x] Playwright E2E passes: launch → Egypt + Flood → run → Leaflet renders → save → restore. _Issue #114, `tests/e2e/golden_path.spec.ts`, gated in `.github/workflows/tests.yml`._
 - [x] All 3 languages complete (en, ar, th) on every user-visible screen. _Issue #123, `src/locales/{en,ar,th}.json` enforced by `npm run lint:locales` in CI._
 - [ ] Install v2.0.0; release v2.0.1 to beta channel; app detects update, shows consent dialog, installs on restart. _Pending — exercise on first v2.0.0 → v2.0.1-beta.1 cut._
