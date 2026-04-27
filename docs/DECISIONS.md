@@ -94,7 +94,7 @@ Key decisions made during the v2 design. Each entry records what was decided, wh
 
 ## D05 — Python compute engine: evaluate before committing
 
-**Status**: Under investigation (Phase 0 spike required)  
+**Status**: Superseded by [D26](#d26--adopt-climate-lama-engine-as-the-runtime-compute-layer-post-v20) (2026-04-27). Track A (CLIMADA + Nuitka) shipped for v2.0; Track B (`climate-lama-engine`) is adopted for v2.x once engine v0.4.0+ parity is confirmed and v2.0.0 has tagged.
 **Date**: 2026-04-16
 
 **Decision**: Do not commit to a specific Python compute approach until Phase 0 research spikes are complete. Three tracks:
@@ -519,6 +519,41 @@ implementation work and the discovered mismatches above are tracked in
 [GitHub issue #134](https://github.com/CortoMaltese3/riskwise-v2/issues/134).
 A separate cleanup issue ([#135](https://github.com/CortoMaltese3/riskwise-v2/issues/135))
 addresses the dead IPC guard and the orphan fetcher methods.
+
+---
+
+## D26 — Adopt `climate-lama-engine` as the runtime compute layer (post-v2.0)
+
+**Status**: Accepted (design); cutover gated on parity smoke and v2.0.0 tag.
+**Date**: 2026-04-27
+
+**Decision**: Replace `climada==6.1.0` with `climate-lama-engine==<cutover-version>` as the runtime compute dependency in Phase 6, after v2.0.0 has tagged on Track A. The cross-project compatibility contract governing the engine, the climate-lama backbone, and riskwise-v2 is captured in [adr-climate-lama-engine-adoption.md §5](../spikes/adr-climate-lama-engine-adoption.md). Implementation work is broken down in [phase-6-engine-migration.md](../plan/phase-6-engine-migration.md) (issues #150–#169).
+
+**Why**:
+- Engine v0.4.0 (released 2026-04-20) covers the full risk-assessment surface riskwise needs, including drought and heatwave hazards beyond the river-flood-only scope of engine v0.1 that drove D05's deferral. The capability assessment in [adr-climate-lama-engine-adoption.md §3](../spikes/adr-climate-lama-engine-adoption.md#3-capability-assessment--engine-v040-vs-climada-610-against-riskwise-needs) maps every CLIMADA call site in the backend to its engine equivalent.
+- The engine is in production use inside the climate-lama backbone product. riskwise becomes the second consumer; the cross-project contract in §5 of the ADR formalises the obligations between the two.
+- Bundle reality: post-Phase-6 single-installer target re-baselines from the original "~50 MB Track B" daydream to ~150–250 MB (vs ~500 MB current). Real reduction; the ERA-data compression follow-up (#175) is a separate further optimisation.
+- The Track A path D05 selected (CLIMADA + Nuitka) shipped successfully for v2.0; D26 is not a retraction of that, only the next step.
+
+**Why not earlier**: Engine v0.1 covered only river flood at the time of D05 (2026-04-16); selecting Track B would have blocked drought + heatwave coverage. Engine v0.4.0 closes that gap.
+
+**Trade-offs accepted**: Smaller bundle, simpler dependency tree, easier hazard extensibility — at the cost of writing our own file loaders (HDF5, GeoTIFF, XLSX) and our own dataset catalog (replacing CLIMADA's `Client`). All five rules of the §5 contract apply: hard pins, no consumer-side workarounds, every engine PR ships with backbone-compat + riskwise-compat tests, coordinated releases.
+
+**Trigger to revisit**: any of —
+- A parity gap surfaces during Phase 6 Track 4 (#163) that the engine cannot close in a reasonable timeframe (rollback path documented in ADR §11).
+- The compatibility contract breaks down in practice — e.g., consumer needs diverge faster than the engine can serve both. The ADR §5.4 coordinated-release rule is the early-warning signal.
+
+**Rejected**:
+- **Stay on CLIMADA indefinitely** — D05's bundle and dependency-tree pain were real; engine v0.4.0 makes the alternative viable for the first time.
+- **Adopt the engine for v2.0 directly** — would have collided with the v2.0 release timeline. ADR is explicit that Phase 6 follows v2.0.0 tag.
+
+**Supersedes**: [D05](#d05--python-compute-engine-evaluate-before-committing).
+
+**References**:
+- [adr-climate-lama-engine-adoption.md](../spikes/adr-climate-lama-engine-adoption.md) — full ADR
+- [adr-bundling.md §6](../spikes/adr-bundling.md#6-cross-reference-with-climate_lama_engine-track-b) — bundle-target re-baseline (footnote points here to ADR §7)
+- [phase-6-engine-migration.md](../plan/phase-6-engine-migration.md) — execution plan
+- [climate-lama-engine v0.4.0 PyPI page](https://pypi.org/project/climate-lama-engine/) — public API source of truth
 
 ---
 

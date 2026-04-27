@@ -332,6 +332,8 @@ The lama engine spike writes the matching row from its side in
 `docs/spikes/adr-lama-engine.md`. Both ADRs must agree on
 their corner of this table before Phase 4 Area 4 executes.
 
+> **Re-baseline note (2026-04-27):** the "~50 MB" Track-B figure in the matrix above assumed CLIMADA was the only heavy dependency. It wasn't. The realistic post-Track-B bundle target is **~150–250 MB**, set by `geopandas` + `rasterio` + `h5py` + the engine's own NumPy/SciPy footprint. See [adr-climate-lama-engine-adoption.md §7](adr-climate-lama-engine-adoption.md#7-bundle-reality-r1-corrected) for the corrected accounting and [DECISIONS.md D26](../DECISIONS.md#d26--adopt-climate-lama-engine-as-the-runtime-compute-layer-post-v20) for the resulting decision. v2.0 ships on Track A as predicted; Track B is adopted post-v2.0 with the re-baselined target.
+
 ---
 
 ## 7. Outstanding work
