@@ -26,10 +26,6 @@ notice.
 
 from backend.engine.adapter import (
     EngineUnavailableError,
-    ExposureArrays,
-    HazardArrays,
-    ImpactFunctionSpec,
-    MeasureSpec,
     build_exposures,
     build_hazard,
     build_impfset,
@@ -37,9 +33,17 @@ from backend.engine.adapter import (
     run_cost_benefit,
     run_impact,
 )
+from backend.engine.types import (
+    EntityBundle,
+    ExposureArrays,
+    HazardArrays,
+    ImpactFunctionSpec,
+    MeasureSpec,
+)
 
 __all__ = [
     "EngineUnavailableError",
+    "EntityBundle",
     "ExposureArrays",
     "HazardArrays",
     "ImpactFunctionSpec",
