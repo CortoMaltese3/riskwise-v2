@@ -71,8 +71,8 @@ now** (release-blocker, must land before tag).
 
 | Metric | Target | Measured | Hardware | Decision | Notes |
 |---|---|---|---|---|---|
-| Online installer size | ≤ 150 MB | _pending — record from CI release artifact_ | release CI | — | Record on first `release-please` cut from `dist/RISK-WISE-Setup-*.exe`. |
-| Offline installer size | ≤ 900 MB | _pending — record from CI release artifact_ | release CI | — | Includes engine + EGY/THA tile pack. |
+| Online installer size | ≤ 150 MB | 293.1 MB | Windows 11 local `npm run dist` | defer | `data/` (175 MB ERA scenarios) bundled in violation of Phase 4 Area 14 design — should be downloaded on first launch. Stripping `data/` from `electron-builder.cjs#files` would put the installer at ~125 MB. First-launch data download tracked in #172; re-measure once that lands. |
+| Offline installer size | ≤ 900 MB | n/a — variant deferred | — | defer | Offline installer variant deferred per [DECISIONS.md D24](../DECISIONS.md#d24--air-gapped-deployment-support-deferred-until-named-customer); tracked in #134. Re-measure once the variant lands. |
 | App cold-start to ready | ≤ 5 s | _pending — measure on reference hardware_ | reference dev box | — | Wall-clock from process spawn to engine `ready` event (see Measurement protocol). First run after reboot. |
 | Egypt flood ERA scenario | ≤ 90 s | _pending — measure on reference hardware_ | reference dev box | — | Median of five runs via `scripts/measure_engine.ps1`. |
 | Thailand heatwave ERA scenario | ≤ 120 s | _pending — measure on reference hardware_ | reference dev box | — | Larger raster than Egypt flood. |
