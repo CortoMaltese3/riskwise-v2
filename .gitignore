@@ -60,6 +60,8 @@ scripts/*
 !scripts/check-color-contrast.js
 # Phase 4 Final — en/ar/th locale completeness check (issue #123).
 !scripts/check-locales.js
+# Phase 6 Track 1 (issue #151 / DECISIONS.md D26) — engine import boundary lint.
+!scripts/check_engine_imports.py
 notes.txt
 
 #certificates

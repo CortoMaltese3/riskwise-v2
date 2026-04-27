@@ -51,10 +51,19 @@ jobs:
             "httpx>=0.27" \
             "ruff>=0.5" \
             "mypy>=1.10" \
-            "pyarrow>=12"
+            "pyarrow>=12" \
+            "climate-lama-engine==0.4.0"
 
       - name: Ruff lint
         run: ruff check .
+
+      # Phase 6 Track 1 (issue #151 / DECISIONS.md D26): the only place
+      # `climate_lama_engine` may be imported is `backend/engine/`. The
+      # adapter is the single boundary so we have one fix point when the
+      # engine API drifts. See adr-climate-lama-engine-adoption.md §5.1
+      # rule 1 for the contract.
+      - name: Engine import boundary
+        run: python scripts/check_engine_imports.py
 
       - name: Ruff format check
         run: ruff format --check .

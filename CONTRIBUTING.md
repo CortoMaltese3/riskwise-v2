@@ -196,6 +196,17 @@ Never edit `NOTICES.txt` by hand — the next regeneration will overwrite it.
   commit time; the commit is blocked if either fails.
 - **release-please** (GitHub Action) cuts releases from Conventional Commits
   landing on `main` and maintains [`CHANGELOG.md`](CHANGELOG.md).
+- **Engine import boundary**
+  ([`scripts/check_engine_imports.py`](scripts/check_engine_imports.py)):
+  enforces that `climate_lama_engine` is imported only from
+  [`backend/engine/`](backend/engine/). Per
+  [DECISIONS.md D26](docs/DECISIONS.md) and
+  [adr-climate-lama-engine-adoption.md §5.1 rule 1](docs/spikes/adr-climate-lama-engine-adoption.md),
+  `backend/engine/adapter.py` is the single boundary between riskwise and
+  the engine library; every other backend module routes through that
+  adapter so we have one fix point when the engine API drifts. The CI
+  job in `.github/workflows/tests.yml` runs this check; it also runs
+  locally as `python scripts/check_engine_imports.py`.
 
 Run the full check set locally before opening a PR:
 
@@ -205,6 +216,7 @@ ruff check .
 ruff format --check .
 mypy
 pytest
+python scripts/check_engine_imports.py
 
 # JS
 npm run lint
