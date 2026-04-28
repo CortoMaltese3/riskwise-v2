@@ -20,10 +20,12 @@ from typing import Any
 
 from db.connection import get_connection
 
+# Provenance keys whose value cannot be ``None`` on a fresh insert. The
+# dual-backend split (#162) made ``engine_version`` and ``climada_version``
+# nullable: exactly one is populated based on the backend that produced
+# the row, so they are deliberately not in this required set.
 _PROVENANCE_FIELDS: tuple[str, ...] = (
     "app_version",
-    "engine_version",
-    "climada_version",
     "entity_data_sha256",
     "hazard_data_sha256",
     "country_config_sha256",
@@ -64,6 +66,7 @@ class ScenarioRow:
     # Provenance fields surfaced for the print view, Excel sheet, and
     # the .riskwise-scenario export so all three read from one source.
     app_version: str | None = None
+    engine: str | None = None
     engine_version: str | None = None
     climada_version: str | None = None
     entity_data_sha256: str | None = None
@@ -123,11 +126,11 @@ def insert_scenario(
                 id, name, tags, notes, country, hazard_type, scenario,
                 exposure_economic, exposure_non_economic, ref_year,
                 future_year, annual_growth, is_era, app_option, status,
-                app_version, engine_version, climada_version,
+                app_version, engine, engine_version, climada_version,
                 entity_data_sha256, hazard_data_sha256, country_config_sha256,
                 config_version, random_seed, computed_at, is_imported
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                      ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?)
+                      ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?)
             """,
             [
                 scenario_id,
@@ -146,8 +149,9 @@ def insert_scenario(
                 params.get("app_option"),
                 status,
                 provenance["app_version"],
-                provenance["engine_version"],
-                provenance["climada_version"],
+                provenance.get("engine"),
+                provenance.get("engine_version"),
+                provenance.get("climada_version"),
                 provenance["entity_data_sha256"],
                 provenance["hazard_data_sha256"],
                 provenance["country_config_sha256"],
@@ -404,7 +408,7 @@ _SCENARIO_SELECT_COLUMNS = """
     exposure_economic, exposure_non_economic, ref_year,
     future_year, annual_growth, is_era, app_option, status,
     created_at,
-    app_version, engine_version, climada_version,
+    app_version, engine, engine_version, climada_version,
     entity_data_sha256, hazard_data_sha256, country_config_sha256,
     random_seed, computed_at, is_imported
 """
@@ -429,12 +433,13 @@ def _row_to_scenario(row: tuple) -> ScenarioRow:
         status=row[14],
         created_at=row[15],
         app_version=row[16],
-        engine_version=row[17],
-        climada_version=row[18],
-        entity_data_sha256=row[19],
-        hazard_data_sha256=row[20],
-        country_config_sha256=row[21],
-        random_seed=row[22],
-        computed_at=row[23],
-        is_imported=bool(row[24]) if row[24] is not None else False,
+        engine=row[17],
+        engine_version=row[18],
+        climada_version=row[19],
+        entity_data_sha256=row[20],
+        hazard_data_sha256=row[21],
+        country_config_sha256=row[22],
+        random_seed=row[23],
+        computed_at=row[24],
+        is_imported=bool(row[25]) if row[25] is not None else False,
     )

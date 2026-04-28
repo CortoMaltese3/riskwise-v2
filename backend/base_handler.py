@@ -17,7 +17,7 @@ import geopandas as gpd
 import pandas as pd
 import pycountry
 
-from climada.util.api_client import Client
+from engine.catalog import CatalogError, is_dataset_available
 from constants import (
     DATA_DIR,
     DATA_ENTITIES_DIR,
@@ -38,31 +38,29 @@ class BaseHandler:
     Generic class for handling basic data and app operations.
     """
 
-    def check_data_type(self, country_name: str, data_type: str) -> list:
+    def check_data_type(self, country_name: str, data_type: str) -> bool:
         """
-        Check if CLIMADA API offers the specified data type for the given country.
+        Check whether the local catalog ships data of ``data_type`` for ``country_name``.
 
-        This function queries the CLIMADA API to check if it offers the specified data type
-        for the specified country. It returns a list of dataset information if available,
-        otherwise returns an empty list.
+        Replaces the legacy CLIMADA API client lookup with a static query
+        against ``data/catalog.json`` via :func:`engine.catalog.is_dataset_available`.
+        The catalog ships every dataset the app needs; "available" means
+        the (country, hazard) pair is present in the bundled tree.
 
-        :param country_name: The name of the country to check.
+        :param country_name: The country to check (full name or ISO-3 code).
         :type country_name: str
-        :param data_type: The type of data to check.
+        :param data_type: The hazard / data type to check (e.g. ``"FL"``,
+            ``"tropical_cyclone"``).
         :type data_type: str
-        :return: A list of dataset information if available, otherwise an empty list.
-        :rtype: list
+        :return: ``True`` when the catalog ships the dataset, ``False`` otherwise.
+        :rtype: bool
         """
-        dataset_infos = []
         try:
-            client = Client()
-            dataset_infos = client.list_dataset_infos(
-                data_type=data_type,
-                properties={
-                    "country_name": country_name,
-                },
-            )
-            return len(dataset_infos) > 0
+            country_code = self.get_iso3_country_code(country_name) or country_name
+            return is_dataset_available(country_code, data_type)
+        except CatalogError as exception:
+            logger.log("error", f"Catalog lookup failed. More info: {exception}")
+            return False
         except Exception as exception:
             logger.log("error", f"An error has occurred. More info: {exception}")
             return False

@@ -31,6 +31,7 @@ class ScenarioWorkspaceItem(BaseModel):
     # ".riskwise-scenario" export. Optional so older rows without provenance
     # still serialise.
     app_version: str | None = None
+    engine: str | None = None
     engine_version: str | None = None
     climada_version: str | None = None
     entity_data_sha256: str | None = None

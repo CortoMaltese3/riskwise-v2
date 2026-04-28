@@ -1,0 +1,12 @@
+-- 0007_provenance_engine: dual-backend provenance marker (#162).
+-- ``engine`` records which compute backend produced the row — "engine"
+-- for the climate-lama-engine path, "climada" for the legacy CLIMADA
+-- path. Existing rows from before this migration get NULL; readers
+-- treat NULL as "pre-dual-backend" and fall back to the existing
+-- ``climada_version`` to identify the producer.
+--
+-- ``engine_version`` (added in 0002) is left in place; it is the
+-- nullable engine-side counterpart to ``climada_version`` and only
+-- needs the application layer to stop requiring both at once. Adding
+-- it again here would error on the duplicate column.
+ALTER TABLE scenarios ADD COLUMN engine VARCHAR DEFAULT NULL;

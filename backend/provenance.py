@@ -35,6 +35,14 @@ _FLOAT_PRECISION = 12
 _APP_VERSION_FALLBACK = "0.0.0+unknown"
 _CLIMADA_VERSION_FALLBACK = "unknown"
 
+# Compute-backend marker stored on every scenario row. Mirrors the
+# ``RISKWISE_ENGINE_BACKEND`` env var read elsewhere in the backend; the
+# default (``"climada"``) matches the per-handler default until #164 flips
+# the global default to ``"engine"``.
+_ENGINE_BACKEND_ENV_VAR = "RISKWISE_ENGINE_BACKEND"
+ENGINE_BACKEND_ENGINE = "engine"
+ENGINE_BACKEND_CLIMADA = "climada"
+
 # Reproducibility caveat stamped onto the exported scenario payload (and
 # surfaced in the PDF export stub). Same-machine determinism is the only
 # guarantee we ship today; cross-platform tolerance will land as a later
@@ -75,11 +83,19 @@ class ManifestError(RuntimeError):
 
 @dataclass(frozen=True)
 class ProvenanceRecord:
-    """Immutable view of the provenance fields stamped onto a scenario row."""
+    """Immutable view of the provenance fields stamped onto a scenario row.
+
+    Exactly one of ``engine_version`` / ``climada_version`` is populated
+    on a fresh run — the other is ``None`` — depending on which backend
+    the scenario ran under. Pre-dual-backend rows (migration 0002) had
+    both columns populated; readers treat ``None`` as "the other field
+    identifies the producer".
+    """
 
     app_version: str
-    engine_version: str
-    climada_version: str
+    engine: str | None
+    engine_version: str | None
+    climada_version: str | None
     entity_data_sha256: str
     hazard_data_sha256: str
     country_config_sha256: str
@@ -89,6 +105,7 @@ class ProvenanceRecord:
     def as_dict(self) -> dict[str, Any]:
         return {
             "app_version": self.app_version,
+            "engine": self.engine,
             "engine_version": self.engine_version,
             "climada_version": self.climada_version,
             "entity_data_sha256": self.entity_data_sha256,
@@ -132,6 +149,16 @@ def climada_version() -> str:
         return str(getattr(climada, "__version__", _CLIMADA_VERSION_FALLBACK))
     except ImportError:
         return _CLIMADA_VERSION_FALLBACK
+
+
+def active_engine_backend() -> str:
+    """Return the active compute backend (``"engine"`` or ``"climada"``).
+
+    Reads :data:`_ENGINE_BACKEND_ENV_VAR` with a ``"climada"`` default so
+    the value matches whatever the per-handler dual-backend selectors saw
+    for the same run.
+    """
+    return os.environ.get(_ENGINE_BACKEND_ENV_VAR, ENGINE_BACKEND_CLIMADA)
 
 
 def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
@@ -217,10 +244,12 @@ def collect(
     NOT NULL constraint on the DB column is satisfied in practice even
     though the value itself would still be an empty string.
     """
+    backend = active_engine_backend()
     return ProvenanceRecord(
         app_version=app_version(),
-        engine_version=engine_version(),
-        climada_version=climada_version(),
+        engine=backend,
+        engine_version=engine_version() if backend == ENGINE_BACKEND_ENGINE else None,
+        climada_version=climada_version() if backend == ENGINE_BACKEND_CLIMADA else None,
         entity_data_sha256=sha256_file(entity_path) if entity_path else "",
         hazard_data_sha256=sha256_file(hazard_path) if hazard_path else "",
         country_config_sha256=(sha256_file(country_config_path) if country_config_path else ""),

@@ -27,7 +27,6 @@ from typing import Any
 
 import numpy as np
 from base_handler import BaseHandler
-from climada.entity import DiscRates
 from constants import DATA_TEMP_DIR
 from costben.costben_handler import CostBenefitHandler
 from countries.loader import CountryConfigError, load_country_config
@@ -171,22 +170,19 @@ class RunScenario:
     def _clear(self):
         self.base_handler.clear_temp_dir()
 
-    def _get_era_discount_rate(self) -> DiscRates:
-        """Build the ERA discount rate from the country config.
+    def _get_era_discount_rate(self) -> float | None:
+        """Read the ERA discount rate from the country config.
 
-        Reads the country's ``discount_rate`` from ``countries/<ISO3>/config.json``
-        and returns a CLIMADA ``DiscRates`` over the requested time horizon,
-        or ``None`` on failure (recording the failure on ``self.status``).
+        Returns the country's ``discount_rate`` (a scalar) for the
+        requested run, or ``None`` on failure (recording the failure on
+        ``self.status``). The CLIMADA ``DiscRates`` wrapper has been
+        retired here; the cost-benefit handler collapses any per-year
+        rate to a scalar anyway, so the runner now passes the scalar
+        through unchanged.
         """
         try:
             config = load_country_config(self.request_data.country_code)
-            year_range = np.arange(self.request_data.ref_year, self.request_data.future_year + 1)
-            n_years = self.request_data.future_year - self.request_data.ref_year + 1
-            annual_discount = np.ones(n_years) * config.discount_rate
-            discount_rates = DiscRates(year_range, annual_discount)
-            discount_rates.check()
-            return discount_rates
-
+            return float(config.discount_rate)
         except Exception as exception:
             status_code = 3000
             status_message = (
