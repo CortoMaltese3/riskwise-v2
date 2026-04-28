@@ -36,6 +36,8 @@ Methods:
 """
 
 import json
+import os
+from dataclasses import replace
 from pathlib import Path
 
 import geopandas as gpd
@@ -101,6 +103,10 @@ class HazardHandler:
                 source = "raster"
             if hazard_type == "heatwaves":
                 source = "hdf5"
+
+        if os.environ.get("RISKWISE_ENGINE_BACKEND", "climada") == "engine":
+            return self._get_hazard_via_engine(hazard_type, source, filepath)
+
         if source == "raster":
             hazard = self._get_hazard_from_raster(filepath, hazard_type)
         if source == "mat":
@@ -112,6 +118,40 @@ class HazardHandler:
                 hazard.haz_type = "D"
 
         return hazard
+
+    def _get_hazard_via_engine(self, hazard_type: str, source: str, filepath: Path):
+        """Engine-backend equivalent of :meth:`get_hazard`.
+
+        Routes through ``backend.engine.loaders.{hdf5,raster}`` and
+        ``backend.engine.adapter.build_hazard`` so the produced object is a
+        ``climate_lama_engine.Hazard`` instead of a CLIMADA ``Hazard``. Legacy
+        ``.mat`` files have no engine loader and fall back to the CLIMADA
+        path, since the v2 hazard catalogue is HDF5/GeoTIFF only.
+        """
+        from backend.engine.adapter import build_hazard
+        from backend.engine.loaders.hdf5 import load_hazard_h5
+        from backend.engine.loaders.raster import load_hazard_raster
+
+        full_path = DATA_HAZARDS_DIR / filepath
+
+        if source == "raster":
+            hazard_code = self.get_hazard_code(hazard_type)
+            return_periods = list(self.get_custom_rp_per_hazard(hazard_code))
+            arrays = load_hazard_raster(
+                full_path,
+                return_periods=return_periods,
+                haz_type=hazard_code,
+                intensity_unit="m",
+            )
+        elif source == "hdf5":
+            arrays = load_hazard_h5(full_path)
+            # Match the CLIMADA path's "DR" → "D" remap for drought files.
+            if hazard_type == "drought":
+                arrays = replace(arrays, haz_type="D")
+        else:
+            return self._get_hazard_from_mat(filepath)
+
+        return build_hazard(arrays)
 
     def _get_hazard_from_raster(self, filepath: Path, hazard_type: str) -> Hazard:
         try:
