@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "riskwise data catalog",
+  "description": "Schema for data/catalog.json — the local replacement for climada.util.api_client.Client. Documents what's bundled with riskwise so dataset-availability checks become a static lookup.",
+  "type": "object",
+  "required": ["version", "hazards", "entities", "measures"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "hazards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["country", "hazard", "scenario", "path"],
+        "additionalProperties": false,
+        "properties": {
+          "country": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "hazard": { "type": "string", "pattern": "^[A-Z]+$" },
+          "scenario": { "type": "string" },
+          "path": { "type": "string" }
+        }
+      }
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["country", "hazard", "exposure_type", "path"],
+        "additionalProperties": false,
+        "properties": {
+          "country": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "hazard": { "type": "string", "pattern": "^[A-Z]+$" },
+          "exposure_type": { "type": "string" },
+          "path": { "type": "string" }
+        }
+      }
+    },
+    "measures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "scope"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string" },
+          "scope": { "type": "string" }
+        }
+      }
+    }
+  }
+}
