@@ -18,3 +18,12 @@ class HazardLoadError(ValueError):
     in the message rather than as separate subclasses — the caller does
     not branch on them, only logs and surfaces to the user.
     """
+
+
+class EntityLoadError(ValueError):
+    """Raised when an entity XLSX file cannot be loaded into :class:`EntityBundle`.
+
+    Subclasses :class:`ValueError` for the same reason as
+    :class:`HazardLoadError`. The message always names the offending
+    sheet, row, or column so the user can find the bad data quickly.
+    """
