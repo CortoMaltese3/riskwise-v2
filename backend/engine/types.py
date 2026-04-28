@@ -33,6 +33,7 @@ from typing import Any
 from backend.impact.registry import ImpactFunctionSpec
 
 __all__ = [
+    "CostBenefitResult",
     "EntityBundle",
     "ExposureArrays",
     "HazardArrays",
@@ -87,6 +88,26 @@ class MeasureSpec:
     mdd_impact_b: float | None = None
     paa_impact_a: float | None = None
     paa_impact_b: float | None = None
+
+
+@dataclass(frozen=True)
+class CostBenefitResult:
+    """Per-measure cost-benefit result — riskwise mirror of the engine's shape.
+
+    The handler returns ``list[CostBenefitResult]`` for both backends so the
+    JSON serializer and downstream consumers don't branch on the source.
+    ``bcr`` is benefit/cost (the ranking-friendly direction); CLIMADA's
+    ``cost_ben_ratio`` is the reciprocal and gets inverted at the boundary.
+    ``risk_baseline_present`` / ``risk_baseline_future`` are the no-measure
+    expected annual impacts used by the waterfall payload.
+    """
+
+    name: str
+    cost: float
+    benefit: float
+    bcr: float
+    risk_baseline_present: float
+    risk_baseline_future: float
 
 
 @dataclass(frozen=True)

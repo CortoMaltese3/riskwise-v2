@@ -25,22 +25,244 @@ Methods:
 """
 
 import json
+import os
 
 import duckdb
+import numpy as np
 from climada.engine import CostBenefit, ImpactCalc
 from climada.engine.cost_benefit import NO_MEASURE, risk_aai_agg
 from climada.entity import DiscRates, Entity
 from climada.hazard import Hazard
-
 from constants import DATA_TEMP_DIR, REQUIREMENTS_DIR
 from hazard.hazard_handler import HazardHandler
 from logger_config import LoggerConfig
+
+from backend.engine.types import CostBenefitResult, MeasureSpec
 
 WATERFALL_DATA_FILENAME = "risks_waterfall_data.json"
 COSTBEN_DATA_FILENAME = "cost_benefit_data.json"
 
 hazard_handler = HazardHandler()
 logger = LoggerConfig(logger_types=["file"])
+
+
+def _measure_specs_from_entity(entity: Entity) -> list[MeasureSpec]:
+    """Convert a CLIMADA ``Entity``'s measures into the engine adapter's ``MeasureSpec`` list.
+
+    Field names already align (CLIMADA's ``Measure`` and ``MeasureSpec`` share
+    ``hazard_inten_imp`` / ``mdd_impact_a/b`` / ``paa_impact_a/b``); this helper
+    just walks the ``MeasureSet`` and copies each per-hazard measure across.
+    """
+    specs: list[MeasureSpec] = []
+    measure_set = entity.measures
+    if measure_set is None:
+        return specs
+
+    for haz_type, names in measure_set.get_names().items():
+        for name in names:
+            m = measure_set.get_measure(haz_type=haz_type, name=name)
+            specs.append(
+                MeasureSpec(
+                    name=str(m.name),
+                    haz_type=str(haz_type),
+                    cost=float(getattr(m, "cost", 0.0) or 0.0),
+                    cost_unit="USD",
+                    hazard_freq_cutoff=_opt_float(getattr(m, "hazard_freq_cutoff", None)),
+                    hazard_inten_imp=_opt_float(getattr(m, "hazard_inten_imp", (None, None))[0]),
+                    mdd_impact_a=_opt_float(getattr(m, "mdd_impact", (None, None))[0]),
+                    mdd_impact_b=_opt_float(getattr(m, "mdd_impact", (None, None))[1]),
+                    paa_impact_a=_opt_float(getattr(m, "paa_impact", (None, None))[0]),
+                    paa_impact_b=_opt_float(getattr(m, "paa_impact", (None, None))[1]),
+                )
+            )
+    return specs
+
+
+def _opt_float(value) -> float | None:
+    if value is None:
+        return None
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return None
+    return f
+
+
+def _disc_rate_scalar(disc_rates: DiscRates | None, default: float = 0.02) -> float:
+    """Collapse CLIMADA's per-year ``DiscRates`` to a single scalar.
+
+    Mirrors #155's choice for the XLSX entity loader: use the arithmetic mean
+    of all per-year rates. The mean is stable and symmetric — a future caller
+    that needs a different scalar (e.g. the final-year rate) can re-derive it
+    from the ``DiscRates`` instance.
+    """
+    if disc_rates is None:
+        return default
+    rates = getattr(disc_rates, "rates", None)
+    if rates is None or len(rates) == 0:
+        return default
+    return float(np.mean(np.asarray(rates, dtype=np.float64)))
+
+
+def _calculate_via_climada(
+    hazard_present: Hazard,
+    entity_present: Entity,
+    hazard_future: Hazard | None,
+    entity_future: Entity | None,
+    future_year: int | None,
+) -> list[CostBenefitResult]:
+    """Run CLIMADA's ``CostBenefit.calc`` and normalise to ``list[CostBenefitResult]``.
+
+    CLIMADA returns a single ``CostBenefit`` aggregator; we project per-measure
+    rows out of it and invert ``cost_ben_ratio`` (cost/benefit) into ``bcr``
+    (benefit/cost) so the shape matches the engine path.
+    """
+    if not _has_measures(entity_present):
+        return []
+
+    try:
+        cb = CostBenefit()
+        cb.calc(
+            hazard_present,
+            entity_present,
+            hazard_future,
+            entity_future,
+            future_year,
+            risk_aai_agg,
+            save_imp=True,
+        )
+    except Exception as exc:
+        raise Exception(f"Failed to calculate cost-benefit: {exc}") from exc
+
+    risk_baseline_present = float(cb.imp_meas_present[NO_MEASURE]["risk"])
+    risk_baseline_future = float(cb.imp_meas_future[NO_MEASURE]["risk"])
+
+    results: list[CostBenefitResult] = []
+    for meas_name, ratio in cb.cost_ben_ratio.items():
+        benefit = float(cb.benefit.get(meas_name, 0.0))
+        cost_tuple = cb.imp_meas_future.get(meas_name, {}).get("cost", (0.0, 0.0))
+        cost = float(cost_tuple[0])
+        bcr = float(1 / ratio) if ratio else 0.0
+        results.append(
+            CostBenefitResult(
+                name=str(meas_name),
+                cost=cost,
+                benefit=benefit,
+                bcr=bcr,
+                risk_baseline_present=risk_baseline_present,
+                risk_baseline_future=risk_baseline_future,
+            )
+        )
+    return results
+
+
+def _calculate_via_engine(
+    hazard_present: Hazard,
+    entity_present: Entity,
+    hazard_future: Hazard | None,
+    entity_future: Entity | None,
+    future_year: int | None,
+) -> list[CostBenefitResult]:
+    """Run ``cc.calc_cost_benefit`` via the engine adapter and normalise the output.
+
+    Builds engine ``Hazard`` / ``Exposures`` / ``ImpactFuncSet`` from the
+    incoming CLIMADA objects (mirroring ``impact_handler._calculate_via_engine``),
+    converts the entity's ``MeasureSet`` to ``MeasureSpec``s and feeds them to
+    ``build_measure``, collapses ``DiscRates`` to a scalar, and projects the
+    engine's ``CostBenefitResult`` list into riskwise's domain shape.
+    """
+    if not _has_measures(entity_present):
+        return []
+
+    from backend.engine.adapter import build_exposures, build_hazard, build_measure
+    from backend.engine.types import ExposureArrays
+
+    try:
+        exposure = entity_present.exposures
+        exposure.assign_centroids(hazard_present, overwrite=False)
+        gdf = exposure.gdf
+
+        centr_col = f"centr_{hazard_present.haz_type}"
+        centroid_idx = gdf[centr_col].values
+
+        impf_col = f"impf_{hazard_present.haz_type}"
+        impf_id = (
+            gdf[impf_col].values if impf_col in gdf.columns else np.ones(len(gdf), dtype=np.int64)
+        )
+
+        cc_exposure = build_exposures(
+            ExposureArrays(
+                values=gdf["value"].values,
+                centroid_idx=centroid_idx,
+                impf_id=impf_id,
+                lat=gdf.geometry.y.values,
+                lon=gdf.geometry.x.values,
+                value_unit=getattr(exposure, "value_unit", "USD"),
+            )
+        )
+        cc_hazard_present = build_hazard(_hazard_arrays(hazard_present))
+        cc_hazard_future = (
+            build_hazard(_hazard_arrays(hazard_future))
+            if hazard_future is not None
+            else cc_hazard_present
+        )
+
+        specs = _measure_specs_from_entity(entity_present)
+        cc_measures = [build_measure(s) for s in specs]
+
+        discount_rate = _disc_rate_scalar(getattr(entity_present, "disc_rates", None))
+
+        present_year = int(getattr(exposure, "ref_year", 2020))
+        future_year_int = int(future_year) if future_year is not None else present_year
+
+        from backend.engine.adapter import run_cost_benefit
+
+        engine_results = run_cost_benefit(
+            hazard_present=cc_hazard_present,
+            hazard_future=cc_hazard_future,
+            exposures=cc_exposure,
+            impfset=entity_present.impact_funcs,
+            measures=cc_measures,
+            discount_rate=discount_rate,
+            present_year=present_year,
+            future_year=future_year_int,
+        )
+    except Exception as exc:
+        raise Exception(f"Failed to calculate cost-benefit via engine: {exc}") from exc
+
+    return [
+        CostBenefitResult(
+            name=str(r.name),
+            cost=float(r.cost),
+            benefit=float(r.benefit),
+            bcr=float(r.bcr),
+            risk_baseline_present=float(r.risk_baseline_present),
+            risk_baseline_future=float(r.risk_baseline_future),
+        )
+        for r in engine_results
+    ]
+
+
+def _hazard_arrays(haz: Hazard):
+    from backend.engine.types import HazardArrays
+
+    return HazardArrays(
+        haz_type=haz.haz_type,
+        intensity_unit=haz.units,
+        intensity=haz.intensity,
+        frequency=haz.frequency,
+        centroid_lat=haz.centroids.lat,
+        centroid_lon=haz.centroids.lon,
+        event_names=tuple(haz.event_name) if haz.event_name else None,
+    )
+
+
+def _has_measures(entity: Entity | None) -> bool:
+    if entity is None or entity.measures is None:
+        return False
+    names_by_haz = entity.measures.get_names()
+    return any(len(v) > 0 for v in names_by_haz.values())
+
 
 class CostBenefitHandler:
     """Class for handling cost-benefit analysis operations."""
@@ -166,7 +388,6 @@ class CostBenefitHandler:
             )
             return None
 
-    # Calculate cost-benefit
     def calculate_cost_benefit(
         self,
         hazard_present: Hazard,
@@ -174,66 +395,60 @@ class CostBenefitHandler:
         hazard_future: Hazard = None,
         entity_future: Entity = None,
         future_year: int = None,
-    ) -> CostBenefit:
-        """
-        Calculates the cost-benefit analysis based on current and future hazard and entity data.
+    ) -> list[CostBenefitResult]:
+        """Calculate per-measure cost-benefit results for the given scenario.
 
-        :param hazard_present: The current hazard data.
-        :type hazard_present: Hazard
-        :param entity_present: The current entity data.
-        :type entity_present: Entity
-        :param hazard_future: The future hazard data.
-        :type hazard_future: Hazard
-        :param entity_future: The future entity data.
-        :type entity_future: Entity
-        :param future_year: The year in the future for which the analysis is performed.
-        :type future_year: int
-        :return: A CostBenefit object with the calculation results.
-        :rtype: CostBenefit
-
-        :raises Exception: If there's an error in the cost-benefit calculation process.
+        Routes to the engine backend when ``RISKWISE_ENGINE_BACKEND=engine`` is
+        set; otherwise uses CLIMADA (default). Both branches return the same
+        normalised ``list[CostBenefitResult]`` shape — one entry per measure,
+        with ``cost`` / ``benefit`` / ``bcr`` plus the no-measure baseline
+        risks needed by the waterfall payload. With zero measures, both
+        branches return an empty list without raising.
         """
-        try:
-            cost_benefit = CostBenefit()
-            cost_benefit.calc(
-                hazard_present,
-                entity_present,
-                hazard_future,
-                entity_future,
-                future_year,
-                risk_aai_agg,
-                save_imp=True,
+        if os.environ.get("RISKWISE_ENGINE_BACKEND", "climada") == "engine":
+            return _calculate_via_engine(
+                hazard_present, entity_present, hazard_future, entity_future, future_year
             )
-
-            return cost_benefit
-        except Exception as e:
-            raise Exception(f"Failed to calculate cost-benefit: {e}") from e
+        return _calculate_via_climada(
+            hazard_present, entity_present, hazard_future, entity_future, future_year
+        )
 
     def compute_waterfall_data(
         self,
-        cost_benefit: CostBenefit,
+        cost_benefit_results: list[CostBenefitResult],
         hazard_present: Hazard,
         entity_present: Entity,
         hazard_future: Hazard,
         entity_future: Entity,
     ) -> dict:
-        """
-        Compute the structured waterfall payload for the frontend.
+        """Compute the structured waterfall payload for the frontend.
 
-        Reads the present-day and future no-measure risks straight off
-        ``cost_benefit`` (populated by ``calc()`` regardless of
-        ``save_imp``) and only recomputes the middle ``risk_dev`` term
-        (future entity against present hazard), which CLIMADA does not
-        retain. The result is persisted as JSON in ``DATA_TEMP_DIR`` so
-        ``run_fetch_waterfall.py`` can serve it through the FastAPI
-        endpoint after the scenario run completes.
+        Reads the no-measure baseline risks from the first ``CostBenefitResult``
+        (every entry carries the same baselines) and only recomputes the
+        middle ``risk_dev`` term — future entity against present hazard —
+        which is not part of the cost-benefit output. When the results list
+        is empty (zero measures), baselines are computed via ``ImpactCalc``
+        instead so the waterfall is still well-defined. The result is
+        persisted as JSON in ``DATA_TEMP_DIR`` so ``run_fetch_waterfall.py``
+        can serve it through the FastAPI endpoint after the scenario run
+        completes.
         """
         try:
             present_year = entity_present.exposures.ref_year
             future_year = entity_future.exposures.ref_year
 
-            risk_present = float(cost_benefit.imp_meas_present[NO_MEASURE]["risk"])
-            risk_future = float(cost_benefit.imp_meas_future[NO_MEASURE]["risk"])
+            if cost_benefit_results:
+                risk_present = float(cost_benefit_results[0].risk_baseline_present)
+                risk_future = float(cost_benefit_results[0].risk_baseline_future)
+            else:
+                imp_present = ImpactCalc(
+                    entity_present.exposures, entity_present.impact_funcs, hazard_present
+                ).impact(assign_centroids=False)
+                imp_future = ImpactCalc(
+                    entity_future.exposures, entity_future.impact_funcs, hazard_future
+                ).impact(assign_centroids=False)
+                risk_present = float(risk_aai_agg(imp_present))
+                risk_future = float(risk_aai_agg(imp_future))
 
             imp_dev = ImpactCalc(
                 entity_future.exposures, entity_future.impact_funcs, hazard_present
@@ -287,43 +502,33 @@ class CostBenefitHandler:
 
     def compute_cost_benefit_data(
         self,
-        cost_benefit: CostBenefit,
+        cost_benefit_results: list[CostBenefitResult],
         entity_present: Entity,
         entity_future: Entity,
     ) -> dict:
-        """
-        Compute the structured cost-benefit payload for the frontend.
+        """Compute the structured cost-benefit payload for the frontend.
 
-        Reads per-measure cost, benefit and benefit/cost ratio off the
-        CLIMADA ``CostBenefit`` object: ``benefit[m]`` is the monetary
-        averted damage, ``imp_meas_future[m]['cost'][0]`` is the measure
-        cost, and ``cost_ben_ratio[m]`` is ``cost / benefit`` — inverted
-        here so the frontend can rank measures by benefit per currency
-        unit. The result is persisted as JSON in ``DATA_TEMP_DIR`` so
-        ``run_fetch_costbenefit.py`` can serve it through the FastAPI
-        endpoint after the scenario run completes.
+        Projects ``list[CostBenefitResult]`` into the JSON shape consumed by
+        the Chart.js cost-benefit chart. Field names are unchanged from the
+        pre-Phase-6 payload — ``benefit_cost_ratio`` is the engine's ``bcr``
+        (benefit/cost), already inverted at the handler boundary if the
+        CLIMADA branch produced it. The result is persisted as JSON in
+        ``DATA_TEMP_DIR`` so ``run_fetch_costbenefit.py`` can serve it
+        through the FastAPI endpoint after the scenario run completes.
         """
         try:
-            measures = []
-            for meas_name, ratio in cost_benefit.cost_ben_ratio.items():
-                benefit = float(cost_benefit.benefit.get(meas_name, 0.0))
-                cost_tuple = cost_benefit.imp_meas_future.get(meas_name, {}).get("cost", (0.0, 0.0))
-                cost = float(cost_tuple[0])
-                # cost_ben_ratio is cost/benefit; invert so the chart shows
-                # benefit per currency spent. Guard against the ratio being
-                # zero (no benefit) by falling back to 0.0.
-                benefit_cost_ratio = float(1 / ratio) if ratio else 0.0
-                measures.append(
-                    {
-                        "name": str(meas_name),
-                        "cost": cost,
-                        "benefit": benefit,
-                        "benefit_cost_ratio": benefit_cost_ratio,
-                    }
-                )
+            measures = [
+                {
+                    "name": r.name,
+                    "cost": r.cost,
+                    "benefit": r.benefit,
+                    "benefit_cost_ratio": r.bcr,
+                }
+                for r in cost_benefit_results
+            ]
 
             payload = {
-                "currency_unit": str(getattr(cost_benefit, "unit", "") or ""),
+                "currency_unit": str(entity_present.exposures.value_unit or ""),
                 "present_year": int(entity_present.exposures.ref_year),
                 "future_year": int(entity_future.exposures.ref_year),
                 "measures": measures,
