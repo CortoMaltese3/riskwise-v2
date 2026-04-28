@@ -64,6 +64,10 @@ scripts/*
 !scripts/check_engine_imports.py
 notes.txt
 
+# Issue #163 — parity test summary is regenerated on every pytest run; the
+# committed scaffold contains the snapshots, not this build artefact.
+tests/parity/_summary.md
+
 #certificates
 certs
 
