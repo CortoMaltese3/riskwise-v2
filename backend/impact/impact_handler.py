@@ -58,6 +58,76 @@ _HAZARD_SELECTOR_TO_HAZ_TYPE: dict[str, str] = {
 _registry_cache: ImpactFunctionRegistry | None = None
 
 
+def _calculate_via_climada(
+    exposure: Exposures,
+    hazard: Hazard,
+    impact_function_set: ImpactFuncSet,
+) -> Impact | None:
+    try:
+        impact_calc = ImpactCalc(
+            exposures=exposure,
+            impfset=impact_function_set,
+            hazard=hazard,
+        )
+        return impact_calc.impact(save_mat=True, assign_centroids=True)
+    except Exception as exception:
+        logger.log("error", f"An error occurred during impact calculation: More info: {exception}")
+        return None
+
+
+def _calculate_via_engine(
+    exposure: Exposures,
+    hazard: Hazard,
+    impact_function_set,
+) -> Impact | None:
+    from backend.engine.adapter import build_exposures, build_hazard, run_impact
+    from backend.engine.types import ExposureArrays, HazardArrays
+
+    try:
+        exposure.assign_centroids(hazard, overwrite=False)
+
+        gdf = exposure.gdf
+        centr_col = f"centr_{hazard.haz_type}"
+        centroid_idx = gdf[centr_col].values
+
+        impf_col = f"impf_{hazard.haz_type}"
+        impf_id = (
+            gdf[impf_col].values
+            if impf_col in gdf.columns
+            else np.ones(len(gdf), dtype=np.int64)
+        )
+
+        hazard_arrays = HazardArrays(
+            haz_type=hazard.haz_type,
+            intensity_unit=hazard.units,
+            intensity=hazard.intensity,
+            frequency=hazard.frequency,
+            centroid_lat=hazard.centroids.lat,
+            centroid_lon=hazard.centroids.lon,
+            event_names=tuple(hazard.event_name) if hazard.event_name else None,
+        )
+
+        exposure_arrays = ExposureArrays(
+            values=gdf["value"].values,
+            centroid_idx=centroid_idx,
+            impf_id=impf_id,
+            lat=gdf.geometry.y.values,
+            lon=gdf.geometry.x.values,
+            value_unit=getattr(exposure, "value_unit", "USD"),
+        )
+
+        cc_hazard = build_hazard(hazard_arrays)
+        cc_exposure = build_exposures(exposure_arrays)
+
+        return run_impact(cc_hazard, cc_exposure, impact_function_set, save_mat=True)
+    except Exception as exception:
+        logger.log(
+            "error",
+            f"An error occurred during engine impact calculation: More info: {exception}",
+        )
+        return None
+
+
 def _get_registry() -> ImpactFunctionRegistry:
     """Lazily load and cache the impact-function registry on first use.
 
@@ -144,11 +214,8 @@ class ImpactHandler:
         """
         Calculate the impact of a hazard on exposure data using specified impact functions.
 
-        This method calculates the impact of a hazard on exposure data using the provided
-        exposure, hazard, and impact function set. It initializes an ImpactCalc object with
-        the given parameters and calculates the impact. If successful, it returns the Impact
-        object representing the calculated impact. If any error occurs during the calculation,
-        it logs an error message and returns None.
+        Routes to the engine backend when ``RISKWISE_ENGINE_BACKEND=engine`` is set;
+        otherwise uses CLIMADA (default).
 
         :param exposure: The exposure data.
         :type exposure: Exposures
@@ -159,25 +226,9 @@ class ImpactHandler:
         :return: The Impact object representing the calculated impact, or None if an error occurs.
         :rtype: Impact
         """
-        try:
-            # Assign a default impact function ID to the exposure data
-            # impf_id = self.get_impf_id(hazard.haz_type)
-            # exposure.gdf[f"impf_{hazard.haz_type}"] = impf_id
-
-            # Prepare the impact calculator with the given parameters
-            impact_calc = ImpactCalc(
-                exposures=exposure,
-                impfset=impact_function_set,
-                hazard=hazard,
-            )
-            # Calculate the impact
-            impact = impact_calc.impact(save_mat=True, assign_centroids=True)
-
-            return impact
-        except Exception as exception:
-            status_message = f"An error occurred during impact calculation: More info: {exception}"
-            logger.log("error", status_message)
-            return None
+        if os.environ.get("RISKWISE_ENGINE_BACKEND", "climada") == "engine":
+            return _calculate_via_engine(exposure, hazard, impact_function_set)
+        return _calculate_via_climada(exposure, hazard, impact_function_set)
 
     def get_circle_radius(self, hazard_type: str, country_iso3: str, exposure_type: str) -> int:
         """
