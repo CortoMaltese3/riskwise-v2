@@ -1,0 +1,81 @@
+name: Parity
+
+# Issue #163: integration parity between the engine and CLIMADA backends.
+#
+# Triggers on:
+#   - every push to main (regression guard for engine version bumps), and
+#   - every pull request labelled ``phase-6`` (the migration gate for #T4.2).
+#
+# The full geospatial stack (real CLIMADA + GDAL) does not install cleanly
+# on ubuntu-latest (see ``tests.yml`` pip-audit step for context), so the
+# scenario tests in ``tests/parity/`` skip cleanly when CLIMADA is missing.
+# In that mode this job validates the scaffold runs and the ``_summary.md``
+# artifact is generated; a developer running locally with the real stack
+# is what actually exercises the parity gates. Once CLIMADA can be
+# installed in CI the import-skip drops out automatically and the
+# tolerances become CI-enforced.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    branches: [main]
+
+concurrency:
+  group: parity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  parity:
+    name: Engine ↔ CLIMADA parity
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.labels.*.name, 'phase-6')
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # Same minimal install as ``tests.yml``: enough to import the
+      # backend, run the conftest skip guards, and produce ``_summary.md``.
+      # ``climate-lama-engine`` lands but ``climada`` does not — the
+      # scenario tests therefore skip on CI until the full stack is
+      # installable. The skip is recorded in ``_summary.md`` so the
+      # artifact still has a clear "ran but no scenarios" entry.
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            "pandas>=2.0,<3" \
+            "numpy>=1.24,<2" \
+            "pycountry>=24.6" \
+            "fastapi>=0.110,<1" \
+            "uvicorn[standard]>=0.27,<1" \
+            "structlog>=24,<26" \
+            "psutil>=5.9,<7" \
+            "duckdb>=1.0,<2" \
+            "openpyxl>=3.1,<4" \
+            "pytest>=8" \
+            "httpx>=0.27" \
+            "pyarrow>=12" \
+            "climate-lama-engine==0.4.0"
+
+      - name: Run parity tests
+        run: pytest tests/parity -q
+
+      # Always upload the markdown summary so reviewers can read the
+      # per-scenario delta tables (or the skip reasons) directly from
+      # the workflow run, without re-running pytest locally.
+      - name: Upload parity summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-summary
+          path: tests/parity/_summary.md
+          if-no-files-found: warn
+          retention-days: 30
