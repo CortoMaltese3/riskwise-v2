@@ -15,6 +15,7 @@ stay aligned.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from backend.engine.types import (
@@ -90,6 +91,31 @@ def build_hazard(arrays: HazardArrays) -> cc.Hazard:
         frequency_type=arrays.frequency_type,
         event_name=list(arrays.event_names) if arrays.event_names is not None else None,
     )
+
+
+def is_engine_exposures(obj: Any) -> bool:
+    """Return ``True`` iff *obj* is a ``climate_lama_engine.Exposures`` instance.
+
+    Lives here so handler modules can dispatch on engine-vs-CLIMADA exposures
+    without importing :mod:`climate_lama_engine` themselves — the
+    engine-import lint in :mod:`scripts.check_engine_imports` only allows
+    `backend/engine/*` to touch the engine package.
+    """
+    try:
+        cc, _ = _import_engine()
+    except EngineUnavailableError:
+        return False
+    return isinstance(obj, cc.Exposures)
+
+
+def replace_exposures_value(exposures: cc.Exposures, value: Any) -> cc.Exposures:
+    """Return a new ``cc.Exposures`` with the ``value`` array replaced.
+
+    Wraps :func:`dataclasses.replace` so handler code can mutate-by-copy
+    a ``cc.Exposures`` without importing the engine package itself.
+    """
+    _cc, np = _import_engine()
+    return replace(exposures, value=np.asarray(value, dtype=np.float64))
 
 
 def build_exposures(arrays: ExposureArrays) -> cc.Exposures:
