@@ -168,6 +168,40 @@ def build_measure(spec: MeasureSpec) -> cc.Measure:
     )
 
 
+def hazard_from_rp_maps(
+    *,
+    haz_type: str,
+    intensity_unit: str,
+    return_periods: Any,
+    intensity: Any,
+    centroid_lat: Any,
+    centroid_lon: Any,
+) -> cc.Hazard:
+    """Build a `climate_lama_engine.Hazard` from RP-banded intensity maps.
+
+    Thin pass-through to :meth:`climate_lama_engine.Hazard.from_rp_maps`
+    so the GeoTIFF loader (and any future RP-based loader) can consume
+    the engine's marginal-frequency math without importing the engine
+    itself — the engine-import lint only allows `backend/engine/*`, and
+    keeping the call-out here means the loader stays expressed in plain
+    domain types.
+    """
+    cc, np = _import_engine()
+    from scipy import sparse
+
+    if not isinstance(intensity, sparse.csr_matrix):
+        intensity = sparse.csr_matrix(intensity)
+
+    return cc.Hazard.from_rp_maps(
+        haz_type=haz_type,
+        intensity_unit=intensity_unit,
+        return_periods=np.asarray(return_periods, dtype=float),
+        intensity=intensity,
+        centroid_lat=np.asarray(centroid_lat, dtype=np.float64),
+        centroid_lon=np.asarray(centroid_lon, dtype=np.float64),
+    )
+
+
 def run_impact(
     hazard: cc.Hazard,
     exposures: cc.Exposures,
