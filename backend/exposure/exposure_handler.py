@@ -11,6 +11,8 @@ Classes:
 
 Methods:
 
+- `get_exposure`:
+    Load an exposure dataset from an XLSX or GeoPackage file.
 - `get_growth_exposure`:
     Calculate exposure growth based on annual growth rate and future year.
 - `generate_exposure_geojson`:
@@ -18,16 +20,34 @@ Methods:
 """
 
 import json
+import os
 from copy import deepcopy
+from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
 from base_handler import BaseHandler
-from climada.entity import Exposures
+from climada.entity import Entity, Exposures
 from constants import DATA_TEMP_DIR
 from logger_config import LoggerConfig
 
 logger = LoggerConfig(logger_types=["file"])
+
+
+def _is_engine_backend() -> bool:
+    return os.environ.get("RISKWISE_ENGINE_BACKEND", "climada") == "engine"
+
+
+def _infer_source(filepath) -> str:
+    suffix = Path(filepath).suffix.lower()
+    if suffix == ".xlsx":
+        return "xlsx"
+    if suffix == ".gpkg":
+        return "gpkg"
+    raise ValueError(
+        f"Cannot infer exposure source from extension {suffix!r}; "
+        f"pass source='xlsx' or 'gpkg' explicitly"
+    )
 
 
 class ExposureHandler:
@@ -41,35 +61,85 @@ class ExposureHandler:
     def __init__(self):
         self.base_handler = BaseHandler()
 
-    def get_growth_exposure(
-        self, exposure: Exposures, annual_growth: float, future_year: int
-    ) -> Exposures:
+    def get_exposure(self, filepath: Path, source: str | None = None):
+        """Load an exposure dataset from an XLSX or GeoPackage file.
+
+        Routes to the engine backend when ``RISKWISE_ENGINE_BACKEND=engine`` is
+        set; otherwise uses CLIMADA (default). The engine branch routes through
+        :func:`backend.engine.loaders.xlsx.load_entity_xlsx` (for ``.xlsx``
+        entity files) or :func:`backend.engine.loaders.gpkg.load_exposures_gpkg`
+        (for ``.gpkg`` exposure files), then ``backend.engine.adapter.build_exposures``.
+
+        :param filepath: Path to an entity XLSX or exposure GeoPackage file.
+        :param source: Optional explicit source (``"xlsx"`` or ``"gpkg"``).
+            When omitted, derived from the file extension.
+        :return: A CLIMADA ``Exposures`` object (default) or a
+            ``climate_lama_engine.Exposures`` (engine backend).
         """
-        Calculates the growth of exposure data for a future year based on the provided
-        annual growth rate.
+        source = source or _infer_source(filepath)
+        if source not in ("xlsx", "gpkg"):
+            raise ValueError(
+                f"Unsupported exposure source {source!r}; expected 'xlsx' or 'gpkg'"
+            )
 
-        This method calculates the exposure growth for a future year based on the provided
-        annual growth rate. It takes the current exposure data, the annual growth rate,
-        and the future year as input parameters. If successful, it returns an Exposures object
-        containing the exposure data for the future year. If any errors occur during the
-        calculation process, it logs an error message and returns None.
+        if _is_engine_backend():
+            return self._get_exposure_via_engine(filepath, source)
 
-        :param exposure: The Exposures object containing the current exposure data.
-        :type exposure: Exposures
-        :param annual_growth: The annual growth rate used to calculate the exposure growth.
-        :type annual_growth: float
-        :param future_year: The year for which the exposure growth is calculated.
-        :type future_year: int
-        :return: An Exposures object containing the exposure data for the future year.
-        :rtype: Exposures
+        if source == "xlsx":
+            entity = Entity.from_excel(filepath)
+            exposure = entity.exposures
+            exposure.gdf = exposure.gdf.loc[:, ~exposure.gdf.columns.str.contains("^Unnamed")]
+            return exposure
+        # source == "gpkg"
+        return Exposures(gpd.read_file(filepath))
+
+    def _get_exposure_via_engine(self, filepath: Path, source: str):
+        """Engine-backend equivalent of :meth:`get_exposure`.
+
+        Routes through the engine loaders and ``build_exposures`` so the
+        produced object is a ``climate_lama_engine.Exposures`` instead of a
+        CLIMADA ``Exposures``.
+        """
+        from backend.engine.adapter import build_exposures
+        from backend.engine.loaders.gpkg import load_exposures_gpkg
+        from backend.engine.loaders.xlsx import load_entity_xlsx
+
+        if source == "xlsx":
+            arrays = load_entity_xlsx(Path(filepath)).exposures
+        else:
+            arrays = load_exposures_gpkg(Path(filepath))
+        return build_exposures(arrays)
+
+    def get_growth_exposure(
+        self, exposure, annual_growth: float, future_year: int, ref_year: int | None = None
+    ):
+        """Apply an annual-growth multiplier to an exposure's value array.
+
+        Multiplier: ``(1 + annual_growth) ** (future_year - ref_year)``. Works
+        identically on both backends — the CLIMADA branch returns a deep-copied
+        ``Exposures`` with multiplied ``gdf['value']``; the engine branch
+        returns a new ``cc.Exposures`` with multiplied ``value`` array.
+
+        :param exposure: A CLIMADA ``Exposures`` or a ``climate_lama_engine.Exposures``.
+        :param annual_growth: Annual growth rate (e.g. ``0.02`` for 2 %/yr).
+        :param future_year: Target year for the multiplied exposure.
+        :param ref_year: Reference year. Defaults to ``exposure.ref_year`` when
+            present (CLIMADA path) and ``2020`` otherwise (engine path; matches
+            the XLSX loader's default).
         """
         try:
-            present_year = exposure.ref_year
+            from backend.engine.adapter import is_engine_exposures, replace_exposures_value
+
+            if ref_year is None:
+                ref_year = getattr(exposure, "ref_year", 2020)
+            multiplier = (1 + annual_growth) ** (future_year - ref_year)
+
+            if is_engine_exposures(exposure):
+                return replace_exposures_value(exposure, exposure.value * multiplier)
+
             exposure_future = deepcopy(exposure)
             exposure_future.ref_year = future_year
-            number_of_years = future_year - present_year + 1
-            growth = annual_growth**number_of_years
-            exposure_future.gdf["value"] = exposure_future.gdf["value"] * growth
+            exposure_future.gdf["value"] = exposure_future.gdf["value"] * multiplier
             return exposure_future
         except Exception as exc:
             logger.log(
