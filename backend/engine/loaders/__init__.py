@@ -8,5 +8,6 @@ keeps file I/O off the engine adapter and out of the handler layer.
 
 from backend.engine.loaders._errors import HazardLoadError
 from backend.engine.loaders.hdf5 import load_hazard_h5
+from backend.engine.loaders.raster import load_hazard_raster
 
-__all__ = ["HazardLoadError", "load_hazard_h5"]
+__all__ = ["HazardLoadError", "load_hazard_h5", "load_hazard_raster"]
