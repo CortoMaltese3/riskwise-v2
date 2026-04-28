@@ -20,6 +20,7 @@ Methods:
     Generate a future Entity object based on the provided entity and parameters.
 """
 
+import os
 from copy import deepcopy
 from pathlib import Path
 
@@ -27,7 +28,6 @@ import pandas as pd
 from climada.entity import DiscRates, Entity, Exposures
 from climada.entity.measures import MeasureSet
 from climada.entity.impact_funcs import ImpactFuncSet
-from climada.util.api_client import Client
 
 
 from cache import file_cache_key, get_entity_cache
@@ -35,6 +35,10 @@ from constants import DATA_ENTITIES_DIR
 from logger_config import LoggerConfig
 
 logger = LoggerConfig(logger_types=["file"])
+
+
+def _is_engine_backend() -> bool:
+    return os.environ.get("RISKWISE_ENGINE_BACKEND", "climada") == "engine"
 
 
 class EntityHandler:
@@ -46,7 +50,11 @@ class EntityHandler:
     """
 
     def __init__(self):
-        self.client = Client()
+        # The CLIMADA API client is intentionally not instantiated here.
+        # Dataset-availability lookups go through ``backend.engine.catalog``
+        # (locked decision #4 from the engine-adoption ADR), so the handler
+        # no longer depends on ``climada.util.api_client.Client``.
+        pass
 
     def get_entity(
         self,
@@ -82,21 +90,27 @@ class EntityHandler:
             logger.log("error", f"Failed to initialize Entity object: {e}")
             raise ValueError(f"Failed to initialize Entity object: {e}") from e
 
-    def get_entity_from_xlsx(self, filepath: str) -> Entity:
+    def get_entity_from_xlsx(self, filepath: str):
         """
-        Retrieves an Entity object from an Excel file.
+        Retrieves an entity object from an Excel file.
 
-        This method reads an Entity object from the specified Excel file. It then checks the
-        validity of the entity and its exposure data before returning it. If any errors occur
-        during the process, it logs the error and returns None.
+        Routes to the engine backend when ``RISKWISE_ENGINE_BACKEND=engine``
+        is set; otherwise uses CLIMADA (default). The engine branch returns
+        a :class:`backend.engine.types.EntityBundle` produced by
+        :func:`backend.engine.loaders.xlsx.load_entity_xlsx`. The CLIMADA
+        branch is unchanged: it reads via :meth:`Entity.from_excel`,
+        validates value-unit consistency, and writes a parquet sidecar so
+        repeat loads skip the openpyxl parse.
 
-        :param filepath: The file path of the Excel file containing the Entity data.
+        :param filepath: The file path of the Excel file containing the entity data.
         :type filepath: str
-        :return: An Entity object created from the Excel file.
-        :rtype: Entity or None
+        :return: A CLIMADA ``Entity`` (default) or an ``EntityBundle`` (engine
+            backend); ``None`` when the load fails.
         """
         try:
             entity_filepath = DATA_ENTITIES_DIR / filepath
+            if _is_engine_backend():
+                return self._get_entity_bundle_via_engine(entity_filepath)
             cache = get_entity_cache()
             cache_key = file_cache_key(entity_filepath)
             cached = cache.get(cache_key)
@@ -132,6 +146,33 @@ class EntityHandler:
                 f"An error occurred while trying to create entity from xlsx. More info: {exc}",
             )
             return None
+
+    def _get_entity_bundle_via_engine(self, entity_filepath: Path):
+        """Engine-backend equivalent of :meth:`get_entity_from_xlsx`.
+
+        Loads the workbook through :func:`backend.engine.loaders.xlsx.load_entity_xlsx`
+        and returns the resulting :class:`backend.engine.types.EntityBundle`.
+        Caches under a key suffixed with ``"|engine"`` so it does not collide
+        with CLIMADA-path entries pinned to the same file.
+        """
+        from backend.engine.loaders.xlsx import load_entity_xlsx
+
+        cache = get_entity_cache()
+        cache_key = f"{file_cache_key(entity_filepath)}|engine"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+        try:
+            bundle = load_entity_xlsx(entity_filepath)
+        except Exception as exc:
+            logger.log(
+                "error",
+                f"An error occurred while trying to create EntityBundle from xlsx. "
+                f"More info: {exc}",
+            )
+            return None
+        cache.put(cache_key, bundle)
+        return bundle
 
     def get_future_entity(self, entity: Entity, future_year: int, aag: float) -> Entity:
         """
