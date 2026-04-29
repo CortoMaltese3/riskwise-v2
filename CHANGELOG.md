@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Changed
+
+- **Phase 6 Track 5 (#164)** — default compute backend flipped from
+  CLIMADA to `climate-lama-engine`. The `RISKWISE_ENGINE_BACKEND`
+  environment variable still routes per-handler; setting it to
+  `climada` selects the legacy path as a diagnostic escape hatch.
+  CLIMADA stays in runtime deps until Track 6 (#166).
+
 ## [2.0.0-rc.1] - 2026-04-28
 
 First release candidate for v2.0.0. Code-complete for Phases 0–4; the

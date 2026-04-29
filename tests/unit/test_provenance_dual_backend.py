@@ -51,8 +51,8 @@ def test_climada_backend_populates_climada_version_only(monkeypatch: pytest.Monk
     assert payload["climada_version"] == "6.1.0"
 
 
-def test_default_backend_is_climada(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Until #164 flips the default, an unset env var means CLIMADA."""
+def test_default_backend_is_engine(monkeypatch: pytest.MonkeyPatch) -> None:
+    """After #164, an unset env var means engine."""
     monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
     record = collect(
         entity_path=None,
@@ -63,6 +63,6 @@ def test_default_backend_is_climada(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     payload = record.as_dict()
 
-    assert payload["engine"] == "climada"
-    assert payload["engine_version"] is None
-    assert payload["climada_version"] == "6.1.0"
+    assert payload["engine"] == "engine"
+    assert payload["engine_version"], "engine_version must be filled when default is engine"
+    assert payload["climada_version"] is None

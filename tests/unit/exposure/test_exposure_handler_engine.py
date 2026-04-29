@@ -1,12 +1,11 @@
 """Engine-backend tests for ``ExposureHandler``.
 
-Verifies that ``RISKWISE_ENGINE_BACKEND="engine"`` swaps the production
-side of ``get_exposure`` to the engine adapter — returning a
+Verifies that the engine backend (default after #164) returns a
 ``climate_lama_engine.Exposures`` whose value/lat/lon arrays match the
-CLIMADA path's equivalent — while ``RISKWISE_ENGINE_BACKEND="climada"``
-(the default) preserves the legacy ``climada.entity.Exposures`` output.
-Also pins ``get_growth_exposure`` so both branches apply the same
-``(1 + annual_growth) ** (future_year - ref_year)`` multiplier.
+CLIMADA path's equivalent, while ``RISKWISE_ENGINE_BACKEND="climada"``
+keeps the legacy ``climada.entity.Exposures`` output as a diagnostic
+escape hatch. Also pins ``get_growth_exposure`` so both branches apply
+the same ``(1 + annual_growth) ** (future_year - ref_year)`` multiplier.
 
 Skipped when the real CLIMADA package is not installed (stub
 environment / CI without the full geospatial stack).
@@ -53,7 +52,7 @@ class TestEngineBackendRouting:
         assert exposure.value.size > 0
 
     def test_climada_backend_returns_climada_exposures(self, monkeypatch) -> None:
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         exposure = ExposureHandler().get_exposure(EGY_XLSX)
         assert isinstance(exposure, ClimadaExposures)
 
@@ -63,7 +62,7 @@ class TestEngineClimadaArrayParity:
 
     @pytest.fixture(autouse=True)
     def _exposures(self, monkeypatch):
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         self._climada = ExposureHandler().get_exposure(EGY_XLSX)
 
         monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "engine")
@@ -105,7 +104,7 @@ class TestGetGrowthExposure:
         return (1 + self.ANNUAL_GROWTH) ** (self.FUTURE_YEAR - self.REF_YEAR)
 
     def test_climada_branch_multiplies_value(self, monkeypatch) -> None:
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         handler = ExposureHandler()
         baseline = handler.get_exposure(EGY_XLSX)
         baseline.ref_year = self.REF_YEAR
@@ -142,7 +141,7 @@ class TestGetGrowthExposure:
 
     def test_branches_produce_matching_values(self, monkeypatch) -> None:
         """The two branches' multiplied value arrays match within 1e-12."""
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         handler = ExposureHandler()
         climada_base = handler.get_exposure(EGY_XLSX)
         climada_base.ref_year = self.REF_YEAR

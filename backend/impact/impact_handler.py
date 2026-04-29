@@ -214,8 +214,8 @@ class ImpactHandler:
         """
         Calculate the impact of a hazard on exposure data using specified impact functions.
 
-        Routes to the engine backend when ``RISKWISE_ENGINE_BACKEND=engine`` is set;
-        otherwise uses CLIMADA (default).
+        Routes to the engine backend by default; setting
+        ``RISKWISE_ENGINE_BACKEND=climada`` selects the legacy CLIMADA path.
 
         :param exposure: The exposure data.
         :type exposure: Exposures
@@ -226,7 +226,7 @@ class ImpactHandler:
         :return: The Impact object representing the calculated impact, or None if an error occurs.
         :rtype: Impact
         """
-        if os.environ.get("RISKWISE_ENGINE_BACKEND", "climada") == "engine":
+        if os.environ.get("RISKWISE_ENGINE_BACKEND", "engine") == "engine":
             return _calculate_via_engine(exposure, hazard, impact_function_set)
         return _calculate_via_climada(exposure, hazard, impact_function_set)
 

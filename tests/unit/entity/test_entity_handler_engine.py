@@ -1,11 +1,11 @@
 """Engine-backend tests for ``EntityHandler.get_entity_from_xlsx``.
 
-Verifies that ``RISKWISE_ENGINE_BACKEND="engine"`` swaps the production
-side of the entity loader to :func:`backend.engine.loaders.xlsx.load_entity_xlsx`
-— returning an :class:`backend.engine.types.EntityBundle` whose value /
+Verifies that the engine backend (default after #164) returns an
+:class:`backend.engine.types.EntityBundle` from
+:func:`backend.engine.loaders.xlsx.load_entity_xlsx` whose value /
 impact-function / discount-rate fields match the CLIMADA path on the
-same fixture — while ``RISKWISE_ENGINE_BACKEND="climada"`` (the default)
-preserves the legacy ``climada.entity.Entity`` output.
+same fixture, while ``RISKWISE_ENGINE_BACKEND="climada"`` keeps the
+legacy ``climada.entity.Entity`` output as a diagnostic escape hatch.
 
 Skipped when the real CLIMADA package is not installed (stub
 environment / CI without the full geospatial stack).
@@ -72,7 +72,7 @@ class TestEngineBackendRouting:
         assert isinstance(bundle, EntityBundle)
 
     def test_climada_backend_returns_climada_entity(self, monkeypatch, isolated_entity_dir) -> None:
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         entity = EntityHandler().get_entity_from_xlsx(isolated_entity_dir)
         assert isinstance(entity, Entity)
 
@@ -82,7 +82,7 @@ class TestEngineClimadaParity:
 
     @pytest.fixture(autouse=True)
     def _entities(self, monkeypatch, isolated_entity_dir):
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         self._climada = EntityHandler().get_entity_from_xlsx(isolated_entity_dir)
 
         monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "engine")

@@ -10,12 +10,10 @@ the rationale.
 The `RISKWISE_ENGINE_BACKEND` environment variable selects the compute
 backend per-handler. Phase 6 Track 3 wires up the consumers:
 
-- `"climada"` (default for the duration of Phase 6 Tracks 1–4) — existing
-  CLIMADA path; the adapter functions in this module are not invoked.
-- `"engine"` — climate-lama-engine path via this adapter.
-
-Track 5 (#164) flips the default to `"engine"`. Track 6 (#166) removes the
-CLIMADA path and the env var becomes a no-op.
+- `"engine"` (default after Track 5 / #164) — climate-lama-engine path via
+  this adapter.
+- `"climada"` — legacy CLIMADA path; kept as a diagnostic escape hatch
+  until Track 6 (#166) removes it and the env var becomes a no-op.
 
 ## Public API
 

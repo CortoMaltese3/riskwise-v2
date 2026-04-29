@@ -99,8 +99,8 @@ def _make_exposures() -> Exposures:
 class TestDualBackendRouting:
     """ImpactHandler.calculate_impact routes to the correct backend."""
 
-    def test_climada_backend_default(self, monkeypatch) -> None:
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+    def test_climada_backend_explicit(self, monkeypatch) -> None:
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         impact = ImpactHandler().calculate_impact(
             _make_exposures(), _make_hazard(), build_impfset([_IMPF_SPEC])
         )
@@ -121,7 +121,7 @@ class TestDualBackendParity:
 
     @pytest.fixture(autouse=True)
     def _results(self, monkeypatch):
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         self._climada = ImpactHandler().calculate_impact(
             _make_exposures(), _make_hazard(), build_impfset([_IMPF_SPEC])
         )

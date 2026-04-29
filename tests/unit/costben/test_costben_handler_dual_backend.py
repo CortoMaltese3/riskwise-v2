@@ -152,8 +152,8 @@ def _make_entity(ref_year: int, with_measures: bool = True) -> Entity:
 class TestDualBackendRouting:
     """``CostBenefitHandler.calculate_cost_benefit`` routes to the correct backend."""
 
-    def test_climada_backend_default(self, monkeypatch) -> None:
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+    def test_climada_backend_explicit(self, monkeypatch) -> None:
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         results = CostBenefitHandler().calculate_cost_benefit(
             _make_hazard(_INTENSITY_PRESENT),
             _make_entity(_PRESENT_YEAR),
@@ -181,7 +181,7 @@ class TestEmptyMeasures:
     """With zero measures, both branches return an empty list without raising."""
 
     def test_climada_branch_empty_measures(self, monkeypatch) -> None:
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         results = CostBenefitHandler().calculate_cost_benefit(
             _make_hazard(_INTENSITY_PRESENT),
             _make_entity(_PRESENT_YEAR, with_measures=False),
@@ -208,7 +208,7 @@ class TestDualBackendParity:
 
     @pytest.fixture(autouse=True)
     def _results(self, monkeypatch):
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         self._climada = CostBenefitHandler().calculate_cost_benefit(
             _make_hazard(_INTENSITY_PRESENT),
             _make_entity(_PRESENT_YEAR),

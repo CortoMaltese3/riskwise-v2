@@ -398,14 +398,14 @@ class CostBenefitHandler:
     ) -> list[CostBenefitResult]:
         """Calculate per-measure cost-benefit results for the given scenario.
 
-        Routes to the engine backend when ``RISKWISE_ENGINE_BACKEND=engine`` is
-        set; otherwise uses CLIMADA (default). Both branches return the same
-        normalised ``list[CostBenefitResult]`` shape — one entry per measure,
-        with ``cost`` / ``benefit`` / ``bcr`` plus the no-measure baseline
-        risks needed by the waterfall payload. With zero measures, both
-        branches return an empty list without raising.
+        Routes to the engine backend by default; setting
+        ``RISKWISE_ENGINE_BACKEND=climada`` selects the legacy CLIMADA path.
+        Both branches return the same normalised ``list[CostBenefitResult]``
+        shape — one entry per measure, with ``cost`` / ``benefit`` / ``bcr``
+        plus the no-measure baseline risks needed by the waterfall payload.
+        With zero measures, both branches return an empty list without raising.
         """
-        if os.environ.get("RISKWISE_ENGINE_BACKEND", "climada") == "engine":
+        if os.environ.get("RISKWISE_ENGINE_BACKEND", "engine") == "engine":
             return _calculate_via_engine(
                 hazard_present, entity_present, hazard_future, entity_future, future_year
             )
