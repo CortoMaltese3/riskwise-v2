@@ -1,10 +1,10 @@
 """Engine-backend tests for ``HazardHandler.get_hazard``.
 
-Verifies that ``RISKWISE_ENGINE_BACKEND="engine"`` swaps the production
-side of ``get_hazard`` to the engine adapter — returning a
+Verifies that the engine backend (default after #164) returns a
 ``climate_lama_engine.Hazard`` whose array shapes match the CLIMADA
-path's equivalent — while ``RISKWISE_ENGINE_BACKEND="climada"`` (the
-default) preserves the legacy ``climada.hazard.Hazard`` output.
+path's equivalent, while ``RISKWISE_ENGINE_BACKEND="climada"`` keeps
+the legacy ``climada.hazard.Hazard`` output as a diagnostic escape
+hatch.
 
 Skipped when the real CLIMADA package is not installed (stub
 environment / CI without the full geospatial stack).
@@ -50,7 +50,7 @@ class TestEngineBackendRouting:
         assert haz.n_events > 0
 
     def test_climada_backend_returns_climada_hazard(self, monkeypatch) -> None:
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         haz = HazardHandler().get_hazard("flood", source="raster", filepath=_FLOOD_FILE)
         assert isinstance(haz, ClimadaHazard)
         assert haz.haz_type == "FL"
@@ -61,7 +61,7 @@ class TestEngineClimadaShapeParity:
 
     @pytest.fixture(autouse=True)
     def _hazards(self, monkeypatch):
-        monkeypatch.delenv("RISKWISE_ENGINE_BACKEND", raising=False)
+        monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "climada")
         self._climada = HazardHandler().get_hazard("flood", source="raster", filepath=_FLOOD_FILE)
 
         monkeypatch.setenv("RISKWISE_ENGINE_BACKEND", "engine")

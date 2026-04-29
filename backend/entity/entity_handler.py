@@ -38,7 +38,7 @@ logger = LoggerConfig(logger_types=["file"])
 
 
 def _is_engine_backend() -> bool:
-    return os.environ.get("RISKWISE_ENGINE_BACKEND", "climada") == "engine"
+    return os.environ.get("RISKWISE_ENGINE_BACKEND", "engine") == "engine"
 
 
 class EntityHandler:
@@ -94,18 +94,19 @@ class EntityHandler:
         """
         Retrieves an entity object from an Excel file.
 
-        Routes to the engine backend when ``RISKWISE_ENGINE_BACKEND=engine``
-        is set; otherwise uses CLIMADA (default). The engine branch returns
-        a :class:`backend.engine.types.EntityBundle` produced by
-        :func:`backend.engine.loaders.xlsx.load_entity_xlsx`. The CLIMADA
-        branch is unchanged: it reads via :meth:`Entity.from_excel`,
-        validates value-unit consistency, and writes a parquet sidecar so
-        repeat loads skip the openpyxl parse.
+        Routes to the engine backend by default; setting
+        ``RISKWISE_ENGINE_BACKEND=climada`` selects the legacy CLIMADA path
+        (kept as a diagnostic escape hatch until #166 removes it). The
+        engine branch returns a :class:`backend.engine.types.EntityBundle`
+        produced by :func:`backend.engine.loaders.xlsx.load_entity_xlsx`.
+        The CLIMADA branch reads via :meth:`Entity.from_excel`, validates
+        value-unit consistency, and writes a parquet sidecar so repeat
+        loads skip the openpyxl parse.
 
         :param filepath: The file path of the Excel file containing the entity data.
         :type filepath: str
-        :return: A CLIMADA ``Entity`` (default) or an ``EntityBundle`` (engine
-            backend); ``None`` when the load fails.
+        :return: An ``EntityBundle`` (default) or a CLIMADA ``Entity`` when
+            ``RISKWISE_ENGINE_BACKEND=climada``; ``None`` when the load fails.
         """
         try:
             entity_filepath = DATA_ENTITIES_DIR / filepath

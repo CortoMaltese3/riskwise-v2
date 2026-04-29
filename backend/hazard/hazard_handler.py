@@ -104,7 +104,7 @@ class HazardHandler:
             if hazard_type == "heatwaves":
                 source = "hdf5"
 
-        if os.environ.get("RISKWISE_ENGINE_BACKEND", "climada") == "engine":
+        if os.environ.get("RISKWISE_ENGINE_BACKEND", "engine") == "engine":
             return self._get_hazard_via_engine(hazard_type, source, filepath)
 
         if source == "raster":

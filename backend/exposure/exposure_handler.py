@@ -35,7 +35,7 @@ logger = LoggerConfig(logger_types=["file"])
 
 
 def _is_engine_backend() -> bool:
-    return os.environ.get("RISKWISE_ENGINE_BACKEND", "climada") == "engine"
+    return os.environ.get("RISKWISE_ENGINE_BACKEND", "engine") == "engine"
 
 
 def _infer_source(filepath) -> str:
@@ -64,8 +64,9 @@ class ExposureHandler:
     def get_exposure(self, filepath: Path, source: str | None = None):
         """Load an exposure dataset from an XLSX or GeoPackage file.
 
-        Routes to the engine backend when ``RISKWISE_ENGINE_BACKEND=engine`` is
-        set; otherwise uses CLIMADA (default). The engine branch routes through
+        Routes to the engine backend by default; setting
+        ``RISKWISE_ENGINE_BACKEND=climada`` selects the legacy CLIMADA path.
+        The engine branch routes through
         :func:`backend.engine.loaders.xlsx.load_entity_xlsx` (for ``.xlsx``
         entity files) or :func:`backend.engine.loaders.gpkg.load_exposures_gpkg`
         (for ``.gpkg`` exposure files), then ``backend.engine.adapter.build_exposures``.
@@ -73,8 +74,8 @@ class ExposureHandler:
         :param filepath: Path to an entity XLSX or exposure GeoPackage file.
         :param source: Optional explicit source (``"xlsx"`` or ``"gpkg"``).
             When omitted, derived from the file extension.
-        :return: A CLIMADA ``Exposures`` object (default) or a
-            ``climate_lama_engine.Exposures`` (engine backend).
+        :return: A ``climate_lama_engine.Exposures`` (default) or a CLIMADA
+            ``Exposures`` when ``RISKWISE_ENGINE_BACKEND=climada``.
         """
         source = source or _infer_source(filepath)
         if source not in ("xlsx", "gpkg"):

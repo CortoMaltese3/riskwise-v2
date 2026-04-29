@@ -37,8 +37,9 @@ _CLIMADA_VERSION_FALLBACK = "unknown"
 
 # Compute-backend marker stored on every scenario row. Mirrors the
 # ``RISKWISE_ENGINE_BACKEND`` env var read elsewhere in the backend; the
-# default (``"climada"``) matches the per-handler default until #164 flips
-# the global default to ``"engine"``.
+# default (``"engine"``) matches the per-handler default after #164. The
+# CLIMADA path stays in-tree as a diagnostic escape hatch until #166
+# removes it from runtime deps.
 _ENGINE_BACKEND_ENV_VAR = "RISKWISE_ENGINE_BACKEND"
 ENGINE_BACKEND_ENGINE = "engine"
 ENGINE_BACKEND_CLIMADA = "climada"
@@ -154,11 +155,11 @@ def climada_version() -> str:
 def active_engine_backend() -> str:
     """Return the active compute backend (``"engine"`` or ``"climada"``).
 
-    Reads :data:`_ENGINE_BACKEND_ENV_VAR` with a ``"climada"`` default so
+    Reads :data:`_ENGINE_BACKEND_ENV_VAR` with an ``"engine"`` default so
     the value matches whatever the per-handler dual-backend selectors saw
     for the same run.
     """
-    return os.environ.get(_ENGINE_BACKEND_ENV_VAR, ENGINE_BACKEND_CLIMADA)
+    return os.environ.get(_ENGINE_BACKEND_ENV_VAR, ENGINE_BACKEND_ENGINE)
 
 
 def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
