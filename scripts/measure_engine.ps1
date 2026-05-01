@@ -16,13 +16,17 @@
 # Unbundled baseline (issue #165):
 #     ./scripts/measure_engine.ps1 -Bundler unbundled `
 #         -EnginePath (Get-Command python).Source `
-#         -EngineArgs '-m','backend' `
+#         -EngineArgs 'backend/__main__.py' `
 #         -DistPath .venv `
 #         -LockPath uv.lock `
 #         -ScenarioPayload tests/fixtures/scenarios/egy-flood-era.json
 #
+# Note: pass `backend/__main__.py` rather than `-m backend` so Python adds
+# `backend/` to sys.path (the entry point's `from app import run` resolves
+# `app` as a top-level module relative to the script directory).
+#
 # Optional:
-#     -EngineArgs @('-m','backend')                   # process args (used for unbundled)
+#     -EngineArgs @('backend/__main__.py')            # process args (used for unbundled)
 #     -ScenarioPayload path/to/scenario-request.json  # enables runtime measurement
 #     -BaselineRuntimeS 72.4                          # unbundled reference for Δ %
 #     -ReadyTimeoutS 30                               # cold-start watchdog
@@ -166,8 +170,8 @@ function Invoke-ScenarioRun {
         while (-not $reader.EndOfStream) {
             $line = $reader.ReadLine()
             if (-not $line -or -not $line.StartsWith('data:')) { continue }
-            $event = ($line.Substring(5)).Trim() | ConvertFrom-Json
-            if ($event.type -in @('result', 'cancelled', 'error')) { break }
+            $sseEvent = ($line.Substring(5)).Trim() | ConvertFrom-Json
+            if ($sseEvent.type -in @('result', 'cancelled', 'error')) { break }
         }
     } finally {
         $reader.Dispose()
