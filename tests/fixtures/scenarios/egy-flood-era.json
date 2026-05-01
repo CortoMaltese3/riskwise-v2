@@ -1,0 +1,11 @@
+{
+  "countryName": "egypt",
+  "hazardType": "flood",
+  "scenario": "rcp85",
+  "exposureEconomic": "assets",
+  "exposureNonEconomic": "",
+  "timeHorizon": [2024, 2050],
+  "annualGrowth": 0.02,
+  "isEra": true,
+  "random_seed": 42
+}

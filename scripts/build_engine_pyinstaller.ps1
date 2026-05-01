@@ -6,12 +6,22 @@
 # single CI invocation and produce apples-to-apples §4.4 rows.
 #
 #     uv sync --extra bundle
-#     ./scripts/build_engine_pyinstaller.ps1
+#     ./scripts/build_engine_pyinstaller.ps1          # full bundle
+#     ./scripts/build_engine_pyinstaller.ps1 -Lean    # engine-path bundle (no CLIMADA)
 #
 # Output: dist/pyinstaller/riskwise-engine/ (onedir for fair compare vs
 # Nuitka --standalone; see ADR §3.3 notes).
+#
+# -Lean drops --collect-submodules climada and --collect-data climada for
+# measuring the engine-path bundle per issue #165. Default preserves the
+# exact ADR §3.3 flag set.
 
 #Requires -Version 5.1
+[CmdletBinding()]
+param(
+    [switch]$Lean
+)
+
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
@@ -20,26 +30,37 @@ Set-Location $RepoRoot
 New-Item -ItemType Directory -Force -Path 'dist/pyinstaller' | Out-Null
 New-Item -ItemType Directory -Force -Path 'build/pyinstaller' | Out-Null
 
-pyinstaller `
-  --onedir `
-  --name riskwise-engine `
-  --distpath dist/pyinstaller `
-  --workpath build/pyinstaller `
-  --specpath build/pyinstaller `
-  --collect-submodules climada `
-  --collect-data climada `
-  --collect-data rasterio `
-  --collect-data pyproj `
-  --collect-data shapely `
-  --collect-data backend `
-  --exclude-module matplotlib `
-  --exclude-module tkinter `
-  --exclude-module IPython `
-  --exclude-module notebook `
-  --exclude-module PyQt5 `
-  --exclude-module PyQt6 `
-  --noconfirm `
-  backend/__main__.py
+$pyinstallerArgs = @(
+    '--onedir',
+    '--name', 'riskwise-engine',
+    '--distpath', 'dist/pyinstaller',
+    '--workpath', 'build/pyinstaller',
+    '--specpath', 'build/pyinstaller'
+)
+
+if (-not $Lean) {
+    $pyinstallerArgs += @(
+        '--collect-submodules', 'climada',
+        '--collect-data', 'climada'
+    )
+}
+
+$pyinstallerArgs += @(
+    '--collect-data', 'rasterio',
+    '--collect-data', 'pyproj',
+    '--collect-data', 'shapely',
+    '--collect-data', 'backend',
+    '--exclude-module', 'matplotlib',
+    '--exclude-module', 'tkinter',
+    '--exclude-module', 'IPython',
+    '--exclude-module', 'notebook',
+    '--exclude-module', 'PyQt5',
+    '--exclude-module', 'PyQt6',
+    '--noconfirm',
+    'backend/__main__.py'
+)
+
+& pyinstaller @pyinstallerArgs
 
 if ($LASTEXITCODE -ne 0) {
     throw "PyInstaller build failed with exit code $LASTEXITCODE"

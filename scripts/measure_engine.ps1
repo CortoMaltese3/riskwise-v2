@@ -13,7 +13,16 @@
 #         -DistPath dist/nuitka `
 #         -LockPath uv.lock
 #
+# Unbundled baseline (issue #165):
+#     ./scripts/measure_engine.ps1 -Bundler unbundled `
+#         -EnginePath (Get-Command python).Source `
+#         -EngineArgs '-m','backend' `
+#         -DistPath .venv `
+#         -LockPath uv.lock `
+#         -ScenarioPayload tests/fixtures/scenarios/egy-flood-era.json
+#
 # Optional:
+#     -EngineArgs @('-m','backend')                   # process args (used for unbundled)
 #     -ScenarioPayload path/to/scenario-request.json  # enables runtime measurement
 #     -BaselineRuntimeS 72.4                          # unbundled reference for Δ %
 #     -ReadyTimeoutS 30                               # cold-start watchdog
@@ -35,6 +44,8 @@ param(
     [string]$LockPath,
 
     [string]$ScenarioPayload,
+
+    [string[]]$EngineArgs = @(),
 
     [double]$BaselineRuntimeS = [double]::NaN,
 
@@ -78,11 +89,20 @@ function Get-OsBuild {
 function Start-EngineAndWaitForReady {
     param(
         [string]$ExePath,
-        [int]$TimeoutS
+        [int]$TimeoutS,
+        [string[]]$ProcArgs = @()
     )
 
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = (Resolve-Path $ExePath).Path
+    if ($ProcArgs -and $ProcArgs.Count -gt 0) {
+        # Windows PowerShell 5.1 / .NET Framework 4.x has no ArgumentList; build the
+        # Arguments string with double-quoting for any token containing whitespace.
+        $quoted = foreach ($a in $ProcArgs) {
+            if ($a -match '\s') { '"' + ($a -replace '"', '\"') + '"' } else { $a }
+        }
+        $psi.Arguments = ($quoted -join ' ')
+    }
     $psi.UseShellExecute = $false
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
@@ -159,7 +179,8 @@ function Invoke-ScenarioRun {
 
 # ---- measurement ---------------------------------------------------------
 
-$bundleSizeMb = Get-BundleSizeMb -Path $DistPath
+# Unbundled has no meaningful bundle size — the §4.4 table renders it as "—".
+$bundleSizeMb = if ($Bundler -eq 'unbundled') { $null } else { Get-BundleSizeMb -Path $DistPath }
 $lockHash = Get-LockHash -Path $LockPath
 $pythonVersion = Get-PythonVersion
 $osBuild = Get-OsBuild
@@ -170,7 +191,8 @@ $runtimeDeltaPct = $null
 
 $engine = $null
 try {
-    $engine = Start-EngineAndWaitForReady -ExePath $EnginePath -TimeoutS $ReadyTimeoutS
+    $engine = Start-EngineAndWaitForReady -ExePath $EnginePath -TimeoutS $ReadyTimeoutS `
+        -ProcArgs $EngineArgs
     $coldStartMs = $engine.ColdStartMs
 
     if ($ScenarioPayload) {
