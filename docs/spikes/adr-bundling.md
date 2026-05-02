@@ -338,12 +338,12 @@ on a different box need a CPU-model override in the footnote.
 > surfaced by the first end-to-end boot of the post-Phase-6 engine:
 > (a) the unbundled engine's mixed `from app …` / `from backend.engine.X
 > …` import scheme is incompatible with both `python -m backend` and
-> `python backend/__main__.py` (only pytest's combined sys.path works),
-> and (b) the Nuitka onefile bundle resolves `_REPO_ROOT` to the
-> extraction temp dir, so `data/manifest.json` is not found at startup
-> and the FastAPI lifespan refuses to come up. Both are tracked in
-> separate issues; this section's "Engine path" rows stay TBD until
-> those land.
+> `python backend/__main__.py` (only pytest's combined sys.path works) —
+> tracked in #195, and (b) the Nuitka onefile bundle resolves
+> `_REPO_ROOT` to the extraction temp dir, so `data/manifest.json` is
+> not found at startup and the FastAPI lifespan refuses to come up —
+> tracked in #196. This section's "Engine path" rows stay TBD until
+> both land.
 
 ---
 
