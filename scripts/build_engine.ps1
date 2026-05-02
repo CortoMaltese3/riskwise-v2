@@ -90,12 +90,30 @@ if ($LASTEXITCODE -ne 0) {
     throw "Nuitka build failed with exit code $LASTEXITCODE"
 }
 
+# Nuitka derives the standalone dist folder name from the entry-point
+# script's basename, so backend/__main__.py produces __main__.dist
+# regardless of --output-filename. Rename it to riskwise-engine.dist so
+# the on-disk layout matches the binary's product name and so the staged
+# shipped-data trees end up inside the bundle Nuitka actually wrote.
+# (Onefile mode does not have this problem -- the bootstrap exe lives
+# in $outputDir/ directly and the intermediate __main__.dist is unused
+# at runtime.)
+if ($Mode -eq 'standalone') {
+    $nuitkaDistRaw = Join-Path $outputDir '__main__.dist'
+    $nuitkaDistFinal = Join-Path $outputDir 'riskwise-engine.dist'
+    if (-not (Test-Path $nuitkaDistRaw)) {
+        throw "Expected Nuitka standalone dist at $nuitkaDistRaw -- did Nuitka change its naming convention?"
+    }
+    if (Test-Path $nuitkaDistFinal) { Remove-Item -Recurse -Force $nuitkaDistFinal }
+    Rename-Item -Path $nuitkaDistRaw -NewName 'riskwise-engine.dist'
+}
+
 # Copy the shipped-data trees alongside the engine .exe. They sit outside
 # the bundle so a re-bundle is not required to refresh hazard files,
 # country configs, or the requirements XLSX templates. The runtime
 # resolver in backend/constants.get_base_dir() returns
 # ``Path(sys.executable).parent`` under sys.frozen, which is exactly this
-# directory — see docs/spikes/adr-bundling.md §3.5.
+# directory -- see docs/spikes/adr-bundling.md §3.5.
 if ($Mode -eq 'onefile') {
     $BundleDir = Join-Path $RepoRoot $outputDir
 } else {
@@ -105,11 +123,28 @@ foreach ($tree in 'data', 'countries', 'requirements') {
     $src = Join-Path $RepoRoot $tree
     $dst = Join-Path $BundleDir $tree
     if (-not (Test-Path $src)) {
-        throw "Shipped-data tree missing at $src — cannot stage bundle"
+        throw "Shipped-data tree missing at $src -- cannot stage bundle"
     }
     if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
     Copy-Item -Recurse -Force $src $dst
 }
+
+# Post-build layout assertion. A 30-60 minute build that produces a bundle
+# in the wrong shape is the worst possible failure mode -- catch it here
+# rather than at the next ./scripts/measure_engine.ps1 invocation. Both
+# bundle modes ship the engine .exe and the data trees as siblings in
+# $BundleDir; the only difference is where $BundleDir sits.
+$expectedExe = Join-Path $BundleDir 'riskwise-engine.exe'
+if (-not (Test-Path $expectedExe)) {
+    throw "Post-build sanity check failed: engine exe missing at $expectedExe"
+}
+foreach ($tree in 'data', 'countries', 'requirements') {
+    $checkPath = Join-Path $BundleDir $tree
+    if (-not (Test-Path $checkPath)) {
+        throw "Post-build sanity check failed: shipped-data tree missing at $checkPath"
+    }
+}
+Write-Host "Post-build layout verified: $expectedExe + data/countries/requirements"
 
 if ($Mode -eq 'onefile') {
     Write-Host "Build complete: $outputDir/riskwise-engine.exe"

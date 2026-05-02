@@ -76,10 +76,25 @@ foreach ($tree in 'data', 'countries', 'requirements') {
     $src = Join-Path $RepoRoot $tree
     $dst = Join-Path $BundleDir $tree
     if (-not (Test-Path $src)) {
-        throw "Shipped-data tree missing at $src — cannot stage bundle"
+        throw "Shipped-data tree missing at $src -- cannot stage bundle"
     }
     if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
     Copy-Item -Recurse -Force $src $dst
 }
+
+# Post-build layout assertion -- mirrors scripts/build_engine.ps1. A
+# successful PyInstaller build that lands the .exe or staged data in an
+# unexpected place is a 30-minute waste; catch it here.
+$expectedExe = Join-Path $BundleDir 'riskwise-engine.exe'
+if (-not (Test-Path $expectedExe)) {
+    throw "Post-build sanity check failed: engine exe missing at $expectedExe"
+}
+foreach ($tree in 'data', 'countries', 'requirements') {
+    $checkPath = Join-Path $BundleDir $tree
+    if (-not (Test-Path $checkPath)) {
+        throw "Post-build sanity check failed: shipped-data tree missing at $checkPath"
+    }
+}
+Write-Host "Post-build layout verified: $expectedExe + data/countries/requirements"
 
 Write-Host "Build complete: dist/pyinstaller/riskwise-engine/"

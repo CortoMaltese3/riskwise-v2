@@ -127,26 +127,75 @@ function Start-EngineAndWaitForReady {
     $proc = New-Object System.Diagnostics.Process
     $proc.StartInfo = $psi
 
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    [void]$proc.Start()
+    # Drain stdout and stderr asynchronously. Reading stdout synchronously
+    # (the previous approach) leaves stderr unbuffered and risks a deadlock
+    # if the child fills its error pipe before emitting ready -- which a
+    # cold bundled engine importing CLIMADA can absolutely do. The async
+    # path also keeps the last N lines of each stream around so a timeout
+    # reports *why* the engine never came up.
+    $state = [hashtable]::Synchronized(@{
+        Ready     = $false
+        ReadyLine = $null
+        StdOut    = New-Object System.Text.StringBuilder
+        StdErr    = New-Object System.Text.StringBuilder
+    })
 
-    $readyLine = $null
-    while (-not $proc.HasExited -and $sw.Elapsed.TotalSeconds -lt $TimeoutS) {
-        $line = $proc.StandardOutput.ReadLine()
-        if ($null -eq $line) { continue }
-        if ($line -match '"name"\s*:\s*"ready"') {
-            $readyLine = $line
-            break
+    $stdoutHandler = {
+        if ($null -eq $EventArgs.Data) { return }
+        [void]$Event.MessageData.StdOut.AppendLine($EventArgs.Data)
+        if (-not $Event.MessageData.Ready -and $EventArgs.Data -match '"name"\s*:\s*"ready"') {
+            $Event.MessageData.ReadyLine = $EventArgs.Data
+            $Event.MessageData.Ready = $true
         }
     }
-    $sw.Stop()
-
-    if (-not $readyLine) {
-        if (-not $proc.HasExited) { $proc.Kill() }
-        throw "Engine did not emit a ready event within $TimeoutS s"
+    $stderrHandler = {
+        if ($null -eq $EventArgs.Data) { return }
+        [void]$Event.MessageData.StdErr.AppendLine($EventArgs.Data)
     }
 
-    $payload = $readyLine | ConvertFrom-Json
+    $outSub = Register-ObjectEvent -InputObject $proc -EventName OutputDataReceived `
+        -Action $stdoutHandler -MessageData $state
+    $errSub = Register-ObjectEvent -InputObject $proc -EventName ErrorDataReceived `
+        -Action $stderrHandler -MessageData $state
+
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    try {
+        [void]$proc.Start()
+        $proc.BeginOutputReadLine()
+        $proc.BeginErrorReadLine()
+
+        while (-not $proc.HasExited -and -not $state.Ready -and $sw.Elapsed.TotalSeconds -lt $TimeoutS) {
+            Start-Sleep -Milliseconds 50
+        }
+        $sw.Stop()
+    } finally {
+        Unregister-Event -SubscriptionId $outSub.Id -ErrorAction SilentlyContinue
+        Unregister-Event -SubscriptionId $errSub.Id -ErrorAction SilentlyContinue
+        Remove-Job -Job $outSub -Force -ErrorAction SilentlyContinue
+        Remove-Job -Job $errSub -Force -ErrorAction SilentlyContinue
+    }
+
+    if (-not $state.Ready) {
+        if (-not $proc.HasExited) {
+            $proc.Kill()
+            [void]$proc.WaitForExit(2000)
+        }
+        $tail = {
+            param($sb)
+            ($sb.ToString() -split "`r?`n" | Where-Object { $_ } | Select-Object -Last 30) -join "`n"
+        }
+        $stdoutTail = & $tail $state.StdOut
+        $stderrTail = & $tail $state.StdErr
+        throw @"
+Engine did not emit a ready event within $TimeoutS s.
+--- stdout (last 30 lines) ---
+$stdoutTail
+--- stderr (last 30 lines) ---
+$stderrTail
+"@
+    }
+
+    $payload = $state.ReadyLine | ConvertFrom-Json
     return @{
         ColdStartMs = [math]::Round($sw.Elapsed.TotalMilliseconds, 2)
         Port        = [int]$payload.port
