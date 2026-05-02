@@ -13,8 +13,8 @@ RunClearTempDir:
 import json
 import sys
 
-from constants import DATA_TEMP_DIR
-from logger_config import LoggerConfig
+from backend.constants import DATA_TEMP_DIR
+from backend.logger_config import LoggerConfig
 
 
 class RunClearTempDir:

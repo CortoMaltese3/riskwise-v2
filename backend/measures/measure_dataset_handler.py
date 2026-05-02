@@ -19,9 +19,10 @@ from pathlib import Path
 
 import duckdb
 import pandas as pd
-from constants import USER_DATA_DIR
-from logging_config import get_logger
-from provenance import sha256_file
+
+from backend.constants import USER_DATA_DIR
+from backend.logging_config import get_logger
+from backend.provenance import sha256_file
 
 _log = get_logger("measures.measure_dataset_handler")
 
@@ -208,7 +209,7 @@ def import_dataset(
 
     owns_conn = conn is None
     if conn is None:
-        from db.connection import get_connection
+        from backend.db.connection import get_connection
 
         conn = get_connection()
 
@@ -264,7 +265,7 @@ def import_dataset(
             target_path.unlink(missing_ok=True)
             raise
 
-        from db.measures_store import list_measure_sets
+        from backend.db.measures_store import list_measure_sets
 
         all_sets = list_measure_sets(conn=conn)
         metadata = next((s for s in all_sets if s["id"] == measure_set_id), None)
@@ -289,7 +290,7 @@ def delete_dataset(
     """Remove a custom measure set. Raises if the id is built-in or unknown."""
     owns_conn = conn is None
     if conn is None:
-        from db.connection import get_connection
+        from backend.db.connection import get_connection
 
         conn = get_connection()
     try:

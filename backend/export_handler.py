@@ -32,15 +32,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from db import (
+from backend.db import (
     ScenarioDetail,
     ScenarioRow,
     get_scenario,
     get_scenario_snapshots_with_image,
     insert_scenario,
 )
-from logging_config import get_logger
-from provenance import REPRODUCIBILITY_NOTE
+from backend.logging_config import get_logger
+from backend.provenance import REPRODUCIBILITY_NOTE
 
 SCENARIO_EXPORT_VERSION = 1
 SCENARIO_ARCHIVE_SUFFIX = ".riskwise-scenario"

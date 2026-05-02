@@ -43,14 +43,14 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from base_handler import BaseHandler
+from backend.base_handler import BaseHandler
 from climada.entity import Entity
 from climada.hazard import Hazard
-from constants import (
+from backend.constants import (
     DATA_HAZARDS_DIR,
     DATA_TEMP_DIR,
 )
-from logger_config import LoggerConfig
+from backend.logger_config import LoggerConfig
 from shapely.geometry import Point
 
 logger = LoggerConfig(logger_types=["file"])

@@ -7,14 +7,15 @@ from pathlib import Path
 import duckdb
 import openpyxl
 import pytest
-from macroeconomic.cred_dataset_handler import (
+
+from backend.macroeconomic.cred_dataset_handler import (
     CredDatasetError,
     delete_dataset,
     get_cred_datasets_dir,
     import_dataset,
     validate_xlsx_schema,
 )
-from macroeconomic.cred_seeder import CRED_COLUMNS
+from backend.macroeconomic.cred_seeder import CRED_COLUMNS
 
 
 def _write_xlsx(path: Path, rows: list[dict], sheet_name: str = "cred_output") -> None:
@@ -60,7 +61,7 @@ def user_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("RISKWISE_USER_DATA", str(user_dir))
     # ``constants.USER_DATA_DIR`` is resolved at import time, so patch the
     # constant already bound in the handler module.
-    import macroeconomic.cred_dataset_handler as handler_mod
+    import backend.macroeconomic.cred_dataset_handler as handler_mod
 
     monkeypatch.setattr(handler_mod, "USER_DATA_DIR", user_dir)
     return user_dir

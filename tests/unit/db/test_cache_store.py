@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from db import cache_store
-from db.connection import DB_PATH_ENV_VAR, get_connection
-from db.migrations import run_migrations
+
+from backend.db import cache_store
+from backend.db.connection import DB_PATH_ENV_VAR, get_connection
+from backend.db.migrations import run_migrations
 
 
 @pytest.fixture

@@ -12,10 +12,10 @@ from pathlib import Path
 
 import duckdb
 import pytest
-from db import DB_PATH_ENV_VAR, MIGRATIONS_DIR, insert_scenario, run_migrations
+from backend.db import DB_PATH_ENV_VAR, MIGRATIONS_DIR, insert_scenario, run_migrations
 from openpyxl import load_workbook
-from provenance import short_sha
-from report.report_handler import (
+from backend.provenance import short_sha
+from backend.report.report_handler import (
     ReportHandler,
     ReportParameters,
     build_bibtex_snippet,

@@ -7,8 +7,9 @@ stack correctly between the present-day and future-year totals.
 
 from __future__ import annotations
 
-from models.common import Status
 from pydantic import BaseModel, Field
+
+from backend.models.common import Status
 
 
 class WaterfallCategory(BaseModel):

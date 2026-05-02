@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from models.common import StatusEnvelope
 from pydantic import BaseModel, ConfigDict, Field
+
+from backend.models.common import StatusEnvelope
 
 
 class ScenarioRunRequest(BaseModel):

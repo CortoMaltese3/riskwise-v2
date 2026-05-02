@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 
-from provenance import canonical_json_sha256
+from backend.provenance import canonical_json_sha256
 
 
 def test_stable_across_key_order() -> None:

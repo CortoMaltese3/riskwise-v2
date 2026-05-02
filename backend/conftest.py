@@ -25,14 +25,14 @@ def _isolate_user_data_registry(monkeypatch: pytest.MonkeyPatch) -> Iterator[Non
     # next test sees a fresh scan against whatever env its own fixtures
     # set up.
     try:
-        from extensibility.registry import reset_registry
+        from backend.extensibility.registry import reset_registry
 
         reset_registry()
     except ImportError:
         pass
     yield
     try:
-        from extensibility.registry import reset_registry
+        from backend.extensibility.registry import reset_registry
 
         reset_registry()
     except ImportError:
@@ -41,7 +41,7 @@ def _isolate_user_data_registry(monkeypatch: pytest.MonkeyPatch) -> Iterator[Non
     # keys off the extensibility registry, so stale state there causes
     # surprising interactions.
     try:
-        from impact.impact_handler import reset_registry_cache
+        from backend.impact.impact_handler import reset_registry_cache
 
         reset_registry_cache()
     except ImportError:

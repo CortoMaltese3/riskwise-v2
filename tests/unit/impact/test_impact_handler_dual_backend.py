@@ -22,11 +22,11 @@ pytest.importorskip("scipy")
 import geopandas as gpd  # noqa: E402
 from climada.entity import Exposures  # noqa: E402
 from climada.hazard import Hazard  # noqa: E402
-from impact.impact_handler import ImpactHandler  # noqa: E402
 from scipy import sparse  # noqa: E402
 from shapely.geometry import Point  # noqa: E402
 
 from backend.engine.adapter import build_impfset  # noqa: E402
+from backend.impact.impact_handler import ImpactHandler  # noqa: E402
 from backend.impact.registry import ImpactFunctionSpec  # noqa: E402
 
 # ---------------------------------------------------------------------------

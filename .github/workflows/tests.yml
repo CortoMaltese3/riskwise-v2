@@ -65,6 +65,13 @@ jobs:
       - name: Engine import boundary
         run: python scripts/check_engine_imports.py
 
+      # Issue #195: every in-repo import must be rooted at the ``backend``
+      # package. Shallow ``from db import …`` style only resolves when
+      # ``backend/`` itself is on ``sys.path`` and silently breaks the
+      # ``python -m backend`` boot path.
+      - name: Backend import scheme
+        run: python scripts/check_backend_imports.py
+
       - name: Ruff format check
         run: ruff format --check .
 

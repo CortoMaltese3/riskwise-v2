@@ -17,8 +17,8 @@ import geopandas as gpd
 import pandas as pd
 import pycountry
 
-from engine.catalog import CatalogError, is_dataset_available
-from constants import (
+from backend.engine.catalog import CatalogError, is_dataset_available
+from backend.constants import (
     DATA_DIR,
     DATA_ENTITIES_DIR,
     DATA_EXPOSURES_DIR,
@@ -28,7 +28,7 @@ from constants import (
     REQUIREMENTS_DIR,
     REPORTS_DIR,
 )
-from logger_config import LoggerConfig
+from backend.logger_config import LoggerConfig
 
 logger = LoggerConfig(logger_types=["file"])
 
@@ -346,8 +346,8 @@ class BaseHandler:
         :param message: A string containing the progress message.
         :return: None
         """
-        from cancellation import check_cancelled
-        from progress import progress_callback_var
+        from backend.cancellation import check_cancelled
+        from backend.progress import progress_callback_var
 
         check_cancelled()
 

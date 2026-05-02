@@ -12,7 +12,8 @@ from pathlib import Path
 
 import openpyxl
 import pytest
-from macroeconomic.cred_seeder import CRED_COLUMNS
+
+from backend.macroeconomic.cred_seeder import CRED_COLUMNS
 
 from .conftest import write_minimal_xlsx
 
@@ -35,7 +36,7 @@ def isolated_user_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     user_dir = tmp_path / "user-data"
     user_dir.mkdir()
     monkeypatch.setenv("RISKWISE_USER_DATA", str(user_dir))
-    import macroeconomic.cred_dataset_handler as handler_mod
+    import backend.macroeconomic.cred_dataset_handler as handler_mod
 
     monkeypatch.setattr(handler_mod, "USER_DATA_DIR", user_dir)
     return user_dir

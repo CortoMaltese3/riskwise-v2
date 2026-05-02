@@ -6,11 +6,12 @@ import io
 import json
 from pathlib import Path
 
-import app as app_module
 import pytest
-from app import REQUEST_ID_HEADER, app
 from fastapi.testclient import TestClient
-from logging_config import (
+
+import backend.app as app_module
+from backend.app import REQUEST_ID_HEADER, app
+from backend.logging_config import (
     bind_request_id,
     configure_logging,
     get_logger,

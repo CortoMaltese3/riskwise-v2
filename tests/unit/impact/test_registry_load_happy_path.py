@@ -20,7 +20,8 @@ import json
 from pathlib import Path
 
 import pytest
-from impact.registry import (
+
+from backend.impact.registry import (
     ImpactFunctionRegistry,
     ImpactFunctionRegistryError,
     ImpactFunctionSpec,

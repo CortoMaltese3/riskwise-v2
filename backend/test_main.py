@@ -13,7 +13,7 @@ import runpy
 from pathlib import Path
 from unittest.mock import patch
 
-import app as app_module
+import backend.app as app_module
 
 
 def _main_path() -> Path:

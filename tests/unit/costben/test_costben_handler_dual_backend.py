@@ -33,9 +33,10 @@ from climada.entity import (  # noqa: E402
     MeasureSet,
 )
 from climada.hazard import Hazard  # noqa: E402
-from costben.costben_handler import CostBenefitHandler  # noqa: E402
 from scipy import sparse  # noqa: E402
 from shapely.geometry import Point  # noqa: E402
+
+from backend.costben.costben_handler import CostBenefitHandler  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Synthetic geometry — 4 centroids / exposure points, 5 events

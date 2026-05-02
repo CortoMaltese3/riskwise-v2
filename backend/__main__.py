@@ -9,7 +9,7 @@ infer. See ``docs/spikes/adr-bundling.md §3.1``.
 
 from __future__ import annotations
 
-from app import run
+from backend.app import run
 
 if __name__ == "__main__":
     run()

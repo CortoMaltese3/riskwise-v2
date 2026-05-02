@@ -249,7 +249,7 @@ def _scan_custom_countries(
         # Validate config.json eagerly so the API surfaces the error and
         # the invalid country is skipped rather than registered.
         # Import here to avoid a module-level circular with countries.loader.
-        from countries.loader import CountryConfigError, load_country_config
+        from backend.countries.loader import CountryConfigError, load_country_config
 
         try:
             config = load_country_config(iso3, config_path=config_path)

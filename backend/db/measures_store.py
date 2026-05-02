@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import duckdb
-from db.connection import get_connection
+
+from backend.db.connection import get_connection
 
 
 def list_measure_sets(conn: duckdb.DuckDBPyConnection | None = None) -> list[dict]:

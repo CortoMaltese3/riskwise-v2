@@ -32,10 +32,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
-from countries.loader import CountryConfigError, load_country_config
-from extensibility.registry import BUILTIN_COUNTRY_CODES, reset_registry
-from extensibility.user_data import get_user_data_countries_dir
-from logging_config import get_logger
+from backend.countries.loader import CountryConfigError, load_country_config
+from backend.extensibility.registry import BUILTIN_COUNTRY_CODES, reset_registry
+from backend.extensibility.user_data import get_user_data_countries_dir
+from backend.logging_config import get_logger
 
 _log = get_logger("custom_data")
 

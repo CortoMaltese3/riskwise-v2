@@ -137,7 +137,8 @@ def parity_db(tmp_path: Path) -> Iterator[Path]:
     do not exercise CRED or measures lookup paths.
     """
     import duckdb
-    from db.migrations import run_migrations
+
+    from backend.db.migrations import run_migrations
 
     db_path = tmp_path / "riskwise-parity.duckdb"
     conn = duckdb.connect(str(db_path))
@@ -217,9 +218,9 @@ def _run_one_backend(
     monkeypatch.setenv("RISKWISE_SKIP_CRED_SEED", "1")
     monkeypatch.setenv("RISKWISE_SKIP_MEASURES_SEED", "1")
 
-    from costben.costben_handler import CostBenefitHandler
-    from impact.impact_handler import ImpactHandler
-    from run_scenario import RunScenario
+    from backend.costben.costben_handler import CostBenefitHandler
+    from backend.impact.impact_handler import ImpactHandler
+    from backend.run_scenario import RunScenario
 
     captured: dict[str, Any] = {"impacts": [], "cost_benefit": None}
 

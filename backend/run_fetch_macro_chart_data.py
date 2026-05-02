@@ -2,9 +2,9 @@ import json
 import sys
 from time import time
 
-from base_handler import BaseHandler
-from logger_config import LoggerConfig
-from macroeconomic.macroeconomic_handler import MacroeconomicHandler
+from backend.base_handler import BaseHandler
+from backend.logger_config import LoggerConfig
+from backend.macroeconomic.macroeconomic_handler import MacroeconomicHandler
 
 
 class RunFetchMacroChartData:

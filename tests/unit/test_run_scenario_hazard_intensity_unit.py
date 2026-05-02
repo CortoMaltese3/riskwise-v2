@@ -26,7 +26,7 @@ def runner():
     The CLIMADA / ``pycountry`` / handler imports pulled in transitively by
     ``run_scenario`` are stubbed by ``tests/unit/conftest.py``.
     """
-    from run_scenario import RunScenario
+    from backend.run_scenario import RunScenario
 
     instance = RunScenario.__new__(RunScenario)
     instance.hazard_handler = MagicMock()

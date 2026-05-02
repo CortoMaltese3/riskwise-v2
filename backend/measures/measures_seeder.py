@@ -15,8 +15,9 @@ from typing import Any
 
 import duckdb
 import pandas as pd
-from logging_config import get_logger
-from provenance import sha256_file
+
+from backend.logging_config import get_logger
+from backend.provenance import sha256_file
 
 _log = get_logger("measures.measures_seeder")
 
@@ -175,7 +176,7 @@ def run_startup_measures_seed(xlsx_path: Path) -> None:
 
     Intended as the FastAPI lifespan entry point, called after migrations.
     """
-    from db.connection import get_connection, resolve_db_path
+    from backend.db.connection import get_connection, resolve_db_path
 
     db_path = resolve_db_path()
     conn = get_connection(db_path)

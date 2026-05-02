@@ -78,10 +78,11 @@ _stub_module("shapely.geometry", Point=_ClimadaStub)
 import duckdb  # noqa: E402
 import openpyxl  # noqa: E402
 import pytest  # noqa: E402
-from db.migrations import run_migrations  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
-from macroeconomic.cred_seeder import CRED_COLUMNS, seed_builtin_cred  # noqa: E402
-from measures.measures_seeder import seed_builtin_measures  # noqa: E402
+
+from backend.db.migrations import run_migrations  # noqa: E402
+from backend.macroeconomic.cred_seeder import CRED_COLUMNS, seed_builtin_cred  # noqa: E402
+from backend.measures.measures_seeder import seed_builtin_measures  # noqa: E402
 
 
 def _write_minimal_cred_xlsx(path: Path) -> None:
@@ -201,7 +202,7 @@ def api_client(tmp_db: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestCl
     monkeypatch.setenv("RISKWISE_SKIP_MEASURES_SEED", "1")
     monkeypatch.setenv("RISKWISE_USER_DATA_DIR", "")
 
-    from app import app
+    from backend.app import app
 
     with TestClient(app, raise_server_exceptions=True) as client:
         yield client
@@ -234,7 +235,7 @@ def seeded_client(
     monkeypatch.setenv("RISKWISE_SKIP_MEASURES_SEED", "1")
     monkeypatch.setenv("RISKWISE_USER_DATA_DIR", "")
 
-    from app import app
+    from backend.app import app
 
     with TestClient(app, raise_server_exceptions=True) as client:
         yield client

@@ -26,19 +26,19 @@ from time import time
 from typing import Any
 
 import numpy as np
-from base_handler import BaseHandler
-from constants import DATA_TEMP_DIR
-from costben.costben_handler import CostBenefitHandler
-from countries.loader import CountryConfigError, load_country_config
-from db import cache_store, insert_scenario, read_result_blobs
-from entity.entity_handler import EntityHandler
-from exposure.exposure_handler import ExposureHandler
-from hazard.hazard_handler import HazardHandler
-from impact.impact_handler import ImpactHandler
-from logger_config import LoggerConfig
-from provenance import REPRODUCIBILITY_NOTE, new_random_seed
-from provenance import collect as collect_provenance
-from scenario_strategy import ScenarioDataStrategy, make_strategy
+from backend.base_handler import BaseHandler
+from backend.constants import DATA_TEMP_DIR
+from backend.costben.costben_handler import CostBenefitHandler
+from backend.countries.loader import CountryConfigError, load_country_config
+from backend.db import cache_store, insert_scenario, read_result_blobs
+from backend.entity.entity_handler import EntityHandler
+from backend.exposure.exposure_handler import ExposureHandler
+from backend.hazard.hazard_handler import HazardHandler
+from backend.impact.impact_handler import ImpactHandler
+from backend.logger_config import LoggerConfig
+from backend.provenance import REPRODUCIBILITY_NOTE, new_random_seed
+from backend.provenance import collect as collect_provenance
+from backend.scenario_strategy import ScenarioDataStrategy, make_strategy
 
 _DATA_ENTITIES_DIR = Path(__file__).resolve().parent.parent / "data" / "entities"
 _DATA_HAZARDS_DIR = Path(__file__).resolve().parent.parent / "data" / "hazards"
@@ -55,7 +55,7 @@ def _resolve_country_config_path(country_code: str) -> Path:
     tree so the empty-path branch in provenance collection behaves exactly
     as before.
     """
-    from extensibility.registry import get_registry as get_country_registry
+    from backend.extensibility.registry import get_registry as get_country_registry
 
     iso3 = country_code.upper()
     entry = get_country_registry().get(iso3)
@@ -395,7 +395,7 @@ class RunScenario:
         before the other two finish. Thread names are logged to make the
         parallelism observable in traces.
         """
-        from progress import progress_callback_var
+        from backend.progress import progress_callback_var
 
         callback = progress_callback_var.get()
         country_name = self.request_data.country_name
@@ -549,7 +549,7 @@ class RunScenario:
         hazard_path = _DATA_HAZARDS_DIR / self.request_data.hazard_filename
         if not entity_path.is_file() or not hazard_path.is_file():
             return None
-        from provenance import sha256_file
+        from backend.provenance import sha256_file
 
         try:
             entity_sha = sha256_file(entity_path)

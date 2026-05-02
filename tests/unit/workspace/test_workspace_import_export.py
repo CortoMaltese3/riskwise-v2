@@ -13,14 +13,15 @@ from pathlib import Path
 
 import duckdb
 import pytest
-from db import (
+
+from backend.db import (
     DB_PATH_ENV_VAR,
     MIGRATIONS_DIR,
     insert_scenario,
     list_scenarios,
     run_migrations,
 )
-from workspace_handler import (
+from backend.workspace_handler import (
     MANIFEST_FILENAME,
     WORKSPACE_EXPORT_VERSION,
     WorkspaceImportError,

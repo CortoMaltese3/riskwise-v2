@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import pandas as pd
 import pytest
-from base_handler import BaseHandler
+
+from backend.base_handler import BaseHandler
 
 
 @pytest.fixture(scope="module")

@@ -26,7 +26,8 @@ pytest.importorskip("climate_lama_engine")
 
 import climate_lama_engine as cc  # noqa: E402
 from climada.entity import Exposures as ClimadaExposures  # noqa: E402
-from exposure.exposure_handler import ExposureHandler  # noqa: E402
+
+from backend.exposure.exposure_handler import ExposureHandler  # noqa: E402
 
 FIXTURES = Path(__file__).parents[2] / "fixtures" / "entities"
 EGY_XLSX = FIXTURES / "egy_economic_present.xlsx"

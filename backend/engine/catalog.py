@@ -45,7 +45,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from constants import BASE_DIR
+from backend.constants import BASE_DIR
 
 __all__ = ["CatalogError", "is_dataset_available", "load_catalog"]
 

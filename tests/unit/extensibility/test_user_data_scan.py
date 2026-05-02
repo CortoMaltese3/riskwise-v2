@@ -12,7 +12,8 @@ import json
 from pathlib import Path
 
 import pytest
-from extensibility.registry import (
+
+from backend.extensibility.registry import (
     BUILTIN_COUNTRY_CODES,
     CountrySource,
     build_registry,

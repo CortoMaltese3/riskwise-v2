@@ -40,7 +40,7 @@ def _valid_payload() -> dict:
 
 
 def test_payload_accepts_valid_data() -> None:
-    from models.waterfall import WaterfallPayload
+    from backend.models.waterfall import WaterfallPayload
 
     payload = WaterfallPayload(**_valid_payload())
     assert payload.present_year == 2024
@@ -56,7 +56,7 @@ def test_payload_accepts_valid_data() -> None:
 
 
 def test_payload_rejects_wrong_category_count() -> None:
-    from models.waterfall import WaterfallPayload
+    from backend.models.waterfall import WaterfallPayload
 
     bad = _valid_payload()
     bad["categories"] = bad["categories"][:3]
@@ -65,21 +65,21 @@ def test_payload_rejects_wrong_category_count() -> None:
 
 
 def test_category_rejects_empty_label() -> None:
-    from models.waterfall import WaterfallCategory
+    from backend.models.waterfall import WaterfallCategory
 
     with pytest.raises(ValidationError):
         WaterfallCategory(key="risk_present", label="", value=1.0, base=0.0)
 
 
 def test_category_rejects_non_numeric_value() -> None:
-    from models.waterfall import WaterfallCategory
+    from backend.models.waterfall import WaterfallCategory
 
     with pytest.raises(ValidationError):
         WaterfallCategory(key="risk_present", label="Risk", value="not-a-number", base=0.0)
 
 
 def test_response_envelopes_payload_with_status() -> None:
-    from models.waterfall import WaterfallResponse
+    from backend.models.waterfall import WaterfallResponse
 
     response = WaterfallResponse(
         data=_valid_payload(),
@@ -90,7 +90,7 @@ def test_response_envelopes_payload_with_status() -> None:
 
 
 def test_payload_defaults_measurement_unit_to_empty() -> None:
-    from models.waterfall import WaterfallPayload
+    from backend.models.waterfall import WaterfallPayload
 
     payload_dict = _valid_payload()
     del payload_dict["measurement_unit"]

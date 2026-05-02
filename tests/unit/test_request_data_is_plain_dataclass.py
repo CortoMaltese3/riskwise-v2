@@ -19,7 +19,7 @@ from typing import Any
 
 
 def _make_request_data(**overrides: Any):
-    from run_scenario import RequestData
+    from backend.run_scenario import RequestData
 
     defaults: dict[str, Any] = {
         "adaptation_measures": [],
@@ -66,7 +66,7 @@ class TestRequestDataPlainDataclass:
         assert data.asset_type == "non_economic"
 
     def test_dataclass_has_no_handler_fields(self) -> None:
-        from run_scenario import RequestData
+        from backend.run_scenario import RequestData
 
         field_names = {f.name for f in fields(RequestData)}
         forbidden = {"base_handler", "hazard_handler"}
@@ -81,7 +81,7 @@ class TestRequestDataPlainDataclass:
         instantiated its own defaults; passing means the request sanitization
         is routed through the injected handlers.
         """
-        from run_scenario import RequestData
+        from backend.run_scenario import RequestData
 
         class _BaseStub:
             def sanitize_country_name(self, name: str) -> str:

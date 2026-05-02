@@ -45,19 +45,21 @@ from pathlib import Path
 from typing import Any
 
 import uvicorn
-from cancellation import CancelRequested, cancel_event_var
-from db import run_startup_migrations
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
-from logging_config import (
+from starlette.background import BackgroundTask
+
+from backend.cancellation import CancelRequested, cancel_event_var
+from backend.db import run_startup_migrations
+from backend.logging_config import (
     bind_request_id,
     configure_logging,
     get_logger,
     request_id_var,
     reset_request_id,
 )
-from models import (
+from backend.models import (
     CostBenefitResponse,
     CountriesResponse,
     CredDatasetDeleteResponse,
@@ -103,9 +105,8 @@ from models import (
     WorkspaceImportRequest,
     WorkspaceImportResponse,
 )
-from progress import ProgressEvent, progress_callback_var
-from provenance import ManifestError, verify_manifest
-from starlette.background import BackgroundTask
+from backend.progress import ProgressEvent, progress_callback_var
+from backend.provenance import ManifestError, verify_manifest
 
 API_PREFIX = "/api/v1"
 
@@ -192,7 +193,7 @@ def _check_memory_preflight() -> tuple[bool, str]:
 
 def _run_scenario_sync(payload: dict) -> dict:
     """Import and execute the legacy scenario runner. Called inside a thread."""
-    from run_scenario import RunScenario
+    from backend.run_scenario import RunScenario
 
     return RunScenario(payload).run_scenario()
 
@@ -204,38 +205,38 @@ def _dispatch_sync(script_name: str, data: Any) -> dict:
     module without pulling in CLIMADA.
     """
     if script_name == "run_check_data_type.py":
-        from run_check_data_type import RunCheckDataType
+        from backend.run_check_data_type import RunCheckDataType
 
         return RunCheckDataType(data).run_check_data_type()
     if script_name == "run_fetch_measures.py":
-        from run_fetch_measures import RunFetchScenario
+        from backend.run_fetch_measures import RunFetchScenario
 
         return RunFetchScenario(data).run_fetch_measures()
     if script_name == "run_clear_temp_dir.py":
-        from run_clear_temp_dir import RunClearTempDir
+        from backend.run_clear_temp_dir import RunClearTempDir
 
         return RunClearTempDir().run_clear_temp_dir()
     if script_name == "run_export_report.py":
-        from run_export_report import RunExportReport
+        from backend.run_export_report import RunExportReport
 
         return RunExportReport(data).run_export_report()
     if script_name == "run_fetch_macro_chart_data.py":
-        from run_fetch_macro_chart_data import RunFetchMacroChartData
+        from backend.run_fetch_macro_chart_data import RunFetchMacroChartData
 
         return RunFetchMacroChartData(data).run_fetch_macro_chart_data()
     if script_name == "run_fetch_cred_output.py":
-        from run_fetch_cred_output import RunFetchCredOutput
+        from backend.run_fetch_cred_output import RunFetchCredOutput
 
         ds = None
         if isinstance(data, dict):
             ds = data.get("dataset_id")
         return RunFetchCredOutput(dataset_id=ds).run_fetch_cred_output()
     if script_name == "run_fetch_waterfall.py":
-        from run_fetch_waterfall import RunFetchWaterfall
+        from backend.run_fetch_waterfall import RunFetchWaterfall
 
         return RunFetchWaterfall().run_fetch_waterfall()
     if script_name == "run_fetch_costbenefit.py":
-        from run_fetch_costbenefit import RunFetchCostBenefit
+        from backend.run_fetch_costbenefit import RunFetchCostBenefit
 
         return RunFetchCostBenefit().run_fetch_costbenefit()
     raise ValueError(f"Unknown script: {script_name}")
@@ -276,8 +277,8 @@ def _scan_user_data_countries() -> None:
     entry schema errors are non-fatal: they are logged as warnings and
     the rest of the registry still loads.
     """
-    from extensibility.registry import CountrySource
-    from extensibility.registry import get_registry as get_country_registry
+    from backend.extensibility.registry import CountrySource
+    from backend.extensibility.registry import get_registry as get_country_registry
 
     api_log = get_logger("api")
     registry = get_country_registry()
@@ -310,13 +311,13 @@ async def _lifespan(_app: FastAPI):
     # Seed the built-in CRED dataset; idempotent — skips if already present.
     # Set RISKWISE_SKIP_CRED_SEED=1 in test fixtures that pre-seed their own DB.
     if not os.getenv("RISKWISE_SKIP_CRED_SEED"):
-        from macroeconomic.cred_seeder import run_startup_cred_seed
+        from backend.macroeconomic.cred_seeder import run_startup_cred_seed
 
         run_startup_cred_seed(_CRED_XLSX_PATH)
     # Seed the built-in adaptation measures; idempotent — skips if already present.
     # Set RISKWISE_SKIP_MEASURES_SEED=1 in test fixtures that pre-seed their own DB.
     if not os.getenv("RISKWISE_SKIP_MEASURES_SEED"):
-        from measures.measures_seeder import run_startup_measures_seed
+        from backend.measures.measures_seeder import run_startup_measures_seed
 
         run_startup_measures_seed(_MEASURES_XLSX_PATH)
     yield
@@ -432,7 +433,7 @@ async def scenario_cancel(job_id: str) -> dict:
     # Cancelled runs may have partial CLIMADA objects pinned in the LRU
     # caches from the aborted load path; drop them so the next run starts
     # from a clean slate rather than reusing a half-initialised entity.
-    from cache import clear_all as _clear_object_caches
+    from backend.cache import clear_all as _clear_object_caches
 
     _clear_object_caches()
     return {"status": "ok", "cancelled": True, "job_id": job_id}
@@ -525,7 +526,7 @@ async def measures(country: str, hazard: str, measure_set_id: str | None = None)
 
 @app.get(f"{API_PREFIX}/measures/datasets", response_model=MeasureSetsResponse)
 async def measure_datasets() -> dict:
-    from db.measures_store import list_measure_sets
+    from backend.db.measures_store import list_measure_sets
 
     datasets = await asyncio.to_thread(list_measure_sets)
     return {"data": datasets, "status": _status_ok()}
@@ -533,7 +534,7 @@ async def measure_datasets() -> dict:
 
 @app.post(f"{API_PREFIX}/measures/datasets", response_model=MeasureSetUploadResponse)
 async def measure_datasets_upload(payload: MeasureSetUploadRequest) -> dict:
-    from measures.measure_dataset_handler import MeasureDatasetError, import_dataset
+    from backend.measures.measure_dataset_handler import MeasureDatasetError, import_dataset
 
     try:
         metadata = await asyncio.to_thread(import_dataset, payload.name, Path(payload.xlsx_path))
@@ -547,7 +548,7 @@ async def measure_datasets_upload(payload: MeasureSetUploadRequest) -> dict:
     response_model=MeasureSetDeleteResponse,
 )
 async def measure_datasets_delete(measure_set_id: str) -> dict:
-    from measures.measure_dataset_handler import (
+    from backend.measures.measure_dataset_handler import (
         MeasureDatasetError,
         MeasureDatasetNotFound,
         MeasureDatasetProtected,
@@ -577,7 +578,7 @@ def _scenario_row_to_dict(row: Any) -> dict:
 
 @app.get(f"{API_PREFIX}/scenarios", response_model=ScenarioListResponse)
 async def list_scenarios_endpoint() -> dict:
-    from db import list_scenarios
+    from backend.db import list_scenarios
 
     rows = await asyncio.to_thread(list_scenarios)
     return {"data": [_scenario_row_to_dict(r) for r in rows], "status": _status_ok()}
@@ -585,7 +586,7 @@ async def list_scenarios_endpoint() -> dict:
 
 @app.get(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=ScenarioDetailResponse)
 async def get_scenario_endpoint(scenario_id: str) -> dict:
-    from db import get_scenario
+    from backend.db import get_scenario
 
     detail = await asyncio.to_thread(get_scenario, scenario_id)
     if detail is None:
@@ -609,7 +610,7 @@ async def export_scenario(scenario_id: str, payload: ExportReportRequest) -> dic
 
 @app.patch(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=SaveScenarioResponse)
 async def patch_scenario_endpoint(scenario_id: str, payload: PatchScenarioRequest) -> dict:
-    from db import patch_scenario_metadata
+    from backend.db import patch_scenario_metadata
 
     row = await asyncio.to_thread(
         patch_scenario_metadata,
@@ -627,7 +628,7 @@ async def patch_scenario_endpoint(scenario_id: str, payload: PatchScenarioReques
 async def list_snapshots_endpoint(scenario_id: str) -> dict:
     from dataclasses import asdict
 
-    from db import list_snapshots
+    from backend.db import list_snapshots
 
     rows = await asyncio.to_thread(list_snapshots, scenario_id)
     return {"data": [asdict(r) for r in rows], "status": _status_ok()}
@@ -635,7 +636,7 @@ async def list_snapshots_endpoint(scenario_id: str) -> dict:
 
 @app.delete(f"{API_PREFIX}/snapshots/{{snapshot_id}}", response_model=DeleteSnapshotResponse)
 async def delete_snapshot_endpoint(snapshot_id: str) -> dict:
-    from db import delete_snapshot
+    from backend.db import delete_snapshot
 
     removed = await asyncio.to_thread(delete_snapshot, snapshot_id)
     if not removed:
@@ -645,7 +646,7 @@ async def delete_snapshot_endpoint(snapshot_id: str) -> dict:
 
 @app.post(f"{API_PREFIX}/scenarios/{{scenario_id}}/save", response_model=SaveScenarioResponse)
 async def save_scenario_endpoint(scenario_id: str, payload: SaveScenarioRequest) -> dict:
-    from db import update_scenario_metadata
+    from backend.db import update_scenario_metadata
 
     row = await asyncio.to_thread(
         update_scenario_metadata,
@@ -661,7 +662,7 @@ async def save_scenario_endpoint(scenario_id: str, payload: SaveScenarioRequest)
 
 @app.delete(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=DeleteScenarioResponse)
 async def delete_scenario_endpoint(scenario_id: str) -> dict:
-    from db import delete_scenario
+    from backend.db import delete_scenario
 
     removed = await asyncio.to_thread(delete_scenario, scenario_id)
     if not removed:
@@ -680,7 +681,7 @@ async def delete_scenario_endpoint(scenario_id: str) -> dict:
 
 async def _build_scenario_export(scenario_id: str) -> tuple[Path, str]:
     """Run :func:`build_export_to_temp` off the loop and translate not-found to 404."""
-    from export_handler import ScenarioExportError, build_export_to_temp
+    from backend.export_handler import ScenarioExportError, build_export_to_temp
 
     try:
         return await asyncio.to_thread(build_export_to_temp, scenario_id)
@@ -728,7 +729,7 @@ async def scenario_export_data(scenario_id: str) -> dict:
 
 @app.post(f"{API_PREFIX}/scenario/import", response_model=ScenarioImportResponse)
 async def scenario_import(payload: ScenarioImportRequest) -> dict:
-    from export_handler import ScenarioImportError, import_scenario
+    from backend.export_handler import ScenarioImportError, import_scenario
 
     try:
         result = await asyncio.to_thread(import_scenario, Path(payload.import_path))
@@ -739,7 +740,7 @@ async def scenario_import(payload: ScenarioImportRequest) -> dict:
 
 @app.get(f"{API_PREFIX}/macro/datasets", response_model=CredDatasetsResponse)
 async def macro_datasets() -> dict:
-    from db.cred_store import list_cred_datasets
+    from backend.db.cred_store import list_cred_datasets
 
     datasets = await asyncio.to_thread(list_cred_datasets)
     return {"data": datasets, "status": _status_ok()}
@@ -747,7 +748,7 @@ async def macro_datasets() -> dict:
 
 @app.post(f"{API_PREFIX}/macro/datasets", response_model=CredDatasetUploadResponse)
 async def macro_datasets_upload(payload: CredDatasetUploadRequest) -> dict:
-    from macroeconomic.cred_dataset_handler import CredDatasetError, import_dataset
+    from backend.macroeconomic.cred_dataset_handler import CredDatasetError, import_dataset
 
     try:
         metadata = await asyncio.to_thread(import_dataset, payload.name, Path(payload.xlsx_path))
@@ -758,7 +759,7 @@ async def macro_datasets_upload(payload: CredDatasetUploadRequest) -> dict:
 
 @app.delete(f"{API_PREFIX}/macro/datasets/{{dataset_id}}", response_model=CredDatasetDeleteResponse)
 async def macro_datasets_delete(dataset_id: str) -> dict:
-    from macroeconomic.cred_dataset_handler import (
+    from backend.macroeconomic.cred_dataset_handler import (
         CredDatasetError,
         CredDatasetNotFound,
         CredDatasetProtected,
@@ -805,7 +806,7 @@ async def countries() -> dict:
     Invalid custom drop-ins are skipped at startup (see
     :func:`_scan_user_data_countries`) and do not appear here.
     """
-    from extensibility.registry import get_registry as get_country_registry
+    from backend.extensibility.registry import get_registry as get_country_registry
 
     registry = get_country_registry()
     data = [
@@ -822,7 +823,7 @@ async def temp_clear() -> dict:
 
 @app.post(f"{API_PREFIX}/custom-data/validate", response_model=CustomDataValidateResponse)
 async def custom_data_validate(payload: CustomDataValidateRequest) -> dict:
-    from custom_data_handler import validate_pack
+    from backend.custom_data_handler import validate_pack
 
     data = await asyncio.to_thread(validate_pack, Path(payload.zip_path))
     return {"data": data, "status": _status_ok()}
@@ -830,7 +831,7 @@ async def custom_data_validate(payload: CustomDataValidateRequest) -> dict:
 
 @app.post(f"{API_PREFIX}/custom-data/import", response_model=CustomDataImportResponse)
 async def custom_data_import(payload: CustomDataImportRequest) -> dict:
-    from custom_data_handler import CustomDataError, import_pack
+    from backend.custom_data_handler import CustomDataError, import_pack
 
     try:
         data = await asyncio.to_thread(import_pack, Path(payload.zip_path))
@@ -841,7 +842,7 @@ async def custom_data_import(payload: CustomDataImportRequest) -> dict:
 
 @app.get(f"{API_PREFIX}/custom-data", response_model=CustomDataListResponse)
 async def custom_data_list() -> dict:
-    from custom_data_handler import list_custom_countries
+    from backend.custom_data_handler import list_custom_countries
 
     countries_list = await asyncio.to_thread(list_custom_countries)
     return {"data": {"countries": countries_list}, "status": _status_ok()}
@@ -849,7 +850,7 @@ async def custom_data_list() -> dict:
 
 @app.delete(f"{API_PREFIX}/custom-data/{{iso3}}", response_model=CustomDataDeleteResponse)
 async def custom_data_delete(iso3: str) -> dict:
-    from custom_data_handler import CustomDataError, delete_custom_country
+    from backend.custom_data_handler import CustomDataError, delete_custom_country
 
     try:
         await asyncio.to_thread(delete_custom_country, iso3)
@@ -866,7 +867,7 @@ async def workspace_export() -> dict:
     location and removes the temp copy afterwards, so the backend never
     needs to stream binary through the IPC channel.
     """
-    from workspace_handler import build_export_to_temp
+    from backend.workspace_handler import build_export_to_temp
 
     output_path, manifest = await asyncio.to_thread(build_export_to_temp)
     return {
@@ -882,7 +883,7 @@ async def workspace_export() -> dict:
 
 @app.post(f"{API_PREFIX}/workspace/import", response_model=WorkspaceImportResponse)
 async def workspace_import(payload: WorkspaceImportRequest) -> dict:
-    from workspace_handler import WorkspaceImportError, import_workspace
+    from backend.workspace_handler import WorkspaceImportError, import_workspace
 
     try:
         counts = await asyncio.to_thread(import_workspace, Path(payload.import_path))
@@ -899,8 +900,8 @@ async def cache_clear() -> dict:
     guaranteed cold repeat of a scenario (e.g. when validating a fix to
     a CLIMADA bug that an old cached result is masking).
     """
-    from cache import clear_all as _clear_object_caches
-    from db import cache_store
+    from backend.cache import clear_all as _clear_object_caches
+    from backend.db import cache_store
 
     await asyncio.to_thread(_clear_object_caches)
     await asyncio.to_thread(cache_store.clear)

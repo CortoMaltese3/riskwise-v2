@@ -34,7 +34,8 @@ can audit them):
 from __future__ import annotations
 
 import pytest
-from impact.registry import load_country_registry
+
+from backend.impact.registry import load_country_registry
 
 
 @pytest.fixture(scope="module")

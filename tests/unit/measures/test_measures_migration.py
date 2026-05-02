@@ -6,7 +6,8 @@ from pathlib import Path
 
 import openpyxl
 import pytest
-from measures.measures_seeder import MeasureSeedError, seed_builtin_measures
+
+from backend.measures.measures_seeder import MeasureSeedError, seed_builtin_measures
 
 
 def _write_xlsx(path: Path, rows: list[dict]) -> None:

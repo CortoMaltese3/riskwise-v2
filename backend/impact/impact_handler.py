@@ -38,10 +38,10 @@ from climada.entity import Exposures
 from climada.entity.impact_funcs import ImpactFuncSet
 from climada.hazard import Hazard
 
-from base_handler import BaseHandler
-from constants import DATA_TEMP_DIR
-from impact.registry import ImpactFunctionRegistry, load_country_registry, load_registry_from_paths
-from logger_config import LoggerConfig
+from backend.base_handler import BaseHandler
+from backend.constants import DATA_TEMP_DIR
+from backend.impact.registry import ImpactFunctionRegistry, load_country_registry, load_registry_from_paths
+from backend.logger_config import LoggerConfig
 
 logger = LoggerConfig(logger_types=["file"])
 
@@ -146,7 +146,7 @@ def _get_registry() -> ImpactFunctionRegistry:
         else:
             # Deferred import so this module stays importable in tests
             # that don't spin up the full registry.
-            from extensibility.registry import get_registry as get_country_registry
+            from backend.extensibility.registry import get_registry as get_country_registry
 
             _registry_cache = load_registry_from_paths(
                 get_country_registry().impact_function_paths()

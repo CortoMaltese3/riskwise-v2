@@ -8,7 +8,8 @@ backend the scenario actually ran under. This test pins both legs.
 from __future__ import annotations
 
 import pytest
-from provenance import collect
+
+from backend.provenance import collect
 
 
 @pytest.fixture(autouse=True)
@@ -20,7 +21,7 @@ def _stub_climada_version(monkeypatch: pytest.MonkeyPatch) -> None:
     the dependency pin and keeps the failure mode focused on the
     backend-selection logic itself.
     """
-    monkeypatch.setattr("provenance.climada_version", lambda: "6.1.0")
+    monkeypatch.setattr("backend.provenance.climada_version", lambda: "6.1.0")
 
 
 def _collect(monkeypatch: pytest.MonkeyPatch, backend: str) -> dict:

@@ -17,15 +17,16 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-from custom_data_handler import (
+from fastapi.testclient import TestClient
+
+from backend.custom_data_handler import (
     CustomDataError,
     delete_custom_country,
     import_pack,
     list_custom_countries,
     validate_pack,
 )
-from extensibility.registry import reset_registry
-from fastapi.testclient import TestClient
+from backend.extensibility.registry import reset_registry
 
 
 @pytest.fixture(autouse=True)
@@ -232,7 +233,7 @@ class TestValidateEndpoint:
 
     @pytest.fixture
     def client(self) -> TestClient:
-        from app import app
+        from backend.app import app
 
         return TestClient(app, raise_server_exceptions=False)
 

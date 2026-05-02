@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from models.common import Status
 from pydantic import BaseModel, ConfigDict, Field
+
+from backend.models.common import Status
 
 
 class ScenarioWorkspaceItem(BaseModel):

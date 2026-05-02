@@ -33,7 +33,7 @@ def _request_data(**overrides):
 
 @pytest.fixture
 def strategy():
-    from scenario_strategy import CustomDataStrategy
+    from backend.scenario_strategy import CustomDataStrategy
 
     return CustomDataStrategy()
 
@@ -156,7 +156,7 @@ class TestCustomLoadHazardFuture:
 
 class TestMakeStrategy:
     def test_era_flag_returns_era_strategy(self) -> None:
-        from scenario_strategy import CustomDataStrategy, EraDataStrategy, make_strategy
+        from backend.scenario_strategy import CustomDataStrategy, EraDataStrategy, make_strategy
 
         assert isinstance(make_strategy(is_era=True), EraDataStrategy)
         assert isinstance(make_strategy(is_era=False), CustomDataStrategy)

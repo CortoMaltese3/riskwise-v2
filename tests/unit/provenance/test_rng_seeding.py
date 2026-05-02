@@ -11,7 +11,8 @@ int64).
 from __future__ import annotations
 
 import numpy as np
-from provenance import new_random_seed
+
+from backend.provenance import new_random_seed
 
 
 def test_new_random_seed_fits_bigint() -> None:

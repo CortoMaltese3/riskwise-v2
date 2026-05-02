@@ -28,9 +28,9 @@ import pytest
 pytest.importorskip("climada", minversion="1.0")
 
 from climada.entity import Entity  # noqa: E402
-from entity.entity_handler import EntityHandler  # noqa: E402
 
 from backend.engine.types import EntityBundle  # noqa: E402
+from backend.entity.entity_handler import EntityHandler  # noqa: E402
 
 FIXTURES = Path(__file__).parents[2] / "fixtures" / "entities"
 EGY_XLSX = FIXTURES / "egy_economic_present.xlsx"
@@ -58,8 +58,8 @@ def isolated_entity_dir(monkeypatch, tmp_path):
     """
     fixture = tmp_path / EGY_XLSX.name
     fixture.write_bytes(EGY_XLSX.read_bytes())
-    monkeypatch.setattr("constants.DATA_ENTITIES_DIR", tmp_path)
-    monkeypatch.setattr("entity.entity_handler.DATA_ENTITIES_DIR", tmp_path)
+    monkeypatch.setattr("backend.constants.DATA_ENTITIES_DIR", tmp_path)
+    monkeypatch.setattr("backend.entity.entity_handler.DATA_ENTITIES_DIR", tmp_path)
     return fixture.name
 
 
