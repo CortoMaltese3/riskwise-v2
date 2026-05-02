@@ -44,8 +44,13 @@ _REQUIRED_KEYS: tuple[str, ...] = (
 
 
 def _default_root() -> Path:
-    # backend/countries/loader.py -> repo_root/countries
-    return Path(__file__).resolve().parents[2] / "countries"
+    # Resolved through backend.constants so the lookup honours the
+    # bundled-aware base dir (Path(sys.executable).parent under Nuitka /
+    # PyInstaller) instead of a __file__-relative path that lands inside
+    # the onefile temp tree.
+    from backend.constants import COUNTRIES_DIR
+
+    return COUNTRIES_DIR
 
 
 def _resolve_config_path(iso3: str, base_dir: Path | None) -> Path:

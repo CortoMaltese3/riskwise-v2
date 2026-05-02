@@ -183,8 +183,11 @@ def build_registry(
 
 
 def _default_builtin_root() -> Path:
-    # backend/extensibility/registry.py -> repo_root/countries
-    return Path(__file__).resolve().parents[2] / "countries"
+    # Use backend.constants so the bundled engine resolves to
+    # ``<exe_dir>/countries`` instead of a Nuitka onefile %TEMP% path.
+    from backend.constants import COUNTRIES_DIR
+
+    return COUNTRIES_DIR
 
 
 def _load_builtin_entries(root: Path, codes: tuple[str, ...]) -> list[RegisteredCountry]:

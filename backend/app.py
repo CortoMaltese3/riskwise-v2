@@ -51,6 +51,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from starlette.background import BackgroundTask
 
 from backend.cancellation import CancelRequested, cancel_event_var
+from backend.constants import BASE_DIR, DATA_MANIFEST_PATH, REQUIREMENTS_DIR
 from backend.db import run_startup_migrations
 from backend.logging_config import (
     bind_request_id,
@@ -246,10 +247,6 @@ async def _dispatch(script_name: str, data: Any) -> dict:
     return await asyncio.to_thread(_dispatch_sync, script_name, data)
 
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-_MANIFEST_PATH = _REPO_ROOT / "data" / "manifest.json"
-
-
 def _verify_shipped_data_manifest() -> None:
     """Check every entry in ``data/manifest.json`` against its SHA on disk.
 
@@ -262,7 +259,7 @@ def _verify_shipped_data_manifest() -> None:
     """
     api_log = get_logger("api")
     try:
-        verify_manifest(_MANIFEST_PATH, _REPO_ROOT)
+        verify_manifest(DATA_MANIFEST_PATH, BASE_DIR)
     except ManifestError as exc:
         api_log.error("startup.manifest_failed", error=str(exc))
         raise
@@ -292,8 +289,8 @@ def _scan_user_data_countries() -> None:
     )
 
 
-_CRED_XLSX_PATH = _REPO_ROOT / "requirements" / "cred_output.xlsx"
-_MEASURES_XLSX_PATH = _REPO_ROOT / "requirements" / "adaptation_measures.xlsx"
+_CRED_XLSX_PATH = REQUIREMENTS_DIR / "cred_output.xlsx"
+_MEASURES_XLSX_PATH = REQUIREMENTS_DIR / "adaptation_measures.xlsx"
 
 
 @asynccontextmanager
