@@ -34,10 +34,16 @@ def get_base_dir() -> Path:
     In a bundle (Nuitka ``--onefile`` / ``--standalone``, PyInstaller
     ``--onedir``) ``__file__`` points inside the unpacked module image —
     for Nuitka onefile that is ``%TEMP%\\ONEFIL~1\\…``, which does *not*
-    contain the shipped data. ``sys.executable`` is the launching ``.exe``
-    in every bundle mode we ship; its parent directory is the canonical
-    location alongside which the build scripts copy the shipped-data
-    trees (see ``docs/spikes/adr-bundling.md`` §3.5).
+    contain the shipped data. The shipped data is copied next to the
+    launching ``.exe`` by the build scripts (see
+    ``docs/spikes/adr-bundling.md`` §3.5).
+
+    For Nuitka onefile, ``sys.executable.resolve()`` follows into the
+    temp extraction dir instead of returning the launcher's path, so we
+    consult ``NUITKA_ONEFILE_BINARY`` first — Nuitka exports it before
+    user code runs and it always points at the original ``.exe``. For
+    Nuitka ``--standalone`` and any PyInstaller flow the env var is
+    unset and ``sys.executable`` is already the right answer.
 
     In a dev checkout, ``backend/`` is the package root and the shipped
     data lives one level up at the repo root.
@@ -46,6 +52,9 @@ def get_base_dir() -> Path:
     :rtype: Path
     """
     if getattr(sys, "frozen", False):
+        onefile_binary = os.environ.get("NUITKA_ONEFILE_BINARY")
+        if onefile_binary:
+            return Path(onefile_binary).resolve().parent
         return Path(sys.executable).resolve().parent
 
     return Path(__file__).resolve().parent.parent
