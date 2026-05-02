@@ -36,6 +36,7 @@ python -m nuitka `
   --include-package-data=rasterio `
   --include-package-data=pyproj `
   --include-package-data=shapely `
+  --include-package-data=backend `
   --nofollow-import-to=matplotlib `
   --nofollow-import-to=tkinter `
   --nofollow-import-to=IPython `
@@ -50,6 +51,23 @@ python -m nuitka `
 
 if ($LASTEXITCODE -ne 0) {
     throw "Nuitka build failed with exit code $LASTEXITCODE"
+}
+
+# Copy the shipped-data trees alongside the engine .exe. They sit outside
+# the bundle so a re-bundle is not required to refresh hazard files,
+# country configs, or the requirements XLSX templates. The runtime
+# resolver in backend/constants.get_base_dir() returns
+# ``Path(sys.executable).parent`` under sys.frozen, which is exactly this
+# directory — see docs/spikes/adr-bundling.md §3.5.
+$BundleDir = Join-Path $RepoRoot 'dist/nuitka'
+foreach ($tree in 'data', 'countries', 'requirements') {
+    $src = Join-Path $RepoRoot $tree
+    $dst = Join-Path $BundleDir $tree
+    if (-not (Test-Path $src)) {
+        throw "Shipped-data tree missing at $src — cannot stage bundle"
+    }
+    if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
+    Copy-Item -Recurse -Force $src $dst
 }
 
 Write-Host "Build complete: dist/nuitka/riskwise-engine.exe"

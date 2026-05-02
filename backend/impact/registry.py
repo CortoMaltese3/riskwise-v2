@@ -357,5 +357,8 @@ def _build_impact_func(spec: ImpactFunctionSpec) -> Any:
 
 
 def _default_root() -> Path:
-    # backend/impact/registry.py -> repo_root/countries
-    return Path(__file__).resolve().parents[2] / "countries"
+    # Use backend.constants so the bundled engine resolves to
+    # ``<exe_dir>/countries`` instead of a Nuitka onefile %TEMP% path.
+    from backend.constants import COUNTRIES_DIR
+
+    return COUNTRIES_DIR

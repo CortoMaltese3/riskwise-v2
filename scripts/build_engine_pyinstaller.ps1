@@ -31,6 +31,7 @@ pyinstaller `
   --collect-data rasterio `
   --collect-data pyproj `
   --collect-data shapely `
+  --collect-data backend `
   --exclude-module matplotlib `
   --exclude-module tkinter `
   --exclude-module IPython `
@@ -42,6 +43,22 @@ pyinstaller `
 
 if ($LASTEXITCODE -ne 0) {
     throw "PyInstaller build failed with exit code $LASTEXITCODE"
+}
+
+# Copy the shipped-data trees next to the engine .exe inside the onedir
+# bundle. Same rationale as the Nuitka script: shipped data lives
+# alongside ``sys.executable`` so the runtime resolver finds it without
+# needing a re-bundle to refresh data. See
+# docs/spikes/adr-bundling.md §3.5.
+$BundleDir = Join-Path $RepoRoot 'dist/pyinstaller/riskwise-engine'
+foreach ($tree in 'data', 'countries', 'requirements') {
+    $src = Join-Path $RepoRoot $tree
+    $dst = Join-Path $BundleDir $tree
+    if (-not (Test-Path $src)) {
+        throw "Shipped-data tree missing at $src — cannot stage bundle"
+    }
+    if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
+    Copy-Item -Recurse -Force $src $dst
 }
 
 Write-Host "Build complete: dist/pyinstaller/riskwise-engine/"

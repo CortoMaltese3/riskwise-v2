@@ -203,6 +203,52 @@ The `requirements.lock.txt` is **not** committed in this spike (it
 belongs to Phase 4 Area 4). Recording the exact lock hash in the
 measurement table (§4) is what makes a given row reproducible.
 
+### 3.5 Shipped-data layout (alongside the .exe)
+
+Both build scripts deliver the runtime in two parts: the bundled engine
+binary (compiled Python + native deps) and the **shipped-data trees**
+(`data/`, `countries/`, `requirements/`) which live as plain
+directories next to `sys.executable`. The runtime resolver in
+`backend/constants.py:get_base_dir()` returns
+`Path(sys.executable).resolve().parent` under `sys.frozen`, which is
+exactly where the build scripts copy those trees.
+
+| Layout | Bundle mode | `sys.executable` | Shipped data lives at |
+|---|---|---|---|
+| Nuitka `--onefile` | One file | `dist/nuitka/riskwise-engine.exe` | `dist/nuitka/{data,countries,requirements}/` |
+| Nuitka `--standalone` (onedir) | Many files | `dist/nuitka/riskwise-engine.dist/riskwise-engine.exe` | `dist/nuitka/riskwise-engine.dist/{data,countries,requirements}/` |
+| PyInstaller `--onedir` | Many files | `dist/pyinstaller/riskwise-engine/riskwise-engine.exe` | `dist/pyinstaller/riskwise-engine/{data,countries,requirements}/` |
+
+Why outside the bundle:
+
+- A CLIMADA hazard refresh (new `.tif` / `.h5`) or a country-config
+  patch (discount rate, return periods) is a data-only update — no
+  reason to re-bundle the engine, re-sign it, and push a new installer
+  ~hundreds of MB to ship a single JSON edit.
+- Nuitka `--onefile` extracts the bundled package files into
+  `%TEMP%\ONEFIL~1\` at boot. Anything resolved from `__file__` lands
+  there, not next to the .exe. Issue #196 was the symptom: `app.py`
+  computed `_REPO_ROOT = Path(__file__).parent.parent` and the manifest
+  check then read from `%TEMP%\data\manifest.json`, which never exists.
+- `Path(sys.executable).parent` is stable across all three bundle modes
+  above; `__file__`-based traversal is not.
+
+What still travels **inside** the bundle:
+
+- Backend package internals that are not user-facing data — most
+  visibly `backend/db/migrations/*.sql`. Both build scripts pass
+  `--include-package-data=backend` (Nuitka) and `--collect-data backend`
+  (PyInstaller) so the migration SQL extracts alongside the compiled
+  package and `backend/db/migrations.py:21` resolves correctly via
+  `Path(__file__).resolve().parent / "migrations"`.
+- The native dependencies surfaced by the per-package `--include-package-data`
+  / `--collect-data` flags for climada, rasterio, pyproj, shapely.
+
+The dev-checkout branch of `get_base_dir()` walks up from
+`backend/constants.py` to the repo root, where the same trees already
+live — so the same resolver works in `python -m backend` and in a
+bundle without branching at every call site.
+
 ---
 
 ## 4. Measurement protocol

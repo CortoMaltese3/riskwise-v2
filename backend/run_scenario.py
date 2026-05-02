@@ -27,7 +27,7 @@ from typing import Any
 
 import numpy as np
 from backend.base_handler import BaseHandler
-from backend.constants import DATA_TEMP_DIR
+from backend.constants import COUNTRIES_DIR, DATA_ENTITIES_DIR, DATA_HAZARDS_DIR, DATA_TEMP_DIR
 from backend.costben.costben_handler import CostBenefitHandler
 from backend.countries.loader import CountryConfigError, load_country_config
 from backend.db import cache_store, insert_scenario, read_result_blobs
@@ -39,11 +39,6 @@ from backend.logger_config import LoggerConfig
 from backend.provenance import REPRODUCIBILITY_NOTE, new_random_seed
 from backend.provenance import collect as collect_provenance
 from backend.scenario_strategy import ScenarioDataStrategy, make_strategy
-
-_DATA_ENTITIES_DIR = Path(__file__).resolve().parent.parent / "data" / "entities"
-_DATA_HAZARDS_DIR = Path(__file__).resolve().parent.parent / "data" / "hazards"
-_COUNTRIES_DIR = Path(__file__).resolve().parent.parent / "countries"
-
 
 def _resolve_country_config_path(country_code: str) -> Path:
     """Return the ``config.json`` path for ``country_code`` (built-in or custom).
@@ -61,7 +56,7 @@ def _resolve_country_config_path(country_code: str) -> Path:
     entry = get_country_registry().get(iso3)
     if entry is not None:
         return entry.config_path
-    return _COUNTRIES_DIR / iso3 / "config.json"
+    return COUNTRIES_DIR / iso3 / "config.json"
 
 
 @dataclass
@@ -545,8 +540,8 @@ class RunScenario:
         cannot key a cache entry on content we cannot hash, and a missing
         file means the run is about to fail anyway.
         """
-        entity_path = _DATA_ENTITIES_DIR / self.request_data.entity_filename
-        hazard_path = _DATA_HAZARDS_DIR / self.request_data.hazard_filename
+        entity_path = DATA_ENTITIES_DIR / self.request_data.entity_filename
+        hazard_path = DATA_HAZARDS_DIR / self.request_data.hazard_filename
         if not entity_path.is_file() or not hazard_path.is_file():
             return None
         from backend.provenance import sha256_file
@@ -625,8 +620,8 @@ class RunScenario:
         ``country_config_sha256`` recorded on the scenarios row, not the
         built-in ones.
         """
-        entity_path = _DATA_ENTITIES_DIR / self.request_data.entity_filename
-        hazard_path = _DATA_HAZARDS_DIR / self.request_data.hazard_filename
+        entity_path = DATA_ENTITIES_DIR / self.request_data.entity_filename
+        hazard_path = DATA_HAZARDS_DIR / self.request_data.hazard_filename
         country_config_path = _resolve_country_config_path(self.request_data.country_code)
         config_version_value = ""
         try:

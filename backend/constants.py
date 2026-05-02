@@ -29,22 +29,25 @@ from pathlib import Path
 
 
 def get_base_dir() -> Path:
-    """
-    Get the base directory of the application.
+    """Return the dir holding the shipped ``data/``, ``countries/``, ``requirements/`` trees.
 
-    This function checks if the application is running in a bundled (packaged by Electron)
-    environment or a normal Python environment (development). It returns the parent directory
-    of the executable in a bundled environment and the parent directory of the current script
-    in a normal Python environment.
+    In a bundle (Nuitka ``--onefile`` / ``--standalone``, PyInstaller
+    ``--onedir``) ``__file__`` points inside the unpacked module image —
+    for Nuitka onefile that is ``%TEMP%\\ONEFIL~1\\…``, which does *not*
+    contain the shipped data. ``sys.executable`` is the launching ``.exe``
+    in every bundle mode we ship; its parent directory is the canonical
+    location alongside which the build scripts copy the shipped-data
+    trees (see ``docs/spikes/adr-bundling.md`` §3.5).
+
+    In a dev checkout, ``backend/`` is the package root and the shipped
+    data lives one level up at the repo root.
 
     :return: The base directory of the application.
     :rtype: Path
     """
     if getattr(sys, "frozen", False):
-        # We are running in a bundle (packaged by Electron)
-        return Path(sys.executable).parent.parent
+        return Path(sys.executable).resolve().parent
 
-    # We are running in a normal Python environment (development)
     return Path(__file__).resolve().parent.parent
 
 
@@ -74,6 +77,10 @@ USER_DATA_DIR = get_user_data_dir()  # persistent
 DATA_DIR = BASE_DIR / "data"
 DATA_ENTITIES_DIR = DATA_DIR / "entities"
 DATA_HAZARDS_DIR = DATA_DIR / "hazards"
+DATA_MANIFEST_PATH = DATA_DIR / "manifest.json"
+
+# COUNTRIES (immutable seed: per-country config + impact functions)
+COUNTRIES_DIR = BASE_DIR / "countries"
 
 # DATA (persistent outputs)
 PERSIST_DATA_DIR = USER_DATA_DIR / "data"
