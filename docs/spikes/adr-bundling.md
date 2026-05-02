@@ -330,6 +330,21 @@ JSON schema because the reference hardware in §4.1 and
 [`docs/reference/benchmarks.md`](../reference/benchmarks.md) already pins it; only rows taken
 on a different box need a CPU-model override in the footnote.
 
+> **Engine-path measurement note (issue #165):** the `-Lean` modes added
+> to `scripts/build_engine.ps1` and `scripts/build_engine_pyinstaller.ps1`
+> and the canonical `tests/fixtures/scenarios/egy-flood-era.json` payload
+> together complete the harness needed to fill in three new "Engine path"
+> rows. Capturing actual numbers is blocked on two pre-existing bugs
+> surfaced by the first end-to-end boot of the post-Phase-6 engine:
+> (a) the unbundled engine's mixed `from app …` / `from backend.engine.X
+> …` import scheme is incompatible with both `python -m backend` and
+> `python backend/__main__.py` (only pytest's combined sys.path works),
+> and (b) the Nuitka onefile bundle resolves `_REPO_ROOT` to the
+> extraction temp dir, so `data/manifest.json` is not found at startup
+> and the FastAPI lifespan refuses to come up. Both are tracked in
+> separate issues; this section's "Engine path" rows stay TBD until
+> those land.
+
 ---
 
 ## 5. Decision gates
