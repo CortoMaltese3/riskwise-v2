@@ -98,7 +98,19 @@ function Start-EngineAndWaitForReady {
     )
 
     $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = (Resolve-Path $ExePath).Path
+    # Resolve a filesystem path when the caller passes one (e.g. a bundled .exe);
+    # otherwise fall back to PATH lookup so an unbundled run can pass `python`.
+    $resolved = Resolve-Path -Path $ExePath -ErrorAction SilentlyContinue
+    if ($resolved) {
+        $psi.FileName = $resolved.Path
+    } else {
+        $cmd = Get-Command -Name $ExePath -CommandType Application -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        if (-not $cmd) {
+            throw "Engine path '$ExePath' is neither a file nor a command on PATH"
+        }
+        $psi.FileName = $cmd.Source
+    }
     if ($ProcArgs -and $ProcArgs.Count -gt 0) {
         # Windows PowerShell 5.1 / .NET Framework 4.x has no ArgumentList; build the
         # Arguments string with double-quoting for any token containing whitespace.
