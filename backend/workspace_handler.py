@@ -21,9 +21,9 @@ import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 
-from db.connection import DB_FILE_NAME, get_connection, resolve_db_path
-from logging_config import get_logger
-from provenance import app_version
+from backend.db.connection import DB_FILE_NAME, get_connection, resolve_db_path
+from backend.logging_config import get_logger
+from backend.provenance import app_version
 
 WORKSPACE_EXPORT_VERSION = 1
 MANIFEST_FILENAME = "manifest.json"

@@ -26,7 +26,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import json
 
-from constants import BACKEND_DIR, LOG_DIR
+from backend.constants import BACKEND_DIR, LOG_DIR
 
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 

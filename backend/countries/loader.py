@@ -63,7 +63,7 @@ def _resolve_config_path(iso3: str, base_dir: Path | None) -> Path:
 
     # Deferred import to break the cycle: the extensibility registry
     # imports this module when it validates custom countries.
-    from extensibility.registry import get_registry
+    from backend.extensibility.registry import get_registry
 
     entry = get_registry().get(iso3)
     if entry is not None:

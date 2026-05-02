@@ -13,7 +13,8 @@ import json
 from pathlib import Path
 
 import pytest
-from provenance import ManifestError, generate_manifest, verify_manifest
+
+from backend.provenance import ManifestError, generate_manifest, verify_manifest
 
 
 def _write_tree(tmp_path: Path) -> tuple[Path, Path]:

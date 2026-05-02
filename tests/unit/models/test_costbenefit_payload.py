@@ -38,7 +38,7 @@ def _valid_payload() -> dict:
 
 
 def test_payload_accepts_valid_data() -> None:
-    from models.costbenefit import CostBenefitPayload
+    from backend.models.costbenefit import CostBenefitPayload
 
     payload = CostBenefitPayload(**_valid_payload())
     assert payload.currency_unit == "USD"
@@ -49,7 +49,7 @@ def test_payload_accepts_valid_data() -> None:
 
 
 def test_payload_defaults_currency_unit_to_empty() -> None:
-    from models.costbenefit import CostBenefitPayload
+    from backend.models.costbenefit import CostBenefitPayload
 
     raw = _valid_payload()
     del raw["currency_unit"]
@@ -58,7 +58,7 @@ def test_payload_defaults_currency_unit_to_empty() -> None:
 
 
 def test_payload_accepts_empty_measures_list() -> None:
-    from models.costbenefit import CostBenefitPayload
+    from backend.models.costbenefit import CostBenefitPayload
 
     raw = _valid_payload()
     raw["measures"] = []
@@ -67,14 +67,14 @@ def test_payload_accepts_empty_measures_list() -> None:
 
 
 def test_measure_rejects_empty_name() -> None:
-    from models.costbenefit import CostBenefitMeasure
+    from backend.models.costbenefit import CostBenefitMeasure
 
     with pytest.raises(ValidationError):
         CostBenefitMeasure(name="", cost=1.0, benefit=2.0, benefit_cost_ratio=2.0)
 
 
 def test_measure_rejects_non_numeric_cost() -> None:
-    from models.costbenefit import CostBenefitMeasure
+    from backend.models.costbenefit import CostBenefitMeasure
 
     with pytest.raises(ValidationError):
         CostBenefitMeasure(
@@ -86,7 +86,7 @@ def test_measure_rejects_non_numeric_cost() -> None:
 
 
 def test_response_envelopes_payload_with_status() -> None:
-    from models.costbenefit import CostBenefitResponse
+    from backend.models.costbenefit import CostBenefitResponse
 
     response = CostBenefitResponse(
         data=_valid_payload(),

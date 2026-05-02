@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import duckdb
-from logging_config import get_logger
-from macroeconomic.cred_seeder import CRED_COLUMNS
+from backend.logging_config import get_logger
+from backend.macroeconomic.cred_seeder import CRED_COLUMNS
 
 _log = get_logger("macroeconomic.handler")
 
@@ -16,7 +16,7 @@ class MacroeconomicHandler:
     def _get_conn(self) -> duckdb.DuckDBPyConnection:
         if self._conn is not None:
             return self._conn
-        from db.connection import get_connection
+        from backend.db.connection import get_connection
 
         return get_connection()
 

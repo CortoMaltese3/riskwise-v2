@@ -6,7 +6,8 @@ from pathlib import Path
 
 import duckdb
 import pytest
-from db.migrations import MIGRATIONS_DIR, MigrationError, run_migrations
+
+from backend.db.migrations import MIGRATIONS_DIR, MigrationError, run_migrations
 
 EXPECTED_TABLES = {
     "schema_version",

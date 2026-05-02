@@ -30,9 +30,9 @@ from climada.entity.measures import MeasureSet
 from climada.entity.impact_funcs import ImpactFuncSet
 
 
-from cache import file_cache_key, get_entity_cache
-from constants import DATA_ENTITIES_DIR
-from logger_config import LoggerConfig
+from backend.cache import file_cache_key, get_entity_cache
+from backend.constants import DATA_ENTITIES_DIR
+from backend.logger_config import LoggerConfig
 
 logger = LoggerConfig(logger_types=["file"])
 

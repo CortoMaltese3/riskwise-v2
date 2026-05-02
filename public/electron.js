@@ -920,7 +920,9 @@ const restartBackendWithBackoff = async () => {
 
 // Create a long-running Python process
 const createPythonProcess = async () => {
-  const scriptPath = path.join(basePath, "backend", "app.py");
+  // The backend package is invoked as ``python -m backend`` with cwd set to
+  // the repo root so the ``from backend.X`` imports resolve. See issue #195.
+  const backendDir = path.join(basePath, "backend");
 
   // Engine is installed under %LOCALAPPDATA%\RiskWiseEngine\python.exe
   const engineRoot = process.env.LOCALAPPDATA;
@@ -937,12 +939,13 @@ const createPythonProcess = async () => {
     pythonExecutable = await downloadAndInstallEngine(loaderWindow);
   }
 
-  if (!fs.existsSync(scriptPath)) {
-    throw new Error("Python script not found at: " + scriptPath);
+  if (!fs.existsSync(backendDir)) {
+    throw new Error("Backend package not found at: " + backendDir);
   }
 
   try {
-    const py = spawn(pythonExecutable, [scriptPath], {
+    const py = spawn(pythonExecutable, ["-m", "backend"], {
+      cwd: basePath,
       stdio: ["pipe", "pipe", "pipe"],
       env: {
         ...process.env,

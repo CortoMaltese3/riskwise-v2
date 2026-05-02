@@ -21,8 +21,9 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-import app as app_module
 from fastapi.testclient import TestClient
+
+import backend.app as app_module
 
 _SYNTHETIC_EGY_FLOOD_PAYLOAD: dict = {
     "countryName": "egypt",
@@ -59,7 +60,7 @@ def _fake_run_scenario(scenario_id: str = "job-test-fixture") -> dict:
     persistence side-effect inside the stub is what lets the test assert
     "result row appears in DuckDB" without touching CLIMADA.
     """
-    from db import insert_scenario
+    from backend.db import insert_scenario
 
     def _impl(payload: dict) -> dict:
         insert_scenario(

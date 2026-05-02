@@ -62,6 +62,8 @@ scripts/*
 !scripts/check-locales.js
 # Phase 6 Track 1 (issue #151 / DECISIONS.md D26) — engine import boundary lint.
 !scripts/check_engine_imports.py
+# Issue #195 — backend import-scheme lint (forbid shallow ``from db import …``).
+!scripts/check_backend_imports.py
 notes.txt
 
 # Issue #163 — parity test summary is regenerated on every pytest run; the

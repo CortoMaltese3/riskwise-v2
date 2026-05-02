@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from db.connection import get_connection
+from backend.db.connection import get_connection
 
 # Provenance keys whose value cannot be ``None`` on a fresh insert. The
 # dual-backend split (#162) made ``engine_version`` and ``climada_version``

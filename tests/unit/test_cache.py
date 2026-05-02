@@ -6,7 +6,8 @@ import os
 from pathlib import Path
 
 import pytest
-from cache import LRUCache, file_cache_key
+
+from backend.cache import LRUCache, file_cache_key
 
 
 def test_lru_eviction_drops_oldest() -> None:

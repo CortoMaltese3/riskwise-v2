@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from db.connection import get_connection
+from backend.db.connection import get_connection
 
 
 def list_cred_datasets() -> list[dict]:

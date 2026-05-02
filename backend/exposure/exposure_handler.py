@@ -26,10 +26,10 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
-from base_handler import BaseHandler
+from backend.base_handler import BaseHandler
 from climada.entity import Entity, Exposures
-from constants import DATA_TEMP_DIR
-from logger_config import LoggerConfig
+from backend.constants import DATA_TEMP_DIR
+from backend.logger_config import LoggerConfig
 
 logger = LoggerConfig(logger_types=["file"])
 

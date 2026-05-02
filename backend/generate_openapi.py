@@ -13,9 +13,9 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent))
 
-from app import app  # noqa: E402
+from backend.app import app  # noqa: E402
 
 OUT_PATH = HERE / "openapi.json"
 

@@ -14,8 +14,9 @@ import json
 from pathlib import Path
 
 import pytest
-from extensibility.registry import build_registry
-from impact.registry import ImpactFunctionRegistryError, load_registry_from_paths
+
+from backend.extensibility.registry import build_registry
+from backend.impact.registry import ImpactFunctionRegistryError, load_registry_from_paths
 
 REPO_COUNTRIES_DIR = Path(__file__).resolve().parents[3] / "countries"
 

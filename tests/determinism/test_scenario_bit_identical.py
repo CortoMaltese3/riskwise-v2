@@ -18,7 +18,8 @@ import io
 import json
 
 import numpy as np
-from provenance import canonical_json_sha256, sha256_bytes
+
+from backend.provenance import canonical_json_sha256, sha256_bytes
 
 _FIXTURE_PAYLOAD = {
     "country": "Egypt",

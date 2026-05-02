@@ -19,10 +19,10 @@ import json
 import sys
 from time import time
 
-from base_handler import BaseHandler
-from hazard.hazard_handler import HazardHandler
-from logger_config import LoggerConfig
-from report.report_handler import ReportHandler, ReportParameters
+from backend.base_handler import BaseHandler
+from backend.hazard.hazard_handler import HazardHandler
+from backend.logger_config import LoggerConfig
+from backend.report.report_handler import ReportHandler, ReportParameters
 
 
 class RunExportReport:

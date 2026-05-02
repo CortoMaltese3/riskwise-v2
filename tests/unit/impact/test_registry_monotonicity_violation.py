@@ -14,7 +14,8 @@ import json
 from pathlib import Path
 
 import pytest
-from impact.registry import ImpactFunctionRegistryError, load_country_registry
+
+from backend.impact.registry import ImpactFunctionRegistryError, load_country_registry
 
 
 def _valid_entry(**overrides: object) -> dict:

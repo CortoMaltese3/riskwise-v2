@@ -14,13 +14,14 @@ import threading
 import time
 from unittest.mock import AsyncMock, patch
 
-import app as app_module
 import pytest
 import uvicorn
-from app import app
-from cancellation import CancelRequested, cancel_event_var
 from fastapi.testclient import TestClient
-from progress import progress_callback_var
+
+import backend.app as app_module
+from backend.app import app
+from backend.cancellation import CancelRequested, cancel_event_var
+from backend.progress import progress_callback_var
 
 
 @pytest.fixture(autouse=True)
@@ -87,8 +88,8 @@ class TestSynchronousEndpoints:
         )
 
     def test_list_scenarios(self, client: TestClient) -> None:
-        import db
-        from db.scenario_store import ScenarioRow
+        import backend.db as db
+        from backend.db.scenario_store import ScenarioRow
 
         row = ScenarioRow(
             id="abc",
@@ -117,8 +118,8 @@ class TestSynchronousEndpoints:
         assert body["data"][0]["name"] == "My run"
 
     def test_get_scenario_found(self, client: TestClient) -> None:
-        import db
-        from db.scenario_store import ScenarioDetail, ScenarioRow
+        import backend.db as db
+        from backend.db.scenario_store import ScenarioDetail, ScenarioRow
 
         row = ScenarioRow(
             id="xyz",
@@ -148,7 +149,7 @@ class TestSynchronousEndpoints:
         assert body["status"]["code"] == 2000
 
     def test_get_scenario_not_found(self, client: TestClient) -> None:
-        import db
+        import backend.db as db
 
         with patch.object(db, "get_scenario", return_value=None):
             response = client.get("/api/v1/scenarios/missing")
@@ -171,8 +172,8 @@ class TestSynchronousEndpoints:
         assert args[1]["exportType"] == "excel"
 
     def test_save_scenario_updates_metadata(self, client: TestClient) -> None:
-        import db
-        from db.scenario_store import ScenarioRow
+        import backend.db as db
+        from backend.db.scenario_store import ScenarioRow
 
         updated = ScenarioRow(
             id="abc",
@@ -208,14 +209,14 @@ class TestSynchronousEndpoints:
         assert response.status_code == 422
 
     def test_save_scenario_unknown_id_returns_404(self, client: TestClient) -> None:
-        import db
+        import backend.db as db
 
         with patch.object(db, "update_scenario_metadata", return_value=None):
             response = client.post("/api/v1/scenarios/ghost/save", json={"name": "X"})
         assert response.status_code == 404
 
     def test_delete_scenario(self, client: TestClient) -> None:
-        import db
+        import backend.db as db
 
         with patch.object(db, "delete_scenario", return_value=True) as m:
             response = client.delete("/api/v1/scenarios/abc")
@@ -224,7 +225,7 @@ class TestSynchronousEndpoints:
         m.assert_called_once_with("abc")
 
     def test_delete_scenario_unknown_id_returns_404(self, client: TestClient) -> None:
-        import db
+        import backend.db as db
 
         with patch.object(db, "delete_scenario", return_value=False):
             response = client.delete("/api/v1/scenarios/ghost")
@@ -446,7 +447,7 @@ class TestStructuredErrorEnvelope:
         # Exercise the 404 branch in ``get_scenario_endpoint`` — the DB lookup
         # returns None and the handler must raise, translating into the
         # structured error envelope.
-        import db
+        import backend.db as db
 
         with patch.object(db, "get_scenario", return_value=None):
             response = client.get("/api/v1/scenarios/missing-scenario-id")
@@ -589,7 +590,7 @@ class TestCooperativeCancellation:
             def scenario_with_checkpoint(_payload: dict) -> dict:
                 worker_started.set()
                 release.wait(timeout=5)
-                from cancellation import check_cancelled
+                from backend.cancellation import check_cancelled
 
                 check_cancelled()
                 return {"data": {"mapTitle": "done"}, "status": {"code": 2000}}
@@ -637,7 +638,7 @@ class TestCooperativeCancellation:
         token = cancel_event_var.set(event)
         try:
             event.set()
-            from cancellation import check_cancelled
+            from backend.cancellation import check_cancelled
 
             with pytest.raises(CancelRequested):
                 check_cancelled()
@@ -648,7 +649,7 @@ class TestCooperativeCancellation:
         event = threading.Event()
         token = cancel_event_var.set(event)
         try:
-            from cancellation import check_cancelled
+            from backend.cancellation import check_cancelled
 
             check_cancelled()  # must not raise
         finally:
@@ -706,7 +707,7 @@ class TestScenarioBundleEndpoints:
             zf.writestr("provenance.json", "{}")
 
         with patch(
-            "export_handler.build_export_to_temp",
+            "backend.export_handler.build_export_to_temp",
             return_value=(zip_path, "Egypt_flood.riskwise-scenario"),
         ):
             response = client.get("/api/v1/scenario/scen-1/export")
@@ -718,10 +719,10 @@ class TestScenarioBundleEndpoints:
         assert "Egypt_flood.riskwise-scenario" in disposition
 
     def test_export_404_when_scenario_missing(self, client: TestClient) -> None:
-        from export_handler import ScenarioExportError
+        from backend.export_handler import ScenarioExportError
 
         with patch(
-            "export_handler.build_export_to_temp",
+            "backend.export_handler.build_export_to_temp",
             side_effect=ScenarioExportError("Scenario not found: scen-x"),
         ):
             response = client.get("/api/v1/scenario/scen-x/export")
@@ -731,7 +732,7 @@ class TestScenarioBundleEndpoints:
         output = tmp_path / "out.riskwise-scenario"
         output.write_bytes(b"PK\x03\x04stub")
         with patch(
-            "export_handler.build_export_to_temp",
+            "backend.export_handler.build_export_to_temp",
             return_value=(output, "scenario.riskwise-scenario"),
         ):
             response = client.get("/api/v1/scenario/scen-1/export-data")
@@ -743,7 +744,7 @@ class TestScenarioBundleEndpoints:
 
     def test_import_returns_new_scenario_id(self, client: TestClient) -> None:
         with patch(
-            "export_handler.import_scenario",
+            "backend.export_handler.import_scenario",
             return_value={"scenario_id": "new-uuid", "name": "Egypt flood"},
         ):
             response = client.post(
@@ -756,10 +757,10 @@ class TestScenarioBundleEndpoints:
         assert body["data"]["name"] == "Egypt flood"
 
     def test_import_400_on_invalid_archive(self, client: TestClient) -> None:
-        from export_handler import ScenarioImportError
+        from backend.export_handler import ScenarioImportError
 
         with patch(
-            "export_handler.import_scenario",
+            "backend.export_handler.import_scenario",
             side_effect=ScenarioImportError("Archive is missing provenance.json"),
         ):
             response = client.post(

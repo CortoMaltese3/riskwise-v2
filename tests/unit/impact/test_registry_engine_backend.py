@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from impact.registry import load_country_registry
+from backend.impact.registry import load_country_registry
 
 
 def _write_country(tmp_path: Path, iso3: str, entries: list[dict]) -> None:

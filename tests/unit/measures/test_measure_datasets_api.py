@@ -51,7 +51,7 @@ def isolated_user_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     user_dir = tmp_path / "user-data"
     user_dir.mkdir()
     monkeypatch.setenv("RISKWISE_USER_DATA", str(user_dir))
-    import measures.measure_dataset_handler as handler_mod
+    import backend.measures.measure_dataset_handler as handler_mod
 
     monkeypatch.setattr(handler_mod, "USER_DATA_DIR", user_dir)
     return user_dir

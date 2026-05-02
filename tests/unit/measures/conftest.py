@@ -7,9 +7,10 @@ from pathlib import Path
 import duckdb
 import openpyxl
 import pytest
-from db.migrations import run_migrations
 from fastapi.testclient import TestClient
-from measures.measures_seeder import seed_builtin_measures
+
+from backend.db.migrations import run_migrations
+from backend.measures.measures_seeder import seed_builtin_measures
 
 
 def write_minimal_measures_xlsx(path: Path) -> None:
@@ -135,7 +136,7 @@ def api_client(seeded_db, monkeypatch):
     monkeypatch.setenv("RISKWISE_SKIP_MANIFEST_VERIFY", "1")
     monkeypatch.setenv("RISKWISE_SKIP_CRED_SEED", "1")
     monkeypatch.setenv("RISKWISE_SKIP_MEASURES_SEED", "1")
-    from app import app
+    from backend.app import app
 
     with TestClient(app, raise_server_exceptions=True) as c:
         yield c

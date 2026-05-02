@@ -6,7 +6,8 @@ from pathlib import Path
 
 import openpyxl
 import pytest
-from macroeconomic.cred_seeder import CRED_COLUMNS, CredSeedError, seed_builtin_cred
+
+from backend.macroeconomic.cred_seeder import CRED_COLUMNS, CredSeedError, seed_builtin_cred
 
 
 def _write_xlsx(path: Path, rows: list[dict]) -> None:

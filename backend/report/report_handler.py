@@ -6,9 +6,9 @@ from typing import Optional
 import pandas as pd
 import xlsxwriter
 
-from constants import DATA_TEMP_DIR, REPORTS_DIR
-from logger_config import LoggerConfig
-from provenance import REPORT_REPRODUCIBILITY_NOTE, short_sha
+from backend.constants import DATA_TEMP_DIR, REPORTS_DIR
+from backend.logger_config import LoggerConfig
+from backend.provenance import REPORT_REPRODUCIBILITY_NOTE, short_sha
 
 # ``BaseHandler`` is imported lazily inside ``__init__`` because importing it
 # at module top pulls in CLIMADA (and CLIMADA's optional deps like fiona),
@@ -52,7 +52,7 @@ class ReportParameters:
 
 class ReportHandler:
     def __init__(self, report_parameters: ReportParameters) -> None:
-        from base_handler import BaseHandler
+        from backend.base_handler import BaseHandler
 
         self.report_parameters = report_parameters
         self.target_dir = REPORTS_DIR / self.report_parameters.scenario_id or DATA_TEMP_DIR
@@ -199,7 +199,7 @@ class ReportHandler:
         non-provenance tabs in isolation. The caller still gets a valid
         workbook so legacy flows do not regress.
         """
-        from db import get_scenario
+        from backend.db import get_scenario
 
         scenario_id = self.report_parameters.scenario_id
         if not scenario_id:

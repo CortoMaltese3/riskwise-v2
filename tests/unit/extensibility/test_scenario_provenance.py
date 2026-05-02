@@ -15,9 +15,10 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from countries.loader import load_country_config
-from extensibility.registry import reset_registry
-from provenance import sha256_file
+
+from backend.countries.loader import load_country_config
+from backend.extensibility.registry import reset_registry
+from backend.provenance import sha256_file
 
 
 def _write_custom(user_countries: Path, iso3: str, config_version: int = 7) -> Path:
@@ -68,7 +69,7 @@ def test_resolve_country_config_path_points_at_custom_file(
 
     # Imported lazily: run_scenario imports CLIMADA at module top via a
     # chain of handlers, so we reach the helper via the module object.
-    from run_scenario import _resolve_country_config_path
+    from backend.run_scenario import _resolve_country_config_path
 
     resolved = _resolve_country_config_path("KEN")
     assert resolved == custom_path
@@ -84,7 +85,7 @@ def test_resolve_falls_back_to_builtin_path_for_unknown_code(
     # No custom country written; unknown ISO3 falls through to the
     # built-in tree so the "file not found" branch of provenance
     # collection behaves as it did pre-#56.
-    from run_scenario import _resolve_country_config_path
+    from backend.run_scenario import _resolve_country_config_path
 
     resolved = _resolve_country_config_path("ZZZ")
 

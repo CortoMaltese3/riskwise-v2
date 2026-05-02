@@ -30,7 +30,7 @@ def _make_runner(handlers=None):
     for the pipeline-equivalence test, which relies on identical mock
     return objects to produce identical call sequences.
     """
-    from run_scenario import RunScenario
+    from backend.run_scenario import RunScenario
 
     runner = RunScenario.__new__(RunScenario)
     handlers = handlers or {}
@@ -47,7 +47,7 @@ def _make_runner(handlers=None):
 
 
 def _make_request_data(**overrides):
-    from run_scenario import RequestData
+    from backend.run_scenario import RequestData
 
     defaults = dict(
         adaptation_measures=[],

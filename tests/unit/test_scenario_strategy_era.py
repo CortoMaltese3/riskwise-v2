@@ -32,7 +32,7 @@ def request_data():
 
 @pytest.fixture
 def strategy():
-    from scenario_strategy import EraDataStrategy
+    from backend.scenario_strategy import EraDataStrategy
 
     return EraDataStrategy()
 

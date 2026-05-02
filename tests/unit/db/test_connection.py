@@ -7,7 +7,8 @@ from pathlib import Path
 
 import duckdb
 import pytest
-from db.connection import DB_FILE_NAME, DB_PATH_ENV_VAR, get_connection, resolve_db_path
+
+from backend.db.connection import DB_FILE_NAME, DB_PATH_ENV_VAR, get_connection, resolve_db_path
 
 
 def test_resolves_path_from_env_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -19,7 +19,7 @@ import hashlib
 import json
 from base64 import b64decode, b64encode
 
-from db.connection import get_connection
+from backend.db.connection import get_connection
 
 
 def derive_cache_key(

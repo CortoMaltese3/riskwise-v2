@@ -13,7 +13,8 @@ from pathlib import Path
 
 import duckdb
 import pytest
-from db import (
+
+from backend.db import (
     DB_PATH_ENV_VAR,
     MIGRATIONS_DIR,
     delete_scenario,

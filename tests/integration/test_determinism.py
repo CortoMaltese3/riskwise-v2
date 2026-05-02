@@ -17,9 +17,10 @@ import json
 from typing import Any
 from unittest.mock import patch
 
-import app as app_module
 import numpy as np
 from fastapi.testclient import TestClient
+
+import backend.app as app_module
 
 
 def _deterministic_aal_runner(payload: dict[str, Any]) -> dict[str, Any]:

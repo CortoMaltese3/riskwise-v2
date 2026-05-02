@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from costben.costben_handler import CostBenefitHandler
+from backend.costben.costben_handler import CostBenefitHandler
 
 
 def test_get_measure_names_returns_names_for_hazard(migrated_conn, tmp_path) -> None:
-    from measures.measures_seeder import seed_builtin_measures
-
+    from backend.measures.measures_seeder import seed_builtin_measures
     from tests.unit.measures.conftest import write_minimal_measures_xlsx
 
     xlsx = tmp_path / "measures.xlsx"
@@ -22,8 +21,7 @@ def test_get_measure_names_returns_names_for_hazard(migrated_conn, tmp_path) -> 
 
 
 def test_get_measure_names_flood(migrated_conn, tmp_path) -> None:
-    from measures.measures_seeder import seed_builtin_measures
-
+    from backend.measures.measures_seeder import seed_builtin_measures
     from tests.unit.measures.conftest import write_minimal_measures_xlsx
 
     xlsx = tmp_path / "measures.xlsx"
@@ -37,8 +35,7 @@ def test_get_measure_names_flood(migrated_conn, tmp_path) -> None:
 
 
 def test_get_measure_names_unknown_hazard_returns_empty(migrated_conn, tmp_path) -> None:
-    from measures.measures_seeder import seed_builtin_measures
-
+    from backend.measures.measures_seeder import seed_builtin_measures
     from tests.unit.measures.conftest import write_minimal_measures_xlsx
 
     xlsx = tmp_path / "measures.xlsx"
@@ -51,8 +48,7 @@ def test_get_measure_names_unknown_hazard_returns_empty(migrated_conn, tmp_path)
 
 
 def test_get_measure_names_with_explicit_set_id(migrated_conn, tmp_path) -> None:
-    from measures.measures_seeder import seed_builtin_measures
-
+    from backend.measures.measures_seeder import seed_builtin_measures
     from tests.unit.measures.conftest import write_minimal_measures_xlsx
 
     xlsx = tmp_path / "measures.xlsx"

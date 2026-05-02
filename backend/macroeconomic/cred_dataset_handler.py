@@ -16,10 +16,10 @@ from pathlib import Path
 
 import duckdb
 import pandas as pd
-from constants import USER_DATA_DIR
-from logging_config import get_logger
-from macroeconomic.cred_seeder import REQUIRED_COLUMNS
-from provenance import sha256_file
+from backend.constants import USER_DATA_DIR
+from backend.logging_config import get_logger
+from backend.macroeconomic.cred_seeder import REQUIRED_COLUMNS
+from backend.provenance import sha256_file
 
 _log = get_logger("macroeconomic.cred_dataset_handler")
 
@@ -139,7 +139,7 @@ def import_dataset(
 
     owns_conn = conn is None
     if conn is None:
-        from db.connection import get_connection
+        from backend.db.connection import get_connection
 
         conn = get_connection()
 
@@ -221,7 +221,7 @@ def delete_dataset(
     """Remove a custom dataset. Raises if the id is built-in or unknown."""
     owns_conn = conn is None
     if conn is None:
-        from db.connection import get_connection
+        from backend.db.connection import get_connection
 
         conn = get_connection()
     try:

@@ -7,7 +7,8 @@ Covers #14 acceptance criteria: ``beautify_hazard_type`` and
 from __future__ import annotations
 
 import pytest
-from base_handler import BaseHandler
+
+from backend.base_handler import BaseHandler
 
 
 @pytest.fixture(scope="module")

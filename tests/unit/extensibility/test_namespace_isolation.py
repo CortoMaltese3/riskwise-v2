@@ -13,7 +13,8 @@ import json
 from pathlib import Path
 
 import pytest
-from extensibility.registry import (
+
+from backend.extensibility.registry import (
     CountrySource,
     ExtensibilityError,
     build_registry,

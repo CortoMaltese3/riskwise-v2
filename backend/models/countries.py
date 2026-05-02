@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from models.common import Status
 from pydantic import BaseModel
+
+from backend.models.common import Status
 
 
 class Country(BaseModel):

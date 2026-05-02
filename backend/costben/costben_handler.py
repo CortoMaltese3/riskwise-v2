@@ -33,9 +33,9 @@ from climada.engine import CostBenefit, ImpactCalc
 from climada.engine.cost_benefit import NO_MEASURE, risk_aai_agg
 from climada.entity import DiscRates, Entity
 from climada.hazard import Hazard
-from constants import DATA_TEMP_DIR, REQUIREMENTS_DIR
-from hazard.hazard_handler import HazardHandler
-from logger_config import LoggerConfig
+from backend.constants import DATA_TEMP_DIR, REQUIREMENTS_DIR
+from backend.hazard.hazard_handler import HazardHandler
+from backend.logger_config import LoggerConfig
 
 from backend.engine.types import CostBenefitResult, MeasureSpec
 

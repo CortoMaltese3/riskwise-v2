@@ -13,12 +13,12 @@ import json
 import sys
 from time import time
 
-from costben.costben_handler import CostBenefitHandler
-from db.connection import get_connection, resolve_db_path
-from hazard.hazard_handler import HazardHandler
-from logger_config import LoggerConfig
+from backend.costben.costben_handler import CostBenefitHandler
+from backend.db.connection import get_connection, resolve_db_path
+from backend.hazard.hazard_handler import HazardHandler
+from backend.logger_config import LoggerConfig
 
-from base_handler import BaseHandler
+from backend.base_handler import BaseHandler
 
 
 class RunFetchScenario:

@@ -15,7 +15,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import duckdb
-from logging_config import get_logger
+
+from backend.logging_config import get_logger
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 
@@ -44,7 +45,7 @@ def run_startup_migrations() -> None:
     Intended as the FastAPI lifespan entry point. Any failure propagates —
     a half-migrated DB is the worst possible state to serve requests from.
     """
-    from db.connection import get_connection, resolve_db_path
+    from backend.db.connection import get_connection, resolve_db_path
 
     db_path = resolve_db_path()
     _log.info("db.migrations.startup", db_path=str(db_path))

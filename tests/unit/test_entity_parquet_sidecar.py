@@ -47,7 +47,7 @@ def _load_handler() -> Any:
                 setattr(mod, attr, value)
             sys.modules[name] = mod
 
-    from entity.entity_handler import EntityHandler  # noqa: E402
+    from backend.entity.entity_handler import EntityHandler  # noqa: E402
 
     return EntityHandler
 

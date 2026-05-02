@@ -23,8 +23,9 @@ pytest.importorskip("rasterio")
 
 import climate_lama_engine as cc  # noqa: E402
 from climada.hazard import Hazard as ClimadaHazard  # noqa: E402
-from constants import DATA_HAZARDS_DIR  # noqa: E402
-from hazard.hazard_handler import HazardHandler  # noqa: E402
+
+from backend.constants import DATA_HAZARDS_DIR  # noqa: E402
+from backend.hazard.hazard_handler import HazardHandler  # noqa: E402
 
 _FLOOD_FILE = "hazard_FL_EGY_historical.tif"
 

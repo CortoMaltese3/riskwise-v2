@@ -13,7 +13,8 @@ import json
 from pathlib import Path
 
 import pytest
-from countries.loader import CountryConfig, CountryConfigError, load_country_config
+
+from backend.countries.loader import CountryConfig, CountryConfigError, load_country_config
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

@@ -17,7 +17,8 @@ from pathlib import Path
 
 import duckdb
 import pytest
-from db import (
+
+from backend.db import (
     DB_PATH_ENV_VAR,
     MIGRATIONS_DIR,
     get_scenario,
@@ -25,7 +26,7 @@ from db import (
     list_scenarios,
     run_migrations,
 )
-from export_handler import (
+from backend.export_handler import (
     PROVENANCE_FILENAME,
     README_FILENAME,
     RESULTS_DIR,
