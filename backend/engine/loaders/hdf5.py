@@ -31,7 +31,7 @@ one, otherwise falls back to the :class:`HazardArrays` default.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import h5py
 import numpy as np
@@ -172,7 +172,9 @@ def _read_event_names(hf: h5py.File) -> tuple[str, ...] | None:
 
 
 def _read_frequency_type(hf: h5py.File) -> str:
-    default = HazardArrays.__dataclass_fields__["frequency_type"].default
+    # The dataclass field has a concrete str default; cast narrows away
+    # the dataclass-machinery MISSING sentinel mypy infers from .default.
+    default = cast(str, HazardArrays.__dataclass_fields__["frequency_type"].default)
     if "frequency_type" in hf.attrs:
         return _decode(hf.attrs["frequency_type"])
     return _read_str(hf, "frequency_type", default=default)

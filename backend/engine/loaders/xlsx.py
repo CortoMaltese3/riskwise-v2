@@ -24,7 +24,7 @@ re-derive it from the CLIMADA path.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, overload
 
 import numpy as np
 import openpyxl
@@ -387,6 +387,10 @@ def _find_col_prefix(header: list[str], prefix: str) -> int | None:
     return None
 
 
+@overload
+def _opt_float(row: tuple[Any, ...], col: int | None, default: float) -> float: ...
+@overload
+def _opt_float(row: tuple[Any, ...], col: int | None, default: None = None) -> float | None: ...
 def _opt_float(row: tuple[Any, ...], col: int | None, default: float | None = None) -> float | None:
     """Return float(row[col]) if col is not None and the cell is not None, else default."""
     if col is None or row[col] is None:
