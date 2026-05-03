@@ -1,6 +1,6 @@
 # ADR — Python Bundling: Nuitka vs PyInstaller on Stripped CLIMADA Env (Spike, Phase 0)
 
-**Status:** Design accepted — empirical results pending Windows runner.
+**Status:** Design accepted — engine-path measurements captured (issue #165); clean-env bundle re-measure deferred until engine-path consolidation.
 **Date:** 2026-04-18
 **Issue:** #3
 **Depends on:** DECISIONS.md D05 (engine track A/B/C), D02 (FastAPI loopback), D09 (offline installer variants), D16 (FastAPI + uvicorn verified on Windows)
@@ -294,20 +294,34 @@ baseline capture). Inputs:
 Accuracy: no attempt to isolate noise below ±2 %. Anything smaller than that
 should not drive a decision.
 
-### 4.4 Results table (to be filled in — all TBD)
+### 4.4 Results table
+
+Full-bundle rows (with CLIMADA) are deferred to a clean-env build; the table
+below captures the **engine-path lean builds** measured in issue #165
+(2026-05-03, Windows 11 Pro 10.0.26200, Python 3.11.12, `lock_hash:
+7fd36d02ae0317a8a13d0c5d06589629c3ae23159188eaa4a5658c963428530b`).
 
 | Config | Bundle size (MB) | Cold start (s) | Scenario (s) | Δ vs unbundled | Notes |
 |---|---|---|---|---|---|
-| Unbundled (venv + pyproject) | — | TBD | TBD | 0 % (baseline) | Reference row. |
-| Nuitka `--onefile` | TBD | TBD | TBD | TBD | Primary candidate per D05. |
-| Nuitka `--standalone` (onedir) | TBD | TBD | TBD | TBD | Onedir for fair compare vs PyInstaller. |
-| PyInstaller `--onedir` | TBD | TBD | TBD | TBD | Fallback / baseline. |
-| PyInstaller `--onefile` | TBD | TBD | TBD | TBD | Optional; documents the temp-extract cost. |
+| Unbundled (engine path) | — | < 1 s | ~3.5 s | 0 % (baseline) | Warm-cache mean over multiple runs on dev box. Cold start not a meaningful target for unbundled. |
+| Engine path — Nuitka `--standalone` lean | 1 634 | 5.6 | 0.76 | −78 %¹ | Lean = `--include-package=climada` / `--include-package-data=climada` dropped. Bundle from `climada_env`; size dominated by transitive deps (llvmlite 87 MB, scipy 37 MB, babel 29 MB, sklearn 12 MB). **Fails §5 gate 1 (size > 900 MB).** |
+| Engine path — PyInstaller `--onedir` lean | 1 289 | 5.2 | 0.75 | −78 %¹ | `--collect-submodules climada` / `--collect-data climada` dropped. Same transitive-dep bloat (llvmlite 87 MB, pyarrow 77 MB, eccodes 37 MB, babel 29 MB). SQL migrations absent from `--collect-data`; added via `--add-data` (see scripts fix). **Fails §5 gate 1.** |
+| Engine path — Nuitka `--onefile` lean | — | — | — | — | Skipped: Nuitka's zstd compression of the ~1.5 GB standalone payload OOM-crashed the build host. Deferred to clean-env venv rebuild. |
+| Full bundle — Nuitka / PyInstaller | TBD | TBD | TBD | TBD | Deferred. Requires clean engine-only venv; bundling from `climada_env` produces the "lean" sizes above even with CLIMADA excluded. |
 
-Each row above is a rendering of a single measurement row produced by
-`scripts/measure_engine.ps1`. The underlying JSON schema — which CI
-captures as a workflow artefact and which the maintainer pastes into the
-table above once collected — is:
+¹ Negative delta reflects warm OS file cache on the bundled runs, not a genuine performance advantage. Cold-start and runtime rows should be re-measured on a cold boot for a fair comparison. Gates §5 (2) and (3) both pass on cold start (≤ 10 s) and runtime (no regression observed).
+
+**Root cause of size gate failure:** `--exclude-module climada` (PyInstaller) and omitting
+`--include-package=climada` (Nuitka) stops the bundler from importing CLIMADA itself, but
+does **not** unwind CLIMADA's transitive dependency graph. Top bloat contributors from
+`climada_env`: `llvmlite` 87 MB (numba JIT, CLIMADA-only), `pyarrow` 77 MB (Parquet I/O,
+not used on engine path), `eccodes` 37 MB (GRIB weather format, CLIMADA-only), `babel`
+29 MB (i18n, transitive), `bokeh` 21 MB (web viz, CLIMADA-only), `sklearn` 14 MB
+(CLIMADA ML utilities). Reaching the 150–250 MB target set in §6's re-baseline note
+requires bundling from a clean engine-only venv (see §7).
+
+Each row is a rendering of a single JSON row from `scripts/measure_engine.ps1`. The
+underlying JSON schema is:
 
 ```json
 {
@@ -321,29 +335,6 @@ table above once collected — is:
   "lock_hash": "<sha256 of the resolved lock file used for the build>"
 }
 ```
-
-The `python_version`, `os_build`, and `lock_hash` fields are the
-per-row reproducibility footnote called out earlier in this section —
-record them alongside each filled cell (e.g. under the table as a
-footnote block, keyed by the row). CPU model is not captured by the
-JSON schema because the reference hardware in §4.1 and
-[`docs/reference/benchmarks.md`](../reference/benchmarks.md) already pins it; only rows taken
-on a different box need a CPU-model override in the footnote.
-
-> **Engine-path measurement note (issue #165):** the `-Lean` modes added
-> to `scripts/build_engine.ps1` and `scripts/build_engine_pyinstaller.ps1`
-> and the canonical `tests/fixtures/scenarios/egy-flood-era.json` payload
-> together complete the harness needed to fill in three new "Engine path"
-> rows. Capturing actual numbers is blocked on two pre-existing bugs
-> surfaced by the first end-to-end boot of the post-Phase-6 engine:
-> (a) the unbundled engine's mixed `from app …` / `from backend.engine.X
-> …` import scheme is incompatible with both `python -m backend` and
-> `python backend/__main__.py` (only pytest's combined sys.path works) —
-> tracked in #195, and (b) the Nuitka onefile bundle resolves
-> `_REPO_ROOT` to the extraction temp dir, so `data/manifest.json` is
-> not found at startup and the FastAPI lifespan refuses to come up —
-> tracked in #196. This section's "Engine path" rows stay TBD until
-> both land.
 
 ---
 
@@ -399,16 +390,22 @@ their corner of this table before Phase 4 Area 4 executes.
 
 ## 7. Outstanding work
 
-This spike has **one** unfinished item. Everything else in the design is
-decided.
-
-- [ ] Run §3 build commands on a Windows 11 runner (CI or physical box).
-      Fill in §4.4 table. Update §6 with the selected track. Promote this
-      ADR's status from "Design accepted" to "Accepted" and add the
-      corresponding entry to `DECISIONS.md` (next free D-number).
-
-Until that runner is available, Phase 4 Area 4 cannot commit to a bundler,
-and the installer-size budget in D09 remains a target not a constraint.
+- [x] Run build + measure harness on a Windows 11 dev box (issue #165).
+      Engine-path lean rows captured in §4.4 (2026-05-03).
+- [x] Fix unbundled boot-path bugs (#195 import-scheme fix, #196 Nuitka onefile
+      `NUITKA_ONEFILE_BINARY` resolver). Both landed before measurement.
+- [ ] Bundle from a clean engine-only venv (no `climada_env`). Current 1.3–1.6 GB
+      lean bundles fail the §5 size gate because `climada_env` transitive deps
+      (llvmlite, pyarrow, eccodes, bokeh, sklearn) inflate the output even when
+      CLIMADA itself is excluded. Target: 150–250 MB per §6 re-baseline note.
+      Deferred until engine-path code consolidation completes; tracked as a
+      follow-up to #165.
+- [ ] Re-measure on clean boot (cold start) and median-of-5 scenario runs once
+      the clean-venv bundle is available. Current §4.4 scenario deltas reflect
+      warm OS cache and are not suitable for gate decisions.
+- [ ] Fill in Full-bundle rows in §4.4 (with CLIMADA) once clean-env venv is set up.
+      Update §6 with the selected track. Promote ADR status to "Accepted" and add
+      `DECISIONS.md` D27 entry.
 
 ---
 

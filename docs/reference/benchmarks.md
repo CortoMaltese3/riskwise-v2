@@ -84,6 +84,28 @@ v2.0.0 release once each row is populated; rows that miss their target
 move from "_pending_" to a `defer` or `fix now` decision before the
 release is tagged.
 
+## v2.x — Engine-path bundle measurements (issue #165)
+
+Measured 2026-05-03. Environment: Windows 11 Pro 10.0.26200, Python 3.11.12,
+`climada_env` conda env. Lean builds exclude CLIMADA package import
+(`--exclude-module climada` / no `--include-package=climada`).
+`lock_hash: 7fd36d02ae0317a8a13d0c5d06589629c3ae23159188eaa4a5658c963428530b`.
+
+| Config | Bundle (MB) | Cold start (s) | Scenario (s) | Δ vs unbundled | Decision |
+|---|---|---|---|---|---|
+| Unbundled (engine path) | — | < 1 s | ~3.5 s | 0 % | Baseline |
+| Nuitka `--standalone` lean | 1 634 | 5.6 | 0.76 | −78 %¹ | **Deferred** — fails size gate (> 900 MB); re-measure from clean engine-only venv |
+| PyInstaller `--onedir` lean | 1 289 | 5.2 | 0.75 | −78 %¹ | **Deferred** — fails size gate; re-measure from clean engine-only venv |
+| Nuitka `--onefile` lean | — | — | — | — | **Skipped** — zstd OOM on build host; deferred to clean-env rebuild |
+
+¹ Negative delta reflects warm OS file cache on bundled runs, not genuine speedup.
+Cold start passes the ≤ 10 s gate; runtime shows no regression.
+
+**Finding:** `--exclude-module climada` does not unwind CLIMADA's transitive
+dep graph (`climada_env`). Top bloat: llvmlite 87 MB, pyarrow 77 MB, eccodes
+37 MB, babel 29 MB, bokeh 21 MB, sklearn 14 MB. Reaching the 150–250 MB target
+requires bundling from a clean engine-only venv post engine-path consolidation.
+
 CI cannot fully substitute for the dev-box runs:
 
 - Bundle-size rows can be measured on `windows-latest` against the

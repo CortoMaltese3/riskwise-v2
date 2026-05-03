@@ -50,6 +50,9 @@ $pyinstallerArgs += @(
     '--collect-data', 'pyproj',
     '--collect-data', 'shapely',
     '--collect-data', 'backend',
+    # --collect-data does not pick up non-Python files (e.g. .sql) from a
+    # source tree; add-data ensures the migration scripts travel with the bundle.
+    '--add-data', 'backend/db/migrations;backend/db/migrations',
     '--exclude-module', 'matplotlib',
     '--exclude-module', 'tkinter',
     '--exclude-module', 'IPython',
