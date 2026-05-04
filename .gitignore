@@ -15,6 +15,14 @@ dist
 playwright-report
 test-results
 
+# Phase 8.1 baseline screenshots (#207). The PNGs are published as the
+# `ui-baseline-v1` GitHub release asset, not committed to the repo. Re-runs
+# of tests/e2e/baseline-screenshots.spec.ts repopulate these locale dirs
+# locally without dirtying `git status`.
+docs/audits/ui-baseline-v1/en/
+docs/audits/ui-baseline-v1/ar/
+docs/audits/ui-baseline-v1/th/
+
 # backend
 __pycache__
 backend_diff.txt

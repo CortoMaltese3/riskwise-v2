@@ -1,6 +1,12 @@
 # UI baseline v1
 
-Pre-Phase-8 screenshots of every primary view at the supported viewport set, captured on `main` before any layout-primitive migration begins. Sub-phase 8.7 will produce the matching post-migration set in this same directory and use these PNGs as the visible "before / after" comparison the spec asks for.
+Pre-Phase-8 screenshots of every primary view at the supported viewport set, captured on `main` before any layout-primitive migration begins. Sub-phase 8.7 will produce the matching post-migration set and use these PNGs as the visible "before / after" comparison the spec asks for.
+
+## Where the PNGs live
+
+The 72 PNGs are **not** committed to `main` — they are attached as a zip asset on the [`ui-baseline-v1` release](https://github.com/CortoMaltese3/riskwise-v2/releases/tag/ui-baseline-v1). Download `ui-baseline-v1.zip` and unpack it under `docs/audits/ui-baseline-v1/` to reconstitute the layout described below; the locale subdirectories are gitignored so the unpacked tree will not show up in `git status`.
+
+Rationale: a 13 MB pile of binary artefacts inflates the repo permanently for a one-off reference set. The release asset is the canonical home; this directory hosts the README and (via Phase 8.7) any text-based comparisons.
 
 ## What is captured
 
@@ -10,7 +16,7 @@ Pre-Phase-8 screenshots of every primary view at the supported viewport set, cap
 | Locales   | `en` (default), `ar` (RTL test target), `th` (long-string benchmark) |
 | Views     | `app-shell` (NavigateAlert landing), `home`, `risk`, `macro`, `workspace`, `settings` |
 
-Total artefacts: `4 × 3 × 6 = 72` PNGs, laid out as `<locale>/<viewport>/<view>.png`.
+Total artefacts: `4 × 3 × 6 = 72` PNGs, laid out as `<locale>/<viewport>/<view>.png` inside the zip.
 
 ## How it was captured
 
@@ -22,6 +28,8 @@ Reproducing the capture:
 npm run build
 npx playwright test tests/e2e/baseline-screenshots.spec.ts
 ```
+
+The spec writes PNGs into `docs/audits/ui-baseline-v1/<locale>/<viewport>/`. Those subdirectories are gitignored, so a re-run will not dirty the working tree. To refresh the published baseline, re-run the spec, re-zip the locale folders, and replace the asset on the `ui-baseline-v1` release.
 
 `RISKWISE_TEST_MODE=1` is set automatically by the spec so the user-data directory and DuckDB scenario store start clean for every launch.
 
