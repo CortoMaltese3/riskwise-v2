@@ -8,7 +8,9 @@ seeded DuckDB row plus the small ``build_bibtex_snippet`` helper.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any, cast
 
 import duckdb
 import pytest
@@ -33,7 +35,13 @@ class _ReportHandlerStub:
     def __init__(self, report_parameters: ReportParameters) -> None:
         self.report_parameters = report_parameters
 
-    _generate_provenance_tab = ReportHandler._generate_provenance_tab
+    # The cast tells mypy the duck-typed `self` is intentional: at runtime
+    # the method only touches ``self.report_parameters``, which the stub
+    # provides identically to ``ReportHandler``.
+    _generate_provenance_tab = cast(
+        Callable[["_ReportHandlerStub", Any], None],
+        ReportHandler._generate_provenance_tab,
+    )
 
 
 class TestShortSha:
