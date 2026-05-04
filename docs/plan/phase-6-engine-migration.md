@@ -1,7 +1,7 @@
 # Phase 6 — Engine Migration (CLIMADA → climate-lama-engine)
 
-> **Weeks**: TBD (post-v2.0; not calendar-bound — sequenced by issue dependencies, not by week number)
-> **Status**: 🔲 Not started
+> **Weeks**: post-v2.0; landed across Tracks 1–5 in 2026-04 / 2026-05.
+> **Status**: ✅ Done
 > **Goal**: Replace the runtime CLIMADA dependency with `climate-lama-engine`, shrink the installer ~50–70 %, formalise the cross-project compatibility contract with the climate-lama backbone, and make future hazard extensibility a JSON + loader change rather than a Python class change.
 > **Canonical references**: [adr-climate-lama-engine-adoption.md](../spikes/adr-climate-lama-engine-adoption.md), [DECISIONS.md D18](../DECISIONS.md) (supersedes D05), [adr-bundling.md](../spikes/adr-bundling.md) (§6 re-baselined).
 > **Hard predecessor**: Phase 4 — v2.0.0 must be tagged on Track A (CLIMADA + Nuitka) before any Phase 6 work begins.
@@ -22,10 +22,10 @@ Phase 6 is **strictly post-v2.0**. v2.0 ships on Track A as planned in Phase 4. 
 
 This phase cannot start until:
 
-- [ ] **v2.0.0 tagged** on `main` per Phase 4 exit criteria.
-- [ ] **Phase 4 release-readiness verification complete** (signing/SmartScreen, airplane-mode, beta-channel update, NVDA smoke, reference-hardware benchmarks in `docs/reference/benchmarks.md`).
-- [ ] **#150 ADR merged** — [adr-climate-lama-engine-adoption.md](../spikes/adr-climate-lama-engine-adoption.md) accepted; D18 entered in `docs/DECISIONS.md` superseding D05.
-- [ ] **Pre-cutover parity smoke recorded** — one-off run of CLIMADA vs engine on the four reference scenarios (§9 of the ADR), results in `docs/spikes/parity-smoke-results.md`. If any row exceeds the §6 tolerances, gate Phase 6 on the upstream engine fix.
+- [x] **v2.0.0 tagged** on `main` per Phase 4 exit criteria.
+- [x] **Phase 4 release-readiness verification complete** (signing/SmartScreen, airplane-mode, beta-channel update, NVDA smoke, reference-hardware benchmarks in `docs/reference/benchmarks.md`).
+- [x] **#150 ADR merged** — [adr-climate-lama-engine-adoption.md](../spikes/adr-climate-lama-engine-adoption.md) accepted; D26 (renumbered from D18 in the original spec) entered in `docs/DECISIONS.md` superseding D05.
+- [x] **Pre-cutover parity smoke recorded** — one-off run of CLIMADA vs engine on the four reference scenarios (§9 of the ADR), results in `docs/spikes/parity-smoke-results.md`. If any row exceeds the §6 tolerances, gate Phase 6 on the upstream engine fix.
 
 If any prerequisite is not met, return to Phase 4 or to #150.
 
@@ -94,18 +94,18 @@ The phase is split into a gate + five tracks. Issue numbers (`#X`) are placehold
 
 Phase 6 is complete when all of the following are true:
 
-- [ ] `python -c "import climada"` raises `ModuleNotFoundError` in a clean install (`climada` is fully removed from runtime deps in `pyproject.toml`, `requirements/requirements.txt`, `requirements/environment.yml`).
-- [ ] `pip install -e .` and `pip install -r requirements/requirements.txt` complete without `climada` in the resolution.
-- [ ] `pytest tests/unit tests/integration tests/parity -q` is green.
-- [ ] Parity test suite (`tests/parity/`) is in CI; passes on EGY-flood, EGY-drought, THA-flood, and one custom-data ZIP within the §6 ADR gates (±2 % AAL, ±5 % RP-50/100/250, ±5 % BCR).
-- [ ] Egypt-flood ERA scenario runs end-to-end through the Electron UI; result blob carries `engine: "climate-lama-engine"`, `engine_version: "<pinned>"`, `climada_version: null`.
-- [ ] Custom-data scenario (user-uploaded ZIP) runs end-to-end. Loaders accept the same ZIP schema as before #150.
-- [ ] Nuitka bundle size measured and recorded in `docs/reference/benchmarks.md` v2.x section. ≤ 250 MB target met (or escalated per ADR §7).
-- [ ] No file under `backend/` (except `backend/engine/adapter.py`) imports `climate_lama_engine.*` directly. (Lint rule or grep check in CI.)
-- [ ] `pip-audit` clean against the new dependency tree.
-- [ ] SBOM regenerated; NOTICES.txt regenerated; both committed.
-- [ ] `docs/DECISIONS.md` updated with D18 superseding D05; `docs/ARCHITECTURE.md` Areas 4, 6, 7, 11, 18, 20 references CLIMADA replaced with engine references; this file's exit criteria all checked.
-- [ ] In the engine repo: `.github/PULL_REQUEST_TEMPLATE.md` updated per ADR §5.3; backbone-compat test and riskwise-compat test both in place; engine pinned to the cutover version on PyPI with release notes.
+- [x] `python -c "import climada"` raises `ModuleNotFoundError` in a clean install (`climada` is fully removed from runtime deps in `pyproject.toml`, `requirements/requirements.txt`, `requirements/environment.yml`).
+- [x] `pip install -e .` and `pip install -r requirements/requirements.txt` complete without `climada` in the resolution.
+- [x] `pytest tests/unit tests/integration tests/parity -q` is green.
+- [x] Parity test suite (`tests/parity/`) is in CI; passes on EGY-flood, EGY-drought, THA-flood, and one custom-data ZIP within the §6 ADR gates (±2 % AAL, ±5 % RP-50/100/250, ±5 % BCR).
+- [x] Egypt-flood ERA scenario runs end-to-end through the Electron UI; result blob carries `engine: "climate-lama-engine"`, `engine_version: "<pinned>"`, `climada_version: null`.
+- [x] Custom-data scenario (user-uploaded ZIP) runs end-to-end. Loaders accept the same ZIP schema as before #150.
+- [x] Nuitka bundle size measured and recorded in `docs/reference/benchmarks.md` v2.x section. ≤ 250 MB target met (or escalated per ADR §7).
+- [x] No file under `backend/` (except `backend/engine/adapter.py`) imports `climate_lama_engine.*` directly. (Enforced by `scripts/check_engine_imports.py` in CI.)
+- [x] `pip-audit` clean against the new dependency tree.
+- [x] SBOM regenerated; NOTICES.txt regenerated; both committed.
+- [x] `docs/DECISIONS.md` updated with D26 superseding D05; `docs/ARCHITECTURE.md` Areas 4, 7, 18, 20 references CLIMADA replaced with engine references where behaviour changed (Areas 6 and 11 had no CLIMADA-specific text to update); this file's exit criteria all checked.
+- [x] In the engine repo: `.github/PULL_REQUEST_TEMPLATE.md` updated per ADR §5.3; backbone-compat test and riskwise-compat test both in place; engine pinned to the cutover version on PyPI with release notes.
 
 ---
 

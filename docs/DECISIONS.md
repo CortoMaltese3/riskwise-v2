@@ -94,7 +94,7 @@ Key decisions made during the v2 design. Each entry records what was decided, wh
 
 ## D05 — Python compute engine: evaluate before committing
 
-**Status**: Superseded by [D26](#d26--adopt-climate-lama-engine-as-the-runtime-compute-layer-post-v20) (2026-04-27). Track A (CLIMADA + Nuitka) shipped for v2.0; Track B (`climate-lama-engine`) is adopted for v2.x once engine v0.4.0+ parity is confirmed and v2.0.0 has tagged.
+**Status**: Superseded by [D26](#d26--adopt-climate-lama-engine-as-the-runtime-compute-layer-post-v20) (2026-04-27). Track A (CLIMADA + Nuitka) shipped for v2.0; Track B (`climate-lama-engine`) was adopted for v2.x in Phase 6 (`climada` removed from runtime deps in #166).
 **Date**: 2026-04-16
 
 **Decision**: Do not commit to a specific Python compute approach until Phase 0 research spikes are complete. Three tracks:
@@ -193,7 +193,7 @@ Track A (CLIMADA + Nuitka) is selected by default if Track B fails any of the ab
 
 **Why**:
 - Target users (government officials in restricted environments) sometimes operate in air-gapped networks.
-- Core CLIMADA computation already runs locally. The gaps are: engine download, update checks, CLIMADA Client API, and Leaflet tiles.
+- Core compute already runs locally (post-Phase-6, via `climate-lama-engine`; pre-cutover, via CLIMADA). The remaining gaps are: engine download, update checks, and Leaflet tiles. (CLIMADA's Client API was a network dependency before Phase 6; the engine has no equivalent — it does not fetch datasets at runtime.)
 - Making it the default would complicate the standard experience unnecessarily.
 
 **Two installer variants**:
@@ -524,8 +524,8 @@ addresses the dead IPC guard and the orphan fetcher methods.
 
 ## D26 — Adopt `climate-lama-engine` as the runtime compute layer (post-v2.0)
 
-**Status**: Accepted (design); cutover gated on parity smoke and v2.0.0 tag.
-**Date**: 2026-04-27
+**Status**: Accepted; in production. Phase 6 cutover complete — `climate-lama-engine` is the default and only runtime compute backend; `climada==6.1.0` removed from runtime deps in #166.
+**Date**: 2026-04-27 (design accepted); cutover landed in Phase 6 (#164 default flip, #166 dep removal).
 
 **Decision**: Replace `climada==6.1.0` with `climate-lama-engine==<cutover-version>` as the runtime compute dependency in Phase 6, after v2.0.0 has tagged on Track A. The cross-project compatibility contract governing the engine, the climate-lama backbone, and riskwise-v2 is captured in [adr-climate-lama-engine-adoption.md §5](../spikes/adr-climate-lama-engine-adoption.md). Implementation work is broken down in [phase-6-engine-migration.md](../plan/phase-6-engine-migration.md) (issues #150–#169).
 

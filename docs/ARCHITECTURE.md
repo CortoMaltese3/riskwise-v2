@@ -266,19 +266,19 @@ Files stay as-is: `.h5`/`.tif` hazard data, `.xlsx` entity defs, `.geojson` boun
 
 ### Area 4 — Python Environment: Lean Backend (HIGH)
 
-Current: ~500MB conda env with unused packages (Flask, Selenium, folium, matplotlib, docx libs).
+Original v1 baseline: ~500MB conda env with unused packages (Flask, Selenium, folium, matplotlib, docx libs).
 
-**Three tracks to evaluate in Phase 0**:
+**Outcome (post-Phase-6)**: Track A (strip deps aggressively + Nuitka) shipped for v2.0; Track B (`climate-lama-engine`) shipped in Phase 6 and is now the default and only runtime compute backend. CLIMADA was removed from runtime deps in #166. See [DECISIONS.md D26](DECISIONS.md#d26--adopt-climate-lama-engine-as-the-runtime-compute-layer-post-v20) and [phase-6-engine-migration.md](plan/phase-6-engine-migration.md).
 
-- **Track A**: Strip deps aggressively + Nuitka bundler (compiles to C, 2-4x faster than PyInstaller)
-- **Track B**: Replace CLIMADA with `climate_lama_engine` (maintainer's own PyPI package, ~20KB, NumPy+SciPy only, currently supports river flood — needs evaluation for drought/heatwave coverage)
-- **Track C**: Remote backend (not recommended — breaks offline use)
+- **Track A** (shipped v2.0): strip deps aggressively + Nuitka bundler (compiles to C, 2-4x faster than PyInstaller).
+- **Track B** (shipped Phase 6): `climate-lama-engine` (NumPy+SciPy only) replaces CLIMADA as the runtime compute layer; HDF5/GeoTIFF/XLSX file I/O lives in `backend/engine/loaders/` and a local catalog (`data/catalog.json` + `backend/engine/catalog.py`) replaces `climada.util.api_client.Client`.
+- **Track C**: Remote backend (rejected — breaks offline use).
 
-**Keep**: climada, geopandas, numpy, pandas, shapely, pycountry, openpyxl, pyarrow, h5py, rasterio, xlsxwriter, duckdb, fastapi, uvicorn
+**Keep**: climate-lama-engine, geopandas, numpy, pandas, scipy, shapely, pycountry, openpyxl, pyarrow, h5py, rasterio, xlsxwriter, duckdb, fastapi, uvicorn, pyproj
 
-**Remove**: matplotlib, Flask, Flask-CORS, Flask-SocketIO, Selenium, Werkzeug, folium, geocoder, ipykernel, cartopy, python-docx, docxtpl, docx2pdf
+**Removed**: climada (Phase 6 #166), matplotlib, Flask, Flask-CORS, Flask-SocketIO, Selenium, Werkzeug, folium, geocoder, ipykernel, cartopy, python-docx, docxtpl, docx2pdf
 
-**Files**: New `pyproject.toml`
+**Files**: `pyproject.toml`, `requirements/requirements.txt`, `requirements/environment.yml`, `backend/engine/`
 
 ---
 
@@ -312,7 +312,9 @@ Backend returns structured JSON; frontend renders. Removes matplotlib dependency
 - Refactor 661-line impact function if/elif chain into a registry loaded from config
 - Dependency injection in handlers for testability
 
-**ERA constants — must move to country configs**: `run_scenario.py:195-270` hardcodes Egypt discount rate (6.89%), Thailand discount rate (0.90%), per-sector growth rates, and `get_custom_rp_per_hazard()` return periods. These must move into `countries/EGY/config.json` and `countries/THA/config.json` with source citations (e.g. World Bank discount rate, CLIMADA default return periods). In ERA mode users adjust via entity xlsx upload; in custom mode expose fields in the UI so analysts can override without touching code.
+**ERA constants — must move to country configs**: `run_scenario.py:195-270` hardcodes Egypt discount rate (6.89%), Thailand discount rate (0.90%), per-sector growth rates, and `get_custom_rp_per_hazard()` return periods. These must move into `countries/EGY/config.json` and `countries/THA/config.json` with source citations (e.g. World Bank discount rate; return-period defaults inherited from the original CLIMADA event-set documentation). In ERA mode users adjust via entity xlsx upload; in custom mode expose fields in the UI so analysts can override without touching code.
+
+**Engine adapter pattern (post-Phase-6)**: `backend/engine/adapter.py` is the single seam between riskwise and `climate-lama-engine`; every other backend module routes through that adapter so we have one fix point when the engine API drifts. Per [DECISIONS.md D26](DECISIONS.md#d26--adopt-climate-lama-engine-as-the-runtime-compute-layer-post-v20) and [adr-climate-lama-engine-adoption.md §5.1](spikes/adr-climate-lama-engine-adoption.md), the adapter is the only file in `backend/` allowed to import `climate_lama_engine.*`; the rule is enforced by `scripts/check_engine_imports.py` in CI.
 
 **RequestData anti-pattern** (existing bug / tech debt): `run_scenario.py:39-76` defines `RequestData` as a dataclass that embeds `BaseHandler` and `HazardHandler` instances as fields — mixing a data-transfer object with service objects. Separate cleanly: `RequestData` is a plain dataclass; handlers are instantiated in the scenario runner and receive the data as arguments.
 
@@ -516,7 +518,7 @@ Target: WCAG 2.1 AA (mandatory in many government procurement contexts).
 - **Dependency hygiene**: Dependabot (npm + pip), `npm audit --production` + `pip-audit` in CI, CycloneDX/SPDX SBOM at release
 - **Signed data packs**: cryptographic signature verification on `.riskwise-pack` imports
 - `SECURITY.md`: vulnerability disclosure policy
-- **Third-party attribution / NOTICES.txt**: Government procurement will ask. Generate a `NOTICES.txt` from the SBOM: GADM data (CC BY 4.0, non-commercial restriction on commercial use — verify for v2's licensing model), OpenStreetMap tiles (ODbL), CLIMADA scientific datasets (ETH Zurich license), Inter font (SIL OFL 1.1), every npm and pip dependency. Attach `NOTICES.txt` to every release artifact. Automate generation — never maintain by hand.
+- **Third-party attribution / NOTICES.txt**: Government procurement will ask. Generate a `NOTICES.txt` from the SBOM: GADM data (CC BY 4.0, non-commercial restriction on commercial use — verify for v2's licensing model), OpenStreetMap tiles (ODbL), `climate-lama-engine` (MIT — see engine repo `LICENSE`), source-attributed scientific datasets shipped under `data/` (per-dataset license noted in `data/manifest.json`), Inter font (SIL OFL 1.1), every npm and pip dependency. Attach `NOTICES.txt` to every release artifact. Automate generation — never maintain by hand.
 - **Secrets ownership**: `CSC_LINK`/`CSC_KEY_PASSWORD` (code signing cert), Sentry DSN, GitHub release-please token, minisign private key for manifest signing. Document who holds each, where it is stored (use GitHub Actions environment secrets with environment protection rules), and who is the break-glass escalation. Review annually.
 
 **Files**: `build/electron.js`, `src/preload.js`, `backend/validation.py`, `SECURITY.md`, `.github/dependabot.yml`
@@ -543,7 +545,7 @@ Target: WCAG 2.1 AA (mandatory in many government procurement contexts).
 ### Area 20 — Scientific Reproducibility (MEDIUM-HIGH)
 
 Every scenario in DuckDB captures:
-- `app_version`, `engine_version`, `climada_version`
+- `app_version`, `engine` (compute backend identifier — `"climate-lama-engine"` for all post-Phase-6 rows), `engine_version`, `climada_version` (nullable; populated only on legacy pre-Phase-6 rows for traceability — new rows are `NULL`)
 - `entity_data_sha256`, `hazard_data_sha256`, `country_config_sha256`
 - `config_version`, `random_seed`, `computed_at`, optional user annotation
 
@@ -552,7 +554,7 @@ Every scenario in DuckDB captures:
 - Versioned country configs (breaking changes bump version)
 - `.riskwise-scenario` export: shareable ZIP with provenance manifest + parquet + snapshots
 
-**Determinism realism**: "Bit-identical outputs" is unachievable cross-platform. CLIMADA uses stochastic sampling for some hazards (event set generation), and BLAS floating-point reductions differ between CPU architectures and OS. The achievable target is:
+**Determinism realism**: "Bit-identical outputs" is unachievable cross-platform. The compute path uses stochastic sampling for some hazards (event-set generation in `climate-lama-engine`; pre-Phase-6, CLIMADA's equivalent), and BLAS floating-point reductions differ between CPU architectures and OS. The achievable target is:
 1. **Seed discipline**: use `np.random.default_rng(seed)` everywhere (not the global `np.random.*` API). Store `random_seed` in the provenance row.
 2. **Same-machine reproducibility**: same OS + same Python + same seed → bit-identical. This is the CI determinism test.
 3. **Cross-machine tolerance**: define a documented tolerance (e.g. ≤0.01% relative difference in AAL and expected damage by return period). Provenance SHAs are computed on a canonical JSON form of outputs (sorted keys, fixed decimal precision) — not raw floats — so they are stable across platforms.
@@ -901,7 +903,7 @@ These are the "done means" definitions for each phase. Use them as acceptance cr
 | 4 | Auto-update end-to-end | Install v2.0.0; release v2.0.1 to beta channel; app detects update, shows consent dialog, installs on restart |
 | 4 | Engine manifest | Change engine version in engine-manifest.json; app prompts for engine re-download and applies it |
 | 4 | Offline installer | Install on airplane-mode Windows VM; app launches, runs Egypt flood scenario, shows clear error for network actions |
-| 4 | Offline toggle | Enable "Offline mode" in Settings; update checks stop, Leaflet switches to cached tiles, CLIMADA Client blocked |
+| 4 | Offline toggle | Enable "Offline mode" in Settings; update checks stop, Leaflet switches to cached tiles. (Pre-Phase-6 this also blocked the CLIMADA Client API; post-Phase-6 there is no equivalent runtime network dependency to block — the engine has no Client.) |
 | 4 | Data pack import | Drop signed `.riskwise-pack` in designated folder; change takes effect after restart |
 | 4 | Data pack rejection | Import `.riskwise-pack` with invalid signature; import fails with clear error |
 | 4 | Signed installer | Install on clean Windows VM; SmartScreen passes immediately (EV) or reputation process understood (OV) |
