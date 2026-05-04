@@ -5,10 +5,10 @@
 
 ---
 
-## Current state (as of 2026-04-26)
+## Current state (as of 2026-05-04)
 
-**Active phase**: **Phase 4 — Environment, Distribution & Polish** (release-readiness sweep).
-**Progress snapshot**: implementation issues for Phases 0–4 (#113–#123) all merged. Remaining work before tagging v2.0.0 is the release-readiness verification listed in [phase-4-distribution-and-polish.md § Exit criteria](phase-4-distribution-and-polish.md#exit-criteria) — VM installs (signing/SmartScreen, airplane-mode, beta-channel update), NVDA smoke test, and reference-hardware benchmark capture per [`docs/reference/benchmarks.md` § v2.0.0 release measurements](../reference/benchmarks.md#v200-release-measurements). Phase 6 (engine migration) is next; Phase 7 (optional / later) runs in parallel post-v2.0.
+**Active phase**: **Phase 7 — Optional / Later** (non-blocking; runs alongside maintenance).
+**Progress snapshot**: Phases 0–4 and Phase 6 are complete. Phase 6 (engine migration, #150–#168) landed `climate-lama-engine` as the runtime compute backend, removed `climada==6.1.0` from runtime deps, refreshed the bundle benchmark, and closed the documentation loop. Phase 7 work is unstarted and non-blocking.
 
 For per-phase exit-criteria status see each phase file's `Exit criteria` section.
 
@@ -22,8 +22,8 @@ For per-phase exit-criteria status see each phase file's `Exit criteria` section
 | 1 — Foundation | [phase-1-foundation.md](phase-1-foundation.md) | 3–7 | ✅ Done |
 | 2 — Data & Backend Cleanup | [phase-2-data-backend-cleanup.md](phase-2-data-backend-cleanup.md) | 8–12 | ✅ Done |
 | 3 — UI Overhaul | [phase-3-ui-overhaul.md](phase-3-ui-overhaul.md) | 13–17 | ✅ Done |
-| 4 — Environment, Distribution & Polish | [phase-4-distribution-and-polish.md](phase-4-distribution-and-polish.md) | 18–20 | 🔄 Implementation complete; release-readiness verification pending |
-| 6 — Engine Migration (CLIMADA → climate-lama-engine) | [phase-6-engine-migration.md](phase-6-engine-migration.md) | post-v2.0 | 🔲 Not started — gated on #150 ADR + v2.0.0 tag |
+| 4 — Environment, Distribution & Polish | [phase-4-distribution-and-polish.md](phase-4-distribution-and-polish.md) | 18–20 | ✅ Done |
+| 6 — Engine Migration (CLIMADA → climate-lama-engine) | [phase-6-engine-migration.md](phase-6-engine-migration.md) | post-v2.0 | ✅ Done |
 | 7 — Optional / Later | [phase-7-optional.md](phase-7-optional.md) | post-v2.0 | ⏳ Unstarted (non-blocking) |
 
 Status legend: 🔄 in progress · ✅ done · ⏳ pending · 🔲 not started · ❌ blocked.

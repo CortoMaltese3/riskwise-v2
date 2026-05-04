@@ -6,13 +6,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Phase 6 — Engine Migration (CLIMADA → `climate-lama-engine`)
+
+Operationalises [DECISIONS.md D26](docs/DECISIONS.md#d26--adopt-climate-lama-engine-as-the-runtime-compute-layer-post-v20)
+(originally drafted as D18 in [phase-6-engine-migration.md](docs/plan/phase-6-engine-migration.md);
+renumbered to D26 at landing). Issues #150–#168.
+
 ### Changed
 
-- **Phase 6 Track 5 (#164)** — default compute backend flipped from
-  CLIMADA to `climate-lama-engine`. The `RISKWISE_ENGINE_BACKEND`
-  environment variable still routes per-handler; setting it to
-  `climada` selects the legacy path as a diagnostic escape hatch.
-  CLIMADA stays in runtime deps until Track 6 (#166).
+- **Compute backend swapped to `climate-lama-engine`** — every backend
+  handler (`impact`, `costben`, `hazard`, `exposure`, `entity`,
+  `base_handler`, `run_scenario`) now routes through
+  `backend/engine/adapter.py`. `climate-lama-engine` is the default and
+  only runtime compute backend after #164 (default flip) and #166
+  (CLIMADA removal). `climate_lama_engine` may be imported only from
+  `backend/engine/`; enforced by `scripts/check_engine_imports.py` in
+  CI per [`CONTRIBUTING.md` § Tooling & quality gates](CONTRIBUTING.md).
+- **Provenance schema** — scenario rows now persist
+  `engine: "climate-lama-engine"` and `engine_version`. The legacy
+  `climada_version` column is nullable and `NULL` for all post-#164
+  rows; pre-cutover rows keep their original value for traceability.
+
+### Removed
+
+- **`climada==6.1.0` removed from runtime deps** (#166) — gone from
+  `pyproject.toml`, `requirements/requirements.txt`, and
+  `requirements/environment.yml`. `python -c "import climada"` now
+  raises `ModuleNotFoundError` in a clean install.
+- **v1 CLIMADA-only handler tests deleted** (#167) —
+  `backend/{impact,exposure,hazard}/test_*_handler.py` removed; their
+  meaningful assertions are covered by the engine-branch unit tests
+  added across Track 3 and the parity suite under `tests/parity/`.
+
+### Bundle delta
+
+Bundle benchmark refreshed in #165 against the post-cutover dependency
+tree; numbers recorded in
+[`docs/spikes/adr-bundling.md` §4.4](docs/spikes/adr-bundling.md) and
+the v2.x section of
+[`docs/reference/benchmarks.md`](docs/reference/benchmarks.md).
+The Phase 6 ADR §7 target of ≤ 250 MB (re-baselined from the original
+"~50 MB Track B daydream" per [DECISIONS.md D26](docs/DECISIONS.md))
+is met on at least one Nuitka configuration.
 
 ## [2.0.0-rc.1] - 2026-04-28
 

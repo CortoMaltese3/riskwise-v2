@@ -22,8 +22,8 @@ RISK WISE is a Graphical User Interface (GUI) for [CLIMADA](https://wcr.ethz.ch/
 
   These requirements are typical for a general-use laptop/PC.
 
-2. CLIMADA API dependency
-   RISK WISE frequently communicates with CLIMADA's API to fetch and validate datasets, among other tasks. API availability is crucial if the API is not accessible, significant functionality issues will arise. RISK WISE uses .hdf5 files for Exposure and Hazard data, obtainable from sources [ETH-Zurich Research Collection](https://www.research-collection.ethz.ch/) and [NASA’s Socioeconomic Data and Applications Center (sedac)](https://sedac.ciesin.columbia.edu/data/collection/gpw-v4/sets/browse). The application's Python backend fetches these files. In their absence, users can provide the necessary parameters, and the application will find, download, and store the datasets.
+2. Datasets
+   RISK WISE uses `.hdf5` and GeoTIFF files for hazard data and `.xlsx` files for entity / exposure data. ERA scenario datasets for Egypt and Thailand ship inside the installer (see [DECISIONS.md D25](docs/DECISIONS.md)); custom-mode users supply their own files following the schemas documented in [`docs/reference/extending.md`](docs/reference/extending.md). Source datasets are available from [ETH-Zurich Research Collection](https://www.research-collection.ethz.ch/) and [NASA's Socioeconomic Data and Applications Center (sedac)](https://sedac.ciesin.columbia.edu/data/collection/gpw-v4/sets/browse). The Python backend reads these files via `backend/engine/loaders/` (HDF5, raster, XLSX, GeoPackage); there is no runtime network dependency on a CLIMADA-style remote dataset client post-Phase-6.
 
 ## Setup and Running the Application
 
@@ -36,7 +36,7 @@ RISK WISE is a Graphical User Interface (GUI) for [CLIMADA](https://wcr.ethz.ch/
    git checkout main
    ```
 2. **Set Up a Virtual Environment** (optional but recommended):
-   _Setting up a local environment is only required to test different parts of the application, for example using Jupyter notebooks to run custom climate scenarios. The application itself does not require a local environment to work, it comes bundled with the frozen climada_env conda environment which includes everything needed for the application to work._
+   _Setting up a local environment is only required to test different parts of the application, for example using Jupyter notebooks to run custom climate scenarios. The application itself does not require a local environment to work — it ships with a bundled Python runtime that includes the [`climate-lama-engine`](https://pypi.org/project/climate-lama-engine/) compute layer (the maintainer's NumPy/SciPy-only risk-assessment library; replaced CLIMADA in Phase 6, see [`docs/DECISIONS.md` D26](docs/DECISIONS.md))._
 
    ```sh
    # Using venv
@@ -56,6 +56,10 @@ RISK WISE is a Graphical User Interface (GUI) for [CLIMADA](https://wcr.ethz.ch/
    ```sh
    pip install -r requirements/requirements.txt
    ```
+
+   This installs `climate-lama-engine` and the geospatial / data stack
+   (NumPy, SciPy, h5py, rasterio, pyproj, openpyxl, duckdb, fastapi, …).
+   `climada` is no longer a runtime dependency.
 
 4. **Install Dependencies for the frontend**:
    Before running the app locally, make sure Node.js is installed. Download and install Node.js from [the official Node.js website](https://nodejs.org/). After installing Node.js, navigate to the root directory of the app where the `package.json` file exists using your terminal or command prompt. Then, run the following command to install the dependencies:
