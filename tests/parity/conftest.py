@@ -227,12 +227,12 @@ def _run_one_backend(
     real_impact = ImpactHandler.calculate_impact
     real_cb = CostBenefitHandler.calculate_cost_benefit
 
-    def _wrapped_impact(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+    def _wrapped_impact(self, *args, **kwargs):
         result = real_impact(self, *args, **kwargs)
         captured["impacts"].append(result)
         return result
 
-    def _wrapped_cb(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+    def _wrapped_cb(self, *args, **kwargs):
         result = real_cb(self, *args, **kwargs)
         captured["cost_benefit"] = result
         return result

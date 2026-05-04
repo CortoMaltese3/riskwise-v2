@@ -5,52 +5,107 @@
 # inside a venv that has the `bundle` extra installed:
 #
 #     uv sync --extra bundle
-#     ./scripts/build_engine.ps1
+#     ./scripts/build_engine.ps1                       # full bundle, --onefile (default)
+#     ./scripts/build_engine.ps1 -Mode standalone      # full bundle, --standalone (onedir)
+#     ./scripts/build_engine.ps1 -Lean                 # engine-path bundle (no CLIMADA), --onefile
+#     ./scripts/build_engine.ps1 -Mode standalone -Lean
 #
-# Output: dist/nuitka/riskwise-engine.exe
+# Output:
+#   default          : dist/nuitka/riskwise-engine.exe
+#   -Mode standalone : dist/nuitka-standalone/riskwise-engine.dist/riskwise-engine.exe
 #
-# Do not "optimise" flags here without updating the ADR first — the flag
-# set is part of the bundler decision, not a script detail.
+# -Lean drops the CLIMADA-specific Nuitka flags (--include-package=climada,
+# --include-package-data=climada) for measuring the engine-path bundle per
+# issue #165. The default (no -Lean) preserves the exact ADR §3.2 flag set.
+#
+# Do not "optimise" the default flag set here without updating the ADR first --
+# the flag set is part of the bundler decision, not a script detail.
 
 #Requires -Version 5.1
+[CmdletBinding()]
+param(
+    [ValidateSet('onefile', 'standalone')]
+    [string]$Mode = 'onefile',
+
+    [switch]$Lean
+)
+
 $ErrorActionPreference = 'Stop'
 
 # Run from the repo root regardless of where the caller invoked us.
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 Set-Location $RepoRoot
 
-New-Item -ItemType Directory -Force -Path 'dist/nuitka' | Out-Null
+if ($Mode -eq 'onefile') {
+    $outputDir = 'dist/nuitka'
+} else {
+    $outputDir = 'dist/nuitka-standalone'
+}
 
-python -m nuitka `
-  --standalone `
-  --onefile `
-  --python-flag=no_site `
-  --assume-yes-for-downloads `
-  --enable-plugin=numpy `
-  --enable-plugin=pylint-warnings `
-  --include-package=climada `
-  --include-package=rasterio `
-  --include-package=fiona `
-  --include-package=pyproj `
-  --include-package-data=climada `
-  --include-package-data=rasterio `
-  --include-package-data=pyproj `
-  --include-package-data=shapely `
-  --include-package-data=backend `
-  --nofollow-import-to=matplotlib `
-  --nofollow-import-to=tkinter `
-  --nofollow-import-to=IPython `
-  --nofollow-import-to=notebook `
-  --output-dir=dist/nuitka `
-  --output-filename=riskwise-engine.exe `
-  --company-name="RISK WISE" `
-  --product-name="RISK WISE Engine" `
-  --file-version=2.0.0.0 `
-  --product-version=2.0.0.0 `
-  backend/__main__.py
+New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
+
+$nuitkaArgs = @(
+    '--standalone',
+    '--python-flag=no_site',
+    '--assume-yes-for-downloads',
+    '--enable-plugin=numpy',
+    '--enable-plugin=pylint-warnings'
+)
+
+if ($Mode -eq 'onefile') {
+    $nuitkaArgs += '--onefile'
+}
+
+if (-not $Lean) {
+    $nuitkaArgs += @(
+        '--include-package=climada',
+        '--include-package-data=climada'
+    )
+}
+
+$nuitkaArgs += @(
+    '--include-package=rasterio',
+    '--include-package=fiona',
+    '--include-package=pyproj',
+    '--include-package-data=rasterio',
+    '--include-package-data=pyproj',
+    '--include-package-data=shapely',
+    '--include-package-data=backend',
+    '--nofollow-import-to=matplotlib',
+    '--nofollow-import-to=tkinter',
+    '--nofollow-import-to=IPython',
+    '--nofollow-import-to=notebook',
+    "--output-dir=$outputDir",
+    '--output-filename=riskwise-engine.exe',
+    '--company-name=RISK WISE',
+    '--product-name=RISK WISE Engine',
+    '--file-version=2.0.0.0',
+    '--product-version=2.0.0.0',
+    'backend/__main__.py'
+)
+
+& python -m nuitka @nuitkaArgs
 
 if ($LASTEXITCODE -ne 0) {
     throw "Nuitka build failed with exit code $LASTEXITCODE"
+}
+
+# Nuitka derives the standalone dist folder name from the entry-point
+# script's basename, so backend/__main__.py produces __main__.dist
+# regardless of --output-filename. Rename it to riskwise-engine.dist so
+# the on-disk layout matches the binary's product name and so the staged
+# shipped-data trees end up inside the bundle Nuitka actually wrote.
+# (Onefile mode does not have this problem -- the bootstrap exe lives
+# in $outputDir/ directly and the intermediate __main__.dist is unused
+# at runtime.)
+if ($Mode -eq 'standalone') {
+    $nuitkaDistRaw = Join-Path $outputDir '__main__.dist'
+    $nuitkaDistFinal = Join-Path $outputDir 'riskwise-engine.dist'
+    if (-not (Test-Path $nuitkaDistRaw)) {
+        throw "Expected Nuitka standalone dist at $nuitkaDistRaw -- did Nuitka change its naming convention?"
+    }
+    if (Test-Path $nuitkaDistFinal) { Remove-Item -Recurse -Force $nuitkaDistFinal }
+    Rename-Item -Path $nuitkaDistRaw -NewName 'riskwise-engine.dist'
 }
 
 # Copy the shipped-data trees alongside the engine .exe. They sit outside
@@ -58,21 +113,46 @@ if ($LASTEXITCODE -ne 0) {
 # country configs, or the requirements XLSX templates. The runtime
 # resolver in backend/constants.get_base_dir() returns
 # ``Path(sys.executable).parent`` under sys.frozen, which is exactly this
-# directory — see docs/spikes/adr-bundling.md §3.5.
-$BundleDir = Join-Path $RepoRoot 'dist/nuitka'
+# directory -- see docs/spikes/adr-bundling.md §3.5.
+if ($Mode -eq 'onefile') {
+    $BundleDir = Join-Path $RepoRoot $outputDir
+} else {
+    $BundleDir = Join-Path $RepoRoot (Join-Path $outputDir 'riskwise-engine.dist')
+}
 foreach ($tree in 'data', 'countries', 'requirements') {
     $src = Join-Path $RepoRoot $tree
     $dst = Join-Path $BundleDir $tree
     if (-not (Test-Path $src)) {
-        throw "Shipped-data tree missing at $src — cannot stage bundle"
+        throw "Shipped-data tree missing at $src -- cannot stage bundle"
     }
     if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
     Copy-Item -Recurse -Force $src $dst
 }
 
-Write-Host "Build complete: dist/nuitka/riskwise-engine.exe"
+# Post-build layout assertion. A 30-60 minute build that produces a bundle
+# in the wrong shape is the worst possible failure mode -- catch it here
+# rather than at the next ./scripts/measure_engine.ps1 invocation. Both
+# bundle modes ship the engine .exe and the data trees as siblings in
+# $BundleDir; the only difference is where $BundleDir sits.
+$expectedExe = Join-Path $BundleDir 'riskwise-engine.exe'
+if (-not (Test-Path $expectedExe)) {
+    throw "Post-build sanity check failed: engine exe missing at $expectedExe"
+}
+foreach ($tree in 'data', 'countries', 'requirements') {
+    $checkPath = Join-Path $BundleDir $tree
+    if (-not (Test-Path $checkPath)) {
+        throw "Post-build sanity check failed: shipped-data tree missing at $checkPath"
+    }
+}
+Write-Host "Post-build layout verified: $expectedExe + data/countries/requirements"
 
-# Azure Trusted Signing — guarded on AZURE_CLIENT_ID so unsigned dev/fork
+if ($Mode -eq 'onefile') {
+    Write-Host "Build complete: $outputDir/riskwise-engine.exe"
+} else {
+    Write-Host "Build complete: $outputDir/riskwise-engine.dist/riskwise-engine.exe"
+}
+
+# Azure Trusted Signing -- guarded on AZURE_CLIENT_ID so unsigned dev/fork
 # builds continue to work unchanged. When the six Azure env vars are set
 # (see docs/reference/signing.md § "Activation path B"), this block signs every PE
 # file in dist/nuitka (the engine onefile .exe plus any sibling DLLs that
@@ -80,7 +160,7 @@ Write-Host "Build complete: dist/nuitka/riskwise-engine.exe"
 # the Microsoft.Trusted.Signing.Client NuGet package on first use and
 # cached under dist/signing/ so repeated calls are cheap.
 if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_ID)) {
-    Write-Host "AZURE_CLIENT_ID not set — skipping Azure Trusted Signing (unsigned build)"
+    Write-Host "AZURE_CLIENT_ID not set -- skipping Azure Trusted Signing (unsigned build)"
 }
 else {
     foreach ($required in @(
@@ -91,11 +171,11 @@ else {
         'AZURE_CERT_PROFILE_NAME'
     )) {
         if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($required))) {
-            throw "AZURE_CLIENT_ID is set but $required is missing — refusing to produce a partially-signed build"
+            throw "AZURE_CLIENT_ID is set but $required is missing -- refusing to produce a partially-signed build"
         }
     }
 
-    Write-Host "Azure Trusted Signing credentials detected — signing engine binaries"
+    Write-Host "Azure Trusted Signing credentials detected -- signing engine binaries"
 
     $signingDir = Join-Path $RepoRoot 'dist/signing'
     New-Item -ItemType Directory -Force -Path $signingDir | Out-Null
@@ -116,7 +196,7 @@ else {
         }
     }
     if (-not $signtool) {
-        throw "signtool.exe not found on PATH or under Windows Kits — install the Windows 10 SDK"
+        throw "signtool.exe not found on PATH or under Windows Kits -- install the Windows 10 SDK"
     }
 
     # Fetch the Azure Trusted Signing client package (contains the signtool
@@ -147,9 +227,9 @@ else {
     $metadataFile = Join-Path $signingDir 'azure-signing-metadata.json'
     Set-Content -Path $metadataFile -Value $metadata -Encoding utf8
 
-    $targets = Get-ChildItem -Path 'dist/nuitka' -Recurse -File -Include *.exe, *.dll -ErrorAction SilentlyContinue
+    $targets = Get-ChildItem -Path $outputDir -Recurse -File -Include *.exe, *.dll -ErrorAction SilentlyContinue
     if (-not $targets) {
-        throw "No .exe/.dll files found under dist/nuitka — nothing to sign"
+        throw "No .exe/.dll files found under $outputDir -- nothing to sign"
     }
 
     foreach ($target in $targets) {
@@ -167,5 +247,5 @@ else {
         }
     }
 
-    Write-Host "Azure Trusted Signing complete — $($targets.Count) file(s) signed"
+    Write-Host "Azure Trusted Signing complete -- $($targets.Count) file(s) signed"
 }

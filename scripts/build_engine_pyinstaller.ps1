@@ -6,12 +6,22 @@
 # single CI invocation and produce apples-to-apples §4.4 rows.
 #
 #     uv sync --extra bundle
-#     ./scripts/build_engine_pyinstaller.ps1
+#     ./scripts/build_engine_pyinstaller.ps1          # full bundle
+#     ./scripts/build_engine_pyinstaller.ps1 -Lean    # engine-path bundle (no CLIMADA)
 #
 # Output: dist/pyinstaller/riskwise-engine/ (onedir for fair compare vs
 # Nuitka --standalone; see ADR §3.3 notes).
+#
+# -Lean drops --collect-submodules climada and --collect-data climada for
+# measuring the engine-path bundle per issue #165. Default preserves the
+# exact ADR §3.3 flag set.
 
 #Requires -Version 5.1
+[CmdletBinding()]
+param(
+    [switch]$Lean
+)
+
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
@@ -20,26 +30,40 @@ Set-Location $RepoRoot
 New-Item -ItemType Directory -Force -Path 'dist/pyinstaller' | Out-Null
 New-Item -ItemType Directory -Force -Path 'build/pyinstaller' | Out-Null
 
-pyinstaller `
-  --onedir `
-  --name riskwise-engine `
-  --distpath dist/pyinstaller `
-  --workpath build/pyinstaller `
-  --specpath build/pyinstaller `
-  --collect-submodules climada `
-  --collect-data climada `
-  --collect-data rasterio `
-  --collect-data pyproj `
-  --collect-data shapely `
-  --collect-data backend `
-  --exclude-module matplotlib `
-  --exclude-module tkinter `
-  --exclude-module IPython `
-  --exclude-module notebook `
-  --exclude-module PyQt5 `
-  --exclude-module PyQt6 `
-  --noconfirm `
-  backend/__main__.py
+$pyinstallerArgs = @(
+    '--onedir',
+    '--name', 'riskwise-engine',
+    '--distpath', 'dist/pyinstaller',
+    '--workpath', 'build/pyinstaller',
+    '--specpath', 'build/pyinstaller'
+)
+
+if (-not $Lean) {
+    $pyinstallerArgs += @(
+        '--collect-submodules', 'climada',
+        '--collect-data', 'climada'
+    )
+}
+
+$pyinstallerArgs += @(
+    '--collect-data', 'rasterio',
+    '--collect-data', 'pyproj',
+    '--collect-data', 'shapely',
+    '--collect-data', 'backend',
+    # --collect-data does not pick up non-Python files (e.g. .sql) from a
+    # source tree; add-data ensures the migration scripts travel with the bundle.
+    '--add-data', 'backend/db/migrations;backend/db/migrations',
+    '--exclude-module', 'matplotlib',
+    '--exclude-module', 'tkinter',
+    '--exclude-module', 'IPython',
+    '--exclude-module', 'notebook',
+    '--exclude-module', 'PyQt5',
+    '--exclude-module', 'PyQt6',
+    '--noconfirm',
+    'backend/__main__.py'
+)
+
+& pyinstaller @pyinstallerArgs
 
 if ($LASTEXITCODE -ne 0) {
     throw "PyInstaller build failed with exit code $LASTEXITCODE"
@@ -55,10 +79,25 @@ foreach ($tree in 'data', 'countries', 'requirements') {
     $src = Join-Path $RepoRoot $tree
     $dst = Join-Path $BundleDir $tree
     if (-not (Test-Path $src)) {
-        throw "Shipped-data tree missing at $src — cannot stage bundle"
+        throw "Shipped-data tree missing at $src -- cannot stage bundle"
     }
     if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
     Copy-Item -Recurse -Force $src $dst
 }
+
+# Post-build layout assertion -- mirrors scripts/build_engine.ps1. A
+# successful PyInstaller build that lands the .exe or staged data in an
+# unexpected place is a 30-minute waste; catch it here.
+$expectedExe = Join-Path $BundleDir 'riskwise-engine.exe'
+if (-not (Test-Path $expectedExe)) {
+    throw "Post-build sanity check failed: engine exe missing at $expectedExe"
+}
+foreach ($tree in 'data', 'countries', 'requirements') {
+    $checkPath = Join-Path $BundleDir $tree
+    if (-not (Test-Path $checkPath)) {
+        throw "Post-build sanity check failed: shipped-data tree missing at $checkPath"
+    }
+}
+Write-Host "Post-build layout verified: $expectedExe + data/countries/requirements"
 
 Write-Host "Build complete: dist/pyinstaller/riskwise-engine/"

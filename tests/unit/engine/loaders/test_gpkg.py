@@ -62,6 +62,8 @@ def test_load_returns_exposure_arrays(tmp_path: Path) -> None:
     arrays = load_exposures_gpkg(path)
 
     assert isinstance(arrays, ExposureArrays)
+    assert arrays.lat is not None
+    assert arrays.lon is not None
     np.testing.assert_allclose(arrays.values, [10.0, 20.0, 30.0])
     np.testing.assert_allclose(arrays.lat, [30.1, 30.2, 30.3], atol=1e-9)
     np.testing.assert_allclose(arrays.lon, [31.1, 31.2, 31.3], atol=1e-9)
@@ -86,6 +88,8 @@ def test_load_picks_up_optional_columns(tmp_path: Path) -> None:
     )
     arrays = load_exposures_gpkg(path)
 
+    assert arrays.deductible is not None
+    assert arrays.cover is not None
     np.testing.assert_allclose(arrays.deductible, [1.0, 2.0])
     np.testing.assert_allclose(arrays.cover, [50.0, 60.0])
     assert arrays.value_unit == "EUR"
@@ -102,6 +106,8 @@ def test_load_uses_explicit_lat_lon_columns(tmp_path: Path) -> None:
     )
     arrays = load_exposures_gpkg(path)
 
+    assert arrays.lat is not None
+    assert arrays.lon is not None
     np.testing.assert_allclose(arrays.lat, [42.5])
     np.testing.assert_allclose(arrays.lon, [13.0])
 

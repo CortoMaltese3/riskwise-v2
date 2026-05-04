@@ -53,6 +53,8 @@ def test_load_egy_returns_entity_bundle(egy_path: Path) -> None:
     assert bundle.exposures.values.shape == (50,)
     assert bundle.exposures.centroid_idx.shape == (50,)
     assert bundle.exposures.impf_id.shape == (50,)
+    assert bundle.exposures.lat is not None
+    assert bundle.exposures.lon is not None
     assert bundle.exposures.lat.shape == (50,)
     assert bundle.exposures.lon.shape == (50,)
     assert bundle.exposures.deductible is not None
@@ -144,6 +146,8 @@ def test_climada_parity_exposures(fixture_name: str, path: Path) -> None:
         pytest.skip(f"missing fixture: {path}")
     entity = _climada_entity(path)
     bundle = load_entity_xlsx(path)
+    assert bundle.exposures.lat is not None
+    assert bundle.exposures.lon is not None
 
     gdf = entity.exposures.gdf
     impf_col = _climada_impf_col(gdf)

@@ -368,6 +368,19 @@ wheels = [
 ]
 
 [[package]]
+name = "climate-lama-engine"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c7/fd/7b5d30eadc24705ad3abf949460e95ce0cde37d9f6336a9cc54142b89c27/climate_lama_engine-0.4.0.tar.gz", hash = "sha256:9a3c20de53e8e833bad46b1c84c567901cf4e9d61205b005ff7ac9d6934783a9", size = 25999, upload-time = "2026-05-01T19:35:39.759Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8a/3a/516e24878f41216116274fa73322eb8f943544a0b319d61aef2c2e28ceb3/climate_lama_engine-0.4.0-py3-none-any.whl", hash = "sha256:2fb38d9a30d4a0d45559a5aa636a509a7006957f1a8281379f520db75aed6778", size = 20508, upload-time = "2026-05-01T19:35:38.326Z" },
+]
+
+[[package]]
 name = "cloudpickle"
 version = "3.1.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1842,6 +1855,7 @@ version = "2.0.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "climada" },
+    { name = "climate-lama-engine" },
     { name = "duckdb" },
     { name = "fastapi" },
     { name = "geopandas" },
@@ -1876,6 +1890,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "climada", specifier = "==6.1.0" },
+    { name = "climate-lama-engine", specifier = "==0.4.0" },
     { name = "duckdb", specifier = ">=1.0,<2" },
     { name = "fastapi", specifier = ">=0.110,<1" },
     { name = "geopandas", specifier = ">=0.14,<2" },
