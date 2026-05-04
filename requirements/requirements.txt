@@ -11,9 +11,6 @@ docx2pdf==0.1.8
 docxtpl==0.20.2
 python-docx==1.2.0
 
-# CLIMADA pin: pyproject.toml is canonical; this file must match.
-climada==6.1.0
-
 # climate-lama-engine pin (DECISIONS.md D26): pyproject.toml is canonical;
 # this file must match. Hard-pinned per ADR §5.1 rule 5.
 climate-lama-engine==0.4.0

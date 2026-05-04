@@ -64,6 +64,8 @@ scripts/*
 !scripts/check_engine_imports.py
 # Issue #195 — backend import-scheme lint (forbid shallow ``from db import …``).
 !scripts/check_backend_imports.py
+# Issue #166 — CLIMADA import boundary lint (forbid any climada import in backend/).
+!scripts/check_climada_imports.py
 notes.txt
 
 # Issue #163 — parity test summary is regenerated on every pytest run; the

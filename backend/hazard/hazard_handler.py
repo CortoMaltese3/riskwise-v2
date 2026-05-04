@@ -36,16 +36,14 @@ Methods:
 """
 
 import json
-import os
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 from backend.base_handler import BaseHandler
-from climada.entity import Entity
-from climada.hazard import Hazard
 from backend.constants import (
     DATA_HAZARDS_DIR,
     DATA_TEMP_DIR,
@@ -72,27 +70,23 @@ class HazardHandler:
         hazard_type: str,
         source: str = None,
         filepath: Path = None,
-    ) -> Hazard:
+    ) -> Any:
         """
-        Retrieve a Hazard object.
+        Retrieve a Hazard object via the climate-lama-engine adapter.
 
-        Loads a Hazard object from a local file (mat, hdf5, or raster). When ``source`` is
-        omitted it defaults from ``hazard_type`` (drought→hdf5, flood→raster, heatwaves→hdf5).
+        Loads from a local HDF5 or raster file. When ``source`` is omitted it defaults
+        from ``hazard_type`` (drought→hdf5, flood→raster, heatwaves→hdf5).
 
         :param hazard_type: The type of hazard dataset to retrieve.
-        :type hazard_type: str
-        :param source: The source of the hazard dataset (e.g., "mat", "hdf5", "raster").
-        :type source: str, optional
+        :param source: The source of the hazard dataset (``"hdf5"`` or ``"raster"``).
         :param filepath: The filepath to the hazard dataset file.
-        :type filepath: Path, optional
-        :return: A Hazard object representing the retrieved hazard dataset.
-        :rtype: Hazard
+        :return: A ``climate_lama_engine.Hazard`` representing the retrieved dataset.
         :raises ValueError: If the specified source is invalid.
         """
-        if source and source not in ["mat", "hdf5", "raster"]:
+        if source and source not in ["hdf5", "raster"]:
             status_message = (
                 "Error while trying to create hazard object. "
-                "Source must be chosen from ['mat', 'hdf5', 'raster']"
+                "Source must be chosen from ['hdf5', 'raster']"
             )
             logger.log("error", status_message)
             raise ValueError(status_message)
@@ -104,29 +98,14 @@ class HazardHandler:
             if hazard_type == "heatwaves":
                 source = "hdf5"
 
-        if os.environ.get("RISKWISE_ENGINE_BACKEND", "engine") == "engine":
-            return self._get_hazard_via_engine(hazard_type, source, filepath)
+        return self._get_hazard_via_engine(hazard_type, source, filepath)
 
-        if source == "raster":
-            hazard = self._get_hazard_from_raster(filepath, hazard_type)
-        if source == "mat":
-            hazard = self._get_hazard_from_mat(filepath)
-        if source == "hdf5":
-            hazard = self._get_hazard_from_h5(filepath)
-            # Quick fix to change the hazard type from DR to D for droughts
-            if hazard_type == "drought":
-                hazard.haz_type = "D"
-
-        return hazard
-
-    def _get_hazard_via_engine(self, hazard_type: str, source: str, filepath: Path):
-        """Engine-backend equivalent of :meth:`get_hazard`.
+    def _get_hazard_via_engine(self, hazard_type: str, source: str, filepath: Path) -> Any:
+        """Load a hazard via the engine loaders + adapter.
 
         Routes through ``backend.engine.loaders.{hdf5,raster}`` and
         ``backend.engine.adapter.build_hazard`` so the produced object is a
-        ``climate_lama_engine.Hazard`` instead of a CLIMADA ``Hazard``. Legacy
-        ``.mat`` files have no engine loader and fall back to the CLIMADA
-        path, since the v2 hazard catalogue is HDF5/GeoTIFF only.
+        ``climate_lama_engine.Hazard``.
         """
         from backend.engine.adapter import build_hazard
         from backend.engine.loaders.hdf5 import load_hazard_h5
@@ -143,121 +122,13 @@ class HazardHandler:
                 haz_type=hazard_code,
                 intensity_unit="m",
             )
-        elif source == "hdf5":
+        else:
             arrays = load_hazard_h5(full_path)
-            # Match the CLIMADA path's "DR" → "D" remap for drought files.
+            # Drought files use "DR" in the source HDF5; remap to "D" for downstream code.
             if hazard_type == "drought":
                 arrays = replace(arrays, haz_type="D")
-        else:
-            return self._get_hazard_from_mat(filepath)
 
         return build_hazard(arrays)
-
-    def _get_hazard_from_raster(self, filepath: Path, hazard_type: str) -> Hazard:
-        try:
-            hazard_code = self.get_hazard_code(hazard_type)
-            # Fallback return periods scenario 10, 25, 50, 100 years
-            frequency = [0.1, 0.04, 0.02, 0.01]
-            if hazard_code == "HW":
-                # Return periods for heatwaves are 10, 25, 50, 75, 100 years
-                frequency = [0.1, 0.04, 0.02, 0.01333, 0.01]
-            elif hazard_code == "FL":
-                # Return periods for floods are 2, 5, 10, 25 years
-                frequency = [0.5, 0.2, 0.1, 0.04]
-            events = [i for i in range(1, len(frequency) + 1)]
-            hazard = Hazard.from_raster(
-                DATA_HAZARDS_DIR / filepath,
-                attrs={
-                    "frequency": np.array(frequency),
-                    "event_id": np.array(events),
-                    "units": "m",
-                },
-                haz_type=hazard_code,
-                band=events,
-            )
-            # Set intensity threshold. This step is required to generate meaningful maps
-            # as CLIMADA sets intensity_thres = 10 and in certain hazards this excludes all values.
-            intensity_thres = self.get_hazard_intensity_thres(hazard_type)
-            hazard.intensity_thres = intensity_thres
-
-            # Set the hazard code
-            hazard.haz_type = hazard_code
-            # Hazard intensity units are set according to the selected Entity file.
-            hazard.units = "m"
-
-            # This step is required to generate the lat/long columns and avoid issues
-            # with array size mismatch
-            hazard.centroids.set_geometry_points()
-            hazard.check()
-
-            return hazard
-        except Exception as exception:
-            logger.log(
-                "error",
-                "An unexpected error occurred while trying to create hazard object from mat file."
-                f"More info: {exception}",
-            )
-            return None
-
-    def _get_hazard_from_h5(self, filepath: Path) -> Hazard:
-        """
-        Retrieve a hazard dataset from an HDF5 file.
-
-        This method retrieves a hazard dataset from an HDF5 file located at the specified
-        filepath. It returns a Hazard object representing the retrieved dataset.
-
-        :param filepath: The filepath to the HDF5 file containing the hazard dataset.
-        :type filepath: Path
-        :return: A Hazard object representing the retrieved hazard dataset.
-        :rtype: Hazard
-        """
-        try:
-            hazard = Hazard().from_hdf5(DATA_HAZARDS_DIR / filepath)
-            hazard_type = hazard.haz_type
-            # Set intensity threshold according to hazard type
-            intensity_thres = self.get_hazard_intensity_thres(hazard_type)
-            hazard.intensity_thres = intensity_thres
-            hazard.check()
-
-            return hazard
-        except Exception as exception:
-            logger.log(
-                "error",
-                "An unexpected error occurred while trying to create hazard object from h5 file."
-                f"More info: {exception}",
-            )
-            return None
-
-    def _get_hazard_from_mat(self, filepath: Path) -> Hazard:
-        """
-        Retrieve a hazard dataset from a MATLAB file.
-
-        This method retrieves a hazard dataset from a MATLAB file located at the specified
-        filepath. It returns a Hazard object representing the retrieved dataset.
-
-        :param filepath: The filepath to the MATLAB file containing the hazard dataset.
-        :type filepath: Path
-        :return: A Hazard object representing the retrieved hazard dataset.
-        :rtype: Hazard
-        :raises ValueError: If an error occurs while retrieving the hazard dataset.
-        """
-        try:
-            hazard = Hazard().from_mat(DATA_HAZARDS_DIR / filepath)
-            hazard_type = hazard.haz_type
-            # Set intensity threshold according to hazard type
-            intensity_thres = self.get_hazard_intensity_thres(hazard_type)
-            hazard.intensity_thres = intensity_thres
-            # Hazard intensity units are set according to the selected Entity file.
-            hazard.units = ""
-
-            return hazard
-        except Exception as exception:
-            logger.log(
-                "error",
-                "An unexpected error occurred while trying to create hazard object from mat file."
-                f"More info: {exception}",
-            )
-            return None
 
     def get_hazard_intensity_thres(self, hazard_type: str) -> float:
         """
@@ -281,7 +152,7 @@ class HazardHandler:
             intensity_thres = -4  # TODO: Test if this is correct
         return intensity_thres
 
-    def get_hazard_intensity_units_from_entity(self, entity: Entity) -> str:
+    def get_hazard_intensity_units_from_entity(self, entity: Any) -> str:
         """
         Retrieve the intensity unit associated from the Entity impact function.
 
@@ -350,7 +221,7 @@ class HazardHandler:
 
     def generate_hazard_geojson(
         self,
-        hazard: Hazard,
+        hazard: Any,
         country_name: str,
         return_periods: tuple,
     ):
@@ -544,7 +415,7 @@ class HazardHandler:
         return hazard_filename
 
     def generate_hazard_report_dataset(
-        self, hazard: Hazard, country_name: str, return_periods: tuple
+        self, hazard: Any, country_name: str, return_periods: tuple
     ) -> pd.DataFrame:
         """
         Generate a dataset for hazard reporting.

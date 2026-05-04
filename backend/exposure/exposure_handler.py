@@ -20,22 +20,16 @@ Methods:
 """
 
 import json
-import os
-from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 import geopandas as gpd
 import pandas as pd
 from backend.base_handler import BaseHandler
-from climada.entity import Entity, Exposures
 from backend.constants import DATA_TEMP_DIR
 from backend.logger_config import LoggerConfig
 
 logger = LoggerConfig(logger_types=["file"])
-
-
-def _is_engine_backend() -> bool:
-    return os.environ.get("RISKWISE_ENGINE_BACKEND", "engine") == "engine"
 
 
 def _infer_source(filepath) -> str:
@@ -61,46 +55,27 @@ class ExposureHandler:
     def __init__(self):
         self.base_handler = BaseHandler()
 
-    def get_exposure(self, filepath: Path, source: str | None = None):
+    def get_exposure(self, filepath: Path, source: str | None = None) -> Any:
         """Load an exposure dataset from an XLSX or GeoPackage file.
 
-        Routes to the engine backend by default; setting
-        ``RISKWISE_ENGINE_BACKEND=climada`` selects the legacy CLIMADA path.
-        The engine branch routes through
-        :func:`backend.engine.loaders.xlsx.load_entity_xlsx` (for ``.xlsx``
+        Routes through :func:`backend.engine.loaders.xlsx.load_entity_xlsx` (for ``.xlsx``
         entity files) or :func:`backend.engine.loaders.gpkg.load_exposures_gpkg`
         (for ``.gpkg`` exposure files), then ``backend.engine.adapter.build_exposures``.
 
         :param filepath: Path to an entity XLSX or exposure GeoPackage file.
         :param source: Optional explicit source (``"xlsx"`` or ``"gpkg"``).
             When omitted, derived from the file extension.
-        :return: A ``climate_lama_engine.Exposures`` (default) or a CLIMADA
-            ``Exposures`` when ``RISKWISE_ENGINE_BACKEND=climada``.
+        :return: A ``climate_lama_engine.Exposures``.
         """
         source = source or _infer_source(filepath)
         if source not in ("xlsx", "gpkg"):
             raise ValueError(
                 f"Unsupported exposure source {source!r}; expected 'xlsx' or 'gpkg'"
             )
+        return self._get_exposure_via_engine(filepath, source)
 
-        if _is_engine_backend():
-            return self._get_exposure_via_engine(filepath, source)
-
-        if source == "xlsx":
-            entity = Entity.from_excel(filepath)
-            exposure = entity.exposures
-            exposure.gdf = exposure.gdf.loc[:, ~exposure.gdf.columns.str.contains("^Unnamed")]
-            return exposure
-        # source == "gpkg"
-        return Exposures(gpd.read_file(filepath))
-
-    def _get_exposure_via_engine(self, filepath: Path, source: str):
-        """Engine-backend equivalent of :meth:`get_exposure`.
-
-        Routes through the engine loaders and ``build_exposures`` so the
-        produced object is a ``climate_lama_engine.Exposures`` instead of a
-        CLIMADA ``Exposures``.
-        """
+    def _get_exposure_via_engine(self, filepath: Path, source: str) -> Any:
+        """Load an exposure via engine loaders + ``build_exposures``."""
         from backend.engine.adapter import build_exposures
         from backend.engine.loaders.gpkg import load_exposures_gpkg
         from backend.engine.loaders.xlsx import load_entity_xlsx
@@ -112,43 +87,33 @@ class ExposureHandler:
         return build_exposures(arrays)
 
     def get_growth_exposure(
-        self, exposure, annual_growth: float, future_year: int, ref_year: int | None = None
-    ):
+        self, exposure: Any, annual_growth: float, future_year: int, ref_year: int | None = None
+    ) -> Any:
         """Apply an annual-growth multiplier to an exposure's value array.
 
-        Multiplier: ``(1 + annual_growth) ** (future_year - ref_year)``. Works
-        identically on both backends — the CLIMADA branch returns a deep-copied
-        ``Exposures`` with multiplied ``gdf['value']``; the engine branch
-        returns a new ``cc.Exposures`` with multiplied ``value`` array.
+        Multiplier: ``(1 + annual_growth) ** (future_year - ref_year)``. Returns a
+        new ``cc.Exposures`` with multiplied ``value`` array.
 
-        :param exposure: A CLIMADA ``Exposures`` or a ``climate_lama_engine.Exposures``.
+        :param exposure: A ``climate_lama_engine.Exposures``.
         :param annual_growth: Annual growth rate (e.g. ``0.02`` for 2 %/yr).
         :param future_year: Target year for the multiplied exposure.
         :param ref_year: Reference year. Defaults to ``exposure.ref_year`` when
-            present (CLIMADA path) and ``2020`` otherwise (engine path; matches
-            the XLSX loader's default).
+            present, ``2020`` otherwise (matches the XLSX loader's default).
         """
         try:
-            from backend.engine.adapter import is_engine_exposures, replace_exposures_value
+            from backend.engine.adapter import replace_exposures_value
 
             if ref_year is None:
                 ref_year = getattr(exposure, "ref_year", 2020)
             multiplier = (1 + annual_growth) ** (future_year - ref_year)
-
-            if is_engine_exposures(exposure):
-                return replace_exposures_value(exposure, exposure.value * multiplier)
-
-            exposure_future = deepcopy(exposure)
-            exposure_future.ref_year = future_year
-            exposure_future.gdf["value"] = exposure_future.gdf["value"] * multiplier
-            return exposure_future
+            return replace_exposures_value(exposure, exposure.value * multiplier)
         except Exception as exc:
             logger.log(
                 "error", f"An error occurred while trying to calculate exposure growth rate: {exc}"
             )
             return None
 
-    def generate_exposure_geojson(self, exposure: Exposures, country_name: str):
+    def generate_exposure_geojson(self, exposure: Any, country_name: str):
         """
         Generate GeoJSON files for exposure data.
 
@@ -207,7 +172,7 @@ class ExposureHandler:
             logger.log("error", f"An unexpected error occurred: {e}")
 
     def generate_exposure_report_dataset(
-        self, exposure: Exposures, country_name: str
+        self, exposure: Any, country_name: str
     ) -> pd.DataFrame:
         """
         Generate a dataset for exposure reporting.

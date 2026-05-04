@@ -26,11 +26,11 @@ Homepage: https://www.openstreetmap.org/copyright
 Map data © OpenStreetMap contributors, available under the Open Database License (ODbL).
 Tiles courtesy of the OpenStreetMap Foundation; usage subject to the OSMF tile-usage policy.
 
-### CLIMADA reference datasets
-License: ETH Zurich CLIMADA license
-Homepage: https://github.com/CLIMADA-project/climada_python
+### climate-lama-engine reference datasets
+License: MIT
+Homepage: https://github.com/CortoMaltese3/climate-lama-engine
 
-Hazard, exposure, and impact-function reference datasets redistributed under the CLIMADA license terms published by ETH Zurich. Refer to the upstream LICENSE in the climada_python repository for the full text.
+Hazard, exposure, and impact-function reference datasets redistributed under the climate-lama-engine MIT license. The engine compute layer replaces the legacy CLIMADA dependency removed in #166; refer to the upstream LICENSE in the climate-lama-engine repository for the full text.
 
 ### Inter font family
 License: SIL OFL 1.1

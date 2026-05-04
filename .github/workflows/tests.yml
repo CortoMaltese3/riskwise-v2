@@ -65,6 +65,12 @@ jobs:
       - name: Engine import boundary
         run: python scripts/check_engine_imports.py
 
+      # Issue #166: CLIMADA is gone from runtime deps. Forbid any new
+      # ``import climada`` / ``from climada`` line in ``backend/`` so the
+      # removal does not silently regress.
+      - name: CLIMADA import boundary
+        run: python scripts/check_climada_imports.py
+
       # Issue #195: every in-repo import must be rooted at the ``backend``
       # package. Shallow ``from db import …`` style only resolves when
       # ``backend/`` itself is on ``sys.path`` and silently breaks the
@@ -239,11 +245,5 @@ jobs:
       # audited so silent gaps don't mask CVEs. Treat any unpatched
       # vulnerability as a release-blocker; downgrade only via an explicit
       # `--ignore-vuln <id>` with a justification.
-      # `climada` is excluded because it depends on GDAL, which requires
-      # building from source against system libgdal — a version mismatch on
-      # ubuntu-latest causes the build to fail regardless of --no-deps.
-      # climada and GDAL have no known CVEs in the pinned range.
       - name: pip-audit (requirements)
-        run: |
-          grep -v '^climada' requirements/requirements.txt > /tmp/requirements_audit.txt
-          pip-audit --strict --requirement /tmp/requirements_audit.txt
+        run: pip-audit --strict --requirement requirements/requirements.txt
