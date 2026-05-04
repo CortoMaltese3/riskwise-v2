@@ -26,17 +26,12 @@ Methods:
 """
 
 import json
-import os
+from typing import Any
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 from shapely.geometry import Point
-
-from climada.engine import Impact, ImpactCalc
-from climada.entity import Exposures
-from climada.entity.impact_funcs import ImpactFuncSet
-from climada.hazard import Hazard
 
 from backend.base_handler import BaseHandler
 from backend.constants import DATA_TEMP_DIR
@@ -47,8 +42,8 @@ logger = LoggerConfig(logger_types=["file"])
 
 # Map the user-facing hazard names accepted by ``get_impact_function_set``
 # (matching ``request_data.hazard_type`` strings such as "flood" / "drought")
-# to the CLIMADA hazard codes used in the JSON registry. Unknown values are
-# passed through unchanged so callers can also supply CLIMADA codes directly.
+# to the engine hazard codes used in the JSON registry. Unknown values are
+# passed through unchanged so callers can also supply codes directly.
 _HAZARD_SELECTOR_TO_HAZ_TYPE: dict[str, str] = {
     "flood": "FL",
     "drought": "D",
@@ -58,28 +53,11 @@ _HAZARD_SELECTOR_TO_HAZ_TYPE: dict[str, str] = {
 _registry_cache: ImpactFunctionRegistry | None = None
 
 
-def _calculate_via_climada(
-    exposure: Exposures,
-    hazard: Hazard,
-    impact_function_set: ImpactFuncSet,
-) -> Impact | None:
-    try:
-        impact_calc = ImpactCalc(
-            exposures=exposure,
-            impfset=impact_function_set,
-            hazard=hazard,
-        )
-        return impact_calc.impact(save_mat=True, assign_centroids=True)
-    except Exception as exception:
-        logger.log("error", f"An error occurred during impact calculation: More info: {exception}")
-        return None
-
-
 def _calculate_via_engine(
-    exposure: Exposures,
-    hazard: Hazard,
-    impact_function_set,
-) -> Impact | None:
+    exposure: Any,
+    hazard: Any,
+    impact_function_set: Any,
+) -> Any:
     from backend.engine.adapter import build_exposures, build_hazard, run_impact
     from backend.engine.types import ExposureArrays, HazardArrays
 
@@ -171,23 +149,22 @@ class ImpactHandler:
     def __init__(self) -> None:
         self.base_handler = BaseHandler()
 
-    def get_impact_function_set(self, exposure_type: str, hazard_type: str) -> ImpactFuncSet:
+    def get_impact_function_set(self, exposure_type: str, hazard_type: str) -> Any:
         """
         Get the impact function based on the given exposure type and hazard type.
 
-        Selection is now a registry lookup — the underlying definitions live in
+        Selection is a registry lookup — the underlying definitions live in
         ``countries/<ISO3>/impact_functions.json`` and are validated for
         intensity monotonicity, unit consistency, and ``(haz_type, exp_type, id)``
         uniqueness when the registry is loaded. Caller-facing strings
-        (``"flood"`` / ``"drought"``) are translated to CLIMADA hazard codes;
-        callers may also pass a CLIMADA code directly.
+        (``"flood"`` / ``"drought"``) are translated to engine hazard codes;
+        callers may also pass a code directly.
 
         :param exposure_type: The type of exposure.
         :type exposure_type: str
         :param hazard_type: The type of hazard.
         :type hazard_type: str
         :return: An ImpactFuncSet object representing the impact function.
-        :rtype: ImpactFuncSet
         """
         haz_type = _HAZARD_SELECTOR_TO_HAZ_TYPE.get(hazard_type, hazard_type)
         return _get_registry().get_set(exposure_type, haz_type)
@@ -209,26 +186,19 @@ class ImpactHandler:
         return impf_ids.get(hazard_type, impf_ids["DEFAULT"])
 
     def calculate_impact(
-        self, exposure: Exposures, hazard: Hazard, impact_function_set: ImpactFuncSet
-    ) -> Impact:
+        self, exposure: Any, hazard: Any, impact_function_set: Any
+    ) -> Any:
         """
         Calculate the impact of a hazard on exposure data using specified impact functions.
 
-        Routes to the engine backend by default; setting
-        ``RISKWISE_ENGINE_BACKEND=climada`` selects the legacy CLIMADA path.
+        Routes through the climate-lama-engine adapter.
 
         :param exposure: The exposure data.
-        :type exposure: Exposures
         :param hazard: The hazard data.
-        :type hazard: Hazard
         :param impact_function_set: The set of impact functions corresponding to the hazard.
-        :type impact_function_set: ImpactFuncSet
         :return: The Impact object representing the calculated impact, or None if an error occurs.
-        :rtype: Impact
         """
-        if os.environ.get("RISKWISE_ENGINE_BACKEND", "engine") == "engine":
-            return _calculate_via_engine(exposure, hazard, impact_function_set)
-        return _calculate_via_climada(exposure, hazard, impact_function_set)
+        return _calculate_via_engine(exposure, hazard, impact_function_set)
 
     def get_circle_radius(self, hazard_type: str, country_iso3: str, exposure_type: str) -> int:
         """
@@ -291,7 +261,7 @@ class ImpactHandler:
 
     def generate_impact_geojson(
         self,
-        impact: Impact,
+        impact: Any,
         country_name: str,
         return_periods: tuple = (25, 20, 15, 10),
         asset_type: str = "economic",
@@ -376,7 +346,7 @@ class ImpactHandler:
             logger.log("error", f"An unexpected error occurred. More info: {exception}")
 
     def generate_impact_report_dataset(
-        self, impact: Impact, country_name: str, return_periods: tuple, asset_type: str
+        self, impact: Any, country_name: str, return_periods: tuple, asset_type: str
     ) -> pd.DataFrame:
         """
         Generate a dataset for impact reporting.

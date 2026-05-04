@@ -2,7 +2,7 @@
 
 The integration tests exercise the real :mod:`backend.app` via
 :class:`fastapi.testclient.TestClient`, against a freshly migrated DuckDB in
-a temp directory. Heavy CLIMADA entrypoints (``_run_scenario_sync``,
+a temp directory. Heavy engine entrypoints (``_run_scenario_sync``,
 ``_dispatch_sync``) are monkey-patched per-test so the suite runs in a
 vanilla Python environment without the geospatial stack.
 
@@ -25,14 +25,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 
-# The dispatched run_fetch_*.py scripts transitively import CLIMADA at
-# module top. Installing the full geospatial stack in CI would blow the
-# test budget — and the integration suite only asserts API shape, not
-# CLIMADA numerics — so stub the modules here in the same conservative
-# fashion as ``tests/unit/conftest.py``: skip if the real package is
-# importable so a local environment that has it keeps the real
-# implementation.
-class _ClimadaStub:
+class _GeoStub:
     def __init__(self, *_: object, **__: object) -> None:
         pass
 
@@ -49,30 +42,12 @@ def _stub_module(name: str, **attrs: object) -> None:
         sys.modules[name] = module
 
 
-_stub_module("climada")
-_stub_module("climada.util")
-_stub_module("climada.util.api_client", Client=_ClimadaStub)
-_stub_module(
-    "climada.entity",
-    DiscRates=_ClimadaStub,
-    Entity=_ClimadaStub,
-    Exposures=_ClimadaStub,
-    ImpactFuncSet=_ClimadaStub,
-)
-_stub_module("climada.entity.measures", MeasureSet=_ClimadaStub)
-_stub_module("climada.entity.impact_funcs", ImpactFunc=_ClimadaStub, ImpactFuncSet=_ClimadaStub)
-_stub_module(
-    "climada.engine", CostBenefit=_ClimadaStub, Impact=_ClimadaStub, ImpactCalc=_ClimadaStub
-)
-_stub_module(
-    "climada.engine.cost_benefit",
-    NO_MEASURE="no measure",
-    risk_aai_agg=lambda *_, **__: None,
-)
-_stub_module("climada.hazard", Hazard=_ClimadaStub)
-_stub_module("geopandas", GeoDataFrame=_ClimadaStub, read_file=lambda *_, **__: None)
+# Optional geospatial-stack stubs so the FastAPI integration suite can run
+# without geopandas / shapely installed. After #166 CLIMADA itself is gone
+# from the dependency tree.
+_stub_module("geopandas", GeoDataFrame=_GeoStub, read_file=lambda *_, **__: None)
 _stub_module("shapely")
-_stub_module("shapely.geometry", Point=_ClimadaStub)
+_stub_module("shapely.geometry", Point=_GeoStub)
 
 
 import duckdb  # noqa: E402

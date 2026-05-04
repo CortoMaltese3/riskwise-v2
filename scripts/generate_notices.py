@@ -16,8 +16,8 @@ bit-identical bytes:
   * Components are sorted by ``(group, name, version)`` with case-folded keys
     so platform-specific filesystem ordering does not leak in.
   * The generator never reads the wall clock — no timestamps in the output.
-  * Static asset blocks (GADM, OSM, CLIMADA, Inter) are emitted in a fixed
-    order from the constants below.
+  * Static asset blocks (GADM, OSM, climate-lama-engine, Inter) are emitted
+    in a fixed order from the constants below.
   * The file ends with a single trailing ``\n`` and uses LF line endings on
     every platform.
 """
@@ -80,14 +80,15 @@ STATIC_ASSETS: list[StaticAsset] = [
         ),
     },
     {
-        "title": "CLIMADA reference datasets",
-        "license": "ETH Zurich CLIMADA license",
-        "homepage": "https://github.com/CLIMADA-project/climada_python",
+        "title": "climate-lama-engine reference datasets",
+        "license": "MIT",
+        "homepage": "https://github.com/CortoMaltese3/climate-lama-engine",
         "notice": (
             "Hazard, exposure, and impact-function reference datasets "
-            "redistributed under the CLIMADA license terms published by ETH "
-            "Zurich. Refer to the upstream LICENSE in the climada_python "
-            "repository for the full text."
+            "redistributed under the climate-lama-engine MIT license. The "
+            "engine compute layer replaces the legacy CLIMADA dependency "
+            "removed in #166; refer to the upstream LICENSE in the "
+            "climate-lama-engine repository for the full text."
         ),
     },
     {

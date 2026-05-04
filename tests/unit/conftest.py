@@ -1,11 +1,9 @@
-"""Stub the CLIMADA package so pure-function tests don't need the geospatial stack.
+"""Optional geospatial-stack stubs for pure-function tests.
 
-The handlers under test (``base_handler.BaseHandler``, ``hazard.hazard_handler``)
-import ``climada.*`` at module top. Installing the real package in CI would
-pull the entire geospatial dependency tree for tests that only exercise
-string munging and a DataFrame bucket-assignment loop. The stubs below stand
-in for the handful of names imported at module level; any test that actually
-needs CLIMADA behaviour belongs in an integration suite, not here.
+After #166 the CLIMADA package is gone — handler modules no longer import
+``climada.*``. The stubs below now only cover ``geopandas`` / ``shapely`` /
+``pycountry`` so unit tests that touch ``base_handler`` can run without the
+full geospatial stack on disk.
 """
 
 from __future__ import annotations
@@ -37,25 +35,6 @@ def _stub_module(name: str, **attrs: object) -> None:
         sys.modules[name] = mod
 
 
-_stub_module("climada")
-_stub_module("climada.util")
-_stub_module("climada.util.api_client", Client=_Stub)
-_stub_module(
-    "climada.entity",
-    DiscRates=_Stub,
-    Entity=_Stub,
-    Exposures=_Stub,
-    ImpactFuncSet=_Stub,
-)
-_stub_module("climada.entity.measures", MeasureSet=_Stub)
-_stub_module("climada.entity.impact_funcs", ImpactFunc=_Stub, ImpactFuncSet=_Stub)
-_stub_module("climada.engine", CostBenefit=_Stub, Impact=_Stub, ImpactCalc=_Stub)
-_stub_module(
-    "climada.engine.cost_benefit",
-    NO_MEASURE="no measure",
-    risk_aai_agg=lambda *_, **__: None,
-)
-_stub_module("climada.hazard", Hazard=_Stub)
 _stub_module("geopandas", GeoDataFrame=_Stub, read_file=lambda *_, **__: None)
 _stub_module("shapely")
 _stub_module("shapely.geometry", Point=_Stub)

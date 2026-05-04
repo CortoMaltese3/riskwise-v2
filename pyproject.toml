@@ -5,24 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "riskwise-backend"
 version = "2.0.0-dev"
-description = "RISK WISE v2 Python backend (CLIMADA + FastAPI loopback engine)"
+description = "RISK WISE v2 Python backend (climate-lama-engine + FastAPI loopback engine)"
 requires-python = ">=3.11,<3.13"
 readme = "README.md"
 license = { file = "LICENSE" }
 
 # Lean v2 runtime set. Kept packages only — every entry here must be
-# justified against one of: (a) core CLIMADA compute path, (b) typed HTTP
+# justified against one of: (a) climate-lama-engine compute path, (b) typed HTTP
 # API (D02 / Area 5), (c) DuckDB scenario store (D03), (d) file formats
 # used by seed data that cannot be replaced. See DECISIONS.md D05 and
 # docs/spikes/adr-bundling.md for the rationale and for
 # the removed-package list.
 dependencies = [
-    # Canonical CLIMADA pin — requirements/requirements.txt and
-    # requirements/environment.yml must match this version (see DECISIONS.md D05).
-    # Phase 6 (DECISIONS.md D26) adds climate-lama-engine as a parallel install;
-    # CLIMADA stays for the duration of Tracks 1–4 to support side-by-side
-    # parity testing. Track 6 (#166) removes this pin.
-    "climada==6.1.0",
     # Engine compute layer (DECISIONS.md D26 / adr-climate-lama-engine-adoption.md).
     # Hard-pinned per ADR §5.1 rule 5; requirements/requirements.txt and
     # requirements/environment.yml must match. Only backend/engine/adapter.py
@@ -54,7 +48,7 @@ dev = [
     "mypy>=1.10",
 ]
 bundle = [
-    # Pinned ranges validated against Python 3.12 + CLIMADA 6.1.0.
+    # Pinned ranges validated against Python 3.12 + climate-lama-engine 0.4.0.
     # Bumping either side requires re-running the build matrix in
     # docs/spikes/adr-bundling.md §5.
     "nuitka>=2.4,<5",
@@ -176,6 +170,7 @@ testpaths = ["tests", "backend"]
 # would let shallow ``from db import …`` reappear and break the boot path.
 pythonpath = ["."]
 # v1 handler tests (backend/{exposure,hazard,impact,entity,report}/test_*.py) import
-# CLIMADA at module top and have never been wired into a runnable harness.
-# Re-enabling them is out of scope for #14; skip collection so `pytest` is green.
+# the legacy CLIMADA package at module top and have never been wired into a runnable
+# harness. They are scoped for deletion in a follow-up issue (#T5.2); skip
+# collection so ``pytest`` is green.
 addopts = ["--ignore-glob=backend/*/test_*.py"]
