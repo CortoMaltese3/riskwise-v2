@@ -18,8 +18,6 @@ import baseTheme from "./theme/theme";
 import { isRtl } from "./i18nConfig";
 import useStore from "./store";
 
-import "./App.css";
-
 const printParams = new URLSearchParams(window.location.search);
 const isPrintView = printParams.get("view") === "print";
 const printScenarioId = printParams.get("scenarioId") ?? "";
