@@ -20,6 +20,14 @@ import pytest
 geopandas = pytest.importorskip("geopandas")
 shapely = pytest.importorskip("shapely")
 
+# tests/unit/conftest.py registers a `_Stub`-backed fake `geopandas` when
+# the real package isn't on the runner (CI's lean install posture).
+# `pytest.importorskip` accepts the stub because the module name resolves,
+# but the stub's GeoDataFrame can't write GPKGs — skip explicitly so the
+# suite stays green in lean envs and runs in full geo envs.
+if not hasattr(geopandas.GeoDataFrame, "to_file"):
+    pytest.skip("real geopandas not installed (stub active)", allow_module_level=True)
+
 from shapely.geometry import Point  # noqa: E402
 
 from backend.engine.loaders import EntityLoadError, load_exposures_gpkg  # noqa: E402
