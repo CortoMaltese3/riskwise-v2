@@ -167,9 +167,3 @@ testpaths = ["tests", "backend"]
 # so pytest only needs the repo root on sys.path. Adding ``backend/`` here
 # would let shallow ``from db import …`` reappear and break the boot path.
 pythonpath = ["."]
-# Remaining v1 handler tests (backend/{entity,report}/test_*.py) import the
-# legacy CLIMADA package at module top and have never been wired into a
-# runnable harness. The impact/exposure/hazard equivalents were deleted in
-# issue #167; entity/report stubs are scheduled for deletion in a later
-# follow-up. Skip collection so ``pytest`` is green.
-addopts = ["--ignore-glob=backend/*/test_*.py"]
