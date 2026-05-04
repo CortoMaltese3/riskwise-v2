@@ -11,6 +11,10 @@ node_modules
 build
 dist
 
+# playwright artefacts (regenerated on every test run)
+playwright-report
+test-results
+
 # backend
 __pycache__
 backend_diff.txt

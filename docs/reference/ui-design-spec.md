@@ -81,7 +81,7 @@ Phase 8 does not introduce new states; it asserts that every region migrated to 
 
 ## Internationalisation width
 
-- Supported locales: `en`, `de` (German is the longest-string benchmark), `ar` (RTL test target), `th` (Phase 3).
+- Supported locales: `en` (default), `ar` (RTL test target), `th` (Phase 3 — also serves as the longest-rendered-string benchmark in the absence of a German locale).
 - Sidebar labels and primary buttons must not truncate in any supported locale at the viewport floor. A label that cannot fit is a content / design issue surfaced as a sub-phase 8.7 verification finding, not silently truncated.
 
 ## Print
@@ -101,7 +101,7 @@ npm run test:e2e          # includes a11y.spec.ts and rtl.spec.ts
 npm run start:electron    # full rebuild — do not use quickstart for spec verification
 ```
 
-Plus, manual at 1280 × 720 / 1366 × 768 / 1920 × 1080 in `en` / `de` / `ar`:
+Plus, manual at 1280 × 720 / 1366 × 768 / 1920 × 1080 in `en` / `ar` / `th`:
 
 - No page-level scrollbar.
 - No clipped controls.
