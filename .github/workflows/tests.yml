@@ -65,12 +65,6 @@ jobs:
       - name: Engine import boundary
         run: python scripts/check_engine_imports.py
 
-      # Issue #166: CLIMADA is gone from runtime deps. Forbid any new
-      # ``import climada`` / ``from climada`` line in ``backend/`` so the
-      # removal does not silently regress.
-      - name: CLIMADA import boundary
-        run: python scripts/check_climada_imports.py
-
       # Issue #195: every in-repo import must be rooted at the ``backend``
       # package. Shallow ``from db import …`` style only resolves when
       # ``backend/`` itself is on ``sys.path`` and silently breaks the

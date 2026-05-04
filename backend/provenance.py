@@ -34,13 +34,11 @@ _FLOAT_PRECISION = 12
 
 _APP_VERSION_FALLBACK = "0.0.0+unknown"
 
-# Compute-backend marker stored on every scenario row. After #166 CLIMADA
-# is removed entirely; the value is fixed at ``"engine"`` so historic rows
-# (which may carry ``"climada"``) remain readable but no new run produces
-# anything else. The constant is kept for the DB schema column type, but
-# only ``ENGINE_BACKEND_ENGINE`` is ever written.
+# Compute-backend marker stamped on every fresh scenario row. After #166
+# CLIMADA is removed entirely and only ``"engine"`` is ever written;
+# historic rows that carry ``"climada"`` remain readable as a free-form
+# string in the DB column.
 ENGINE_BACKEND_ENGINE = "engine"
-ENGINE_BACKEND_CLIMADA = "climada"
 
 # Reproducibility caveat stamped onto the exported scenario payload (and
 # surfaced in the PDF export stub). Same-machine determinism is the only
