@@ -124,7 +124,15 @@ const AppShell = () => {
   const Section = sectionComponents[activeSection] || HomeView;
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
+    <Box
+      sx={{
+        display: "flex",
+        height: "100vh",
+        overflow: "hidden",
+        pt: `${TOP_BAR_HEIGHT}px`,
+        boxSizing: "border-box",
+      }}
+    >
       <TopBar />
       <Sidebar />
       <Box
@@ -136,8 +144,8 @@ const AppShell = () => {
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
-          mt: `${TOP_BAR_HEIGHT}px`,
           minHeight: 0,
+          overflow: "hidden",
         }}
       >
         <EngineStatusBanner />
