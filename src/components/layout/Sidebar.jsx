@@ -22,7 +22,10 @@ import useStore from "../../store";
 
 export const SIDEBAR_WIDTH = 220;
 export const SIDEBAR_COLLAPSED_WIDTH = 60;
-export const TOP_BAR_HEIGHT = 64;
+// Matches the GIZ logo (64px tall + 8px top/bottom margins from
+// Header.module.css). Toolbar in TopBar.jsx is pinned to this height so the
+// banner and sidebar paper align cleanly under the AppBar.
+export const TOP_BAR_HEIGHT = 80;
 
 const items = [
   { id: "home", labelKey: "sidebar_home", icon: HomeIcon },

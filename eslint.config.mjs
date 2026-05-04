@@ -23,6 +23,8 @@ export default [
       "spike/**",
       "translations/**",
       ".venv/**",
+      "playwright-report/**",
+      "test-results/**",
       "**/*.ts",
       "**/*.tsx",
       "**/*.d.ts",

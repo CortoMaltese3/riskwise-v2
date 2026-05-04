@@ -10,6 +10,7 @@ import ShutdownButton from "../nav/ShutdownButton";
 
 import giz_logo from "../../assets/giz_logo.png";
 import useStore from "../../store";
+import { TOP_BAR_HEIGHT } from "./Sidebar";
 import css from "../nav/Header.module.css";
 
 const sectionTitleKeys = {
@@ -36,7 +37,16 @@ const TopBar = () => {
         zIndex: (theme) => theme.zIndex.drawer + 1,
       }}
     >
-      <Toolbar disableGutters sx={{ display: "flex", alignItems: "center", px: 1 }}>
+      <Toolbar
+        disableGutters
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          px: 1,
+          minHeight: `${TOP_BAR_HEIGHT}px`,
+          "@media (min-width:600px)": { minHeight: `${TOP_BAR_HEIGHT}px` },
+        }}
+      >
         <Tooltip title={t("sidebar_toggle")}>
           <IconButton
             aria-label={t("sidebar_toggle")}

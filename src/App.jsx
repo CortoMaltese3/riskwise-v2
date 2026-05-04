@@ -81,7 +81,7 @@ const App = () => {
           {selectedAppOption === "" ? (
             <NavigateAlert />
           ) : (
-            <Box display="flex" flexDirection="column" minHeight="100vh">
+            <Box display="flex" flexDirection="column" height="100vh" overflow="hidden">
               <AppShell />
               <ProgressOverlay />
               <AlertMessage />
