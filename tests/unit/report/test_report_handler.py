@@ -12,8 +12,9 @@ from pathlib import Path
 
 import duckdb
 import pytest
-from backend.db import DB_PATH_ENV_VAR, MIGRATIONS_DIR, insert_scenario, run_migrations
 from openpyxl import load_workbook
+
+from backend.db import DB_PATH_ENV_VAR, MIGRATIONS_DIR, insert_scenario, run_migrations
 from backend.provenance import short_sha
 from backend.report.report_handler import (
     ReportHandler,
@@ -25,7 +26,8 @@ from backend.report.report_handler import (
 class _ReportHandlerStub:
     """Light-weight stand-in: ``_generate_provenance_tab`` only reads
     ``self.report_parameters`` so we can exercise it without booting the
-    real ReportHandler (which transitively imports CLIMADA via BaseHandler).
+    real ReportHandler (which pulls in BaseHandler and the full report
+    construction stack).
     """
 
     def __init__(self, report_parameters: ReportParameters) -> None:
@@ -101,9 +103,7 @@ def seeded_scenario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
 
 
 class TestProvenanceSheet:
-    def test_sheet_contains_all_expected_fields(
-        self, seeded_scenario: str, tmp_path: Path
-    ) -> None:
+    def test_sheet_contains_all_expected_fields(self, seeded_scenario: str, tmp_path: Path) -> None:
         import xlsxwriter
 
         params = ReportParameters(
@@ -123,10 +123,7 @@ class TestProvenanceSheet:
         assert "Provenance" in loaded.sheetnames
         ws = loaded["Provenance"]
         flat = " ".join(
-            str(cell.value)
-            for row in ws.iter_rows()
-            for cell in row
-            if cell.value is not None
+            str(cell.value) for row in ws.iter_rows() for cell in row if cell.value is not None
         )
         # 8-char prefix shown for each SHA, never the full 64 chars.
         assert "deadbeef" in flat
