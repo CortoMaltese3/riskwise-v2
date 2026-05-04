@@ -11,7 +11,9 @@ import ShutdownButton from "../nav/ShutdownButton";
 import giz_logo from "../../assets/giz_logo.png";
 import useStore from "../../store";
 import { TOP_BAR_HEIGHT } from "./Sidebar";
-import css from "../nav/Header.module.css";
+
+const GIZ_LOGO_WIDTH = 230;
+const GIZ_LOGO_HEIGHT = 64;
 
 const sectionTitleKeys = {
   home: "sidebar_home",
@@ -59,7 +61,12 @@ const TopBar = () => {
           </IconButton>
         </Tooltip>
         <Box sx={{ display: "flex", alignItems: "center", flexBasis: "25%", flexGrow: 0 }}>
-          <img src={giz_logo} alt="giz_logo" className={css.logo_giz} />
+          <Box
+            component="img"
+            src={giz_logo}
+            alt="giz_logo"
+            sx={{ width: GIZ_LOGO_WIDTH, height: GIZ_LOGO_HEIGHT, my: 1, mx: 2 }}
+          />
         </Box>
         <Typography
           variant="h5"
