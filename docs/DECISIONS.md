@@ -647,3 +647,33 @@ does not retract the runtime offline behavior.
   enhancement-labeled issue (no milestone) so it does not get lost.
 
 ---
+
+## D27 — MUI + emotion + CSS variables stay; no Tailwind
+
+**Status**: Accepted
+**Date**: 2026-05-04
+
+**Decision**: For the Phase 8 UI layout refinement and any subsequent UI work, RISK WISE stays on MUI v9 + emotion. When `sx`-prop volume becomes a maintenance problem in repeated layout patterns, the answer is to consume the MUI theme via plain CSS classes (or `styled()` blocks) backed by `var(--mui-palette-*)` custom properties — not to introduce Tailwind. The MUI v9 `createTheme({ cssVariables: true })` flag is already enabled in `src/theme/theme.ts`; every palette token is exposed as a CSS variable. We use that.
+
+**Why**:
+- The codebase is 102 files importing `@mui/material`, 33 files importing `@mui/icons-material`, and 368 `sx={...}` blocks across 84 files. A migration to a different component library is a multi-week refactor with **no user-visible win** for a desktop Electron tool whose users do not see the framework. The same is true of a hybrid (MUI components + Tailwind utility classes via `className`) — emotion's specificity fights Tailwind's, design tokens duplicate, and the mental model doubles.
+- The actual problems Phase 8 solves — legacy CRA `App.css` rules, no shared layout primitives, inconsistent input-card DOM — are **not framework-coupled**. Tailwind would have the same bugs in different syntax.
+- MUI v9 already gives the ergonomics people reach for Tailwind for: utility-feeling CSS classes whose values come from a single theme source. The pattern is plain CSS (or `@layer` rules) consuming `var(--mui-palette-inputCard-default)`, `var(--mui-palette-divider)`, etc. It does not require a new toolchain.
+- D04 (stay on MUI, upgrade to v7) committed the foundation in 2026-04-16 and shipped successfully through Phases 1–4. D27 extends that decision into the Phase 8 layout work.
+
+**Rejected**:
+- **Adopt Tailwind, drop MUI** — full rewrite of every `Drawer`, `AppBar`, `Tooltip`, `Card`, `TextField`, `Menu`, `Dialog`, `Snackbar`, `Stepper` on top of Radix / shadcn or hand-rolled. Re-introduces a11y bugs MUI already solved. Multi-week effort with zero observable win for the user.
+- **Adopt Tailwind, keep MUI components, use Tailwind classes for layout** — emotion's runtime and Tailwind's atomic CSS compete on specificity; design tokens split between `theme.palette` and `tailwind.config`; mental model doubles for everyone reading the code. Worst of both.
+- **Adopt CSS Modules globally** — current usage is one file (`Header.module.css`) and Phase 8 sub-phase 8.2 retires that. Reintroducing modules across 102 files for the same problem CSS variables solve is more code, not less.
+
+**Consequence**:
+- Phase 8 layout primitives use `sx` for one-off layout and may promote repeated patterns to `styled()` or plain CSS classes consuming `var(--mui-palette-*)`. The choice between the two is documented in `docs/reference/ui-design-spec.md`.
+- No Tailwind, PostCSS, or atomic-CSS toolchain is added to the build.
+- The Phase 8 `phase-8/cleanup` issue retires `src/App.css` (CRA-template legacy) and `src/components/nav/Header.module.css` (sole CSS Module) without replacement.
+
+**References**:
+- [D04 — Stay on MUI, upgrade to v7](#d04--stay-on-mui-upgrade-to-v7) (foundation committed 2026-04-16).
+- [phase-8-ui-layout.md](plan/phase-8-ui-layout.md) — execution plan.
+- [ui-design-spec.md](reference/ui-design-spec.md) — frozen layout / density / motion rules.
+
+---

@@ -25,6 +25,7 @@ For per-phase exit-criteria status see each phase file's `Exit criteria` section
 | 4 — Environment, Distribution & Polish | [phase-4-distribution-and-polish.md](phase-4-distribution-and-polish.md) | 18–20 | ✅ Done |
 | 6 — Engine Migration (CLIMADA → climate-lama-engine) | [phase-6-engine-migration.md](phase-6-engine-migration.md) | post-v2.0 | ✅ Done |
 | 7 — Optional / Later | [phase-7-optional.md](phase-7-optional.md) | post-v2.0 | ⏳ Unstarted (non-blocking) |
+| 8 — UI Layout Architecture Refinement | [phase-8-ui-layout.md](phase-8-ui-layout.md) | post-v2.0 | ⏳ Unstarted |
 
 Status legend: 🔄 in progress · ✅ done · ⏳ pending · 🔲 not started · ❌ blocked.
 
@@ -71,6 +72,7 @@ For quick navigation without reading every file:
 - **Phase 4 signing activation** depends on the cert obtained per DECISIONS.md D17 (Azure Trusted Signing primary, SSL.com EV fallback).
 - **Phase 6 cannot start** until v2.0.0 is tagged AND #150 (the engine-adoption ADR) merges with the parity smoke recorded.
 - **Phase 7 is independent** of Phase 6; both may run in parallel post-v2.0.
+- **Phase 8 is independent** of Phase 6 and Phase 7. Hard predecessors: v2.0 release tag and Phase 6 documentation closure ([#205](https://github.com/CortoMaltese3/riskwise-v2/pull/205)). Phase 7's dark-mode candidate, if pursued, depends on Phase 8 layout primitives and theme polish landing first.
 
 ---
 
