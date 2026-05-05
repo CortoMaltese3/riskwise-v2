@@ -5,6 +5,7 @@ import { Box, Button, Typography } from "@mui/material";
 
 import ResultsTypography from "./ResultsTypography";
 import useStore from "../../store";
+import { layoutTransition } from "../../theme/theme";
 
 const EconomicResultsCard = () => {
   const { activeMap, activeViewControl, setActiveMap } = useStore();
@@ -29,7 +30,7 @@ const EconomicResultsCard = () => {
               sx={{
                 marginBottom: 2,
                 bgcolor: isButtonSelected(type) ? "accent.main" : "accent.light",
-                transition: "transform 0.1s ease-in-out",
+                transition: layoutTransition(["transform"]),
                 "&:active": {
                   transform: "scale(0.96)",
                 },
@@ -48,13 +49,14 @@ const EconomicResultsCard = () => {
         sx={{
           bgcolor: "accent.light",
           padding: 2,
-          borderRadius: "4px",
+          borderRadius: (theme) => theme.spacing(0.5),
         }}
       >
         <Typography
           variant="h6"
           sx={{
-            borderBottom: "1px solid var(--mui-palette-surface-mutedText)",
+            borderBottom: 1,
+            borderBottomColor: "surface.mutedText",
             paddingBottom: 1,
             color: "surface.mutedText",
             textAlign: "center",

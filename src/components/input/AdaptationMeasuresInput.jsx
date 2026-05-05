@@ -61,7 +61,7 @@ const AdaptationMeasuresInput = () => {
             mt: 2,
             backgroundColor: (theme) => theme.palette.inputCard.panelBg,
             padding: 2,
-            borderRadius: "8px",
+            borderRadius: (theme) => theme.spacing(1),
           }}
         >
           {measures.map((measure) => {
@@ -82,7 +82,7 @@ const AdaptationMeasuresInput = () => {
                   sx={{
                     bgcolor: (theme) => theme.palette.inputCard.default,
                     mb: 2,
-                    minHeight: "24px",
+                    minHeight: 3,
                   }}
                 >
                   <CardContent sx={{ p: 1 }}>

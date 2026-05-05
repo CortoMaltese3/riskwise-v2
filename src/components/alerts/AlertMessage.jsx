@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { Snackbar, Stack, Button } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
 import useStore from "../../store";
+import { layoutTransition } from "../../theme/theme";
 
 const Alert = forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -42,13 +43,15 @@ const AlertMessage = () => {
               sx={{
                 color: "white",
                 marginLeft: 1,
-                border: "1px solid white",
-                transition: "background-color 0.2s",
+                border: 1,
+                borderColor: "common.white",
+                transition: layoutTransition(["background-color"]),
                 maxWidth: "100%",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                padding: "4px 8px",
+                py: 0.5,
+                px: 1,
                 "&:hover": {
                   backgroundColor: "rgba(255, 255, 255, 0.1)",
                 },

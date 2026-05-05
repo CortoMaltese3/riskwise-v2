@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardActionArea, Typography, CardContent } from "@mui/material";
 import useStore from "../../store";
+import { layoutTransition } from "../../theme/theme";
 
 const ScenarioMacroCard = () => {
   const { selectedMacroScenario, setSelectedMacroScenario } = useStore();
@@ -26,9 +27,10 @@ const ScenarioMacroCard = () => {
         maxWidth: 800,
         margin: "auto",
         bgcolor: "card.bg",
-        border: "2px solid var(--mui-palette-primary-dark)",
-        borderRadius: "16px",
-        marginBottom: "16px",
+        border: 2,
+        borderColor: "primary.dark",
+        borderRadius: (theme) => theme.spacing(2),
+        marginBottom: 2,
       }}
     >
       <CardContent>
@@ -41,9 +43,9 @@ const ScenarioMacroCard = () => {
             textAlign: "center",
             fontWeight: "bold",
             backgroundColor: "accent.main",
-            borderRadius: "8px",
-            padding: "8px",
-            marginBottom: "24px",
+            borderRadius: (theme) => theme.spacing(1),
+            padding: 1,
+            marginBottom: 3,
           }}
         >
           {t("card_scenario_title")}
@@ -54,12 +56,13 @@ const ScenarioMacroCard = () => {
             onClick={() => handleCardSelect(scenario)}
             sx={{
               backgroundColor: isButtonSelected(scenario) ? "accent.main" : "accent.light",
-              borderRadius: "8px",
-              margin: "16px", // Space around buttons
+              borderRadius: (theme) => theme.spacing(1),
+              margin: 2,
               marginLeft: 0,
               textAlign: "center",
-              padding: "8px 0",
-              transition: "transform 0.1s ease-in-out", // Add transition for transform
+              py: 1,
+              px: 0,
+              transition: layoutTransition(["transform"]),
               "&:active": {
                 transform: "scale(0.96)", // Slightly scale down when clicked
               },
@@ -70,7 +73,13 @@ const ScenarioMacroCard = () => {
             </Typography>
           </CardActionArea>
         ))}
-        <Box sx={{ padding: 2, backgroundColor: "surface.muted", borderRadius: "8px" }}>
+        <Box
+          sx={{
+            padding: 2,
+            backgroundColor: "surface.muted",
+            borderRadius: (theme) => theme.spacing(1),
+          }}
+        >
           <Typography variant="body2" color="text.primary">
             {t("card_scenario_remarks")}
           </Typography>

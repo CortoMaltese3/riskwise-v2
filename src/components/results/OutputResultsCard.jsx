@@ -6,6 +6,7 @@ import { Box, Button } from "@mui/material";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import logger from "../../lib/logger.ts";
 import useStore from "../../store";
+import { layoutTransition } from "../../theme/theme";
 
 const OutputResultsCard = () => {
   const { t } = useTranslation();
@@ -63,7 +64,7 @@ const OutputResultsCard = () => {
                 sx={{
                   marginBottom: 2,
                   bgcolor: "accent.light",
-                  transition: "transform 0.1s ease-in-out",
+                  transition: layoutTransition(["transform"]),
                   "&:active": {
                     transform: "scale(0.96)",
                   },
@@ -88,7 +89,7 @@ const OutputResultsCard = () => {
                 sx={{
                   marginBottom: 2,
                   bgcolor: "accent.light",
-                  transition: "transform 0.1s ease-in-out",
+                  transition: layoutTransition(["transform"]),
                   "&:active": {
                     transform: "scale(0.96)",
                   },

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import L from "leaflet";
 import "leaflet-simple-map-screenshoter";
-import Button from "@mui/material/Button";
+import { Box, Button } from "@mui/material";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 
 import "leaflet/dist/leaflet.css";
@@ -170,17 +170,17 @@ const RiskMap = () => {
   const RPButtonStyle = (rp) => ({
     flexGrow: 0,
     margin: 1,
-    minWidth: "60px",
-    maxWidth: "60px",
+    minWidth: 7.5,
+    maxWidth: 7.5,
     fontSize: "0.75rem",
     bgcolor: rp === activeRPLayer ? "mapControl.main" : "mapControl.light",
     "&:hover": { bgcolor: "mapControl.hover" },
   });
 
-  const buttonContainerStyle = {
+  const buttonContainerSx = {
     position: "absolute",
-    top: "10px",
-    right: "10px",
+    top: 1.25,
+    right: 1.25,
     zIndex: 1000,
     display: "flex",
     flexDirection: "row",
@@ -233,7 +233,7 @@ const RiskMap = () => {
     >
       <TileLayer url={tileLayerUrl} maxZoom={15} minZoom={5} />
       <MapEvents />
-      <div style={buttonContainerStyle}>
+      <Box sx={buttonContainerSx}>
         {returnPeriods.map((rp) => (
           <Button
             key={`rp-${rp}`}
@@ -246,7 +246,7 @@ const RiskMap = () => {
             {rp}
           </Button>
         ))}
-      </div>
+      </Box>
       {mapInfo.geoJson && mapInfo.colorScale && (
         <>
           <CircleLayer

@@ -5,6 +5,7 @@ import { Box, Button, Tabs, Tab, Paper } from "@mui/material";
 
 import useStore from "../../store";
 import { useMapTools } from "../../utils/mapTools";
+import { layoutTransition } from "../../theme/theme";
 
 const MainSubTabs = () => {
   const {
@@ -59,7 +60,7 @@ const MainSubTabs = () => {
       square
       sx={{
         position: "fixed",
-        top: "128px",
+        top: 16,
         zIndex: (theme) => theme.zIndex.drawer + 1,
         width: "100%",
         bgcolor: "primary.light",
@@ -83,7 +84,8 @@ const MainSubTabs = () => {
             color: "text.primary",
             fontSize: "0.875rem",
             minHeight: 24,
-            padding: "6px 12px",
+            py: 0.75,
+            px: 1.5,
           },
           ".MuiTabs-indicator": {
             height: 2,
@@ -103,7 +105,7 @@ const MainSubTabs = () => {
                 size="small"
                 sx={{
                   bgcolor: "accent.light",
-                  transition: "transform 0.1s ease-in-out",
+                  transition: layoutTransition(["transform"]),
                   "&:active": {
                     transform: "scale(0.96)",
                   },

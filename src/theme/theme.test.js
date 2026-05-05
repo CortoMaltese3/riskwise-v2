@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import theme from "./theme";
+import theme, { MOTION_DURATION_MS, MOTION_EASING, layoutTransition } from "./theme";
 
 // Relative luminance per WCAG 2.1. Expects `#RRGGBB`.
 function relativeLuminance(hex) {
@@ -43,6 +43,32 @@ describe("theme — design tokens", () => {
 
   it("sets a non-default shape radius", () => {
     expect(theme.shape.borderRadius).toBe(12);
+  });
+
+  it("exposes the canonical motion duration and easing", () => {
+    // Spec § Motion: 150 ms / easeOut, applied to every layout transition.
+    // Theme `transitions.duration.standard` is overridden so MUI internals
+    // (MuiButtonBase ripple, Drawer slide) honour the same cadence.
+    expect(MOTION_DURATION_MS).toBe(150);
+    expect(MOTION_EASING).toMatch(/cubic-bezier/);
+    expect(theme.transitions.duration.standard).toBe(150);
+  });
+
+  it("layoutTransition() composes the canonical duration + easing", () => {
+    expect(layoutTransition(["transform"])).toBe(`transform 150ms ${MOTION_EASING}`);
+    expect(layoutTransition(["background-color", "transform"])).toBe(
+      `background-color 150ms ${MOTION_EASING}, transform 150ms ${MOTION_EASING}`
+    );
+    // Default argument keeps "all" as a sensible fallback for hover-state sx.
+    expect(layoutTransition()).toBe(`all 150ms ${MOTION_EASING}`);
+  });
+
+  it("focus ring is owned by MuiButtonBase root override", () => {
+    const root = theme.components?.MuiButtonBase?.styleOverrides?.root;
+    expect(root).toBeDefined();
+    const focusVisible = root["&:focus-visible"];
+    expect(focusVisible.outline).toMatch(/2px solid/);
+    expect(focusVisible.outlineOffset).toBe("2px");
   });
 });
 

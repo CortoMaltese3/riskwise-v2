@@ -35,6 +35,7 @@ import DeleteIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import useStore from "../../store";
 import { enqueueToast } from "../../hooks/useToast";
+import { layoutTransition } from "../../theme/theme";
 
 const isXlsxPath = (filePath) => typeof filePath === "string" && /\.xlsx$/i.test(filePath);
 
@@ -200,14 +201,15 @@ const CREDDataSection = () => {
 
   const dropZoneSx = useMemo(
     () => ({
-      border: "2px dashed",
+      border: 2,
+      borderStyle: "dashed",
       borderColor: isDragging ? "primary.main" : "divider",
       borderRadius: 2,
       p: 4,
       textAlign: "center",
       cursor: "pointer",
       bgcolor: isDragging ? "action.hover" : "transparent",
-      transition: "background-color 120ms ease, border-color 120ms ease",
+      transition: layoutTransition(["background-color", "border-color"]),
     }),
     [isDragging]
   );

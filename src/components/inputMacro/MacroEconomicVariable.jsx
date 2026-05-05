@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardContent, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
+import { layoutTransition } from "../../theme/theme";
 
 const MacroEconomicVariable = () => {
   const { setSelectedMacroCard, setActiveViewControl, selectedMacroVariable } = useStore();
@@ -45,7 +46,7 @@ const MacroEconomicVariable = () => {
       sx={{
         cursor: "pointer",
         bgcolor: bgColor,
-        transition: "background-color 0.3s, transform 0.1s", // Added transform to the transition
+        transition: layoutTransition(["background-color", "transform"]),
         "&:hover": {
           bgcolor: "inputCard.hover",
         },

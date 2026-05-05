@@ -8,6 +8,7 @@ import RestoreIcon from "@mui/icons-material/Restore";
 
 import { useReportTools } from "../../utils/reportTools";
 import useStore from "../../store";
+import { layoutTransition } from "../../theme/theme";
 
 const ReportCard = ({ data, image, id, isSelected, onCardClick, onReportAction, title, type }) => {
   const { t } = useTranslation();
@@ -72,15 +73,16 @@ const ReportCard = ({ data, image, id, isSelected, onCardClick, onReportAction, 
         sx={{
           alignItems: "flex-start",
           backgroundColor: isSelected ? "inputCard.default" : "common.white",
-          border: "1px solid var(--mui-palette-surface-borderLight)",
-          borderRadius: "16px",
+          border: 1,
+          borderColor: "surface.borderLight",
+          borderRadius: (theme) => theme.spacing(2),
           display: "flex",
           flexDirection: "row",
           marginBottom: 2,
           width: "100%",
 
           cursor: "pointer",
-          transition: "background-color 0.3s, transform 0.1s", // Added transform to the transition
+          transition: layoutTransition(["background-color", "transform"]),
           "&:hover": {
             bgcolor: "inputCard.hover",
           },
@@ -130,7 +132,7 @@ const ReportCard = ({ data, image, id, isSelected, onCardClick, onReportAction, 
             sx={{
               width: "auto",
               height: "100%", // Take full height of the parent box
-              maxHeight: "128px", // Set a max height to prevent the image from becoming too large
+              maxHeight: 16, // Set a max height to prevent the image from becoming too large
               objectFit: "contain", // Ensure the image fits within the bounds without being distorted
             }}
             alt="report_image"

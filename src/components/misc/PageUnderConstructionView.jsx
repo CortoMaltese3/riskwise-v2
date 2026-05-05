@@ -11,10 +11,10 @@ const PageUnderConstructionView = () => {
     <div style={{ height: "80%", display: "flex", flexDirection: "column" }}>
       <Paper
         elevation={3}
-        style={{
+        sx={{
           flex: 1,
-          borderRadius: "15px",
-          marginBottom: "16px",
+          borderRadius: (theme) => theme.spacing(2),
+          marginBottom: 2,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -23,7 +23,7 @@ const PageUnderConstructionView = () => {
         }}
       >
         <Box textAlign="center" p={3}>
-          <ConstructionIcon color="warning" style={{ fontSize: "64px" }} />
+          <ConstructionIcon color="warning" sx={(theme) => ({ fontSize: theme.spacing(8) })} />
           <Typography variant="h4" gutterBottom>
             {t("general_main_view_progress_dev_title")}
           </Typography>
