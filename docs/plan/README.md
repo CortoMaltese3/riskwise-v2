@@ -5,10 +5,10 @@
 
 ---
 
-## Current state (as of 2026-05-04)
+## Current state (as of 2026-05-05)
 
-**Active phase**: **Phase 7 — Optional / Later** (non-blocking; runs alongside maintenance).
-**Progress snapshot**: Phases 0–4 and Phase 6 are complete. Phase 6 (engine migration, #150–#168) landed `climate-lama-engine` as the runtime compute backend, removed `climada==6.1.0` from runtime deps, refreshed the bundle benchmark, and closed the documentation loop. Phase 7 work is unstarted and non-blocking.
+**Active phase**: **Phase 8 — UI Layout Architecture Refinement** (view migrations landing; input-card uniformity in flight on `refactor/216-input-card-uniformity`).
+**Progress snapshot**: Phases 0–4 and Phase 6 are complete. Phase 6 (engine migration, #150–#168) landed `climate-lama-engine` as the runtime compute backend, removed `climada==6.1.0` from runtime deps, refreshed the bundle benchmark, and closed the documentation loop. Phase 8 view migrations have shipped for MacroeconomicView (#227), WorkspaceView (#230), HomeView (#231), and SettingsView (#232); 8.5 input-card uniformity is the current branch. Phase 7 and Phase 9 are unstarted; Phase 9 captures four parent technical-debt epics (#226, #228, #229, #233) that will be split into `/build`-sized child issues.
 
 For per-phase exit-criteria status see each phase file's `Exit criteria` section.
 
@@ -25,7 +25,8 @@ For per-phase exit-criteria status see each phase file's `Exit criteria` section
 | 4 — Environment, Distribution & Polish | [phase-4-distribution-and-polish.md](phase-4-distribution-and-polish.md) | 18–20 | ✅ Done |
 | 6 — Engine Migration (CLIMADA → climate-lama-engine) | [phase-6-engine-migration.md](phase-6-engine-migration.md) | post-v2.0 | ✅ Done |
 | 7 — Optional / Later | [phase-7-optional.md](phase-7-optional.md) | post-v2.0 | ⏳ Unstarted (non-blocking) |
-| 8 — UI Layout Architecture Refinement | [phase-8-ui-layout.md](phase-8-ui-layout.md) | post-v2.0 | ⏳ Unstarted |
+| 8 — UI Layout Architecture Refinement | [phase-8-ui-layout.md](phase-8-ui-layout.md) | post-v2.0 | 🔄 In progress |
+| 9 — Technical-Debt Cleanup | [phase-9-tech-debt-cleanup.md](phase-9-tech-debt-cleanup.md) | post-v2.0 | ⏳ Unstarted |
 
 Status legend: 🔄 in progress · ✅ done · ⏳ pending · 🔲 not started · ❌ blocked.
 
@@ -73,6 +74,7 @@ For quick navigation without reading every file:
 - **Phase 6 cannot start** until v2.0.0 is tagged AND #150 (the engine-adoption ADR) merges with the parity smoke recorded.
 - **Phase 7 is independent** of Phase 6; both may run in parallel post-v2.0.
 - **Phase 8 is independent** of Phase 6 and Phase 7. Hard predecessors: v2.0 release tag and Phase 6 documentation closure ([#205](https://github.com/CortoMaltese3/riskwise-v2/pull/205)). Phase 7's dark-mode candidate, if pursued, depends on Phase 8 layout primitives and theme polish landing first.
+- **Phase 9 is independent** of Phase 6 and Phase 7. Hard predecessors: v2.0 release tag and Phase 8 view migrations merged so frontend sub-phases (9.1, 9.3) don't conflict with layout-primitive churn. Phase 8 sub-phases 8.6 / 8.7 may run in parallel with Phase 9. Phase 9 sub-phase 9.4.12 (repo cleanup) overlaps with `phase-8/cleanup` on `Header.module.css` — coordinate ownership at split time.
 
 ---
 
