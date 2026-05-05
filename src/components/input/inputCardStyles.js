@@ -7,10 +7,8 @@
  * "invalid" | "neutral").
  */
 
-// Minimum card height keeps every scenario-input card the same size whether
-// it is showing only its label or label + selected-value TextField. Sized to
-// fit a label (incl. one wrap) + readonly TextField without clipping.
-export const INPUT_CARD_MIN_HEIGHT = 110;
+// Per ui-design-spec § Density.
+export const INPUT_CARD_HEIGHT = 110;
 
 export const getInputCardSx = (state, { clicked = false } = {}) => ({
   cursor: "pointer",
@@ -18,7 +16,7 @@ export const getInputCardSx = (state, { clicked = false } = {}) => ({
   transition: "background-color 0.3s, transform 0.1s",
   display: "flex",
   flexDirection: "column",
-  minHeight: INPUT_CARD_MIN_HEIGHT,
+  height: INPUT_CARD_HEIGHT,
   "&:hover": {
     bgcolor: (theme) => theme.palette.inputCard.hover,
   },

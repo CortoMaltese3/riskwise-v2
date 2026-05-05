@@ -80,6 +80,7 @@
     "results_export_button_gis": "Export to GIS",
     "results_report_details": "Report Details",
     "input_view_title": "Input Parameters",
+    "input_card_placeholder": "Click to select",
     "input_annual_growth_title": "Annual Growth",
     "input_annual_gdp_growth_title": "Annual GDP Growth",
     "input_annual_population_growth_title": "Annual Population Growth",
