@@ -80,6 +80,7 @@
     "results_export_button_gis": "ส่งออกเป็น GIS",
     "results_report_details": "รายละเอียดรายงาน",
     "input_view_title": "โปรดใส่พารามิเตอร์ (Input Parameters)",
+    "input_card_placeholder": "คลิกเพื่อเลือก",
     "input_annual_growth_title": "การเติบโตรายปี",
     "input_annual_gdp_growth_title": "อัตราการเติบโตของ GDP รายปี",
     "input_annual_population_growth_title": "การเติบโตของประชากรรายปี",

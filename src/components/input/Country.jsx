@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, Stack, Typography, TextField } from "@mui/material";
+import { Card, CardContent, Stack, Typography, TextField } from "@mui/material";
 import useStore from "../../store";
 import ContextualTooltip from "../help/ContextualTooltip";
 import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
@@ -39,27 +39,24 @@ const Country = () => {
       sx={getInputCardSx(cardState, { clicked })}
     >
       <CardContent sx={{ p: 2 }}>
-        <Box>
-          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-            <Typography id="country-label" variant="h6" component="div" m={0}>
-              {t("country")}
-            </Typography>
-            <ContextualTooltip titleKey="input_tooltip_country" />
-          </Stack>
-          {selectedCountry && (
-            <TextField
-              id="country"
-              fullWidth
-              variant="outlined"
-              value={t(`input_country_${selectedCountry}`)}
-              disabled
-              InputProps={{
-                readOnly: true,
-              }}
-              sx={disabledFieldSx}
-            />
-          )}
-        </Box>
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+          <Typography id="country-label" variant="h6" component="div" m={0}>
+            {t("country")}
+          </Typography>
+          <ContextualTooltip titleKey="input_tooltip_country" />
+        </Stack>
+        <TextField
+          id="country"
+          fullWidth
+          variant="outlined"
+          value={selectedCountry ? t(`input_country_${selectedCountry}`) : ""}
+          placeholder={t("input_card_placeholder")}
+          disabled
+          InputProps={{
+            readOnly: true,
+          }}
+          sx={disabledFieldSx}
+        />
       </CardContent>
     </Card>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
+import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
 import ContextualTooltip from "../help/ContextualTooltip";
 import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
@@ -64,27 +64,28 @@ const ExposureNonEconomic = () => {
       sx={getInputCardSx(cardState, { clicked })}
     >
       <CardContent>
-        <Box>
-          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-            <Typography id="exposure-dropdown" variant="h6" component="div" m={0}>
-              {t("input_exposure_non_economic_title")}
-            </Typography>
-            <ContextualTooltip titleKey="input_tooltip_exposure_non_economic" />
-          </Stack>
-          {selectedExposureNonEconomic && (
-            <TextField
-              id="exposure-non-economic-textfield"
-              fullWidth
-              variant="outlined"
-              value={t(`input_exposure_non_economic_${selectedExposureNonEconomic}`)}
-              disabled
-              InputProps={{
-                readOnly: true,
-              }}
-              sx={disabledFieldSx}
-            />
-          )}
-        </Box>
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+          <Typography id="exposure-dropdown" variant="h6" component="div" m={0}>
+            {t("input_exposure_non_economic_title")}
+          </Typography>
+          <ContextualTooltip titleKey="input_tooltip_exposure_non_economic" />
+        </Stack>
+        <TextField
+          id="exposure-non-economic-textfield"
+          fullWidth
+          variant="outlined"
+          value={
+            selectedExposureNonEconomic
+              ? t(`input_exposure_non_economic_${selectedExposureNonEconomic}`)
+              : ""
+          }
+          placeholder={t("input_card_placeholder")}
+          disabled
+          InputProps={{
+            readOnly: true,
+          }}
+          sx={disabledFieldSx}
+        />
       </CardContent>
     </Card>
   );

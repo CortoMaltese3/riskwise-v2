@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
+import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 
 import useStore from "../../store";
 import ContextualTooltip from "../help/ContextualTooltip";
@@ -51,40 +51,35 @@ const TimeHorizon = () => {
   }, [isEraLocked, selectedCountry]);
 
   return (
-    <Box>
-      <Card
-        variant="outlined"
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onClick={handleClick}
-        sx={getInputCardSx(cardState, { clicked })}
-      >
-        <CardContent>
-          <Box>
-            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-              <Typography id="time-horizon-dropdown" variant="h6" component="div" m={0}>
-                {t("time_horizon_title")}
-              </Typography>
-              <ContextualTooltip titleKey="input_tooltip_time_horizon" />
-            </Stack>
-            {selectedTimeHorizon && (
-              <TextField
-                id="timeHorizon"
-                fullWidth
-                variant="outlined"
-                value={`${selectedTimeHorizon[0]} - ${selectedTimeHorizon[1]}`}
-                disabled
-                InputProps={{
-                  readOnly: true,
-                }}
-                sx={disabledFieldSx}
-              />
-            )}
-          </Box>
-        </CardContent>
-      </Card>
-    </Box>
+    <Card
+      variant="outlined"
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onClick={handleClick}
+      sx={getInputCardSx(cardState, { clicked })}
+    >
+      <CardContent>
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+          <Typography id="time-horizon-dropdown" variant="h6" component="div" m={0}>
+            {t("time_horizon_title")}
+          </Typography>
+          <ContextualTooltip titleKey="input_tooltip_time_horizon" />
+        </Stack>
+        <TextField
+          id="timeHorizon"
+          fullWidth
+          variant="outlined"
+          value={selectedTimeHorizon ? `${selectedTimeHorizon[0]} - ${selectedTimeHorizon[1]}` : ""}
+          placeholder={t("input_card_placeholder")}
+          disabled
+          InputProps={{
+            readOnly: true,
+          }}
+          sx={disabledFieldSx}
+        />
+      </CardContent>
+    </Card>
   );
 };
 

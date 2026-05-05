@@ -80,6 +80,7 @@
     "results_export_button_gis": "حفظ بصيغة GIS",
     "results_report_details": "تفاصيل التقرير",
     "input_view_title": "معلمات الإدخال",
+    "input_card_placeholder": "انقر للاختيار",
     "input_annual_growth_title": "النمو السنوي ",
     "input_annual_gdp_growth_title": "نمو الناتج المحلي الإجمالي السنوي",
     "input_annual_population_growth_title": "نمو السكان السنوي",

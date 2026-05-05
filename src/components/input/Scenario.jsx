@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
+import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
 import ContextualTooltip from "../help/ContextualTooltip";
 import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
@@ -39,28 +39,24 @@ const Scenario = () => {
       sx={getInputCardSx(cardState, { clicked })}
     >
       <CardContent>
-        <Box>
-          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-            <Typography id="scenario-dropdown" variant="h6" component="div" m={0}>
-              {t("scenario_title")}
-            </Typography>
-            <ContextualTooltip titleKey="input_tooltip_scenario" />
-          </Stack>
-
-          {selectedScenario && (
-            <TextField
-              id="scenario"
-              fullWidth
-              variant="outlined"
-              value={t(`input_scenario_scenarios_${selectedScenario}`)}
-              disabled
-              InputProps={{
-                readOnly: true,
-              }}
-              sx={disabledFieldSx}
-            />
-          )}
-        </Box>
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+          <Typography id="scenario-dropdown" variant="h6" component="div" m={0}>
+            {t("scenario_title")}
+          </Typography>
+          <ContextualTooltip titleKey="input_tooltip_scenario" />
+        </Stack>
+        <TextField
+          id="scenario"
+          fullWidth
+          variant="outlined"
+          value={selectedScenario ? t(`input_scenario_scenarios_${selectedScenario}`) : ""}
+          placeholder={t("input_card_placeholder")}
+          disabled
+          InputProps={{
+            readOnly: true,
+          }}
+          sx={disabledFieldSx}
+        />
       </CardContent>
     </Card>
   );

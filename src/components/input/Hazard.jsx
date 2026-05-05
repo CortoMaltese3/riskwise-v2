@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
+import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
 import ContextualTooltip from "../help/ContextualTooltip";
 import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
@@ -45,27 +45,24 @@ const Hazard = () => {
       sx={getInputCardSx(cardState, { clicked })}
     >
       <CardContent>
-        <Box>
-          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-            <Typography id="hazard-dropdown" variant="h6" component="div" m={0}>
-              {t("hazard_title")}
-            </Typography>
-            <ContextualTooltip titleKey="input_tooltip_hazard" />
-          </Stack>
-          {selectedHazard && (
-            <TextField
-              id="hazard"
-              fullWidth
-              variant="outlined"
-              value={t(`input_hazard_${selectedHazard}`)}
-              disabled
-              InputProps={{
-                readOnly: true,
-              }}
-              sx={disabledFieldSx}
-            />
-          )}
-        </Box>
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+          <Typography id="hazard-dropdown" variant="h6" component="div" m={0}>
+            {t("hazard_title")}
+          </Typography>
+          <ContextualTooltip titleKey="input_tooltip_hazard" />
+        </Stack>
+        <TextField
+          id="hazard"
+          fullWidth
+          variant="outlined"
+          value={selectedHazard ? t(`input_hazard_${selectedHazard}`) : ""}
+          placeholder={t("input_card_placeholder")}
+          disabled
+          InputProps={{
+            readOnly: true,
+          }}
+          sx={disabledFieldSx}
+        />
       </CardContent>
     </Card>
   );
