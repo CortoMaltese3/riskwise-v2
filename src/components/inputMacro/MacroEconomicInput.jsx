@@ -8,7 +8,6 @@ import Sector from "./Sector";
 import MacroEconomicVariable from "./MacroEconomicVariable";
 import Scenario from "./Scenario";
 import useStore from "../../store";
-import PlotMacroButton from "../nav/RunPlotMacroButton";
 
 const MacroEconomicInput = () => {
   const { selectedTab } = useStore();
@@ -38,9 +37,6 @@ const MacroEconomicInput = () => {
             <Sector />
           </Grid>
         </Grid>
-
-        {/* Run button section */}
-        <PlotMacroButton />
       </Box>
     </>
   );
