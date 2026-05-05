@@ -74,7 +74,7 @@ The browser / Electron window must never show a **page-level** scrollbar.
 Every data-bearing region must explicitly handle three states:
 
 1. **Loading** — `LoadingSkeleton` or `ProgressOverlay` while a fetch / scenario run is in flight. `aria-live="polite"` for status updates that should not interrupt; `aria-live="assertive"` for errors.
-2. **Empty** — explanatory copy plus a primary call-to-action (existing pattern: `MacroEmptyState` in [`AppShell.jsx`](../../src/components/layout/AppShell.jsx)). No blank panels.
+2. **Empty** — render the same container chrome as the populated state, with explanatory copy (and a primary call-to-action where one applies). Existing pattern: `MapEmptyState` rendered inside `MapLayout`'s `Paper` wrapper, and the framed `MacroEconomicChart` empty plot in [`MacroEconomicChart.jsx`](../../src/components/charts/MacroEconomicChart.jsx). No blank panels, and no swapping the container itself for a centred message.
 3. **Error** — caught at the boundary by `ErrorBoundary` (component crash) or surfaced as a toast via `ErrorToast` (network / engine failure). No raw stack traces.
 
 Phase 8 does not introduce new states; it asserts that every region migrated to primitives demonstrably has all three.

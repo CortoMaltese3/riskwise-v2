@@ -365,7 +365,10 @@ const useStore = create((set, get) => ({
     if (tab === 1) {
       viewControl = "display_map";
     } else if (tab === 2) {
-      viewControl = "display_macro_parameters";
+      // Macro tab opens on the chart frame so the analyst always sees a
+      // chart container; parameter editors open on demand when a
+      // side-column card is clicked.
+      viewControl = "display_macro_chart";
     }
 
     set({

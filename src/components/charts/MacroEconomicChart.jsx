@@ -175,15 +175,21 @@ const MacroEconomicChart = () => {
     },
   };
 
-  const tableHeaders = [t("macro_display_chart_x_axis_label"), ...datasets.map((d) => d.label)];
-  const tableRows = labels.map((year, i) => [
-    year,
-    ...datasets.map((d) =>
-      d.data[i] == null
-        ? ""
-        : `${formatNumber(d.data[i], locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`
-    ),
-  ]);
+  const hasData = filteredData.length > 0;
+
+  const tableHeaders = hasData
+    ? [t("macro_display_chart_x_axis_label"), ...datasets.map((d) => d.label)]
+    : [];
+  const tableRows = hasData
+    ? labels.map((year, i) => [
+        year,
+        ...datasets.map((d) =>
+          d.data[i] == null
+            ? ""
+            : `${formatNumber(d.data[i], locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`
+        ),
+      ])
+    : [];
 
   const ariaLabel = macroEconomicChartTitle
     ? `${macroEconomicChartTitle}. ${datasets.length} series across ${labels.length} years.`
@@ -191,6 +197,7 @@ const MacroEconomicChart = () => {
 
   return (
     <Box
+      data-testid="macro-chart-frame"
       sx={{
         margin: "auto",
         bgcolor: "card.bg",
@@ -203,42 +210,41 @@ const MacroEconomicChart = () => {
       }}
     >
       <Box sx={{ height: "100%", overflowY: "auto" }}>
-        {filteredData.length > 0 ? (
-          <>
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={{ mb: 1 }}
-            >
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <Typography variant="subtitle1" component="h3" sx={{ m: 0 }}>
-                  {macroEconomicChartTitle}
-                </Typography>
-                <ChartInfoPopover
-                  titleKey="chart_info_macro_title"
-                  bodyKey="chart_info_macro_body"
-                />
-              </Stack>
-              <Button
-                size="small"
-                variant={showChartValues ? "contained" : "outlined"}
-                onClick={toggleShowChartValues}
-                aria-pressed={showChartValues}
-              >
-                {showChartValues ? t("chart_hide_values") : t("chart_show_values")}
-              </Button>
+        {hasData && (
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+            <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Typography variant="subtitle1" component="h3" sx={{ m: 0 }}>
+                {macroEconomicChartTitle}
+              </Typography>
+              <ChartInfoPopover titleKey="chart_info_macro_title" bodyKey="chart_info_macro_body" />
             </Stack>
-            <Line data={transformedData} options={options} aria-label={ariaLabel} role="img" />
-            <ChartDataTable
-              caption={macroEconomicChartTitle}
-              headers={tableHeaders}
-              rows={tableRows}
-              summaryLabel={t("chart_data_table_summary")}
-            />
-          </>
+            <Button
+              size="small"
+              variant={showChartValues ? "contained" : "outlined"}
+              onClick={toggleShowChartValues}
+              aria-pressed={showChartValues}
+            >
+              {showChartValues ? t("chart_hide_values") : t("chart_show_values")}
+            </Button>
+          </Stack>
+        )}
+        <Line data={transformedData} options={options} aria-label={ariaLabel} role="img" />
+        {hasData ? (
+          <ChartDataTable
+            caption={macroEconomicChartTitle}
+            headers={tableHeaders}
+            rows={tableRows}
+            summaryLabel={t("chart_data_table_summary")}
+          />
         ) : (
-          <Typography variant="h6" align="center" color="textSecondary">
+          <Typography
+            variant="body2"
+            align="center"
+            color="text.secondary"
+            data-testid="macro-chart-empty-hint"
+            aria-hidden="true"
+            sx={{ mt: 1 }}
+          >
             {t("macro_display_chart_not_available")}
           </Typography>
         )}
