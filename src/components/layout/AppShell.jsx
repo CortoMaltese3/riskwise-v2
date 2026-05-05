@@ -41,27 +41,58 @@ const LeftPanel = ({ children }) => (
   </Box>
 );
 
+const RISK_LEFT_PANEL_WIDTH = 280;
+const RISK_RESULTS_PANEL_WIDTH = 260;
+
 export const RiskAssessmentView = () => {
   const { t } = useTranslation();
   return (
-    <Box sx={{ display: "flex", flexGrow: 1, minHeight: 0 }}>
-      <LeftPanel>
-        <DataInput />
-        <AdaptationMeasuresInput />
-      </LeftPanel>
-      <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
-        <MainView />
-      </Box>
-      <Box
-        component="aside"
-        role="complementary"
-        aria-label={t("results_panel_aria")}
-        data-tour="results-panel"
-        sx={{ width: 260, overflow: "auto", borderLeft: 1, borderColor: "divider", p: 1 }}
-      >
-        <ResultsView />
-      </Box>
-    </Box>
+    <HorizontalSplit>
+      <FixedColumn width={RISK_LEFT_PANEL_WIDTH}>
+        <Box
+          sx={{
+            height: "100%",
+            borderRight: 1,
+            borderColor: "divider",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <ScrollableRegion>
+            <Box sx={{ p: 1 }}>
+              <DataInput />
+              <AdaptationMeasuresInput />
+            </Box>
+          </ScrollableRegion>
+        </Box>
+      </FixedColumn>
+      <ScrollableRegion>
+        <Box sx={{ p: 2 }}>
+          <MainView />
+        </Box>
+      </ScrollableRegion>
+      <FixedColumn width={RISK_RESULTS_PANEL_WIDTH}>
+        <Box
+          component="aside"
+          role="complementary"
+          aria-label={t("results_panel_aria")}
+          data-tour="results-panel"
+          sx={{
+            height: "100%",
+            borderLeft: 1,
+            borderColor: "divider",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <ScrollableRegion>
+            <Box sx={{ p: 1 }}>
+              <ResultsView />
+            </Box>
+          </ScrollableRegion>
+        </Box>
+      </FixedColumn>
+    </HorizontalSplit>
   );
 };
 
