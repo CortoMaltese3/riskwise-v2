@@ -131,17 +131,11 @@ const MacroeconomicView = () => {
   );
 };
 
-const WorkspaceSection = () => (
-  <Box sx={{ flexGrow: 1, overflow: "auto" }}>
-    <WorkspaceView />
-  </Box>
-);
-
 const sectionComponents = {
   home: HomeView,
   risk: RiskAssessmentView,
   macro: MacroeconomicView,
-  workspace: WorkspaceSection,
+  workspace: WorkspaceView,
   settings: SettingsView,
 };
 
