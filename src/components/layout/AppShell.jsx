@@ -133,7 +133,7 @@ const AppShell = () => {
       <TopBar />
       <HorizontalSplit>
         <FixedColumn width={sidebarWidth}>
-          <Sidebar />
+          <Sidebar width={sidebarWidth} />
         </FixedColumn>
         <ScrollableRegion>
           <Box
