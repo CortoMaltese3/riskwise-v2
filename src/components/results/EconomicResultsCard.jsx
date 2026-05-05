@@ -18,7 +18,7 @@ const EconomicResultsCard = () => {
   const isButtonSelected = (type) => activeMap === type;
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "85vh" }}>
+    <Box sx={{ display: "flex", flexDirection: "column" }}>
       {/* Button Section with flex column direction */}
 
       {activeViewControl === "display_map" && (

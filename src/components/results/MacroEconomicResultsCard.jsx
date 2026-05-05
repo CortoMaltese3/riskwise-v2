@@ -10,7 +10,7 @@ const MacroEconomicResultsCard = () => {
   const { activeViewControl } = useStore();
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "85vh" }}>
+    <Box sx={{ display: "flex", flexDirection: "column" }}>
       {/* Result Details section */}
       <Box
         sx={{
