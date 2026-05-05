@@ -40,9 +40,7 @@ const MacroEconomicInput = () => {
         </Grid>
 
         {/* Run button section */}
-        <Grid item xs={12}>
-          <PlotMacroButton />
-        </Grid>
+        <PlotMacroButton />
       </Box>
     </>
   );
