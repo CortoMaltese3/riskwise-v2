@@ -699,6 +699,7 @@
     "map_hazard_legend_title_flood_prefix": "ความลึกของน้ำท่วม",
     "map_hazard_legend_title_drought_prefix": "ดัชนีปริมาณน้ำฝนมาตรฐาน",
     "map_hazard_legend_title_heatwaves_prefix": "ดัชนีระยะเวลาช่วงอากาศร้อน",
+    "map_empty_state_message": "เรียกใช้สถานการณ์เพื่อดูแผนที่",
     "map_legend_title_billions_suffix": "พันล้าน",
     "map_legend_title_millions_suffix": "ล้าน",
     "map_legend_title_thousands_suffix": "พัน",

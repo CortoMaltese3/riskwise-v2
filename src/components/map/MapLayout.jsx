@@ -5,12 +5,30 @@ import { Paper } from "@mui/material";
 import ExposureMap from "./ExposureMap";
 import HazardMap from "./HazardMap";
 import RiskMap from "./RiskMap";
+import MapEmptyState from "./MapEmptyState";
 import LoadingSkeleton from "../layout/LoadingSkeleton";
 import useStore from "../../store";
 
 const MapLayout = () => {
   const activeMap = useStore((state) => state.activeMap);
   const isScenarioRunning = useStore((state) => state.isScenarioRunning);
+  const isScenarioRunCompleted = useStore((state) => state.isScenarioRunCompleted);
+
+  const renderContent = () => {
+    if (isScenarioRunning) {
+      return <LoadingSkeleton variant="map" data-testid="map-skeleton" />;
+    }
+    if (!isScenarioRunCompleted) {
+      return <MapEmptyState />;
+    }
+    return (
+      <>
+        {activeMap === "exposure" && <ExposureMap />}
+        {activeMap === "hazard" && <HazardMap />}
+        {activeMap === "impact" && <RiskMap />}
+      </>
+    );
+  };
 
   return (
     <div style={{ height: "80%", display: "flex", flexDirection: "column" }}>
@@ -23,15 +41,7 @@ const MapLayout = () => {
           overflow: "hidden",
         }}
       >
-        {isScenarioRunning ? (
-          <LoadingSkeleton variant="map" data-testid="map-skeleton" />
-        ) : (
-          <>
-            {activeMap === "exposure" && <ExposureMap />}
-            {activeMap === "hazard" && <HazardMap />}
-            {activeMap === "impact" && <RiskMap />}
-          </>
-        )}
+        {renderContent()}
       </Paper>
     </div>
   );
