@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
 import {
   Drawer,
@@ -35,18 +36,15 @@ const items = [
   { id: "settings", labelKey: "sidebar_settings", icon: SettingsIcon },
 ];
 
-const Sidebar = () => {
+const Sidebar = ({ width }) => {
   const { t } = useTranslation();
   const { activeSection, setActiveSection, sidebarCollapsed } = useStore();
   const setGlossaryOpen = useStore((s) => s.setGlossaryOpen);
-  const width = sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
 
   return (
     <Drawer
       variant="permanent"
       sx={{
-        width,
-        flexShrink: 0,
         "& .MuiDrawer-paper": {
           width,
           top: TOP_BAR_HEIGHT,
@@ -129,6 +127,10 @@ const Sidebar = () => {
       </Box>
     </Drawer>
   );
+};
+
+Sidebar.propTypes = {
+  width: PropTypes.number.isRequired,
 };
 
 export default Sidebar;
