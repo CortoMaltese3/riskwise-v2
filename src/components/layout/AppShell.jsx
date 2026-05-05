@@ -11,6 +11,8 @@ import DataInput from "../input/DataInput";
 import MacroEconomicInput from "../inputMacro/MacroEconomicInput";
 import MainView from "../main/MainView";
 import ResultsView from "../results/ResultsView";
+import RunPlotMacroButton from "../nav/RunPlotMacroButton";
+import RunScenarioButton from "../nav/RunScenarioButton";
 import WorkspaceView from "../workspace/WorkspaceView";
 import HomeView from "./views/HomeView";
 import SettingsView from "../settings/SettingsView";
@@ -30,6 +32,9 @@ const MACRO_LEFT_PANEL_WIDTH = 280;
 
 export const RiskAssessmentView = () => {
   const { t } = useTranslation();
+  const selectedTab = useStore((s) => s.selectedTab);
+  const selectedSubTab = useStore((s) => s.selectedSubTab);
+  const showRunButton = selectedTab === 0 || (selectedTab === 1 && selectedSubTab === 0);
   return (
     <HorizontalSplit>
       <FixedColumn width={RISK_LEFT_PANEL_WIDTH}>
@@ -48,6 +53,18 @@ export const RiskAssessmentView = () => {
               <AdaptationMeasuresInput />
             </Box>
           </ScrollableRegion>
+          {showRunButton && (
+            <Box
+              sx={{
+                flexShrink: 0,
+                p: 1,
+                borderTop: 1,
+                borderColor: "divider",
+              }}
+            >
+              <RunScenarioButton />
+            </Box>
+          )}
         </Box>
       </FixedColumn>
       <ScrollableRegion>
@@ -122,6 +139,16 @@ const MacroeconomicView = () => {
               <MacroEconomicInput />
             </Box>
           </ScrollableRegion>
+          <Box
+            sx={{
+              flexShrink: 0,
+              p: 1,
+              borderTop: 1,
+              borderColor: "divider",
+            }}
+          >
+            <RunPlotMacroButton />
+          </Box>
         </Box>
       </FixedColumn>
       <ScrollableRegion>

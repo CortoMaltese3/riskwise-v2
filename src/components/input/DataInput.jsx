@@ -7,7 +7,6 @@ import Country from "./Country";
 import DataInputViewTitle from "../title/DataInputViewTitle";
 import ExposureEconomic from "./ExposureEconomic";
 import ExposureNonEconomic from "./ExposureNonEconomic";
-import RunScenarioButton from "../nav/RunScenarioButton";
 import Hazard from "./Hazard";
 import Scenario from "./Scenario";
 import TimeHorizon from "./TimeHorizon";
@@ -54,11 +53,6 @@ const DataInput = () => {
           <Grid item xs={12}>
             <AnnualGrowth />
           </Grid>
-        </Grid>
-
-        {/* Run button section */}
-        <Grid item xs={12}>
-          <RunScenarioButton />
         </Grid>
       </Box>
     </>
