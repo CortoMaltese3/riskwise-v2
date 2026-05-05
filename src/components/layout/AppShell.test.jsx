@@ -75,4 +75,11 @@ describe("AppShell", () => {
     expect(useStore.getState().sidebarCollapsed).toBe(true);
     expect(localStorage.getItem("riskwise.sidebarCollapsed")).toBe("true");
   });
+
+  it("renders MainView (no MacroEmptyState substitute) when entering Macro with no data", () => {
+    useStore.setState({ activeSection: "macro", credOutputData: [] });
+    renderShell();
+    expect(screen.getByTestId("main-view")).toBeInTheDocument();
+    expect(useStore.getState().activeViewControl).toBe("display_macro_chart");
+  });
 });
