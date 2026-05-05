@@ -42,25 +42,26 @@ const TopBar = () => {
       <Toolbar
         disableGutters
         sx={(theme) => ({
-          display: "flex",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
           alignItems: "center",
           px: 1,
           minHeight: `${TOP_BAR_HEIGHT}px`,
           [theme.breakpoints.up("sm")]: { minHeight: `${TOP_BAR_HEIGHT}px` },
         })}
       >
-        <Tooltip title={t("sidebar_toggle")}>
-          <IconButton
-            aria-label={t("sidebar_toggle")}
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            color="inherit"
-            size="small"
-            sx={{ mr: 1 }}
-          >
-            <MenuIcon />
-          </IconButton>
-        </Tooltip>
-        <Box sx={{ display: "flex", alignItems: "center", flexBasis: "25%", flexGrow: 0 }}>
+        <Box sx={{ display: "flex", alignItems: "center" }}>
+          <Tooltip title={t("sidebar_toggle")}>
+            <IconButton
+              aria-label={t("sidebar_toggle")}
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              color="inherit"
+              size="small"
+              sx={{ mr: 1 }}
+            >
+              <MenuIcon />
+            </IconButton>
+          </Tooltip>
           <Box
             component="img"
             src={giz_logo}
@@ -72,7 +73,7 @@ const TopBar = () => {
           variant="h5"
           noWrap
           component="div"
-          sx={{ flexGrow: 1, textAlign: "center", display: { xs: "none", sm: "block" } }}
+          sx={{ textAlign: "center", display: { xs: "none", sm: "block" } }}
         >
           {t(sectionTitleKeys[activeSection] || "application_title")}
         </Typography>
