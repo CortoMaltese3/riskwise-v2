@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, TextField, Typography } from "@mui/material";
+import { Card, CardContent, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
-import { layoutTransition } from "../../theme/theme";
+import { disabledFieldSx, getInputCardSx } from "../input/inputCardStyles";
 
 const Scenario = () => {
   const { selectedMacroScenario, setActiveViewControl, setSelectedMacroCard } = useStore();
   const { t } = useTranslation();
-  const [clicked, setClicked] = useState(false); // State to manage click animation
-  const [bgcolor, setBgcolor] = useState("inputCard.default"); // State to manage background color
+  const [clicked, setClicked] = useState(false);
+  const [cardState, setCardState] = useState("default");
 
   const handleMouseDown = () => {
-    setClicked(true); // Trigger animation
+    setClicked(true);
   };
 
   const handleMouseUp = () => {
-    setClicked(false); // Reset animation
+    setClicked(false);
   };
 
   const handleClick = () => {
@@ -24,16 +24,8 @@ const Scenario = () => {
     setActiveViewControl("display_macro_parameters");
   };
 
-  const handleBgColor = () => {
-    if (selectedMacroScenario) {
-      setBgcolor("inputCard.valid"); // green
-    } else {
-      setBgcolor("inputCard.default"); // default light blue
-    }
-  };
-
   useEffect(() => {
-    handleBgColor();
+    setCardState(selectedMacroScenario ? "valid" : "default");
   }, [selectedMacroScenario]);
 
   return (
@@ -41,47 +33,28 @@ const Scenario = () => {
       variant="outlined"
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp} // Reset animation when the mouse leaves the card
+      onMouseLeave={handleMouseUp}
       onClick={handleClick}
-      sx={{
-        cursor: "pointer",
-        bgcolor: bgcolor,
-        transition: layoutTransition(["background-color", "transform"]),
-        "&:hover": {
-          bgcolor: "inputCard.hover",
-        },
-        ".MuiCardContent-root:last-child": {
-          padding: 2,
-        },
-        transform: clicked ? "scale(0.97)" : "scale(1)", // Apply scale transform when clicked
-      }}
+      sx={getInputCardSx(cardState, { clicked })}
     >
-      <CardContent>
-        <Box>
-          <Typography id="scenario-dropdown" gutterBottom variant="h6" component="div" m={0}>
-            {t("scenario_title")}
-          </Typography>
-
-          {selectedMacroScenario && (
-            <TextField
-              id="scenario"
-              fullWidth
-              variant="outlined"
-              value={t(`input_scenario_scenarios_${selectedMacroScenario}`)}
-              disabled
-              InputProps={{
-                readOnly: true,
-              }}
-              sx={{
-                ".MuiInputBase-input.Mui-disabled": {
-                  WebkitTextFillColor: "inputCard.disabledText", // Change the text color for disabled content
-                  bgcolor: "inputCard.disabledBg", // Change background for disabled TextField
-                  padding: 1,
-                },
-              }}
-            />
-          )}
-        </Box>
+      <CardContent sx={{ p: 2 }}>
+        <Typography id="scenario-dropdown" gutterBottom variant="h6" component="div" m={0}>
+          {t("scenario_title")}
+        </Typography>
+        <TextField
+          id="scenario"
+          fullWidth
+          variant="outlined"
+          value={
+            selectedMacroScenario ? t(`input_scenario_scenarios_${selectedMacroScenario}`) : ""
+          }
+          placeholder={t("input_card_placeholder")}
+          disabled
+          InputProps={{
+            readOnly: true,
+          }}
+          sx={disabledFieldSx}
+        />
       </CardContent>
     </Card>
   );

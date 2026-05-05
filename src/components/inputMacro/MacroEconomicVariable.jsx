@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, TextField, Typography } from "@mui/material";
+import { Card, CardContent, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
-import { layoutTransition } from "../../theme/theme";
+import { disabledFieldSx, getInputCardSx } from "../input/inputCardStyles";
 
 const MacroEconomicVariable = () => {
   const { setSelectedMacroCard, setActiveViewControl, selectedMacroVariable } = useStore();
   const { t } = useTranslation();
-  const [clicked, setClicked] = useState(false); // State to manage click animation
-  const [bgColor, setBgColor] = useState("inputCard.default"); // State to manage background color
+  const [clicked, setClicked] = useState(false);
+  const [cardState, setCardState] = useState("default");
 
   const handleMouseDown = () => {
-    setClicked(true); // Trigger animation
+    setClicked(true);
   };
 
   const handleMouseUp = () => {
-    setClicked(false); // Reset animation
+    setClicked(false);
   };
 
   const handleClick = () => {
@@ -24,16 +24,8 @@ const MacroEconomicVariable = () => {
     setActiveViewControl("display_macro_parameters");
   };
 
-  const handleBgColor = () => {
-    if (selectedMacroVariable) {
-      setBgColor("inputCard.valid"); // green
-    } else {
-      setBgColor("inputCard.default"); // default light blue
-    }
-  };
-
   useEffect(() => {
-    handleBgColor();
+    setCardState(selectedMacroVariable ? "valid" : "default");
   }, [selectedMacroVariable]);
 
   return (
@@ -41,46 +33,26 @@ const MacroEconomicVariable = () => {
       variant="outlined"
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp} // Reset animation when the mouse leaves the card
+      onMouseLeave={handleMouseUp}
       onClick={handleClick}
-      sx={{
-        cursor: "pointer",
-        bgcolor: bgColor,
-        transition: layoutTransition(["background-color", "transform"]),
-        "&:hover": {
-          bgcolor: "inputCard.hover",
-        },
-        ".MuiCardContent-root:last-child": {
-          padding: 2,
-        },
-        transform: clicked ? "scale(0.97)" : "scale(1)", // Apply scale transform when clicked
-      }}
+      sx={getInputCardSx(cardState, { clicked })}
     >
-      <CardContent>
-        <Box>
-          <Typography id="macro-variable-title" gutterBottom variant="h6" component="div" m={0}>
-            {t("input_macro_economic_variable_title")}
-          </Typography>
-          {selectedMacroVariable && (
-            <TextField
-              id="macro-variable-textfield"
-              fullWidth
-              variant="outlined"
-              value={t(`input_macro_variable_${selectedMacroVariable}`)}
-              disabled
-              InputProps={{
-                readOnly: true,
-              }}
-              sx={{
-                ".MuiInputBase-input.Mui-disabled": {
-                  WebkitTextFillColor: "inputCard.disabledText", // Change the text color for disabled content
-                  bgcolor: "inputCard.disabledBg", // Change background for disabled TextField
-                  padding: 1,
-                },
-              }}
-            />
-          )}
-        </Box>
+      <CardContent sx={{ p: 2 }}>
+        <Typography id="macro-variable-title" gutterBottom variant="h6" component="div" m={0}>
+          {t("input_macro_economic_variable_title")}
+        </Typography>
+        <TextField
+          id="macro-variable-textfield"
+          fullWidth
+          variant="outlined"
+          value={selectedMacroVariable ? t(`input_macro_variable_${selectedMacroVariable}`) : ""}
+          placeholder={t("input_card_placeholder")}
+          disabled
+          InputProps={{
+            readOnly: true,
+          }}
+          sx={disabledFieldSx}
+        />
       </CardContent>
     </Card>
   );
