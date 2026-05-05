@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Box, Card, CardActionArea, Chip, Typography, CardContent } from "@mui/material";
 import useStore from "../../store";
 import RiskWiseClient from "../../lib/RiskWiseClient";
+import { layoutTransition } from "../../theme/theme";
 
 // Mirror CountryCard — macro screen picks from the same registry-backed
 // list so a custom country (user-data drop-in) appears on both pages
@@ -60,9 +61,10 @@ const CountryMacroCard = () => {
         maxWidth: 800,
         margin: "auto",
         bgcolor: "card.bg",
-        border: "2px solid var(--mui-palette-primary-dark)",
-        borderRadius: "16px",
-        marginBottom: "16px",
+        border: 2,
+        borderColor: "primary.dark",
+        borderRadius: (theme) => theme.spacing(2),
+        marginBottom: 2,
       }}
     >
       <CardContent>
@@ -75,8 +77,8 @@ const CountryMacroCard = () => {
             textAlign: "center",
             fontWeight: "bold",
             backgroundColor: "accent.main",
-            borderRadius: "8px",
-            padding: "8px",
+            borderRadius: (theme) => theme.spacing(1),
+            padding: 1,
           }}
         >
           {t("card_country_title")}
@@ -96,11 +98,12 @@ const CountryMacroCard = () => {
               sx={{
                 backgroundColor: isButtonSelected(country) ? "accent.main" : "accent.light",
                 flexGrow: 1,
-                borderRadius: "8px",
+                borderRadius: (theme) => theme.spacing(1),
                 textAlign: "center",
-                padding: "8px 0",
-                margin: "8px",
-                transition: "transform 0.1s ease-in-out",
+                py: 1,
+                px: 0,
+                margin: 1,
+                transition: layoutTransition(["transform"]),
                 "&:active": {
                   transform: "scale(0.96)",
                 },
@@ -118,12 +121,18 @@ const CountryMacroCard = () => {
                 size="small"
                 color={country.source === "custom" ? "secondary" : "primary"}
                 variant="outlined"
-                sx={{ marginTop: "4px" }}
+                sx={{ marginTop: 0.5 }}
               />
             </CardActionArea>
           ))}
         </Box>
-        <Box sx={{ padding: 2, backgroundColor: "surface.muted", borderRadius: "8px" }}>
+        <Box
+          sx={{
+            padding: 2,
+            backgroundColor: "surface.muted",
+            borderRadius: (theme) => theme.spacing(1),
+          }}
+        >
           <Typography variant="body2" color="text.primary">
             {t("card_country_macro_remarks")}
           </Typography>

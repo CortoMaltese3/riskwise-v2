@@ -194,10 +194,11 @@ const MacroEconomicChart = () => {
       sx={{
         margin: "auto",
         bgcolor: "card.bg",
-        border: "2px solid var(--mui-palette-primary-dark)",
-        borderRadius: "16px",
-        padding: "16px",
-        marginBottom: "16px",
+        border: 2,
+        borderColor: "primary.dark",
+        borderRadius: (theme) => theme.spacing(2),
+        padding: 2,
+        marginBottom: 2,
         overflow: "hidden",
       }}
     >

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardContent, Typography, TextField } from "@mui/material";
 import useStore from "../../store";
+import { layoutTransition } from "../../theme/theme";
 
 const Country = () => {
   const { selectedMacroCountry, setActiveViewControl, setSelectedMacroCard } = useStore();
@@ -45,7 +46,7 @@ const Country = () => {
       sx={{
         cursor: "pointer",
         bgcolor: bgcolor,
-        transition: "background-color 0.3s, transform 0.1s", // Added transform to the transition
+        transition: layoutTransition(["background-color", "transform"]),
         "&:hover": {
           bgcolor: "inputCard.default",
         },

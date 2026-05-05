@@ -11,13 +11,14 @@ const Legend = ({ colorScale, percentileValues, title, divisor }) => {
   const isAscending = percentileValues[0] < percentileValues[percentileValues.length - 1];
 
   // Create a color block for each percentile value
+  const blockHeight = 20;
   const colorBlocks = percentileValues.map((value, index) => (
     <div
       key={index}
       style={{
         backgroundColor: colorScale(value),
         width: `${100 / percentileValues.length}%`,
-        height: "20px",
+        height: `${blockHeight}px`,
       }}
     />
   ));

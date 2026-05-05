@@ -3,7 +3,25 @@ import { createTheme } from "@mui/material/styles";
 // Phase 1 design-token surface (issue #15, extended in #78). Hex literals live
 // in this file only; component code consumes these tokens via
 // `sx={{ bgcolor: "header.main", ... }}` or `theme.palette.*`. Raw hex/rgb in
-// component files is banned by ESLint (see `eslint.config.mjs`).
+// component files is banned by ESLint (see `eslint.config.mjs`). The same ban
+// applies to raw `px` / `em` literals in component code (issue #217 / spec
+// § Density) — spacing comes from `theme.spacing(n)` and the named-constant
+// escapes for fixed chrome (`TOP_BAR_HEIGHT`, `SIDEBAR_WIDTH`,
+// `SIDEBAR_COLLAPSED_WIDTH`, `INPUT_CARD_HEIGHT`).
+
+// Motion tokens (issue #217 / spec § Motion). One canonical duration + easing
+// applied to every layout transition (sidebar collapse / expand, card hover,
+// drawer open / close, panel resize). Chart, map, and skeleton transitions
+// are owned by their respective libraries and stay outside this token set.
+// `prefers-reduced-motion` is respected by MUI v9 default behaviour.
+export const MOTION_DURATION_MS = 150;
+export const MOTION_EASING = "cubic-bezier(0.0, 0, 0.2, 1)";
+
+// Convenience builder for sx blocks. Pass the CSS properties to animate, get
+// a canonical transition string back. Default `["all"]` covers the common
+// hover / state-change case without enumerating every property.
+export const layoutTransition = (props: readonly string[] = ["all"]): string =>
+  props.map((p) => `${p} ${MOTION_DURATION_MS}ms ${MOTION_EASING}`).join(", ");
 
 const inputCardColors = {
   default: "#CCE1E7",
@@ -146,7 +164,20 @@ export const theme = createTheme({
     fontFamily: '"Inter", "Segoe UI", sans-serif',
   },
   shape: { borderRadius: 12 },
+  // Override MUI's 300 ms default standard duration to the canonical 150 ms.
+  // Easing keeps MUI's `easeOut` cubic-bezier (the spec's canonical curve).
+  // Component code consumes these via `theme.transitions.create(...)` or via
+  // the `layoutTransition()` helper above; no component should hand-roll a
+  // duration / easing again.
+  transitions: {
+    duration: {
+      standard: MOTION_DURATION_MS,
+    },
+  },
   components: {
+    // The visible focus ring is owned here so every interactive element gets
+    // it for free (spec § Focus and keyboard). Components must not redefine
+    // `&:focus-visible` without an explanatory code comment.
     MuiButtonBase: {
       styleOverrides: {
         root: {

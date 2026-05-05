@@ -41,13 +41,13 @@ const TopBar = () => {
     >
       <Toolbar
         disableGutters
-        sx={{
+        sx={(theme) => ({
           display: "flex",
           alignItems: "center",
           px: 1,
           minHeight: `${TOP_BAR_HEIGHT}px`,
-          "@media (min-width:600px)": { minHeight: `${TOP_BAR_HEIGHT}px` },
-        }}
+          [theme.breakpoints.up("sm")]: { minHeight: `${TOP_BAR_HEIGHT}px` },
+        })}
       >
         <Tooltip title={t("sidebar_toggle")}>
           <IconButton

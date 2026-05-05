@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import useStore from "../../store";
+import { layoutTransition } from "../../theme/theme";
 
 import {
   Box,
@@ -63,8 +64,8 @@ const NavigateAlert = () => {
               color: "white",
               fontWeight: "bold",
               textAlign: "center",
-              padding: "8px",
-              borderRadius: "4px",
+              padding: 1,
+              borderRadius: (theme) => theme.spacing(0.5),
             }}
           >
             {t("navigate_verification_title")}
@@ -76,8 +77,9 @@ const NavigateAlert = () => {
             sx={{
               maxWidth: 800,
               mb: 2,
-              border: "2px solid var(--mui-palette-surface-border)",
-              borderRadius: "16px",
+              border: 2,
+              borderColor: "surface.border",
+              borderRadius: (theme) => theme.spacing(2),
             }}
           >
             <Typography //Use this approach to add new lines without risking inserting html
@@ -86,8 +88,8 @@ const NavigateAlert = () => {
                 margin: "auto",
                 marginBottom: 2,
                 textAlign: "left",
-                padding: "8px",
-                borderRadius: "4px",
+                padding: 1,
+                borderRadius: (theme) => theme.spacing(0.5),
               }}
             >
               {t("navigate_verification_subtitle")}
@@ -101,8 +103,9 @@ const NavigateAlert = () => {
               sx={{
                 maxWidth: 800,
                 mb: 2,
-                border: "2px solid darkred",
-                borderRadius: "16px",
+                border: 2,
+                borderColor: "error.dark",
+                borderRadius: (theme) => theme.spacing(2),
                 backgroundColor: "white",
                 color: "black",
                 ":hover": {
@@ -138,8 +141,8 @@ const NavigateAlert = () => {
             color: "white",
             fontWeight: "bold",
             textAlign: "center",
-            padding: "8px",
-            borderRadius: "4px",
+            padding: 1,
+            borderRadius: (theme) => theme.spacing(0.5),
           }}
         >
           {t("welcome_title")}
@@ -151,8 +154,9 @@ const NavigateAlert = () => {
             maxWidth: 800,
             mb: 2,
             // bgcolor: "card.bg",
-            border: "2px solid var(--mui-palette-surface-border)",
-            borderRadius: "16px",
+            border: 2,
+            borderColor: "surface.border",
+            borderRadius: (theme) => theme.spacing(2),
           }}
         >
           <Typography //Use this approach to add new lines without risking inserting html
@@ -161,8 +165,8 @@ const NavigateAlert = () => {
               margin: "auto",
               marginBottom: 2,
               textAlign: "left",
-              padding: "8px",
-              borderRadius: "4px",
+              padding: 1,
+              borderRadius: (theme) => theme.spacing(0.5),
             }}
           >
             {t("welcome_subtitle")
@@ -179,8 +183,9 @@ const NavigateAlert = () => {
             margin: "auto",
             marginBottom: 2,
             bgcolor: "card.bg",
-            border: "2px solid var(--mui-palette-primary-dark)",
-            borderRadius: "16px",
+            border: 2,
+            borderColor: "primary.dark",
+            borderRadius: (theme) => theme.spacing(2),
           }}
         >
           <CardContent>
@@ -193,8 +198,8 @@ const NavigateAlert = () => {
                 textAlign: "center",
                 fontWeight: "bold",
                 backgroundColor: "accent.main",
-                borderRadius: "8px",
-                padding: "8px",
+                borderRadius: (theme) => theme.spacing(1),
+                padding: 1,
               }}
             >
               {t("card_option_title")}
@@ -208,19 +213,20 @@ const NavigateAlert = () => {
                   sx={{
                     backgroundColor: "accent.light",
                     flexGrow: 1,
-                    borderRadius: "8px",
+                    borderRadius: (theme) => theme.spacing(1),
                     marginLeft: 0,
                     marginRight: 0,
                     textAlign: "center",
-                    padding: "8px 0",
-                    margin: "8px", // Keep some space between the buttons
+                    py: 1,
+                    px: 0,
+                    margin: 1, // Keep some space between the buttons
                     "&:first-of-type": {
                       marginLeft: 0, // Remove left margin for the first button
                     },
                     "&:last-of-type": {
                       marginRight: 0, // Remove right margin for the last button
                     },
-                    transition: "transform 0.1s ease-in-out", // Add transition for transform
+                    transition: layoutTransition(["transform"]),
                     "&:active": {
                       transform: "scale(0.96)", // Slightly scale down when clicked
                     },
@@ -232,7 +238,13 @@ const NavigateAlert = () => {
                 </CardActionArea>
               ))}
             </Box>
-            <Box sx={{ padding: 2, backgroundColor: "surface.muted", borderRadius: "8px" }}>
+            <Box
+              sx={{
+                padding: 2,
+                backgroundColor: "surface.muted",
+                borderRadius: (theme) => theme.spacing(1),
+              }}
+            >
               <Typography variant="body2" color="text.primary">
                 {t("card_option_remarks")}
               </Typography>

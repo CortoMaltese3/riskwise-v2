@@ -58,11 +58,11 @@ const ProgressOverlay = () => {
       open={isScenarioRunning}
       role="progressbar"
       aria-label="scenario_progress_overlay"
-      sx={{
-        color: (theme) => theme.palette.common.white,
-        zIndex: (theme) => theme.zIndex.modal + 1,
-        backdropFilter: "blur(2px)",
-      }}
+      sx={(theme) => ({
+        color: theme.palette.common.white,
+        zIndex: theme.zIndex.modal + 1,
+        backdropFilter: `blur(${theme.spacing(0.25)})`,
+      })}
     >
       <Paper
         elevation={6}

@@ -16,13 +16,14 @@ const MacroEconomicResultsCard = () => {
         sx={{
           bgcolor: "accent.light",
           padding: 2,
-          borderRadius: "4px",
+          borderRadius: (theme) => theme.spacing(0.5),
         }}
       >
         <Typography
           variant="h6"
           sx={{
-            borderBottom: "1px solid var(--mui-palette-surface-mutedText)",
+            borderBottom: 1,
+            borderBottomColor: "surface.mutedText",
             paddingBottom: 1,
             color: "surface.mutedText",
             textAlign: "center",

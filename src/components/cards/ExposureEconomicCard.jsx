@@ -15,6 +15,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import logger from "../../lib/logger.ts";
 import useStore from "../../store";
+import { layoutTransition } from "../../theme/theme";
 
 const exposureEconomicDict = {
   thailand: {
@@ -130,8 +131,9 @@ const ExposureEconomicCard = () => {
         maxWidth: 800,
         margin: "auto",
         bgcolor: "card.bg",
-        border: "2px solid var(--mui-palette-primary-dark)",
-        borderRadius: "16px",
+        border: 2,
+        borderColor: "primary.dark",
+        borderRadius: (theme) => theme.spacing(2),
       }}
     >
       <CardContent>
@@ -144,9 +146,9 @@ const ExposureEconomicCard = () => {
             textAlign: "center",
             fontWeight: "bold",
             backgroundColor: "accent.main",
-            borderRadius: "8px",
-            padding: "8px",
-            marginBottom: "24px",
+            borderRadius: (theme) => theme.spacing(1),
+            padding: 1,
+            marginBottom: 3,
           }}
         >
           {t("card_exposure_economic_title")}
@@ -160,11 +162,13 @@ const ExposureEconomicCard = () => {
               onClick={() => handleCardSelect(exposure)}
               sx={{
                 backgroundColor: isButtonSelected(exposure) ? "accent.main" : "accent.light",
-                borderRadius: "8px",
-                margin: "8px 0", // Adjust spacing for vertical alignment
+                borderRadius: (theme) => theme.spacing(1),
+                my: 1,
+                mx: 0,
                 textAlign: "center",
-                padding: "8px 0",
-                transition: "transform 0.1s ease-in-out", // Add transition for transform
+                py: 1,
+                px: 0,
+                transition: layoutTransition(["transform"]),
                 "&:active": {
                   transform: "scale(0.96)", // Slightly scale down when clicked
                 },
@@ -189,7 +193,7 @@ const ExposureEconomicCard = () => {
                 fontWeight: "bold",
                 margin: 2,
                 "&:hover": { bgcolor: "accent.light" },
-                transition: "transform 0.1s ease-in-out", // Add transition for transform
+                transition: layoutTransition(["transform"]),
                 "&:active": {
                   transform: "scale(0.96)", // Slightly scale down when clicked
                 },
@@ -221,7 +225,7 @@ const ExposureEconomicCard = () => {
                 fontWeight: "bold",
                 margin: 2,
                 "&:hover": { bgcolor: "accent.light" },
-                transition: "transform 0.1s ease-in-out", // Add transition for transform
+                transition: layoutTransition(["transform"]),
                 "&:active": {
                   transform: "scale(0.96)", // Slightly scale down when clicked
                 },
@@ -284,7 +288,13 @@ const ExposureEconomicCard = () => {
         )}
 
         {/* Remarks section */}
-        <Box sx={{ padding: 2, backgroundColor: "surface.muted", borderRadius: "8px" }}>
+        <Box
+          sx={{
+            padding: 2,
+            backgroundColor: "surface.muted",
+            borderRadius: (theme) => theme.spacing(1),
+          }}
+        >
           <Typography variant="body2" color="text.primary">
             {t("card_exposure_economic_remarks")}
           </Typography>

@@ -30,11 +30,12 @@ const MainViewControls = () => {
         maxWidth: "100%",
         margin: "auto",
         bgcolor: "accent.light",
-        border: "1px solid var(--mui-palette-common-black)",
-        borderRadius: "16px",
+        border: 1,
+        borderColor: "common.black",
+        borderRadius: (theme) => theme.spacing(2),
       }}
     >
-      <CardContent sx={{ padding: "8px", "&:last-child": { paddingBottom: "6px" } }}>
+      <CardContent sx={{ padding: 1, "&:last-child": { paddingBottom: 0.75 } }}>
         <Box
           sx={{
             display: "flex",

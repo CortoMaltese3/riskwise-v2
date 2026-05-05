@@ -92,12 +92,19 @@ export default [
   // or `theme.palette.*` in styled). Raw hex literals are an error. The only
   // escape hatch is `src/theme/**` where the palette tokens themselves live.
   //
+  // density-tokens-enforced (issue #217): the same gate extends to raw `px`
+  // and `em` literals in component code. Spacing comes from `theme.spacing(n)`
+  // (the MUI 8 px scale); fixed chrome uses the four named-constant escapes
+  // (`TOP_BAR_HEIGHT`, `SIDEBAR_WIDTH`, `SIDEBAR_COLLAPSED_WIDTH`,
+  // `INPUT_CARD_HEIGHT`). Tests are exempted below — they assert against
+  // computed `style.*` values which are inherently in `px`.
+  //
   // rgba() is NOT banned here — chart libraries (Chart.js) need raw rgba for
   // per-dataset styling, and the issue's acceptance criteria scope the gate
   // to hex literals only.
   {
     files: ["src/**/*.{js,jsx}"],
-    ignores: ["src/theme/**"],
+    ignores: ["src/theme/**", "src/**/__tests__/**", "src/**/*.test.{js,jsx}"],
     rules: {
       "no-restricted-syntax": [
         "error",
@@ -109,6 +116,16 @@ export default [
           selector: "TemplateElement[value.raw=/#[0-9a-fA-F]{3,8}\\b/]",
           message:
             "Use a theme token (palette path or CSS variable) instead of a raw hex colour in template strings.",
+        },
+        {
+          selector: "Literal[value=/\\b\\d+(?:\\.\\d+)?(?:px|em)\\b/]",
+          message:
+            "Use theme.spacing(n) or a named-constant escape (TOP_BAR_HEIGHT / SIDEBAR_WIDTH / SIDEBAR_COLLAPSED_WIDTH / INPUT_CARD_HEIGHT) instead of a raw px / em literal.",
+        },
+        {
+          selector: "TemplateElement[value.raw=/\\b\\d+(?:\\.\\d+)?(?:px|em)\\b/]",
+          message:
+            "Use theme.spacing(n) or a named-constant escape (TOP_BAR_HEIGHT / SIDEBAR_WIDTH / SIDEBAR_COLLAPSED_WIDTH / INPUT_CARD_HEIGHT) instead of a raw px / em literal in template strings.",
         },
         // i18n-date-calendar (issue #86): block raw `toLocaleDateString()` /
         // `toLocaleString()` calls that don't pin an explicit `calendar`.

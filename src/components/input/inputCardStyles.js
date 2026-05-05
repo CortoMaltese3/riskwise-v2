@@ -7,13 +7,15 @@
  * "invalid" | "neutral").
  */
 
+import { layoutTransition } from "../../theme/theme";
+
 // Per ui-design-spec § Density.
 export const INPUT_CARD_HEIGHT = 110;
 
 export const getInputCardSx = (state, { clicked = false } = {}) => ({
   cursor: "pointer",
   bgcolor: (theme) => theme.palette.inputCard[state],
-  transition: "background-color 0.3s, transform 0.1s",
+  transition: layoutTransition(["background-color", "transform"]),
   display: "flex",
   flexDirection: "column",
   height: INPUT_CARD_HEIGHT,

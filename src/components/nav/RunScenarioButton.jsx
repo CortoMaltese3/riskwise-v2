@@ -144,7 +144,7 @@ const RunScenarioButton = () => {
           size="medium"
           startIcon={<PlayCircleIcon />}
           sx={{
-            minWidth: "120px",
+            minWidth: 15,
             bgcolor: "accent.main",
             "&:hover": { bgcolor: "accent.light" },
           }}
@@ -156,7 +156,7 @@ const RunScenarioButton = () => {
         <LoadingButton
           loading={isRunButtonLoading}
           loadingPosition="center"
-          sx={{ minWidth: "120px" }}
+          sx={{ minWidth: 15 }}
           color="secondary"
           variant="contained"
         >

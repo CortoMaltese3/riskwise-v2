@@ -22,8 +22,9 @@ const TimeHorizonCard = () => {
         maxWidth: 800,
         margin: "auto",
         bgcolor: "card.bg",
-        border: "2px solid var(--mui-palette-primary-dark)",
-        borderRadius: "16px",
+        border: 2,
+        borderColor: "primary.dark",
+        borderRadius: (theme) => theme.spacing(2),
       }}
     >
       <CardContent>
@@ -36,9 +37,9 @@ const TimeHorizonCard = () => {
             textAlign: "center",
             fontWeight: "bold",
             backgroundColor: "accent.main",
-            borderRadius: "8px",
-            padding: "8px",
-            marginBottom: "16px",
+            borderRadius: (theme) => theme.spacing(1),
+            padding: 1,
+            marginBottom: 2,
           }}
         >
           {t("card_timehorizon_title")}
@@ -50,9 +51,10 @@ const TimeHorizonCard = () => {
             justifyContent: "center",
             alignItems: "center", // Center children horizontally
             backgroundColor: "accent.light",
-            borderRadius: "8px",
-            padding: "20px 0",
-            marginBottom: "16px",
+            borderRadius: (theme) => theme.spacing(1),
+            py: 2.5,
+            px: 0,
+            marginBottom: 2,
           }}
         >
           <Typography
@@ -80,13 +82,14 @@ const TimeHorizonCard = () => {
             ]}
             sx={{
               color: "accent.main", // Slider track and thumb color
-              marginTop: "48px",
+              marginTop: 6,
               width: "90%", // Adjust width to be less than container to center properly
               "& .MuiSlider-thumb": {
                 height: 24,
                 width: 24,
                 backgroundColor: "common.white",
-                border: "2px solid currentColor",
+                border: 2,
+                borderColor: "currentColor",
                 "&:focus, &:hover, &.Mui-active": {
                   boxShadow: "inherit",
                 },
@@ -95,7 +98,7 @@ const TimeHorizonCard = () => {
                 color: "black",
                 variant: "body2",
                 fontWeight: "bold",
-                borderRadius: "16px",
+                borderRadius: (theme) => theme.spacing(2),
                 borderColor: "black",
                 backgroundColor: "accent.main",
               },
@@ -112,7 +115,13 @@ const TimeHorizonCard = () => {
             }}
           />
         </Box>
-        <Box sx={{ padding: 2, backgroundColor: "surface.muted", borderRadius: "8px" }}>
+        <Box
+          sx={{
+            padding: 2,
+            backgroundColor: "surface.muted",
+            borderRadius: (theme) => theme.spacing(1),
+          }}
+        >
           <Typography variant="body2" color="text.primary">
             {t("card_timehorison_remarks")}
           </Typography>

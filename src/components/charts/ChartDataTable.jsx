@@ -31,7 +31,8 @@ const ChartDataTable = ({ caption, headers, rows, summaryLabel }) => {
         mt: 1,
         "& > summary": {
           cursor: "pointer",
-          padding: "4px 8px",
+          py: 0.5,
+          px: 1,
           fontSize: "0.875rem",
           color: "text.secondary",
         },
@@ -42,9 +43,10 @@ const ChartDataTable = ({ caption, headers, rows, summaryLabel }) => {
           mt: 1,
         },
         "& th, & td": {
-          border: "1px solid",
+          border: 1,
           borderColor: "divider",
-          padding: "4px 8px",
+          py: 0.5,
+          px: 1,
           textAlign: "left",
         },
         "& th": {

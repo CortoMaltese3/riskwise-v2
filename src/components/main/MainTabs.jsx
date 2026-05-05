@@ -11,6 +11,7 @@ import { useMacroTools } from "../../utils/macroTools";
 import { useReportTools } from "../../utils/reportTools";
 import MainSubTabs from "./MainSubTabs";
 import useStore from "../../store";
+import { TOP_BAR_HEIGHT } from "../layout/Sidebar";
 
 const MainTabs = () => {
   const { selectedAppOption, credOutputData, selectedTab, setSelectedTab, setSelectedSubTab } =
@@ -38,7 +39,11 @@ const MainTabs = () => {
     <Box sx={{ bgcolor: "tab.main" }}>
       <AppBar
         position="fixed"
-        sx={{ bgcolor: "tab.main", top: "80px", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        sx={{
+          bgcolor: "tab.main",
+          top: `${TOP_BAR_HEIGHT}px`,
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+        }}
       >
         <Tabs
           value={selectedTab}

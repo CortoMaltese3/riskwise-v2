@@ -20,6 +20,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutlined";
 
 import useStore from "../../store";
+import { layoutTransition } from "../../theme/theme";
 
 export const SIDEBAR_WIDTH = 220;
 export const SIDEBAR_COLLAPSED_WIDTH = 60;
@@ -50,7 +51,7 @@ const Sidebar = ({ width }) => {
           top: TOP_BAR_HEIGHT,
           height: `calc(100% - ${TOP_BAR_HEIGHT}px)`,
           overflowX: "hidden",
-          transition: "width 150ms ease",
+          transition: layoutTransition(["width"]),
           boxSizing: "border-box",
         },
       }}

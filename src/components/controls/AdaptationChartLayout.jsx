@@ -43,10 +43,10 @@ const AdaptationChartLayout = () => {
     <div style={{ height: "80%", display: "flex", flexDirection: "column" }}>
       <Paper
         elevation={3}
-        style={{
+        sx={{
           flex: 1,
-          borderRadius: "15px",
-          marginBottom: "16px",
+          borderRadius: (theme) => theme.spacing(2),
+          marginBottom: 2,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",

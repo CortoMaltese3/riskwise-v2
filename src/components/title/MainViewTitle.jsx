@@ -21,8 +21,8 @@ const MainViewTitle = () => {
           color: "white",
           fontWeight: "bold",
           textAlign: "center",
-          padding: "8px",
-          borderRadius: "4px",
+          padding: 1,
+          borderRadius: (theme) => theme.spacing(0.5),
         }}
       >
         {mapTitle && selectedTab === 1 ? `${mapTitle}` : t(`main_view_tab_${selectedTab}_title`)}

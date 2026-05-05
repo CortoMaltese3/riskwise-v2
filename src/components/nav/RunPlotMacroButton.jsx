@@ -49,7 +49,7 @@ const RunPlotMacroButton = () => {
         size="medium"
         startIcon={<InsightsIcon />}
         sx={{
-          minWidth: "120px",
+          minWidth: 15,
           bgcolor: "accent.main",
           "&:hover": { bgcolor: "accent.light" },
         }}

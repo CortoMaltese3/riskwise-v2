@@ -36,8 +36,9 @@ const AnnualGrowthCard = () => {
         maxWidth: 800,
         margin: "auto",
         bgcolor: "card.bg",
-        border: "2px solid var(--mui-palette-primary-dark)",
-        borderRadius: "16px",
+        border: 2,
+        borderColor: "primary.dark",
+        borderRadius: (theme) => theme.spacing(2),
       }}
     >
       <CardContent>
@@ -50,9 +51,9 @@ const AnnualGrowthCard = () => {
             textAlign: "center",
             fontWeight: "bold",
             backgroundColor: "accent.main",
-            borderRadius: "8px",
-            padding: "8px",
-            marginBottom: "16px",
+            borderRadius: (theme) => theme.spacing(1),
+            padding: 1,
+            marginBottom: 2,
           }}
         >
           {t("card_annualgrowth_title")}
@@ -65,8 +66,8 @@ const AnnualGrowthCard = () => {
               justifyContent: "center",
               alignItems: "center", // Center children horizontally
               backgroundColor: "accent.light",
-              borderRadius: "8px",
-              marginBottom: "16px",
+              borderRadius: (theme) => theme.spacing(1),
+              marginBottom: 2,
             }}
           >
             {/* GDP Box */}
@@ -77,11 +78,12 @@ const AnnualGrowthCard = () => {
                 justifyContent: "center",
                 alignItems: "center", // Center children horizontally
                 backgroundColor: "accent.light",
-                borderRadius: "8px",
-                padding: "20px 0",
+                borderRadius: (theme) => theme.spacing(1),
+                py: 2.5,
+                px: 0,
                 width: "80%", // Take up half of the parent container
-                paddingRight: "16px",
-                marginRight: "16px",
+                paddingRight: 2,
+                marginRight: 2,
               }}
             >
               <Typography
@@ -107,13 +109,14 @@ const AnnualGrowthCard = () => {
                 value={selectedAnnualGrowth ? parseFloat(selectedAnnualGrowth) : 0}
                 sx={{
                   color: "accent.main", // Slider track and thumb color
-                  marginTop: "48px ",
+                  marginTop: 6,
                   width: "90%", // Adjust width to be less than container to center properly
                   "& .MuiSlider-thumb": {
                     height: 24,
                     width: 24,
                     backgroundColor: "common.white",
-                    border: "2px solid currentColor",
+                    border: 2,
+                    borderColor: "currentColor",
                     "&:focus, &:hover, &.Mui-active": {
                       boxShadow: "inherit",
                     },
@@ -122,7 +125,7 @@ const AnnualGrowthCard = () => {
                     color: "black",
                     variant: "body2",
                     fontWeight: "bold",
-                    borderRadius: "16px",
+                    borderRadius: (theme) => theme.spacing(2),
                     borderColor: "black",
                     backgroundColor: "accent.main",
                   },
@@ -149,8 +152,8 @@ const AnnualGrowthCard = () => {
               justifyContent: "center",
               alignItems: "center", // Center children horizontally
               backgroundColor: "accent.light",
-              borderRadius: "8px",
-              marginBottom: "16px",
+              borderRadius: (theme) => theme.spacing(1),
+              marginBottom: 2,
             }}
           >
             {/* Population Box */}
@@ -161,11 +164,12 @@ const AnnualGrowthCard = () => {
                 justifyContent: "center",
                 alignItems: "center", // Center children horizontally
                 backgroundColor: "accent.light",
-                borderRadius: "8px",
-                padding: "20px 0",
+                borderRadius: (theme) => theme.spacing(1),
+                py: 2.5,
+                px: 0,
                 width: "80%", // Take up half of the parent container
-                paddingRight: "16px",
-                marginRight: "16px",
+                paddingRight: 2,
+                marginRight: 2,
               }}
             >
               <Typography
@@ -191,13 +195,14 @@ const AnnualGrowthCard = () => {
                 value={selectedAnnualGrowth ? parseFloat(selectedAnnualGrowth) : 0}
                 sx={{
                   color: "accent.main", // Slider track and thumb color
-                  marginTop: "48px ",
+                  marginTop: 6,
                   width: "90%", // Adjust width to be less than container to center properly
                   "& .MuiSlider-thumb": {
                     height: 24,
                     width: 24,
                     backgroundColor: "common.white",
-                    border: "2px solid currentColor",
+                    border: 2,
+                    borderColor: "currentColor",
                     "&:focus, &:hover, &.Mui-active": {
                       boxShadow: "inherit",
                     },
@@ -206,7 +211,7 @@ const AnnualGrowthCard = () => {
                     color: "black",
                     variant: "body2",
                     fontWeight: "bold",
-                    borderRadius: "16px",
+                    borderRadius: (theme) => theme.spacing(2),
                     borderColor: "black",
                     backgroundColor: "accent.main",
                   },
@@ -225,7 +230,13 @@ const AnnualGrowthCard = () => {
             </Box>
           </Box>
         )}
-        <Box sx={{ padding: 2, backgroundColor: "surface.muted", borderRadius: "8px" }}>
+        <Box
+          sx={{
+            padding: 2,
+            backgroundColor: "surface.muted",
+            borderRadius: (theme) => theme.spacing(1),
+          }}
+        >
           <Typography variant="body2" color="text.primary">
             {t("card_annualgrowth_remarks")}
           </Typography>
