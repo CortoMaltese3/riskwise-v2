@@ -4,7 +4,7 @@ import { Box, Button, Stack, Typography } from "@mui/material";
 import InsightsIcon from "@mui/icons-material/Insights";
 
 import useStore from "../../store";
-import Sidebar, { TOP_BAR_HEIGHT } from "./Sidebar";
+import Sidebar, { SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from "./Sidebar";
 import TopBar from "./TopBar";
 import AdaptationMeasuresInput from "../input/AdaptationMeasuresInput";
 import DataInput from "../input/DataInput";
@@ -17,6 +17,10 @@ import SettingsView from "../settings/SettingsView";
 import UpdateDialog from "../UpdateDialog";
 import EngineStatusBanner from "../EngineStatusBanner";
 import OfflineIndicator from "./OfflineIndicator";
+import AppViewport from "./primitives/AppViewport";
+import HorizontalSplit from "./primitives/HorizontalSplit";
+import FixedColumn from "./primitives/FixedColumn";
+import ScrollableRegion from "./primitives/ScrollableRegion";
 
 const sectionToTab = { home: 0, risk: 1, macro: 2, workspace: 3, settings: 0 };
 
@@ -114,7 +118,7 @@ const sectionComponents = {
 
 const AppShell = () => {
   const { t } = useTranslation();
-  const { activeSection, setSelectedTab } = useStore();
+  const { activeSection, setSelectedTab, sidebarCollapsed } = useStore();
 
   useEffect(() => {
     const tab = sectionToTab[activeSection];
@@ -122,38 +126,31 @@ const AppShell = () => {
   }, [activeSection, setSelectedTab]);
 
   const Section = sectionComponents[activeSection] || HomeView;
+  const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        height: "100vh",
-        overflow: "hidden",
-        pt: `${TOP_BAR_HEIGHT}px`,
-        boxSizing: "border-box",
-      }}
-    >
+    <AppViewport>
       <TopBar />
-      <Sidebar />
-      <Box
-        component="main"
-        role="main"
-        id="main-content"
-        aria-label={t("main_content_aria")}
-        sx={{
-          flexGrow: 1,
-          display: "flex",
-          flexDirection: "column",
-          minHeight: 0,
-          overflow: "hidden",
-        }}
-      >
-        <EngineStatusBanner />
-        <Section />
-      </Box>
+      <HorizontalSplit>
+        <FixedColumn width={sidebarWidth}>
+          <Sidebar />
+        </FixedColumn>
+        <ScrollableRegion>
+          <Box
+            component="main"
+            role="main"
+            id="main-content"
+            aria-label={t("main_content_aria")}
+            sx={{ display: "flex", flexDirection: "column", height: "100%" }}
+          >
+            <EngineStatusBanner />
+            <Section />
+          </Box>
+        </ScrollableRegion>
+      </HorizontalSplit>
       <UpdateDialog />
       <OfflineIndicator />
-    </Box>
+    </AppViewport>
   );
 };
 
