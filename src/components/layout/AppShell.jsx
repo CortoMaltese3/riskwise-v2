@@ -166,6 +166,16 @@ const sectionComponents = {
   settings: SettingsView,
 };
 
+const CHROME_COLUMN_SX = {
+  display: "flex",
+  flexDirection: "column",
+  flexGrow: 1,
+  minHeight: 0,
+  minWidth: 0,
+};
+
+const MAIN_PANE_SX = { display: "flex", flexDirection: "column", height: "100%" };
+
 const AppShell = () => {
   const { t } = useTranslation();
   const { activeSection, setSelectedTab, sidebarCollapsed } = useStore();
@@ -181,23 +191,25 @@ const AppShell = () => {
   return (
     <AppViewport>
       <TopBar />
-      <HorizontalSplit>
-        <FixedColumn width={sidebarWidth}>
-          <Sidebar width={sidebarWidth} />
-        </FixedColumn>
-        <ScrollableRegion>
-          <Box
-            component="main"
-            role="main"
-            id="main-content"
-            aria-label={t("main_content_aria")}
-            sx={{ display: "flex", flexDirection: "column", height: "100%" }}
-          >
-            <EngineStatusBanner />
-            <Section />
-          </Box>
-        </ScrollableRegion>
-      </HorizontalSplit>
+      <Box sx={CHROME_COLUMN_SX}>
+        <EngineStatusBanner />
+        <HorizontalSplit>
+          <FixedColumn width={sidebarWidth}>
+            <Sidebar width={sidebarWidth} />
+          </FixedColumn>
+          <ScrollableRegion>
+            <Box
+              component="main"
+              role="main"
+              id="main-content"
+              aria-label={t("main_content_aria")}
+              sx={MAIN_PANE_SX}
+            >
+              <Section />
+            </Box>
+          </ScrollableRegion>
+        </HorizontalSplit>
+      </Box>
       <UpdateDialog />
       <OfflineIndicator />
     </AppViewport>
