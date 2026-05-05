@@ -24,25 +24,9 @@ import ScrollableRegion from "./primitives/ScrollableRegion";
 
 const sectionToTab = { home: 0, risk: 1, macro: 2, workspace: 3, settings: 0 };
 
-const LeftPanel = ({ children }) => (
-  <Box
-    sx={{
-      width: 280,
-      minWidth: 220,
-      maxWidth: 520,
-      resize: "horizontal",
-      overflow: "auto",
-      borderRight: 1,
-      borderColor: "divider",
-      p: 1,
-    }}
-  >
-    {children}
-  </Box>
-);
-
 const RISK_LEFT_PANEL_WIDTH = 280;
 const RISK_RESULTS_PANEL_WIDTH = 260;
+const MACRO_LEFT_PANEL_WIDTH = 280;
 
 export const RiskAssessmentView = () => {
   const { t } = useTranslation();
@@ -122,14 +106,28 @@ const MacroeconomicView = () => {
   const credOutputData = useStore((s) => s.credOutputData);
   const showEmpty = !credOutputData || credOutputData.length === 0;
   return (
-    <Box sx={{ display: "flex", flexGrow: 1, minHeight: 0 }}>
-      <LeftPanel>
-        <MacroEconomicInput />
-      </LeftPanel>
-      <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
-        {showEmpty ? <MacroEmptyState /> : <MainView />}
-      </Box>
-    </Box>
+    <HorizontalSplit>
+      <FixedColumn width={MACRO_LEFT_PANEL_WIDTH}>
+        <Box
+          sx={{
+            height: "100%",
+            borderRight: 1,
+            borderColor: "divider",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <ScrollableRegion>
+            <Box sx={{ p: 1 }}>
+              <MacroEconomicInput />
+            </Box>
+          </ScrollableRegion>
+        </Box>
+      </FixedColumn>
+      <ScrollableRegion>
+        <Box sx={{ p: 2 }}>{showEmpty ? <MacroEmptyState /> : <MainView />}</Box>
+      </ScrollableRegion>
+    </HorizontalSplit>
   );
 };
 
