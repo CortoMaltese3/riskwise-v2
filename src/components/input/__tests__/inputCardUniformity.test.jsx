@@ -25,6 +25,10 @@ import TimeHorizon from "../TimeHorizon";
 import ExposureEconomic from "../ExposureEconomic";
 import ExposureNonEconomic from "../ExposureNonEconomic";
 import AnnualGrowth from "../AnnualGrowth";
+import MacroCountry from "../../inputMacro/Country";
+import MacroScenario from "../../inputMacro/Scenario";
+import MacroEconomicVariable from "../../inputMacro/MacroEconomicVariable";
+import MacroSector from "../../inputMacro/Sector";
 
 const CARDS = [
   { name: "Country", Component: Country },
@@ -34,6 +38,26 @@ const CARDS = [
   { name: "ExposureEconomic", Component: ExposureEconomic },
   { name: "ExposureNonEconomic", Component: ExposureNonEconomic },
   { name: "AnnualGrowth", Component: AnnualGrowth },
+];
+
+const MACRO_CARDS = [
+  { name: "MacroCountry", Component: MacroCountry },
+  { name: "MacroScenario", Component: MacroScenario },
+  { name: "MacroEconomicVariable", Component: MacroEconomicVariable },
+  { name: "MacroSector", Component: MacroSector },
+];
+
+const MACRO_SELECTION_STATES = [
+  { name: "empty", state: {} },
+  {
+    name: "fully populated",
+    state: {
+      selectedMacroCountry: "egypt",
+      selectedMacroScenario: "ssp2",
+      selectedMacroVariable: "gdp",
+      selectedMacroSector: "agriculture",
+    },
+  },
 ];
 
 const SELECTION_STATES = [
@@ -83,6 +107,10 @@ const resetStore = (overrides = {}) => {
     isValidHazard: false,
     isValidExposureEconomic: false,
     isValidExposureNonEconomic: false,
+    selectedMacroCountry: "",
+    selectedMacroScenario: "",
+    selectedMacroVariable: "",
+    selectedMacroSector: "",
     ...overrides,
   });
 };
@@ -107,6 +135,32 @@ describe("input card uniformity", () => {
 
   for (const { name, Component } of CARDS) {
     for (const { name: stateName, state } of SELECTION_STATES) {
+      it(`${name} renders label + read-only TextField (state: ${stateName})`, () => {
+        resetStore(state);
+        const { container } = render(
+          <ThemeProvider theme={theme}>
+            <Component />
+          </ThemeProvider>
+        );
+
+        const cards = container.querySelectorAll(".MuiCard-root");
+        expect(cards.length).toBe(1);
+
+        const labels = container.querySelectorAll(".MuiTypography-h6");
+        expect(labels.length).toBe(1);
+        expect(labels[0].textContent.trim().length).toBeGreaterThan(0);
+
+        const inputs = container.querySelectorAll("input");
+        expect(inputs.length).toBe(1);
+        const input = inputs[0];
+        expect(input.disabled).toBe(true);
+        expect(input.placeholder).toBe("input_card_placeholder");
+      });
+    }
+  }
+
+  for (const { name, Component } of MACRO_CARDS) {
+    for (const { name: stateName, state } of MACRO_SELECTION_STATES) {
       it(`${name} renders label + read-only TextField (state: ${stateName})`, () => {
         resetStore(state);
         const { container } = render(
