@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Box, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
 
+import ScrollableRegion from "../layout/primitives/ScrollableRegion";
 import CustomDataSection from "./CustomDataSection";
 import CREDDataSection from "./CREDDataSection";
 import DiagnosticsSection from "./DiagnosticsSection";
@@ -38,41 +39,45 @@ const SettingsView = () => {
   const [activeTab, setActiveTab] = useState("custom-data");
 
   return (
-    <Box sx={{ p: 3, flexGrow: 1, overflow: "auto" }}>
-      <Typography variant="h4" gutterBottom>
-        {t("sidebar_settings")}
-      </Typography>
-      <Paper variant="outlined" sx={{ display: "flex", minHeight: 480 }}>
-        <Tabs
-          orientation="vertical"
-          value={activeTab}
-          onChange={(_e, value) => setActiveTab(value)}
-          aria-label={t("settings_tabs_aria")}
-          sx={{
-            borderRight: 1,
-            borderColor: "divider",
-            minWidth: 200,
-            "& .MuiTab-root": { alignItems: "flex-start", textAlign: "left" },
-          }}
-        >
-          {TABS.map((tab) => (
-            <Tab key={tab.id} value={tab.id} label={t(tab.labelKey)} />
-          ))}
-        </Tabs>
-        <Box role="tabpanel" sx={{ p: 3, flexGrow: 1, overflow: "auto" }}>
-          {activeTab === "custom-data" && <CustomDataSection />}
-          {activeTab === "import-scenario" && <ImportScenarioSection />}
-          {activeTab === "cred-data" && <CREDDataSection />}
-          {activeTab === "measures" && <MeasuresSection />}
-          {activeTab === "updates" && <UpdatesPanel />}
-          {activeTab === "offline" && <OfflineSection />}
-          {activeTab === "diagnostics" && <DiagnosticsSection />}
-          {activeTab === "about" && (
-            <PlaceholderPanel titleKey="settings_tab_about" bodyKey="settings_about_body" />
-          )}
-        </Box>
-      </Paper>
-    </Box>
+    <ScrollableRegion>
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          {t("sidebar_settings")}
+        </Typography>
+        <Paper variant="outlined">
+          <Stack direction="row" sx={{ minHeight: 480 }}>
+            <Tabs
+              orientation="vertical"
+              value={activeTab}
+              onChange={(_e, value) => setActiveTab(value)}
+              aria-label={t("settings_tabs_aria")}
+              sx={{
+                borderRight: 1,
+                borderColor: "divider",
+                minWidth: 200,
+                "& .MuiTab-root": { alignItems: "flex-start", textAlign: "left" },
+              }}
+            >
+              {TABS.map((tab) => (
+                <Tab key={tab.id} value={tab.id} label={t(tab.labelKey)} />
+              ))}
+            </Tabs>
+            <Box role="tabpanel" sx={{ p: 3, flexGrow: 1 }}>
+              {activeTab === "custom-data" && <CustomDataSection />}
+              {activeTab === "import-scenario" && <ImportScenarioSection />}
+              {activeTab === "cred-data" && <CREDDataSection />}
+              {activeTab === "measures" && <MeasuresSection />}
+              {activeTab === "updates" && <UpdatesPanel />}
+              {activeTab === "offline" && <OfflineSection />}
+              {activeTab === "diagnostics" && <DiagnosticsSection />}
+              {activeTab === "about" && (
+                <PlaceholderPanel titleKey="settings_tab_about" bodyKey="settings_about_body" />
+              )}
+            </Box>
+          </Stack>
+        </Paper>
+      </Box>
+    </ScrollableRegion>
   );
 };
 
