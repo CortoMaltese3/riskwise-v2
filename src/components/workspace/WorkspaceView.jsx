@@ -2,7 +2,6 @@ import React, { useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
 import {
-  Box,
   Button,
   FormControl,
   InputLabel,
@@ -17,6 +16,7 @@ import InboxIcon from "@mui/icons-material/Inbox";
 import useStore from "../../store";
 import useWorkspaceStore from "../../store/workspaceSlice";
 import { enqueueToast } from "../../hooks/useToast";
+import ScrollableRegion from "../layout/primitives/ScrollableRegion";
 import ScenarioTable from "./ScenarioTable";
 import WorkspaceImportExport from "./WorkspaceImportExport";
 
@@ -41,16 +41,7 @@ const compareBy = (key, dir) => (a, b) => {
 const EmptyState = ({ onStart }) => {
   const { t } = useTranslation();
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        py: 10,
-        color: "text.secondary",
-      }}
-    >
+    <Stack alignItems="center" justifyContent="center" sx={{ py: 10, color: "text.secondary" }}>
       <InboxIcon sx={{ fontSize: 64, mb: 2 }} />
       <Typography variant="h6" gutterBottom>
         {t("workspace_empty_title")}
@@ -61,7 +52,7 @@ const EmptyState = ({ onStart }) => {
       <Button variant="contained" onClick={onStart}>
         {t("workspace_empty_cta")}
       </Button>
-    </Box>
+    </Stack>
   );
 };
 
@@ -132,99 +123,95 @@ const WorkspaceView = ({ initialScenarios }) => {
     setAllSelected(checked ? visibleRows.map((r) => r.id) : []);
   };
 
-  if (!scenarios.length) {
-    return (
+  return (
+    <ScrollableRegion>
       <Stack spacing={2} sx={{ p: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Typography variant="h5">{t("sidebar_workspace")}</Typography>
           <WorkspaceImportExport onImported={loadScenarios} />
         </Stack>
-        <EmptyState onStart={() => setActiveSection("risk")} />
+
+        {!scenarios.length ? (
+          <EmptyState onStart={() => setActiveSection("risk")} />
+        ) : (
+          <>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label={t("workspace_search_label")}
+                size="small"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                slotProps={{ htmlInput: { "aria-label": "search-scenarios" } }}
+                sx={{ minWidth: 220 }}
+              />
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel id="country-filter-label">{t("country")}</InputLabel>
+                <Select
+                  labelId="country-filter-label"
+                  label={t("country")}
+                  value={countryFilter}
+                  onChange={(e) => setCountryFilter(e.target.value)}
+                  inputProps={{ "aria-label": "country-filter" }}
+                >
+                  <MenuItem value="">{t("workspace_filter_all")}</MenuItem>
+                  {countries.map((country) => (
+                    <MenuItem key={country} value={country}>
+                      {country}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel id="hazard-filter-label">{t("hazard_title")}</InputLabel>
+                <Select
+                  labelId="hazard-filter-label"
+                  label={t("hazard_title")}
+                  value={hazardFilter}
+                  onChange={(e) => setHazardFilter(e.target.value)}
+                  inputProps={{ "aria-label": "hazard-filter" }}
+                >
+                  <MenuItem value="">{t("workspace_filter_all")}</MenuItem>
+                  {hazards.map((hazard) => (
+                    <MenuItem key={hazard} value={hazard}>
+                      {hazard}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+
+            {selectedIds.length > 0 && (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography variant="body2">
+                  {t("workspace_scenarios_selected", { count: selectedIds.length })}
+                </Typography>
+                <Button size="small" color="error" onClick={deleteSelected}>
+                  Delete selected
+                </Button>
+              </Stack>
+            )}
+
+            {error && (
+              <Typography role="alert" color="error">
+                {error}
+              </Typography>
+            )}
+
+            <ScenarioTable
+              rows={visibleRows}
+              selectedIds={selectedIds}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              onSort={setSort}
+              onToggleSelected={toggleSelected}
+              onToggleAll={toggleAll}
+              onRename={renameScenario}
+              onAction={handleAction}
+            />
+          </>
+        )}
       </Stack>
-    );
-  }
-
-  return (
-    <Stack spacing={2} sx={{ p: 2 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="h5">{t("sidebar_workspace")}</Typography>
-        <WorkspaceImportExport onImported={loadScenarios} />
-      </Stack>
-
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-        <TextField
-          label={t("workspace_search_label")}
-          size="small"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          slotProps={{ htmlInput: { "aria-label": "search-scenarios" } }}
-          sx={{ minWidth: 220 }}
-        />
-        <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel id="country-filter-label">{t("country")}</InputLabel>
-          <Select
-            labelId="country-filter-label"
-            label={t("country")}
-            value={countryFilter}
-            onChange={(e) => setCountryFilter(e.target.value)}
-            inputProps={{ "aria-label": "country-filter" }}
-          >
-            <MenuItem value="">{t("workspace_filter_all")}</MenuItem>
-            {countries.map((country) => (
-              <MenuItem key={country} value={country}>
-                {country}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel id="hazard-filter-label">{t("hazard_title")}</InputLabel>
-          <Select
-            labelId="hazard-filter-label"
-            label={t("hazard_title")}
-            value={hazardFilter}
-            onChange={(e) => setHazardFilter(e.target.value)}
-            inputProps={{ "aria-label": "hazard-filter" }}
-          >
-            <MenuItem value="">{t("workspace_filter_all")}</MenuItem>
-            {hazards.map((hazard) => (
-              <MenuItem key={hazard} value={hazard}>
-                {hazard}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Stack>
-
-      {selectedIds.length > 0 && (
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Typography variant="body2">
-            {t("workspace_scenarios_selected", { count: selectedIds.length })}
-          </Typography>
-          <Button size="small" color="error" onClick={deleteSelected}>
-            Delete selected
-          </Button>
-        </Stack>
-      )}
-
-      {error && (
-        <Typography role="alert" color="error">
-          {error}
-        </Typography>
-      )}
-
-      <ScenarioTable
-        rows={visibleRows}
-        selectedIds={selectedIds}
-        sortKey={sortKey}
-        sortDir={sortDir}
-        onSort={setSort}
-        onToggleSelected={toggleSelected}
-        onToggleAll={toggleAll}
-        onRename={renameScenario}
-        onAction={handleAction}
-      />
-    </Stack>
+    </ScrollableRegion>
   );
 };
 
