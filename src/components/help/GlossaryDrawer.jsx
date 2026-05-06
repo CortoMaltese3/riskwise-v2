@@ -23,6 +23,12 @@ import enGlossary from "../../content/glossary/en.md?raw";
 import arGlossary from "../../content/glossary/ar.md?raw";
 import thGlossary from "../../content/glossary/th.md?raw";
 
+// Mirrors TOP_BAR_HEIGHT in components/layout/Sidebar.jsx. Inlined rather
+// than imported because pulling Sidebar into this module breaks the
+// glossary_drawer test setup (Sidebar's MUI-icon imports trigger a module
+// load failure in the test runner).
+const TOP_BAR_HEIGHT = 80;
+
 const GLOSSARIES = { en: enGlossary, ar: arGlossary, th: thGlossary };
 
 const parseGlossary = (source) => {
@@ -105,7 +111,16 @@ const GlossaryDrawer = () => {
       anchor="right"
       open={open}
       onClose={() => setOpen(false)}
-      PaperProps={{ sx: { width: { xs: "100%", sm: 400 } } }}
+      PaperProps={{
+        sx: {
+          width: { xs: "100%", sm: 400 },
+          // TopBar is `position: fixed` with zIndex `drawer + 1`, so without
+          // this offset the AppBar paints over the drawer's top 80px (search
+          // field gets clipped). Sit the drawer paper below the AppBar.
+          top: TOP_BAR_HEIGHT,
+          height: `calc(100% - ${TOP_BAR_HEIGHT}px)`,
+        },
+      }}
     >
       <Box role="presentation" sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <Stack
