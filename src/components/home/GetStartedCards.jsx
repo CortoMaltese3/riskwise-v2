@@ -50,56 +50,47 @@ const GetStartedCards = () => {
   const ArrowIcon = rtl ? WestIcon : EastIcon;
 
   return (
-    <Box>
-      <Typography
-        variant="overline"
-        component="h2"
-        sx={{ display: "block", mb: 1, color: "text.secondary" }}
-      >
-        {t("home_get_started_label")}
-      </Typography>
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
-          gap: 2,
-        }}
-      >
-        {CTA_DEFINITIONS.map(({ id, titleKey, subtitleKey }) => {
-          const Icon = ICONS[id];
-          return (
-            <Card key={id} variant="outlined" sx={CARD_SX}>
-              <CardActionArea
-                onClick={() => setActiveSection(id)}
-                aria-label={t(titleKey)}
-                data-testid={`home-cta-${id}`}
-                sx={ACTION_AREA_SX}
-              >
-                <Stack spacing={1.5} sx={{ height: "100%" }}>
-                  <Icon color="primary" />
-                  <Typography variant="h6" component="h3">
-                    {t(titleKey)}
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
+        gap: 2,
+      }}
+    >
+      {CTA_DEFINITIONS.map(({ id, titleKey, subtitleKey }) => {
+        const Icon = ICONS[id];
+        return (
+          <Card key={id} variant="outlined" sx={CARD_SX}>
+            <CardActionArea
+              onClick={() => setActiveSection(id)}
+              aria-label={t(titleKey)}
+              data-testid={`home-cta-${id}`}
+              sx={ACTION_AREA_SX}
+            >
+              <Stack spacing={1.5} sx={{ height: "100%" }}>
+                <Icon color="primary" />
+                <Typography variant="h6" component="h3">
+                  {t(titleKey)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+                  {t(subtitleKey)}
+                </Typography>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  spacing={0.5}
+                  sx={{ color: "primary.main" }}
+                >
+                  <Typography variant="body2" component="span">
+                    {t("home_cta_open")}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
-                    {t(subtitleKey)}
-                  </Typography>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    spacing={0.5}
-                    sx={{ color: "primary.main" }}
-                  >
-                    <Typography variant="body2" component="span">
-                      {t("home_cta_open")}
-                    </Typography>
-                    <ArrowIcon fontSize="small" />
-                  </Stack>
+                  <ArrowIcon fontSize="small" />
                 </Stack>
-              </CardActionArea>
-            </Card>
-          );
-        })}
-      </Box>
+              </Stack>
+            </CardActionArea>
+          </Card>
+        );
+      })}
     </Box>
   );
 };
