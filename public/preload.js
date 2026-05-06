@@ -80,6 +80,15 @@ contextBridge.exposeInMainWorld("electron", {
   // Long-running scenario progress events streamed from the SSE bridge.
   onProgress: (callback) => subscribe("progress", callback),
 
+  // Splash loader bridge (issue #283). `loader:init` fires once after the
+  // loader window finishes loading and carries theme-resolved wordmark,
+  // asset path and app version; `loader:status` fires every time main
+  // crosses a boot phase boundary (engine spawn → ready → data-packs →
+  // tiles → finalizing). Only the loader window subscribes; the main
+  // window receives no traffic on these channels.
+  onLoaderInit: (callback) => subscribe("loader:init", callback, { once: true }),
+  onLoaderStatus: (callback) => subscribe("loader:status", callback),
+
   // Auto-update bridge (issue #115). `updates.*` drive the consent dialog
   // and Settings panel; `engine.*` drive the signed-manifest engine update
   // flow. All calls go through invoke/`handle` with result envelopes, so a

@@ -189,17 +189,94 @@ if (app.getGPUFeatureStatus().gpu_compositing.includes("disabled")) {
   app.disableHardwareAcceleration();
 }
 
+// Splash loader theme bundle (issue #283). The loader window reads its
+// theme name from the URL hash (set when we call `loadFile` below); main
+// reads the matching `loader-themes/<name>/{manifest.json,strings.json}`
+// once and resolves phase keys against that map. Per-client distributions
+// drop a sibling directory under `loader-themes/` and set `LOADER_THEME`
+// at boot — no code changes required. Slugs are restricted to
+// `[A-Za-z0-9_-]` so a malformed env var cannot escape the directory.
+const LOADER_THEME_NAME = (() => {
+  const raw = process.env.LOADER_THEME || "default";
+  return /^[A-Za-z0-9_-]+$/.test(raw) ? raw : "default";
+})();
+
+const readLoaderThemeBundle = (themeName) => {
+  const themeRoot = path.join(basePath, "build", "loader-themes", themeName);
+  let manifest = {};
+  let strings = {};
+  let manifestOk = false;
+  try {
+    manifest = JSON.parse(fs.readFileSync(path.join(themeRoot, "manifest.json"), "utf8"));
+    manifestOk = true;
+  } catch (err) {
+    log.warn(`[loader] missing/invalid manifest for theme "${themeName}": ${err.message}`);
+  }
+  const stringsFile = (manifest && manifest.strings) || "strings.json";
+  try {
+    strings = JSON.parse(fs.readFileSync(path.join(themeRoot, stringsFile), "utf8"));
+  } catch (err) {
+    log.warn(`[loader] missing/invalid strings for theme "${themeName}": ${err.message}`);
+  }
+  return { manifestOk, manifest, strings };
+};
+
+let loaderThemeCache = null;
+const getLoaderTheme = () => {
+  if (loaderThemeCache) return loaderThemeCache;
+  let themeName = LOADER_THEME_NAME;
+  let bundle = readLoaderThemeBundle(themeName);
+  if (!bundle.manifestOk && themeName !== "default") {
+    log.warn(`[loader] theme "${themeName}" not found; falling back to default`);
+    themeName = "default";
+    bundle = readLoaderThemeBundle(themeName);
+  }
+  loaderThemeCache = { themeName, manifest: bundle.manifest, strings: bundle.strings };
+  return loaderThemeCache;
+};
+
+const sendLoaderInit = () => {
+  if (!loaderWindow || loaderWindow.isDestroyed()) return;
+  const { themeName, manifest } = getLoaderTheme();
+  const assetUrl =
+    manifest && manifest.asset ? `loader-themes/${themeName}/${manifest.asset}` : "";
+  try {
+    loaderWindow.webContents.send("loader:init", {
+      themeName,
+      wordmark: (manifest && manifest.wordmark) || "",
+      wordmarkAccent: (manifest && manifest.wordmarkAccent) || "",
+      assetUrl,
+      assetAlt: (manifest && manifest.assetAlt) || "Loading",
+      version: `v${app.getVersion()}`,
+    });
+  } catch (err) {
+    log.error(`[loader] failed to send init: ${err.message}`);
+  }
+};
+
+// Engine-install phase covers first-run download/extract progress. Each
+// call here lands on the splash via the same `loader:status` channel as
+// regular boot phases; the message passed in *is* the rendered string,
+// since these strings include dynamic data (download percentage) that
+// would not survive a static `strings.json` lookup.
 const updateLoaderMessage = (message) => {
+  emitLoaderStatus("engine-install", message);
+};
+
+// Push a phase boundary onto the splash. `fallbackMessage` is what we log
+// and what the splash falls back to if the active theme's `strings.json`
+// is missing the phase key (acceptance criterion: no blank status line).
+const emitLoaderStatus = (phase, fallbackMessage) => {
+  const { strings } = getLoaderTheme();
+  const themed = strings && typeof strings[phase] === "string" ? strings[phase] : null;
+  const message = themed || fallbackMessage;
+  log.info(`[loader] ${phase}: ${fallbackMessage}`);
   if (loaderWindow && !loaderWindow.isDestroyed()) {
-    loaderWindow.webContents.executeJavaScript(`
-      document.body.innerHTML = \`
-        <div style="text-align: center; color: white; font-family: Arial, sans-serif;">
-          <img src="gear-loader.svg" alt="loading..." style="width: 60px; height: 60px; margin-bottom: 12px;">
-          <h3 style="margin: 0 0 6px 0; font-size: 15px;">Starting RISK WISE</h3>
-          <p style="margin: 0; font-size: 12px;">${message}</p>
-        </div>
-      \`;
-    `);
+    try {
+      loaderWindow.webContents.send("loader:status", { phase, message });
+    } catch (err) {
+      log.error(`[loader] failed to send status: ${err.message}`);
+    }
   }
 };
 
@@ -501,19 +578,19 @@ app.whenReady().then(async () => {
   // Give loader window time to render
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  updateLoaderMessage("Initializing application...");
+  // Phase 1 — engine spawn.
+  emitLoaderStatus("engine-starting", "Starting application engine...");
 
   let pythonReady = false;
 
-  // Start the Python backend process
   try {
-    updateLoaderMessage("Starting application engine...");
     log.info("[electron] creating Python process...");
     global.pythonProcess = await createPythonProcess();
 
-    updateLoaderMessage("Waiting for engine to be ready...");
     await waitForPythonProcessReady(global.pythonProcess);
     pythonReady = true;
+    // Phase 2 — engine handshake complete.
+    emitLoaderStatus("engine-ready", "Engine ready...");
   } catch (error) {
     log.error("[electron] Failed to start Python process:", error);
     pythonReady = false;
@@ -536,7 +613,6 @@ app.whenReady().then(async () => {
   // Clear temporary directory on startup
   if (pythonReady) {
     try {
-      updateLoaderMessage("Clearing temporary files...");
       log.info("[electron] clearing temp directory...");
       await clearTempDir();
     } catch (error) {
@@ -546,7 +622,24 @@ app.whenReady().then(async () => {
     log.warn("[electron] skipping temp directory clear - Python not ready");
   }
 
-  updateLoaderMessage("Loading application...");
+  // Phase 3 — data-packs scan. Runs while the splash is still in front so
+  // a slow signature-verification pass on a large packs/ directory doesn't
+  // present as a blank screen to the user (issue #283).
+  emitLoaderStatus("data-packs", "Loading data packs...");
+  importStartupDataPacks();
+
+  // Phase 4 — offline tile server (skipped when offline mode is off).
+  if (isOfflineMode()) {
+    emitLoaderStatus("tiles", "Preparing map tiles...");
+    try {
+      await ensureTileServer();
+    } catch (err) {
+      log.error("[electron] tile server start failed:", err.message);
+    }
+  }
+
+  // Phase 5 — about to swap the splash for the main window.
+  emitLoaderStatus("finalizing", "Almost ready...");
 
   // Close loader window and open main window
   try {
@@ -574,12 +667,6 @@ app.whenReady().then(async () => {
     startUpdateCheckTimer();
   }
 
-  importStartupDataPacks();
-  if (isOfflineMode()) {
-    ensureTileServer().catch((err) =>
-      log.error("[electron] tile server start failed:", err.message)
-    );
-  }
   broadcastOfflineStatus();
 });
 
@@ -588,19 +675,30 @@ const createLoaderWindow = () => {
     const iconPath = path.join(basePath, "build", "icon.ico");
 
     loaderWindow = new BrowserWindow({
-      height: 200,
-      width: 300,
+      height: 320,
+      width: 480,
       center: true,
       alwaysOnTop: true,
       frame: false,
       resizable: false,
       autoHideMenuBar: true,
       icon: iconPath,
-      webPreferences: { ...HARDENED_WEB_PREFERENCES },
+      webPreferences: {
+        ...HARDENED_WEB_PREFERENCES,
+        preload: path.join(basePath, "build", "preload.js"),
+      },
     });
 
+    // Theme name is passed via the URL hash so `loader.js` can attach the
+    // matching stylesheet to <head> synchronously, before the body paints.
+    // IPC would arrive too late and cause a flash of unstyled content.
+    const { themeName } = getLoaderTheme();
     const loaderPath = path.join(basePath, "build", "loader.html");
-    loaderWindow.loadFile(loaderPath);
+    loaderWindow.loadFile(loaderPath, { hash: themeName });
+
+    loaderWindow.webContents.once("did-finish-load", () => {
+      sendLoaderInit();
+    });
   } catch (error) {
     log.error("[electron] failed to create loader window:", error);
   }

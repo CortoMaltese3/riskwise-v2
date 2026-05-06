@@ -1,0 +1,96 @@
+/* Default RISK WISE splash theme. Per-client themes copy this directory and
+   override the custom properties below; loader.html consumes these tokens
+   only — no hex colours or asset names should appear in the markup. */
+:root {
+  --loader-bg: #2a4d69;
+  --loader-fg: #e2ecf3;
+  --loader-wordmark-fg: #ffffff;
+  --loader-accent: #8ac8d0;
+  --loader-status-fg: #b7cada;
+  --loader-version-fg: rgba(255, 255, 255, 0.35);
+  --loader-font: -apple-system, "Segoe UI", Roboto, sans-serif;
+  --loader-wordmark-size: 28px;
+  --loader-wordmark-weight: 300;
+  --loader-wordmark-accent-weight: 600;
+  --loader-wordmark-letter-spacing: 6px;
+  --loader-wordmark-margin: 28px;
+  --loader-mark-size: 56px;
+  --loader-mark-margin: 20px;
+  --loader-status-size: 13px;
+  --loader-status-letter-spacing: 0.3px;
+  --loader-version-size: 11px;
+  --loader-version-bottom: 12px;
+  --loader-version-right: 14px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--loader-bg);
+  color: var(--loader-fg);
+  font-family: var(--loader-font);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.wordmark {
+  font-size: var(--loader-wordmark-size);
+  font-weight: var(--loader-wordmark-weight);
+  letter-spacing: var(--loader-wordmark-letter-spacing);
+  color: var(--loader-wordmark-fg);
+  margin-bottom: var(--loader-wordmark-margin);
+}
+
+.wordmark .accent {
+  font-weight: var(--loader-wordmark-accent-weight);
+  color: var(--loader-accent);
+}
+
+.mark {
+  width: var(--loader-mark-size);
+  height: var(--loader-mark-size);
+  margin-bottom: var(--loader-mark-margin);
+  animation: loader-spin 2s linear infinite;
+}
+
+@keyframes loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.status {
+  font-size: var(--loader-status-size);
+  color: var(--loader-status-fg);
+  min-height: 18px;
+  letter-spacing: var(--loader-status-letter-spacing);
+  text-align: center;
+  padding: 0 24px;
+}
+
+.version {
+  position: absolute;
+  bottom: var(--loader-version-bottom);
+  right: var(--loader-version-right);
+  font-size: var(--loader-version-size);
+  color: var(--loader-version-fg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mark {
+    animation: none;
+  }
+}

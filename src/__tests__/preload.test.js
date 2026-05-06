@@ -58,6 +58,8 @@ const ALLOWED_LISTEN_CHANNELS = new Set([
   "update:available",
   "update:downloaded",
   "offline:status-changed",
+  "loader:init",
+  "loader:status",
 ]);
 
 const loadPreload = () => {
@@ -178,6 +180,8 @@ describe("preload bridge surface", () => {
       exposed.electron.onSaveScreenshotReply(() => {}),
       exposed.electron.onCopyFileReply(() => {}),
       exposed.electron.onCopyFolderReply(() => {}),
+      exposed.electron.onLoaderInit(() => {}),
+      exposed.electron.onLoaderStatus(() => {}),
       exposed.electron.updates.onAvailable(() => {}),
       exposed.electron.updates.onDownloaded(() => {}),
       exposed.electron.offline.onStatusChanged(() => {}),
