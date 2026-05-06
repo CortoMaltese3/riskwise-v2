@@ -2148,6 +2148,13 @@ ipcMain.handle("engine:verify-manifest", async () => {
 });
 
 ipcMain.handle("engine:check-blocked", async () => {
+  // No signed manifest is published yet (Phase 6 / v2.0.0 cutover). In
+  // unpackaged dev runs we spawn the source-tree backend directly, so the
+  // gate has nothing real to gate against — short-circuit instead of
+  // surfacing a misleading "HTTP 404" from the not-yet-published manifest.
+  if (isDevelopmentEnv()) {
+    return { ok: true, blocked: false, devBypass: true };
+  }
   try {
     const manifest = await fetchVerifiedEngineManifest();
     const cachedEngineVersion = updateStore ? updateStore.get("engine.version", null) : null;
@@ -2185,6 +2192,9 @@ ipcMain.handle("diagnostics:set-sentry-consent", (_evt, payload) => {
 });
 
 ipcMain.handle("engine:download-update", async () => {
+  if (isDevelopmentEnv()) {
+    return { ok: true, devBypass: true };
+  }
   try {
     const manifest = await fetchVerifiedEngineManifest();
     const engineRoot = process.env.LOCALAPPDATA;
