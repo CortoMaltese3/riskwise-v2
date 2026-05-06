@@ -2,11 +2,11 @@ import React, { useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
 import {
+  Box,
   Button,
   FormControl,
   InputLabel,
   MenuItem,
-  Paper,
   Select,
   Stack,
   TextField,
@@ -42,24 +42,32 @@ const compareBy = (key, dir) => (a, b) => {
 const EmptyState = ({ onStart }) => {
   const { t } = useTranslation();
   return (
-    <Paper variant="outlined" sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={{ flex: 1, minHeight: 480, color: "text.secondary", p: 2 }}
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+        pt: 6,
+        color: "text.secondary",
+      }}
+    >
+      <InboxIcon sx={{ fontSize: 48, mb: 1.5, alignSelf: "center" }} />
+      <Typography variant="subtitle1" gutterBottom sx={{ alignSelf: "center" }}>
+        {t("workspace_empty_title")}
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 2, alignSelf: "center" }}>
+        {t("workspace_empty_body")}
+      </Typography>
+      <Button
+        variant="contained"
+        size="small"
+        onClick={onStart}
+        sx={{ alignSelf: "center", width: "auto" }}
       >
-        <InboxIcon sx={{ fontSize: 64, mb: 2 }} />
-        <Typography variant="h6" gutterBottom>
-          {t("workspace_empty_title")}
-        </Typography>
-        <Typography variant="body2" sx={{ mb: 3 }}>
-          {t("workspace_empty_body")}
-        </Typography>
-        <Button variant="contained" onClick={onStart}>
-          {t("workspace_empty_cta")}
-        </Button>
-      </Stack>
-    </Paper>
+        {t("workspace_empty_cta")}
+      </Button>
+    </Box>
   );
 };
 
@@ -136,8 +144,9 @@ const WorkspaceView = ({ initialScenarios }) => {
         spacing={2}
         sx={{ p: 2, minHeight: "100%", flex: 1, display: "flex", flexDirection: "column" }}
       >
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Stack direction="row" alignItems="center" spacing={2} sx={{ width: "100%" }}>
           <Typography variant="h5">{t("sidebar_workspace")}</Typography>
+          <Box sx={{ flexGrow: 1 }} />
           <WorkspaceImportExport onImported={() => loadScenarios({ force: true })} />
         </Stack>
 
