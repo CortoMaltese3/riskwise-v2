@@ -141,10 +141,8 @@ const RunScenarioButton = () => {
           key="runButton"
           disabled={isRunButtonDisabled}
           onClick={onRunHandler}
-          size="medium"
           startIcon={<PlayCircleIcon />}
           sx={{
-            minWidth: 15,
             bgcolor: "accent.main",
             "&:hover": { bgcolor: "accent.light" },
           }}
@@ -156,7 +154,6 @@ const RunScenarioButton = () => {
         <LoadingButton
           loading={isRunButtonLoading}
           loadingPosition="center"
-          sx={{ minWidth: 15 }}
           color="secondary"
           variant="contained"
         >

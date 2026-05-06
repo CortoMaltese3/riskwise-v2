@@ -225,7 +225,6 @@ const MeasuresSection = () => {
         </Typography>
         <Button
           variant="contained"
-          size="small"
           sx={{ mt: 2 }}
           disabled={busy !== null}
           onClick={(e) => {

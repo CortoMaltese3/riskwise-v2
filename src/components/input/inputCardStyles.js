@@ -44,9 +44,15 @@ export const getInputCardSx = (state, { clicked = false } = {}) => ({
 });
 
 export const disabledFieldSx = {
+  // Apply the disabled fill to the outer rounded `OutlinedInput` slot so it
+  // inherits the notched-outline border-radius. Styling the inner native
+  // `<input>` instead leaves a square grey rectangle peeking behind the pill,
+  // which shows up clearly on the neutral-state card (#285).
+  ".MuiOutlinedInput-root.Mui-disabled": {
+    bgcolor: (theme) => theme.palette.inputCard.disabledBg,
+  },
   ".MuiInputBase-input.Mui-disabled": {
     WebkitTextFillColor: (theme) => theme.palette.inputCard.disabledText,
-    bgcolor: (theme) => theme.palette.inputCard.disabledBg,
     padding: 1,
   },
 };

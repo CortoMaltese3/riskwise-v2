@@ -46,10 +46,8 @@ const RunPlotMacroButton = () => {
       <Button
         disabled={isPlotButtonDisabled}
         onClick={handleRunButton}
-        size="medium"
         startIcon={<InsightsIcon />}
         sx={{
-          minWidth: 15,
           bgcolor: "accent.main",
           "&:hover": { bgcolor: "accent.light" },
         }}

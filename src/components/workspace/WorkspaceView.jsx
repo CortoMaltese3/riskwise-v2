@@ -59,12 +59,7 @@ const EmptyState = ({ onStart }) => {
       <Typography variant="body2" sx={{ mb: 2, alignSelf: "center" }}>
         {t("workspace_empty_body")}
       </Typography>
-      <Button
-        variant="contained"
-        size="small"
-        onClick={onStart}
-        sx={{ alignSelf: "center", width: "auto" }}
-      >
+      <Button variant="contained" onClick={onStart}>
         {t("workspace_empty_cta")}
       </Button>
     </Box>

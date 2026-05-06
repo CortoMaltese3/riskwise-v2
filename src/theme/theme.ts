@@ -188,6 +188,45 @@ export const theme = createTheme({
         },
       },
     },
+    // Button intents (issue #285 / spec § Buttons). Three intents driven by
+    // MUI variant; size is owned by the theme, not call sites.
+    //
+    //   variant="contained" — primary CTA. One per surface (empty-state hero,
+    //                         modal primary action, dropzone browse, page CTA).
+    //                         Anchored with `minWidth: 140` so short labels
+    //                         like "Save" don't shrink to a tab.
+    //   variant="outlined"  — action. Inline / secondary actions in toolbars,
+    //                         tables, and dialog secondary buttons.
+    //   variant="text"      — subtle. Tertiary, nav-like.
+    //
+    // Call sites must NOT pass `size` on `<Button>` (the theme owns sizing) and
+    // must NOT pass sizing-related `sx` (`width`, `minWidth`, `padding`,
+    // `fontSize`). Spacing (`mt`, `mb`) belongs to the parent layout where
+    // possible, but staying on the button is acceptable when the parent is a
+    // plain `Box` — the rule targets *sizing*, not nudges.
+    //
+    // Legitimate size="small" on `<Button>` is reserved for dense toolbar /
+    // table-row / chart-toggle actions. Avoid it on primary CTAs.
+    MuiButton: {
+      defaultProps: {
+        // Flat contained buttons (no MUI default elevation shadow). The
+        // existing buttons across home, workspace, and settings already render
+        // flat in their screenshots; this makes that the explicit default.
+        disableElevation: true,
+      },
+      styleOverrides: {
+        // `contained` slot anchors primary CTAs at a generous min-width so
+        // short-label CTAs feel balanced next to long-label ones (e.g. "Save"
+        // alongside "Run your first scenario"). `sizeSmall` overrides this
+        // back to MUI's natural minimum for legitimately-dense uses.
+        contained: {
+          minWidth: 140,
+        },
+        sizeSmall: {
+          minWidth: 0,
+        },
+      },
+    },
   },
 });
 

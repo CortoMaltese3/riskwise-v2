@@ -10,18 +10,18 @@ const MainViewTitle = () => {
   const { t } = useTranslation();
 
   return (
-    <Box sx={{ width: "100%", marginBottom: 2 }}>
+    <Box sx={{ width: "100%" }}>
       <Typography
         variant="h6"
         component="div"
         sx={{
-          display: "inline-block",
+          margin: "auto",
+          marginBottom: 2,
           bgcolor: "accent.dark",
           color: "white",
           fontWeight: "bold",
-          textAlign: "left",
-          paddingX: 1.5,
-          paddingY: 1,
+          textAlign: "center",
+          padding: 1,
           borderRadius: (theme) => theme.spacing(0.5),
         }}
       >
