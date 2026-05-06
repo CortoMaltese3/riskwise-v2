@@ -134,6 +134,12 @@ const MacroEconomicChart = () => {
     // with the locale-aware tick formatter below, this keeps Arabic renders
     // visually correct without duplicating chart code per locale.
     rtl,
+    responsive: true,
+    // Without this, Chart.js sizes the canvas as width/aspectRatio (default 2),
+    // so on wide right-panes the empty plot becomes ~700-900px tall and pushes
+    // the controls bar past the viewport, triggering a scrollbar in the parent
+    // ScrollableRegion. Pair with the fixed-height wrapper below.
+    maintainAspectRatio: false,
     scales: {
       x: {
         type: "category",
@@ -228,7 +234,9 @@ const MacroEconomicChart = () => {
             </Button>
           </Stack>
         )}
-        <Line data={transformedData} options={options} aria-label={ariaLabel} role="img" />
+        <Box sx={{ position: "relative", height: 320, mb: 1 }}>
+          <Line data={transformedData} options={options} aria-label={ariaLabel} role="img" />
+        </Box>
         {hasData ? (
           <ChartDataTable
             caption={macroEconomicChartTitle}
