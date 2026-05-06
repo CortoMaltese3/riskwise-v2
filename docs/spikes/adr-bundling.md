@@ -112,20 +112,35 @@ if __name__ == "__main__":
 
 ### 3.2 Nuitka (primary)
 
+> **Post-D26 update:** CLIMADA is no longer a runtime dependency
+> (see `adr-climate-lama-engine-adoption.md`). Three changes vs. the
+> original Phase-0 spike command:
+>
+> 1. `--include-package=climada` and `--include-package-data=climada`
+>    removed (CLIMADA dropped).
+> 2. `--include-package=fiona` swapped for `--include-package=pyogrio`
+>    (and matching `--include-package-data=pyogrio`). Geopandas 1.x
+>    uses pyogrio as its default I/O backend and pyogrio ships its
+>    own GDAL DLLs as package data; fiona is no longer in the
+>    resolution graph after CLIMADA removal.
+> 3. `--enable-plugin=numpy` removed (Nuitka 2.x auto-detects numpy
+>    and prints a deprecation warning when the plugin is enabled).
+>
+> The §4.4 measurement rows that reference CLIMADA-era bundle sizes are
+> historical and not re-baselined here.
+
 ```powershell
 python -m nuitka `
   --standalone `
   --onefile `
   --python-flag=no_site `
   --assume-yes-for-downloads `
-  --enable-plugin=numpy `
   --enable-plugin=pylint-warnings `
-  --include-package=climada `
   --include-package=rasterio `
-  --include-package=fiona `
+  --include-package=pyogrio `
   --include-package=pyproj `
-  --include-package-data=climada `
   --include-package-data=rasterio `
+  --include-package-data=pyogrio `
   --include-package-data=pyproj `
   --include-package-data=shapely `
   --nofollow-import-to=matplotlib `
@@ -143,9 +158,9 @@ python -m nuitka `
 
 Notes:
 
-- `--enable-plugin=numpy` is mandatory on 2.x Nuitka for SciPy-family packages.
-- `--include-package-data` is what catches CLIMADA's shipped `.hdf5` /
-  `.json` assets, GDAL/PROJ data directories, and Shapely's `.dll`s.
+- `--include-package-data` catches GDAL/PROJ data directories, Shapely's
+  `.dll`s, and pyogrio's bundled GDAL. (Pre-D26 it also caught CLIMADA's
+  shipped `.hdf5` / `.json` assets — no longer applicable.)
 - `--nofollow-import-to` sanity checks that the removed packages really
   are not pulled through a transitive `try: import matplotlib` branch.
   Any violation here is a spec-vs-reality bug that must be fixed in

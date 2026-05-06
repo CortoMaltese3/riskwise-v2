@@ -1,33 +1,26 @@
 # Build the RISK WISE Python engine with Nuitka (primary / Track A).
 #
-# Implements the exact build command from
-# docs/spikes/adr-bundling.md §3.2. Run from the repo root
+# Implements the build command from docs/spikes/adr-bundling.md §3.2 (post-D26
+# / climate-lama-engine cutover -- CLIMADA is no longer a runtime dependency,
+# so the climada include flags have been removed). Run from the repo root
 # inside a venv that has the `bundle` extra installed:
 #
 #     uv sync --extra bundle
-#     ./scripts/build_engine.ps1                       # full bundle, --onefile (default)
-#     ./scripts/build_engine.ps1 -Mode standalone      # full bundle, --standalone (onedir)
-#     ./scripts/build_engine.ps1 -Lean                 # engine-path bundle (no CLIMADA), --onefile
-#     ./scripts/build_engine.ps1 -Mode standalone -Lean
+#     ./scripts/build_engine.ps1                       # --onefile (default)
+#     ./scripts/build_engine.ps1 -Mode standalone      # --standalone (onedir)
 #
 # Output:
 #   default          : dist/nuitka/riskwise-engine.exe
 #   -Mode standalone : dist/nuitka-standalone/riskwise-engine.dist/riskwise-engine.exe
 #
-# -Lean drops the CLIMADA-specific Nuitka flags (--include-package=climada,
-# --include-package-data=climada) for measuring the engine-path bundle per
-# issue #165. The default (no -Lean) preserves the exact ADR §3.2 flag set.
-#
-# Do not "optimise" the default flag set here without updating the ADR first --
+# Do not "optimise" the flag set here without updating the ADR first --
 # the flag set is part of the bundler decision, not a script detail.
 
 #Requires -Version 5.1
 [CmdletBinding()]
 param(
     [ValidateSet('onefile', 'standalone')]
-    [string]$Mode = 'onefile',
-
-    [switch]$Lean
+    [string]$Mode = 'onefile'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -48,7 +41,6 @@ $nuitkaArgs = @(
     '--standalone',
     '--python-flag=no_site',
     '--assume-yes-for-downloads',
-    '--enable-plugin=numpy',
     '--enable-plugin=pylint-warnings'
 )
 
@@ -56,18 +48,12 @@ if ($Mode -eq 'onefile') {
     $nuitkaArgs += '--onefile'
 }
 
-if (-not $Lean) {
-    $nuitkaArgs += @(
-        '--include-package=climada',
-        '--include-package-data=climada'
-    )
-}
-
 $nuitkaArgs += @(
     '--include-package=rasterio',
-    '--include-package=fiona',
+    '--include-package=pyogrio',
     '--include-package=pyproj',
     '--include-package-data=rasterio',
+    '--include-package-data=pyogrio',
     '--include-package-data=pyproj',
     '--include-package-data=shapely',
     '--include-package-data=backend',

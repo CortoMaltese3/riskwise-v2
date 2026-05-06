@@ -41,9 +41,12 @@ def get_base_dir() -> Path:
     For Nuitka onefile, ``sys.executable.resolve()`` follows into the
     temp extraction dir instead of returning the launcher's path, so we
     consult ``NUITKA_ONEFILE_BINARY`` first — Nuitka exports it before
-    user code runs and it always points at the original ``.exe``. For
-    Nuitka ``--standalone`` and any PyInstaller flow the env var is
-    unset and ``sys.executable`` is already the right answer.
+    user code runs and it always points at the original ``.exe``. The
+    env-var check is unconditional (not gated on ``sys.frozen``) because
+    Nuitka does not reliably set ``sys.frozen`` (that's a PyInstaller
+    convention; Nuitka sets ``__compiled__`` instead). For Nuitka
+    ``--standalone`` and PyInstaller, ``sys.executable`` is already the
+    right answer.
 
     In a dev checkout, ``backend/`` is the package root and the shipped
     data lives one level up at the repo root.
@@ -51,10 +54,10 @@ def get_base_dir() -> Path:
     :return: The base directory of the application.
     :rtype: Path
     """
-    if getattr(sys, "frozen", False):
-        onefile_binary = os.environ.get("NUITKA_ONEFILE_BINARY")
-        if onefile_binary:
-            return Path(onefile_binary).resolve().parent
+    onefile_binary = os.environ.get("NUITKA_ONEFILE_BINARY")
+    if onefile_binary:
+        return Path(onefile_binary).resolve().parent
+    if getattr(sys, "frozen", False) or "__compiled__" in globals():
         return Path(sys.executable).resolve().parent
 
     return Path(__file__).resolve().parent.parent
