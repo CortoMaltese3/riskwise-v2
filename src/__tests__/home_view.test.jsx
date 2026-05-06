@@ -143,11 +143,8 @@ describe("HomeView", () => {
     expect(screen.getByTestId("home-resources-link-giz")).toBeInTheDocument();
   });
 
-  it("Need help: Start tour calls store.startTour and Glossary opens drawer", () => {
+  it("Need help: Glossary opens drawer", () => {
     render(<HomeView />);
-    fireEvent.click(screen.getByTestId("home-start-tour"));
-    expect(useStore.getState().activeTour).toBe("first_scenario");
-
     fireEvent.click(screen.getByTestId("home-open-glossary"));
     expect(useStore.getState().glossaryOpen).toBe(true);
   });

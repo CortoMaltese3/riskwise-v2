@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   Box,
   Button,
-  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -23,16 +22,10 @@ import {
   Typography,
 } from "@mui/material";
 import BugReportIcon from "@mui/icons-material/BugReport";
-import ExpandLess from "@mui/icons-material/ExpandLess";
-import ExpandMore from "@mui/icons-material/ExpandMore";
 import InfoIcon from "@mui/icons-material/Info";
 import KeyboardIcon from "@mui/icons-material/Keyboard";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
-import RestartAltIcon from "@mui/icons-material/RestartAlt";
-import TourIcon from "@mui/icons-material/Tour";
-
 import useStore from "../../store";
-import { TOURS } from "../onboarding/tours";
 import packageJson from "../../../package.json";
 
 const SHORTCUTS = [
@@ -48,19 +41,11 @@ const HelpMenu = () => {
   const { t } = useTranslation();
   const helpMenuOpen = useStore((s) => s.helpMenuOpen);
   const setHelpMenuOpen = useStore((s) => s.setHelpMenuOpen);
-  const startTour = useStore((s) => s.startTour);
-  const startWalkthrough = useStore((s) => s.startWalkthrough);
   const setGlossaryOpen = useStore((s) => s.setGlossaryOpen);
 
-  const [toursOpen, setToursOpen] = useState(true);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const close = () => setHelpMenuOpen(false);
-
-  const handleRestartWalkthrough = () => {
-    close();
-    startWalkthrough();
-  };
 
   const handleOpenGlossary = () => {
     close();
@@ -80,34 +65,6 @@ const HelpMenu = () => {
             {t("help_menu_title")}
           </Typography>
           <List>
-            <ListItemButton
-              onClick={() => setToursOpen((v) => !v)}
-              aria-expanded={toursOpen}
-              aria-controls="help-menu-tours"
-            >
-              <ListItemIcon>
-                <TourIcon />
-              </ListItemIcon>
-              <ListItemText primary={t("help_menu_take_a_tour")} />
-              {toursOpen ? <ExpandLess /> : <ExpandMore />}
-            </ListItemButton>
-            <Collapse in={toursOpen} unmountOnExit>
-              <List id="help-menu-tours" component="div" disablePadding>
-                {TOURS.map((tour) => (
-                  <ListItemButton key={tour.id} sx={{ pl: 6 }} onClick={() => startTour(tour.id)}>
-                    <ListItemText primary={t(tour.titleKey)} />
-                  </ListItemButton>
-                ))}
-              </List>
-            </Collapse>
-
-            <ListItemButton onClick={handleRestartWalkthrough}>
-              <ListItemIcon>
-                <RestartAltIcon />
-              </ListItemIcon>
-              <ListItemText primary={t("help_menu_restart_walkthrough")} />
-            </ListItemButton>
-
             <ListItemButton onClick={handleOpenGlossary}>
               <ListItemIcon>
                 <MenuBookIcon />

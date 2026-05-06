@@ -3,15 +3,11 @@ import { useTranslation } from "react-i18next";
 import { Button, Stack, Typography } from "@mui/material";
 
 import useStore from "../../store";
-import { TOURS } from "../onboarding/tours";
 import HomeCard from "./HomeCard";
 
 const NeedHelpCard = () => {
   const { t } = useTranslation();
-  const startTour = useStore((s) => s.startTour);
   const setGlossaryOpen = useStore((s) => s.setGlossaryOpen);
-
-  const defaultTourId = TOURS[0]?.id || "first_scenario";
 
   return (
     <HomeCard data-testid="home-needhelp-card" title={t("home_needhelp_title")}>
@@ -24,14 +20,6 @@ const NeedHelpCard = () => {
           {t("home_needhelp_body")}
         </Typography>
         <Stack direction="row" spacing={1} flexShrink={0}>
-          <Button
-            variant="contained"
-            size="small"
-            onClick={() => startTour(defaultTourId)}
-            data-testid="home-start-tour"
-          >
-            {t("home_needhelp_start_tour")}
-          </Button>
           <Button
             variant="outlined"
             size="small"

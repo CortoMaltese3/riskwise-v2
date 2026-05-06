@@ -12,8 +12,6 @@ import NavigateAlert from "./components/alerts/NavigateAlert";
 import ScenarioPrintView from "./components/workspace/ScenarioPrintView";
 import HelpMenu from "./components/help/HelpMenu";
 import GlossaryDrawer from "./components/help/GlossaryDrawer";
-import GuidedTour from "./components/onboarding/GuidedTour";
-import Walkthrough from "./components/onboarding/Walkthrough";
 import baseTheme from "./theme/theme";
 import { isRtl } from "./i18nConfig";
 import useStore from "./store";
@@ -83,8 +81,6 @@ const App = () => {
               <AppShell />
               <ProgressOverlay />
               <AlertMessage />
-              <Walkthrough />
-              <GuidedTour />
               <HelpMenu />
               <GlossaryDrawer />
             </Box>
