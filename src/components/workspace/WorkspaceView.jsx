@@ -6,6 +6,7 @@ import {
   FormControl,
   InputLabel,
   MenuItem,
+  Paper,
   Select,
   Stack,
   TextField,
@@ -41,18 +42,24 @@ const compareBy = (key, dir) => (a, b) => {
 const EmptyState = ({ onStart }) => {
   const { t } = useTranslation();
   return (
-    <Stack alignItems="center" justifyContent="center" sx={{ py: 10, color: "text.secondary" }}>
-      <InboxIcon sx={{ fontSize: 64, mb: 2 }} />
-      <Typography variant="h6" gutterBottom>
-        {t("workspace_empty_title")}
-      </Typography>
-      <Typography variant="body2" sx={{ mb: 3 }}>
-        {t("workspace_empty_body")}
-      </Typography>
-      <Button variant="contained" onClick={onStart}>
-        {t("workspace_empty_cta")}
-      </Button>
-    </Stack>
+    <Paper variant="outlined" sx={{ flexGrow: 1 }}>
+      <Stack
+        alignItems="center"
+        justifyContent="center"
+        sx={{ minHeight: 480, color: "text.secondary" }}
+      >
+        <InboxIcon sx={{ fontSize: 64, mb: 2 }} />
+        <Typography variant="h6" gutterBottom>
+          {t("workspace_empty_title")}
+        </Typography>
+        <Typography variant="body2" sx={{ mb: 3 }}>
+          {t("workspace_empty_body")}
+        </Typography>
+        <Button variant="contained" onClick={onStart}>
+          {t("workspace_empty_cta")}
+        </Button>
+      </Stack>
+    </Paper>
   );
 };
 
