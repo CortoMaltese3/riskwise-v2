@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
 import ContextualTooltip from "../help/ContextualTooltip";
-import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
+import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const ExposureNonEconomic = () => {
   const {
@@ -65,7 +65,7 @@ const ExposureNonEconomic = () => {
     >
       <CardContent>
         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-          <Typography id="exposure-dropdown" variant="h6" component="div" m={0}>
+          <Typography id="exposure-dropdown" variant="h6" component="div" m={0} sx={cardTitleSx}>
             {t("input_exposure_non_economic_title")}
           </Typography>
           <ContextualTooltip titleKey="input_tooltip_exposure_non_economic" />

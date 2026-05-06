@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
 import ContextualTooltip from "../help/ContextualTooltip";
-import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
+import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const Hazard = () => {
   const { isValidHazard, selectedHazard, setSelectedCard, setSelectedTab } = useStore();
@@ -46,7 +46,7 @@ const Hazard = () => {
     >
       <CardContent>
         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-          <Typography id="hazard-dropdown" variant="h6" component="div" m={0}>
+          <Typography id="hazard-dropdown" variant="h6" component="div" m={0} sx={cardTitleSx}>
             {t("hazard_title")}
           </Typography>
           <ContextualTooltip titleKey="input_tooltip_hazard" />
