@@ -1,0 +1,8 @@
+{
+  "name": "default",
+  "wordmark": "RISK",
+  "wordmarkAccent": "WISE",
+  "asset": "mark.svg",
+  "assetAlt": "Loading",
+  "strings": "strings.json"
+}

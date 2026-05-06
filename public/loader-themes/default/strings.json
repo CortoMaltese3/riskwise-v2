@@ -1,0 +1,7 @@
+{
+  "engine-starting": "Starting application engine…",
+  "engine-ready": "Engine ready…",
+  "data-packs": "Loading data packs…",
+  "tiles": "Preparing map tiles…",
+  "finalizing": "Almost ready…"
+}
