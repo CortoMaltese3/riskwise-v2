@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Design 2 — Brand-forward</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: radial-gradient(ellipse at 30% 20%, #3A6A8A 0%, #2A4D69 55%, #1B3447 100%);
+    color: #E2ECF3;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    user-select: none;
+  }
+  .logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+  .logo-mark {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #8AC8D0 0%, #2F7A86 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  }
+  .logo-mark svg { width: 24px; height: 24px; }
+  .wordmark {
+    font-size: 26px;
+    font-weight: 300;
+    letter-spacing: 5px;
+    color: #ffffff;
+  }
+  .wordmark b { font-weight: 600; color: #8AC8D0; }
+  .indeterminate {
+    width: 220px;
+    height: 3px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 18px;
+  }
+  .indeterminate::before {
+    content: "";
+    position: absolute;
+    left: -40%;
+    top: 0;
+    height: 100%;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, #8AC8D0, transparent);
+    animation: slide 1.6s ease-in-out infinite;
+  }
+  @keyframes slide {
+    0% { left: -40%; }
+    100% { left: 100%; }
+  }
+  .status {
+    font-size: 12.5px;
+    color: rgba(226, 236, 243, 0.75);
+    letter-spacing: 0.4px;
+    min-height: 18px;
+  }
+  .version-pill {
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
+    font-size: 10.5px;
+    color: rgba(255,255,255,0.55);
+    background: rgba(255,255,255,0.06);
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .copyright {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    font-size: 10.5px;
+    color: rgba(255,255,255,0.35);
+  }
+</style>
+</head>
+<body>
+  <div class="logo-wrap">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#0E5A66" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 17 9 11 13 15 21 7"/>
+        <polyline points="14 7 21 7 21 14"/>
+      </svg>
+    </div>
+    <div class="wordmark">RISK<b>WISE</b></div>
+  </div>
+  <div class="indeterminate"></div>
+  <div class="status" id="status">Starting application engine&hellip;</div>
+  <div class="copyright">&copy; 2026</div>
+  <div class="version-pill">v2.4.1</div>
+
+<script>
+  const phases = [
+    "Starting application engine…",
+    "Loading data packs…",
+    "Preparing map tiles…",
+    "Almost ready…"
+  ];
+  let i = 0;
+  setInterval(() => {
+    i = (i + 1) % phases.length;
+    document.getElementById("status").textContent = phases[i];
+  }, 1800);
+</script>
+</body>
+</html>

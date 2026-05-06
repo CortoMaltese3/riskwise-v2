@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Design 1 — Minimal polish</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: #2A4D69;
+    color: #E2ECF3;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+  .wordmark {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 6px;
+    color: #ffffff;
+    margin-bottom: 28px;
+  }
+  .wordmark b { font-weight: 600; color: #8AC8D0; }
+  .gear {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 20px;
+    animation: spin 2s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status {
+    font-size: 13px;
+    color: #B7CADA;
+    min-height: 18px;
+    letter-spacing: 0.3px;
+  }
+  .version {
+    position: absolute;
+    bottom: 12px;
+    right: 14px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+  }
+</style>
+</head>
+<body>
+  <div class="wordmark">RISK<b>WISE</b></div>
+  <svg class="gear" viewBox="0 0 24 24" fill="none" stroke="#8AC8D0" stroke-width="1.5">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+  <div class="status" id="status">Starting application engine&hellip;</div>
+  <div class="version">v2.4.1</div>
+
+<script>
+  const phases = [
+    "Starting application engine…",
+    "Loading data packs…",
+    "Preparing map tiles…",
+    "Almost ready…"
+  ];
+  let i = 0;
+  setInterval(() => {
+    i = (i + 1) % phases.length;
+    document.getElementById("status").textContent = phases[i];
+  }, 1800);
+</script>
+</body>
+</html>
