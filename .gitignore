@@ -62,6 +62,8 @@ scripts/*
 !scripts/build_engine.ps1
 !scripts/build_engine_pyinstaller.ps1
 !scripts/measure_engine.ps1
+# Local dev workflow — stage built engine into %LOCALAPPDATA% (ADR §3.5.1).
+!scripts/stage_engine.ps1
 # Phase 4 Area 13 — engine-manifest signing (issue #115).
 !scripts/sign_manifest.ps1
 # Phase 4 Area 17 — Sentry DSN injection at build time (issue #119).

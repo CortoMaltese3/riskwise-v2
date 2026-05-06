@@ -1071,36 +1071,57 @@ const restartBackendWithBackoff = async () => {
 // The Nuitka shape wins when present so a locally-built engine can be tested
 // against the real Electron client without ripping out the legacy path.
 const createPythonProcess = async () => {
-  const engineRoot = process.env.LOCALAPPDATA;
-  if (!engineRoot) {
-    throw new Error("Failed to resolve LOCALAPPDATA environment variable");
-  }
-
-  const enginePath = path.join(engineRoot, ENGINE_DIR_NAME);
-  const nuitkaExecutable = path.join(enginePath, "riskwise-engine.exe");
-  let pythonExecutable = path.join(enginePath, "python.exe");
-
-  const useNuitkaBundle = fs.existsSync(nuitkaExecutable);
-
-  if (!useNuitkaBundle && !fs.existsSync(pythonExecutable)) {
-    log.info("[electron] Python engine not found, initiating download...");
-    pythonExecutable = await downloadAndInstallEngine(loaderWindow);
-  }
-
   let executable;
   let args;
-  if (useNuitkaBundle) {
-    log.info("[electron] Using Nuitka engine bundle at:", nuitkaExecutable);
-    executable = nuitkaExecutable;
-    args = [];
-  } else {
-    const backendDir = path.join(basePath, "backend");
-    if (!fs.existsSync(backendDir)) {
-      throw new Error("Backend package not found at: " + backendDir);
+
+  // Dev-mode opt-in: when ``RISKWISE_ENGINE_DEV_PYTHON`` points at a Python
+  // interpreter (typically the repo's ``.venv``), spawn ``python -m backend``
+  // against live source instead of the cached Nuitka bundle. Edits to
+  // ``backend/`` are picked up on the next app restart with no rebuild.
+  // The env-var gate keeps default behaviour unchanged: unset, or in
+  // packaged builds, the bundle path runs as before. See
+  // docs/spikes/adr-bundling.md §3.5.1 for the rebuild / refresh /
+  // live-source matrix.
+  const devPython = process.env.RISKWISE_ENGINE_DEV_PYTHON;
+  if (isDevelopmentEnv() && devPython) {
+    if (!fs.existsSync(devPython)) {
+      throw new Error(
+        `RISKWISE_ENGINE_DEV_PYTHON is set to "${devPython}" but no file exists there`
+      );
     }
-    log.info("[electron] Using CPython interpreter at:", pythonExecutable);
-    executable = pythonExecutable;
+    log.info(`[electron] DEV: spawning live backend via ${devPython} -m backend`);
+    executable = devPython;
     args = ["-m", "backend"];
+  } else {
+    const engineRoot = process.env.LOCALAPPDATA;
+    if (!engineRoot) {
+      throw new Error("Failed to resolve LOCALAPPDATA environment variable");
+    }
+
+    const enginePath = path.join(engineRoot, ENGINE_DIR_NAME);
+    const nuitkaExecutable = path.join(enginePath, "riskwise-engine.exe");
+    let pythonExecutable = path.join(enginePath, "python.exe");
+
+    const useNuitkaBundle = fs.existsSync(nuitkaExecutable);
+
+    if (!useNuitkaBundle && !fs.existsSync(pythonExecutable)) {
+      log.info("[electron] Python engine not found, initiating download...");
+      pythonExecutable = await downloadAndInstallEngine(loaderWindow);
+    }
+
+    if (useNuitkaBundle) {
+      log.info("[electron] Using Nuitka engine bundle at:", nuitkaExecutable);
+      executable = nuitkaExecutable;
+      args = [];
+    } else {
+      const backendDir = path.join(basePath, "backend");
+      if (!fs.existsSync(backendDir)) {
+        throw new Error("Backend package not found at: " + backendDir);
+      }
+      log.info("[electron] Using CPython interpreter at:", pythonExecutable);
+      executable = pythonExecutable;
+      args = ["-m", "backend"];
+    }
   }
 
   try {

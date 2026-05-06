@@ -264,6 +264,56 @@ The dev-checkout branch of `get_base_dir()` walks up from
 live — so the same resolver works in `python -m backend` and in a
 bundle without branching at every call site.
 
+#### 3.5.1 Local dev workflow: rebuild vs refresh
+
+The bundle / shipped-data split above gives two distinct dev iteration
+paths. Use the matrix to pick the right one — a full rebuild takes
+30–60 min on the reference hardware, a data refresh is seconds.
+
+| Edited | Action | Why |
+|---|---|---|
+| `backend/**/*.py` | Rebuild | Compiled into the .exe via the `backend/__main__.py` entry point |
+| `backend/logging_config.json`, `backend/openapi.json`, `backend/db/migrations/*.sql`, `backend/.pylintrc` | Rebuild | Baked in via `--include-package-data=backend` |
+| `pyproject.toml` `bundle` extra (or transitives shifting via `uv lock`) | Rebuild | Native deps and Python packages live inside the bundle |
+| `scripts/build_engine.ps1` flags | Rebuild | The flag set is the bundle |
+| `data/**` (hazards, manifest, exposures seed) | Refresh (data-only) | Read at runtime from `BASE_DIR / "data"`, which is the launcher dir, not the bundle |
+| `countries/**` (per-country config, impact functions) | Refresh (data-only) | Read at runtime from `BASE_DIR / "countries"` |
+| `requirements/**` (XLSX templates) | Refresh (data-only) | Read at runtime from `BASE_DIR / "requirements"` |
+| `src/**`, `public/electron.js`, `index.html`, `package.json` | Neither | Renderer / Electron-main; rebuilt by `npm run start:electron` |
+
+Both paths converge on a single operational tool:
+
+```powershell
+.\scripts\build_engine.ps1                   # full rebuild -> dist/nuitka/riskwise-engine.exe
+.\scripts\stage_engine.ps1                   # deploy exe + data trees to %LOCALAPPDATA%\RiskWiseEngineV2\
+.\scripts\stage_engine.ps1 -DataOnly         # refresh data trees only (no exe copy, no rebuild needed)
+```
+
+`stage_engine.ps1` is the canonical "deploy a local build" tool. It
+hardcodes the `RiskWiseEngineV2` cache dir name, which must match
+`ENGINE_DIR_NAME` in `public/electron.js` — that constant is what the
+Electron main process uses to decide whether to spawn the Nuitka
+bundle or fall back to the legacy stock-CPython path. The build
+script itself only writes to `dist/nuitka/`; staging into the
+user-local cache is a separate explicit step so a half-finished build
+cannot silently replace a working installation.
+
+**Live-source escape hatch for backend iteration.** Rebuilding for
+every backend edit is a non-starter at 30–60 min/build. Set the
+`RISKWISE_ENGINE_DEV_PYTHON` env var to your venv's `python.exe` and
+`createPythonProcess()` in `public/electron.js` will spawn
+`python -m backend` against the live repo source instead of the
+cached bundle. The env-var gate keeps the default predictable: unset,
+or in packaged builds, the bundle path runs as before. The dev path
+skips the bundle entirely, so Nuitka-only failure modes (extraction,
+process-tree shutdown, signing) only surface after a real rebuild —
+test through the bundle before shipping.
+
+```powershell
+$env:RISKWISE_ENGINE_DEV_PYTHON = "$PWD\.venv\Scripts\python.exe"
+npm run start:electron                       # live backend, no rebuild
+```
+
 ---
 
 ## 4. Measurement protocol
