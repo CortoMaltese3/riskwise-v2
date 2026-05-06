@@ -2,12 +2,15 @@ import { create } from "zustand";
 
 import { generateRunCode } from "./utils/misc";
 import { SECTION_IDS } from "./constants/sections";
+import { DEFAULT_THEME_MODE, THEME_MODES } from "./constants/themeModes";
 
 const SIDEBAR_STORAGE_KEY = "riskwise.sidebarCollapsed";
 const SHOW_CHART_VALUES_STORAGE_KEY = "riskwise.showChartValues";
 const WALKTHROUGH_STORAGE_KEY = "riskwise.hasSeenWalkthrough";
 const TOUR_STATE_STORAGE_KEY = "riskwise.tourState";
+const THEME_MODE_STORAGE_KEY = "riskwise.themeMode";
 const VALID_SECTIONS = new Set(SECTION_IDS);
+const VALID_THEME_MODES = new Set(THEME_MODES);
 
 const readSidebarCollapsed = () => {
   try {
@@ -82,6 +85,25 @@ const writeTourState = (activeTour, tourStep) => {
   }
 };
 
+// Invalid persisted values are silently overwritten on the next
+// `setThemeMode` so a corrupted entry can't wedge the toggle.
+const readThemeMode = () => {
+  try {
+    const v = globalThis.localStorage?.getItem(THEME_MODE_STORAGE_KEY);
+    return VALID_THEME_MODES.has(v) ? v : DEFAULT_THEME_MODE;
+  } catch {
+    return DEFAULT_THEME_MODE;
+  }
+};
+
+const writeThemeMode = (value) => {
+  try {
+    globalThis.localStorage?.setItem(THEME_MODE_STORAGE_KEY, value);
+  } catch {
+    // storage may be unavailable (private mode, tests without jsdom storage)
+  }
+};
+
 const initialTourState = readTourState();
 const initialHasSeenWalkthrough = readHasSeenWalkthrough();
 
@@ -92,6 +114,7 @@ const useStore = create((set, get) => ({
   activeSection: "home",
   sidebarCollapsed: readSidebarCollapsed(),
   showChartValues: readShowChartValues(),
+  themeMode: readThemeMode(),
   // Offline mode. Source of truth is electron-store on the main side;
   // the renderer mirrors it via the `electron.offline` IPC bridge.
   // ``offlineTilePort`` stays null until the local MBTiles tile server
@@ -231,6 +254,11 @@ const useStore = create((set, get) => ({
     const next = !get().showChartValues;
     writeShowChartValues(next);
     set({ showChartValues: next });
+  },
+  setThemeMode: (mode) => {
+    const next = VALID_THEME_MODES.has(mode) ? mode : DEFAULT_THEME_MODE;
+    writeThemeMode(next);
+    set({ themeMode: next });
   },
   setActiveMap: (map) => set({ activeMap: map }),
   setActiveMapRef: (mapRef) => set({ activeMapRef: mapRef }),

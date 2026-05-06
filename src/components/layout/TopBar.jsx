@@ -7,6 +7,7 @@ import LanguageSelector from "../nav/LanguageButton";
 import MinimizeButton from "../nav/MinimizeButton";
 import ReloadButton from "../nav/ReloadButton";
 import ShutdownButton from "../nav/ShutdownButton";
+import ThemeModeButton from "../nav/ThemeModeButton";
 
 import giz_logo from "../../assets/giz_logo.png";
 import useStore from "../../store";
@@ -106,6 +107,7 @@ const TopBar = () => {
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
           <ReloadButton />
+          <ThemeModeButton />
           <LanguageSelector />
           <MinimizeButton />
           <ShutdownButton />

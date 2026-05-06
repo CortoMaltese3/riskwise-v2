@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import theme, { MOTION_DURATION_MS, MOTION_EASING, layoutTransition } from "./theme";
 
+// WCAG helpers below are intentionally duplicated in
+// `scripts/check-color-contrast.js` (CommonJS, dependency-free) — keep the
+// math in sync. Both implementations follow WCAG 2.1 § Relative Luminance.
+
 // Relative luminance per WCAG 2.1. Expects `#RRGGBB`.
 function relativeLuminance(hex) {
   const channels = hex
@@ -20,6 +24,19 @@ function contrastRatio(a, b) {
   const [bright, dark] = la >= lb ? [la, lb] : [lb, la];
   return (bright + 0.05) / (dark + 0.05);
 }
+
+const CUSTOM_PALETTE_SLOTS = [
+  "inputCard",
+  "header",
+  "accent",
+  "card",
+  "surface",
+  "tab",
+  "mapControl",
+  "tableHeader",
+  "loader",
+  "slider",
+];
 
 describe("theme — design tokens", () => {
   it("opts into CSS variables and Inter font", () => {
@@ -82,29 +99,90 @@ describe("theme — design tokens", () => {
   });
 });
 
+describe("theme — color schemes", () => {
+  // Issue #288: light/dark schemes share the same custom palette slots so
+  // component `sx={{ bgcolor: "header.main" }}` keeps working in both modes.
+  it("declares both light and dark color schemes", () => {
+    expect(theme.colorSchemes?.light?.palette).toBeDefined();
+    expect(theme.colorSchemes?.dark?.palette).toBeDefined();
+  });
+
+  it.each(CUSTOM_PALETTE_SLOTS)(
+    "%s palette slot is defined under both light and dark schemes",
+    (slot) => {
+      expect(theme.colorSchemes.light.palette[slot]).toBeDefined();
+      expect(theme.colorSchemes.dark.palette[slot]).toBeDefined();
+    }
+  );
+
+  it("light scheme keeps the canonical primary teal (no accidental drift)", () => {
+    // Pixel-equivalence guard: the light values match the pre-#288 palette so
+    // the existing UI is visually unchanged after the colorSchemes refactor.
+    const lightPrimary = theme.colorSchemes.light.palette.primary;
+    expect(lightPrimary.main).toBe("#2F7A86");
+    expect(lightPrimary.dark).toBe("#0E5A66");
+    expect(lightPrimary.light).toBe("#8AC8D0");
+    expect(lightPrimary.contrastText).toBe("#ffffff");
+    expect(theme.colorSchemes.light.palette.background.default).toBe("#f8fafc");
+    expect(theme.colorSchemes.light.palette.background.paper).toBe("#ffffff");
+  });
+
+  it("dark scheme uses dark backgrounds and light text", () => {
+    const dark = theme.colorSchemes.dark.palette;
+    expect(dark.background.default).toBe("#0F172A");
+    expect(dark.background.paper).toBe("#1E293B");
+    expect(dark.text.primary).toBe("#F1F5F9");
+  });
+});
+
 describe("theme — WCAG AA contrast", () => {
-  // Pairs must pass 4.5:1 for normal body text (WCAG 2.1 AA). Extend this list
-  // as new semantic pairs are added; each pair documents a real on-screen use.
+  // Pairs must pass 4.5:1 for normal body text (WCAG 2.1 AA). The
+  // comprehensive audit (every text-bearing pair, both schemes) lives in the
+  // follow-up issue #289; this suite covers the foundational text-on-bg pairs
+  // both schemes must hit before either is acceptable to ship.
+  const lightPalette = theme.colorSchemes.light.palette;
+  const darkPalette = theme.colorSchemes.dark.palette;
+
   const pairs = [
     {
-      name: "text.primary on background.default",
-      fg: () => theme.palette.text.primary,
-      bg: () => theme.palette.background.default,
+      name: "[light] text.primary on background.default",
+      fg: () => lightPalette.text.primary,
+      bg: () => lightPalette.background.default,
     },
     {
-      name: "text.primary on background.paper",
-      fg: () => theme.palette.text.primary,
-      bg: () => theme.palette.background.paper,
+      name: "[light] text.primary on background.paper",
+      fg: () => lightPalette.text.primary,
+      bg: () => lightPalette.background.paper,
     },
     {
-      name: "text.secondary on background.default",
-      fg: () => theme.palette.text.secondary,
-      bg: () => theme.palette.background.default,
+      name: "[light] text.secondary on background.default",
+      fg: () => lightPalette.text.secondary,
+      bg: () => lightPalette.background.default,
     },
     {
-      name: "header.contrastText on header.main",
-      fg: () => theme.palette.header.contrastText,
-      bg: () => theme.palette.header.main,
+      name: "[light] header.contrastText on header.main",
+      fg: () => lightPalette.header.contrastText,
+      bg: () => lightPalette.header.main,
+    },
+    {
+      name: "[dark] text.primary on background.default",
+      fg: () => darkPalette.text.primary,
+      bg: () => darkPalette.background.default,
+    },
+    {
+      name: "[dark] text.primary on background.paper",
+      fg: () => darkPalette.text.primary,
+      bg: () => darkPalette.background.paper,
+    },
+    {
+      name: "[dark] text.secondary on background.default",
+      fg: () => darkPalette.text.secondary,
+      bg: () => darkPalette.background.default,
+    },
+    {
+      name: "[dark] header.contrastText on header.main",
+      fg: () => darkPalette.header.contrastText,
+      bg: () => darkPalette.header.main,
     },
   ];
 
