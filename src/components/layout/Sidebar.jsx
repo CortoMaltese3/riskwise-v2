@@ -2,7 +2,6 @@ import React from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
 import {
-  Drawer,
   IconButton,
   List,
   ListItem,
@@ -26,8 +25,8 @@ import { layoutTransition } from "../../theme/theme";
 export const SIDEBAR_WIDTH = 220;
 export const SIDEBAR_COLLAPSED_WIDTH = 60;
 // Matches the GIZ logo in TopBar.jsx (64px tall + 8px top/bottom margins).
-// Toolbar in TopBar.jsx is pinned to this height so the banner and sidebar
-// paper align cleanly under the AppBar.
+// Toolbar in TopBar.jsx is pinned to this height so AppViewport's pt offset
+// clears the fixed AppBar.
 export const TOP_BAR_HEIGHT = 80;
 
 const ITEM_META = {
@@ -46,17 +45,16 @@ const Sidebar = ({ width }) => {
   const setGlossaryOpen = useStore((s) => s.setGlossaryOpen);
 
   return (
-    <Drawer
-      variant="permanent"
+    <Box
       sx={{
-        "& .MuiDrawer-paper": {
-          width,
-          top: TOP_BAR_HEIGHT,
-          height: `calc(100% - ${TOP_BAR_HEIGHT}px)`,
-          overflowX: "hidden",
-          transition: layoutTransition(["width"]),
-          boxSizing: "border-box",
-        },
+        width,
+        height: "100%",
+        bgcolor: "background.paper",
+        borderRight: 1,
+        borderColor: "divider",
+        overflowX: "hidden",
+        transition: layoutTransition(["width"]),
+        boxSizing: "border-box",
       }}
     >
       <Box
@@ -129,7 +127,7 @@ const Sidebar = ({ width }) => {
           </Tooltip>
         </Box>
       </Box>
-    </Drawer>
+    </Box>
   );
 };
 
