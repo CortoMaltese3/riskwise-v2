@@ -12,7 +12,10 @@
       Defense-in-depth CSP. The authoritative policy is injected at the
       network layer in public/electron.js (see CSP_DIRECTIVES) so a stripped
       meta tag still leaves the renderer locked down. Keep the two in sync
-      when adding allowed sources.
+      when adding allowed sources. ``frame-ancestors`` is intentionally
+      omitted here -- per the CSP spec it is only honoured when delivered as
+      an HTTP header, and Chromium logs a warning if it appears in a meta
+      tag. The header path in electron.js still applies it.
     -->
     <meta
       http-equiv="Content-Security-Policy"
@@ -20,7 +23,6 @@
         default-src 'self';
         base-uri 'self';
         object-src 'none';
-        frame-ancestors 'none';
         form-action 'none';
         script-src 'self';
         style-src 'self' 'unsafe-inline';

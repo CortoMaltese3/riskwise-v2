@@ -103,8 +103,13 @@ REPORTS_DIR = PERSIST_DATA_DIR / "reports"
 # LOGS (persistent)
 LOG_DIR = USER_DATA_DIR / "logs"
 
-# BACKEND (immutable)
-BACKEND_DIR = BASE_DIR / "backend"
+# BACKEND (immutable, package-internal). Resolved relative to this module
+# rather than ``BASE_DIR`` because in a Nuitka onefile bundle the backend
+# package is extracted to a temp directory, not next to the launcher exe
+# where ``BASE_DIR`` points. Anything addressed via ``BACKEND_DIR`` is a
+# resource shipped *inside* the package (e.g. ``logging_config.json``); for
+# user-facing seed data, use ``DATA_DIR`` / ``COUNTRIES_DIR`` instead.
+BACKEND_DIR = Path(__file__).resolve().parent
 
 # REQUIREMENTS (immutable)
 REQUIREMENTS_DIR = BASE_DIR / "requirements"

@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, net, protocol, session, shell, dialog } = require("electron");
 const { autoUpdater } = require("electron-updater");
-const { spawn } = require("child_process");
+const { spawn, execFileSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("node:crypto");
@@ -16,6 +16,7 @@ const { startTileServer } = require("./tileServer");
 const { TILES_FILENAME } = require("./offlineConstants");
 const { buildDiagnosticsZip, sanitizeScenarioRow } = require("./diagnostics");
 const os = require("node:os");
+const treeKill = require("tree-kill");
 
 global.pythonProcess = null;
 
@@ -157,12 +158,45 @@ const pruneOldLogs = (logDir) => {
 };
 
 const cleanupPython = () => {
-  if (global.pythonProcess && !global.pythonProcess.killed) {
+  // Nuitka onefile is a bootstrap that re-execs into a child Python; we must
+  // kill the whole tree, not just the spawned PID. On Windows we use
+  // synchronous ``taskkill /T /F`` so the kill (and its log line) complete
+  // before ``app.quit()`` tears down the event loop -- previously the async
+  // tree-kill callback never reached electron-log on the way out. On other
+  // platforms tree-kill (async) is fine because shutdown paths there don't
+  // race the same way.
+  const proc = global.pythonProcess;
+  if (!proc || proc.killed || !proc.pid) {
+    global.pythonProcess = null;
+    return;
+  }
+  if (process.platform === "win32") {
     try {
-      global.pythonProcess.kill();
-      log.info("[electron] Python process terminated in cleanup");
+      execFileSync("taskkill", ["/pid", String(proc.pid), "/T", "/F"], {
+        windowsHide: true,
+        stdio: "ignore",
+      });
+      log.info(`[electron] Python process tree terminated (pid ${proc.pid})`);
     } catch (error) {
-      log.error("[electron] error killing Python process in cleanup:", error);
+      // taskkill exits 128 when the target is already gone -- that's the
+      // happy path during a normal shutdown sequence, not an error.
+      if (error && error.status === 128) {
+        log.info(`[electron] Python process tree already exited (pid ${proc.pid})`);
+      } else {
+        log.error(
+          `[electron] taskkill failed (pid ${proc.pid}, exit ${error && error.status}):`,
+          error && error.message
+        );
+      }
+    }
+  } else {
+    try {
+      treeKill(proc.pid, "SIGKILL", (err) => {
+        if (err) log.error("[electron] tree-kill failed:", err.message);
+        else log.info("[electron] Python process tree terminated in cleanup");
+      });
+    } catch (error) {
+      log.error("[electron] error invoking tree-kill in cleanup:", error);
     }
   }
   global.pythonProcess = null;
@@ -923,10 +957,13 @@ const createMainWindow = () => {
       mainWindow.webContents.openDevTools();
     }
 
-    // Pipe renderer console messages into unified log
-    mainWindow.webContents.on("console-message", (_event, level, message, line, sourceId) => {
-      const lvl = level === 2 ? "warn" : level === 3 ? "error" : "info";
-      const text = `[renderer] ${message} (${sourceId}:${line})`;
+    // Pipe renderer console messages into unified log. Uses the modern
+    // event-object signature (``WebContentsConsoleMessageEventParams``); the
+    // legacy positional-arg form is deprecated and emits a console warning.
+    mainWindow.webContents.on("console-message", (event) => {
+      const lvl =
+        event.level === "warning" ? "warn" : event.level === "error" ? "error" : "info";
+      const text = `[renderer] ${event.message} (${event.sourceId}:${event.lineNumber})`;
       if (lvl === "warn") log.warn(text);
       else if (lvl === "error") log.error(text);
       else log.info(text);

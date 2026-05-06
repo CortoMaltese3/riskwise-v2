@@ -29,6 +29,18 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 Set-Location $RepoRoot
 
+# Defensive: kill any running engine instances before Nuitka tries to
+# overwrite the previous build's output. The Nuitka onefile bootstrap forks
+# a child Python that survives a Stop-Process on the parent, so dev
+# iterations can leave orphans that hold dist/nuitka/riskwise-engine.exe
+# under a Windows file lock -- failing the rebuild with "Access is denied".
+$staleEngines = @(Get-Process riskwise-engine -ErrorAction SilentlyContinue)
+if ($staleEngines.Count -gt 0) {
+    Write-Host "Stopping $($staleEngines.Count) stale riskwise-engine process(es) before build..."
+    $staleEngines | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 500
+}
+
 if ($Mode -eq 'onefile') {
     $outputDir = 'dist/nuitka'
 } else {
