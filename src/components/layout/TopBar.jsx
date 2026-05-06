@@ -12,8 +12,8 @@ import giz_logo from "../../assets/giz_logo.png";
 import useStore from "../../store";
 import { TOP_BAR_HEIGHT } from "./Sidebar";
 
-const GIZ_LOGO_WIDTH = 230;
-const GIZ_LOGO_HEIGHT = 64;
+const GIZ_LOGO_WIDTH = 140;
+const GIZ_LOGO_HEIGHT = 40;
 
 const sectionTitleKeys = {
   home: "sidebar_home",
@@ -69,14 +69,41 @@ const TopBar = () => {
             sx={{ width: GIZ_LOGO_WIDTH, height: GIZ_LOGO_HEIGHT, my: 1, mx: 2 }}
           />
         </Box>
-        <Typography
-          variant="h5"
-          noWrap
-          component="div"
-          sx={{ textAlign: "center", display: { xs: "none", sm: "block" } }}
+        <Box
+          sx={{
+            display: { xs: "none", sm: "flex" },
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            lineHeight: 1.1,
+          }}
         >
-          {t(sectionTitleKeys[activeSection] || "application_title")}
-        </Typography>
+          <Typography
+            variant="overline"
+            component="div"
+            sx={{
+              fontSize: "0.7rem",
+              fontWeight: 600,
+              letterSpacing: "0.15rem",
+              opacity: 0.75,
+              lineHeight: 1.2,
+            }}
+          >
+            {t("application_title")}
+          </Typography>
+          <Typography
+            noWrap
+            component="div"
+            sx={{
+              fontSize: "1.4rem",
+              fontWeight: 600,
+              letterSpacing: "0.02rem",
+              lineHeight: 1.2,
+            }}
+          >
+            {t(sectionTitleKeys[activeSection] || "application_title")}
+          </Typography>
+        </Box>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
           <ReloadButton />
           <LanguageSelector />

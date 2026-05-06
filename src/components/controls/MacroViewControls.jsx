@@ -23,7 +23,8 @@ const MainViewControls = () => {
   return (
     <Card
       sx={{
-        maxWidth: activeViewControl === "display_macro_parameters" ? 800 : "100%",
+        width: "100%",
+        maxWidth: 480,
         margin: "auto",
         bgcolor: "accent.light",
         border: 1,
