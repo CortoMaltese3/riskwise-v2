@@ -20,6 +20,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutlined";
 
 import useStore from "../../store";
+import { SECTION_IDS } from "../../constants/sections";
 import { layoutTransition } from "../../theme/theme";
 
 export const SIDEBAR_WIDTH = 220;
@@ -29,13 +30,15 @@ export const SIDEBAR_COLLAPSED_WIDTH = 60;
 // paper align cleanly under the AppBar.
 export const TOP_BAR_HEIGHT = 80;
 
-const items = [
-  { id: "home", labelKey: "sidebar_home", icon: HomeIcon },
-  { id: "risk", labelKey: "sidebar_risk_assessment", icon: AssessmentIcon },
-  { id: "macro", labelKey: "sidebar_macroeconomic", icon: PublicIcon },
-  { id: "workspace", labelKey: "sidebar_workspace", icon: FolderIcon },
-  { id: "settings", labelKey: "sidebar_settings", icon: SettingsIcon },
-];
+const ITEM_META = {
+  home: { labelKey: "sidebar_home", icon: HomeIcon },
+  risk: { labelKey: "sidebar_risk_assessment", icon: AssessmentIcon },
+  macro: { labelKey: "sidebar_macroeconomic", icon: PublicIcon },
+  workspace: { labelKey: "sidebar_workspace", icon: FolderIcon },
+  settings: { labelKey: "sidebar_settings", icon: SettingsIcon },
+};
+
+const items = SECTION_IDS.map((id) => ({ id, ...ITEM_META[id] }));
 
 const Sidebar = ({ width }) => {
   const { t } = useTranslation();

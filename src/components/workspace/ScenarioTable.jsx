@@ -19,9 +19,12 @@ import {
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import StarIcon from "@mui/icons-material/Star";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
 
 import { formatDateTime } from "../../lib/formatDate";
 import { isRtl } from "../../i18nConfig";
+import useWorkspaceStore from "../../store/workspaceSlice";
 import SnapshotDrawer from "./SnapshotDrawer";
 
 const formatCreatedAt = (value, locale) => {
@@ -42,7 +45,15 @@ const COLUMNS = [
   { key: "tags", label: "Tags", sortable: false },
 ];
 
-const ScenarioRow = ({ row, selected, onToggleSelected, onRename, onAction }) => {
+const ScenarioRow = ({
+  row,
+  selected,
+  pinned,
+  onToggleSelected,
+  onTogglePinned,
+  onRename,
+  onAction,
+}) => {
   const { i18n, t } = useTranslation();
   const locale = i18n.language;
   const rtl = isRtl(locale);
@@ -82,6 +93,25 @@ const ScenarioRow = ({ row, selected, onToggleSelected, onRename, onAction }) =>
             onChange={() => onToggleSelected(row.id)}
             inputProps={{ "aria-label": `select-${row.id}` }}
           />
+        </TableCell>
+        <TableCell padding="none">
+          <IconButton
+            size="small"
+            aria-label={
+              pinned
+                ? t("workspace_unpin_aria", { id: row.id })
+                : t("workspace_pin_aria", { id: row.id })
+            }
+            aria-pressed={pinned}
+            data-testid={`pin-${row.id}`}
+            onClick={() => onTogglePinned(row.id)}
+          >
+            {pinned ? (
+              <StarIcon fontSize="small" color="primary" />
+            ) : (
+              <StarBorderIcon fontSize="small" />
+            )}
+          </IconButton>
         </TableCell>
         <TableCell padding="none">
           <IconButton
@@ -150,7 +180,7 @@ const ScenarioRow = ({ row, selected, onToggleSelected, onRename, onAction }) =>
       </TableRow>
       {expanded && (
         <TableRow>
-          <TableCell colSpan={COLUMNS.length + 3} sx={{ p: 0, borderBottom: 0 }}>
+          <TableCell colSpan={COLUMNS.length + 4} sx={{ p: 0, borderBottom: 0 }}>
             <Box sx={{ p: 2, backgroundColor: "action.hover" }}>
               <SnapshotDrawer scenarioId={row.id} />
             </Box>
@@ -164,7 +194,9 @@ const ScenarioRow = ({ row, selected, onToggleSelected, onRename, onAction }) =>
 ScenarioRow.propTypes = {
   row: PropTypes.object.isRequired,
   selected: PropTypes.bool.isRequired,
+  pinned: PropTypes.bool.isRequired,
   onToggleSelected: PropTypes.func.isRequired,
+  onTogglePinned: PropTypes.func.isRequired,
   onRename: PropTypes.func.isRequired,
   onAction: PropTypes.func.isRequired,
 };
@@ -180,6 +212,8 @@ const ScenarioTable = ({
   onRename,
   onAction,
 }) => {
+  const pinnedIds = useWorkspaceStore((state) => state.pinnedIds);
+  const togglePinned = useWorkspaceStore((state) => state.togglePinned);
   const allSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.id));
   const indeterminate = selectedIds.length > 0 && !allSelected;
 
@@ -196,6 +230,7 @@ const ScenarioTable = ({
                 inputProps={{ "aria-label": "select-all" }}
               />
             </TableCell>
+            <TableCell padding="none" />
             <TableCell padding="none" />
             {COLUMNS.map((col) => (
               <TableCell key={col.key} sortDirection={sortKey === col.key ? sortDir : false}>
@@ -221,7 +256,9 @@ const ScenarioTable = ({
               key={row.id}
               row={row}
               selected={selectedIds.includes(row.id)}
+              pinned={pinnedIds.includes(row.id)}
               onToggleSelected={onToggleSelected}
+              onTogglePinned={togglePinned}
               onRename={onRename}
               onAction={onAction}
             />

@@ -135,7 +135,7 @@ const WorkspaceView = ({ initialScenarios }) => {
       <Stack spacing={2} sx={{ p: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Typography variant="h5">{t("sidebar_workspace")}</Typography>
-          <WorkspaceImportExport onImported={loadScenarios} />
+          <WorkspaceImportExport onImported={() => loadScenarios({ force: true })} />
         </Stack>
 
         {!scenarios.length ? (
