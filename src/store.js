@@ -1,11 +1,32 @@
 import { create } from "zustand";
 
 import { generateRunCode } from "./utils/misc";
+import { SECTION_IDS } from "./constants/sections";
 
 const SIDEBAR_STORAGE_KEY = "riskwise.sidebarCollapsed";
 const SHOW_CHART_VALUES_STORAGE_KEY = "riskwise.showChartValues";
 const WALKTHROUGH_STORAGE_KEY = "riskwise.hasSeenWalkthrough";
 const TOUR_STATE_STORAGE_KEY = "riskwise.tourState";
+const LAST_SECTION_STORAGE_KEY = "riskwise.lastSection";
+
+const VALID_SECTIONS = new Set(SECTION_IDS);
+
+const readLastSection = () => {
+  try {
+    const value = globalThis.localStorage?.getItem(LAST_SECTION_STORAGE_KEY);
+    return VALID_SECTIONS.has(value) ? value : "home";
+  } catch {
+    return "home";
+  }
+};
+
+const writeLastSection = (value) => {
+  try {
+    globalThis.localStorage?.setItem(LAST_SECTION_STORAGE_KEY, value);
+  } catch {
+    // no-op
+  }
+};
 
 const readSidebarCollapsed = () => {
   try {
@@ -84,7 +105,10 @@ const initialTourState = readTourState();
 const initialHasSeenWalkthrough = readHasSeenWalkthrough();
 
 const useStore = create((set, get) => ({
-  activeSection: "risk",
+  // First-run users land on Home; returning users resume their last
+  // section (persisted to localStorage). Settings and section ids are
+  // validated on read so a stale or unknown value falls back to home.
+  activeSection: readLastSection(),
   sidebarCollapsed: readSidebarCollapsed(),
   showChartValues: readShowChartValues(),
   // Offline mode. Source of truth is electron-store on the main side;
@@ -211,7 +235,10 @@ const useStore = create((set, get) => ({
     set(next);
   },
 
-  setActiveSection: (section) => set({ activeSection: section }),
+  setActiveSection: (section) => {
+    if (VALID_SECTIONS.has(section)) writeLastSection(section);
+    set({ activeSection: section });
+  },
   setSidebarCollapsed: (collapsed) => {
     writeSidebarCollapsed(collapsed);
     set({ sidebarCollapsed: collapsed });

@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { Box, Button, Typography } from "@mui/material";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlineOutlined";
+
+import useEngineStatus from "../hooks/useEngineStatus";
 
 // Warns the user when the cached engine version is outside the signed
 // manifest's [min_app_version, max_app_version] range (issue #115,
@@ -40,37 +42,7 @@ const BUTTON_SX = {
 
 const EngineStatusBanner = () => {
   const { t } = useTranslation();
-  const [blocked, setBlocked] = useState(false);
-  const [reason, setReason] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  const refresh = useCallback(async () => {
-    const bridge = window.electron?.engine;
-    if (!bridge?.checkBlocked) return;
-    const result = await bridge.checkBlocked();
-    if (result?.error) {
-      setBlocked(true);
-      setReason(result.error);
-    } else {
-      setBlocked(Boolean(result?.blocked));
-      setReason(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  const handleDownload = async () => {
-    setBusy(true);
-    try {
-      const result = await window.electron?.engine?.downloadUpdate();
-      if (result?.error) setReason(result.error);
-      await refresh();
-    } finally {
-      setBusy(false);
-    }
-  };
+  const { blocked, reason, busy, downloadUpdate } = useEngineStatus();
 
   if (!blocked) return null;
 
@@ -90,7 +62,7 @@ const EngineStatusBanner = () => {
       <Button
         variant="outlined"
         size="small"
-        onClick={handleDownload}
+        onClick={downloadUpdate}
         disabled={busy}
         sx={BUTTON_SX}
       >
