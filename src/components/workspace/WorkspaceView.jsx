@@ -42,11 +42,11 @@ const compareBy = (key, dir) => (a, b) => {
 const EmptyState = ({ onStart }) => {
   const { t } = useTranslation();
   return (
-    <Paper variant="outlined" sx={{ flexGrow: 1 }}>
+    <Paper variant="outlined" sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
       <Stack
         alignItems="center"
         justifyContent="center"
-        sx={{ minHeight: 480, color: "text.secondary" }}
+        sx={{ flex: 1, minHeight: 480, color: "text.secondary", p: 2 }}
       >
         <InboxIcon sx={{ fontSize: 64, mb: 2 }} />
         <Typography variant="h6" gutterBottom>
@@ -132,7 +132,10 @@ const WorkspaceView = ({ initialScenarios }) => {
 
   return (
     <ScrollableRegion>
-      <Stack spacing={2} sx={{ p: 2 }}>
+      <Stack
+        spacing={2}
+        sx={{ p: 2, minHeight: "100%", flex: 1, display: "flex", flexDirection: "column" }}
+      >
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Typography variant="h5">{t("sidebar_workspace")}</Typography>
           <WorkspaceImportExport onImported={() => loadScenarios({ force: true })} />

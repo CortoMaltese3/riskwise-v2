@@ -67,7 +67,16 @@ export const RiskAssessmentView = () => {
         </Box>
       </FixedColumn>
       <ScrollableRegion>
-        <Box sx={{ pt: 2, px: 2, pb: 2 }}>
+        <Box
+          sx={{
+            pt: 2,
+            px: 2,
+            pb: 2,
+            minHeight: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           <MainView />
         </Box>
       </ScrollableRegion>
@@ -127,7 +136,16 @@ const MacroeconomicView = () => {
         </Box>
       </FixedColumn>
       <ScrollableRegion>
-        <Box sx={{ pt: 2, px: 2, pb: 2 }}>
+        <Box
+          sx={{
+            pt: 2,
+            px: 2,
+            pb: 2,
+            minHeight: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           <MainView />
         </Box>
       </ScrollableRegion>

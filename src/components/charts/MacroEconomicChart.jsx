@@ -205,7 +205,10 @@ const MacroEconomicChart = () => {
     <Box
       data-testid="macro-chart-frame"
       sx={{
-        margin: "auto",
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
         bgcolor: "card.bg",
         border: 2,
         borderColor: "primary.dark",
@@ -215,7 +218,9 @@ const MacroEconomicChart = () => {
         overflow: "hidden",
       }}
     >
-      <Box sx={{ height: "100%", overflowY: "auto" }}>
+      <Box
+        sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflowY: "auto" }}
+      >
         {hasData && (
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
             <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -234,7 +239,7 @@ const MacroEconomicChart = () => {
             </Button>
           </Stack>
         )}
-        <Box sx={{ position: "relative", height: 320, mb: 1 }}>
+        <Box sx={{ position: "relative", flex: 1, minHeight: 320, mb: 1 }}>
           <Line data={transformedData} options={options} aria-label={ariaLabel} role="img" />
         </Box>
         {hasData ? (
