@@ -16,17 +16,9 @@ import { TOP_BAR_HEIGHT } from "./Sidebar";
 const GIZ_LOGO_WIDTH = 140;
 const GIZ_LOGO_HEIGHT = 40;
 
-const sectionTitleKeys = {
-  home: "sidebar_home",
-  risk: "sidebar_risk_assessment",
-  macro: "sidebar_macroeconomic",
-  workspace: "sidebar_workspace",
-  settings: "sidebar_settings",
-};
-
 const TopBar = () => {
   const { t } = useTranslation();
-  const { activeSection, sidebarCollapsed, setSidebarCollapsed } = useStore();
+  const { sidebarCollapsed, setSidebarCollapsed } = useStore();
 
   return (
     <AppBar
@@ -73,36 +65,22 @@ const TopBar = () => {
         <Box
           sx={{
             display: { xs: "none", sm: "flex" },
-            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            lineHeight: 1.1,
           }}
         >
-          <Typography
-            variant="overline"
-            component="div"
-            sx={{
-              fontSize: "0.7rem",
-              fontWeight: 600,
-              letterSpacing: "0.15rem",
-              opacity: 0.75,
-              lineHeight: 1.2,
-            }}
-          >
-            {t("application_title")}
-          </Typography>
           <Typography
             noWrap
             component="div"
             sx={{
-              fontSize: "1.4rem",
+              fontSize: "1rem",
               fontWeight: 600,
-              letterSpacing: "0.02rem",
-              lineHeight: 1.2,
+              letterSpacing: "0.2rem",
+              textTransform: "uppercase",
+              lineHeight: 1,
             }}
           >
-            {t(sectionTitleKeys[activeSection] || "application_title")}
+            {t("application_title")}
           </Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
