@@ -12,7 +12,21 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import numpy as np
 import pytest
+
+from backend.engine.types import HazardArrays
+
+
+def _hazard_arrays(intensity_unit: str = "") -> HazardArrays:
+    return HazardArrays(
+        intensity=np.zeros((1, 1)),
+        frequency=np.array([1.0]),
+        centroid_lat=np.array([0.0]),
+        centroid_lon=np.array([0.0]),
+        haz_type="FL",
+        intensity_unit=intensity_unit,
+    )
 
 
 def _request_data(**overrides):
@@ -74,8 +88,7 @@ class TestCustomLoadHazardPresent:
         hazard_handler = MagicMock()
         base_handler = MagicMock()
         base_handler.check_file_type.return_value = "raster"
-        fake_hazard = SimpleNamespace(units=None)
-        hazard_handler.get_hazard.return_value = fake_hazard
+        hazard_handler.get_hazard.return_value = _hazard_arrays()
 
         result = strategy.load_hazard_present(request_data, hazard_handler, base_handler, "mm")
 
@@ -84,8 +97,8 @@ class TestCustomLoadHazardPresent:
             filepath="user_hist.tif",
             source="raster",
         )
-        assert result is fake_hazard
-        assert fake_hazard.units == "mm"
+        assert isinstance(result, HazardArrays)
+        assert result.intensity_unit == "mm"
 
     def test_future_with_uploaded_file_falls_back_to_era_historical(self, strategy) -> None:
         """When the user uploads only a future hazard file, the historical
@@ -97,8 +110,7 @@ class TestCustomLoadHazardPresent:
         )
         hazard_handler = MagicMock()
         hazard_handler.get_hazard_filename.return_value = "tha_fl_hist.h5"
-        fake_hazard = SimpleNamespace(units=None)
-        hazard_handler.get_hazard.return_value = fake_hazard
+        hazard_handler.get_hazard.return_value = _hazard_arrays()
 
         result = strategy.load_hazard_present(request_data, hazard_handler, MagicMock(), "m")
 
@@ -107,8 +119,8 @@ class TestCustomLoadHazardPresent:
             hazard_type="flood",
             filepath="tha_fl_hist.h5",
         )
-        assert result is fake_hazard
-        assert fake_hazard.units == "m"
+        assert isinstance(result, HazardArrays)
+        assert result.intensity_unit == "m"
 
     def test_without_hazard_file_raises_missing_upload(self, strategy) -> None:
         """No-upload branch fails loudly instead of triggering an online fetch."""
@@ -130,8 +142,7 @@ class TestCustomLoadHazardFuture:
         hazard_handler = MagicMock()
         base_handler = MagicMock()
         base_handler.check_file_type.return_value = "hdf5"
-        fake_hazard = SimpleNamespace(units=None)
-        hazard_handler.get_hazard.return_value = fake_hazard
+        hazard_handler.get_hazard.return_value = _hazard_arrays()
 
         result = strategy.load_hazard_future(request_data, hazard_handler, base_handler, "m")
 
@@ -140,8 +151,8 @@ class TestCustomLoadHazardFuture:
             filepath="user_future.h5",
             source="hdf5",
         )
-        assert result is fake_hazard
-        assert fake_hazard.units == "m"
+        assert isinstance(result, HazardArrays)
+        assert result.intensity_unit == "m"
 
     def test_without_uploaded_file_raises_missing_upload(self, strategy) -> None:
         """No-upload branch fails loudly instead of triggering an online fetch."""

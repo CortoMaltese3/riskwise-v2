@@ -12,7 +12,21 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import numpy as np
 import pytest
+
+from backend.engine.types import HazardArrays
+
+
+def _hazard_arrays(intensity_unit: str = "") -> HazardArrays:
+    return HazardArrays(
+        intensity=np.zeros((1, 1)),
+        frequency=np.array([1.0]),
+        centroid_lat=np.array([0.0]),
+        centroid_lon=np.array([0.0]),
+        haz_type="FL",
+        intensity_unit=intensity_unit,
+    )
 
 
 @pytest.fixture
@@ -70,8 +84,7 @@ class TestEraLoadHazardPresent:
     def test_loads_historical_file_and_sets_intensity_unit(self, strategy, request_data) -> None:
         hazard_handler = MagicMock()
         hazard_handler.get_hazard_filename.return_value = "tha_fl_hist.h5"
-        fake_hazard = SimpleNamespace(units=None)
-        hazard_handler.get_hazard.return_value = fake_hazard
+        hazard_handler.get_hazard.return_value = _hazard_arrays()
 
         result = strategy.load_hazard_present(request_data, hazard_handler, MagicMock(), "m")
 
@@ -80,8 +93,8 @@ class TestEraLoadHazardPresent:
             hazard_type="flood",
             filepath="tha_fl_hist.h5",
         )
-        assert result is fake_hazard
-        assert fake_hazard.units == "m"
+        assert isinstance(result, HazardArrays)
+        assert result.intensity_unit == "m"
 
 
 class TestEraLoadHazardFuture:
@@ -90,8 +103,7 @@ class TestEraLoadHazardFuture:
     ) -> None:
         hazard_handler = MagicMock()
         hazard_handler.get_hazard_filename.return_value = "tha_fl_rcp45.h5"
-        fake_hazard = SimpleNamespace(units=None)
-        hazard_handler.get_hazard.return_value = fake_hazard
+        hazard_handler.get_hazard.return_value = _hazard_arrays()
 
         result = strategy.load_hazard_future(request_data, hazard_handler, MagicMock(), "m")
 
@@ -100,5 +112,5 @@ class TestEraLoadHazardFuture:
             hazard_type="flood",
             filepath="tha_fl_rcp45.h5",
         )
-        assert result is fake_hazard
-        assert fake_hazard.units == "m"
+        assert isinstance(result, HazardArrays)
+        assert result.intensity_unit == "m"

@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 from backend.base_handler import BaseHandler
 from backend.constants import DATA_TEMP_DIR
@@ -129,13 +130,16 @@ class ExposureHandler:
         :type country_name: str
         """
         try:
-            exp_gdf = exposure.gdf
-            # Cast DataFrame to GeoDataFrame to avoid issues with gpd.sjoin later
+            lat = np.asarray(exposure.lat, dtype=np.float64)
+            lon = np.asarray(exposure.lon, dtype=np.float64)
             exposure_gdf = gpd.GeoDataFrame(
-                exp_gdf,
-                geometry=gpd.points_from_xy(
-                    exp_gdf["longitude"], exp_gdf["latitude"], crs="EPSG:4326"
-                ),
+                {
+                    "value": np.asarray(exposure.values, dtype=np.float64),
+                    "value_unit": exposure.value_unit,
+                    "latitude": lat,
+                    "longitude": lon,
+                },
+                geometry=gpd.points_from_xy(lon, lat, crs="EPSG:4326"),
             )
             country_iso3 = self.base_handler.get_iso3_country_code(country_name)
             layers = [0, 1, 2]
@@ -196,12 +200,16 @@ class ExposureHandler:
         """
         try:
             # Cast the exposure data to a GeoDataFrame
-            exp_gdf = exposure.gdf
+            lat = np.asarray(exposure.lat, dtype=np.float64)
+            lon = np.asarray(exposure.lon, dtype=np.float64)
             exposure_gdf = gpd.GeoDataFrame(
-                exp_gdf,
-                geometry=gpd.points_from_xy(
-                    exp_gdf["longitude"], exp_gdf["latitude"], crs="EPSG:4326"
-                ),
+                {
+                    "value": np.asarray(exposure.values, dtype=np.float64),
+                    "value_unit": exposure.value_unit,
+                    "latitude": lat,
+                    "longitude": lon,
+                },
+                geometry=gpd.points_from_xy(lon, lat, crs="EPSG:4326"),
             )
 
             # Retrieve the ISO3 country code

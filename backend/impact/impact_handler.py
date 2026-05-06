@@ -31,7 +31,6 @@ from typing import Any
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from shapely.geometry import Point
 
 from backend.base_handler import BaseHandler
 from backend.constants import DATA_TEMP_DIR
@@ -56,48 +55,28 @@ _registry_cache: ImpactFunctionRegistry | None = None
 def _calculate_via_engine(
     exposure: Any,
     hazard: Any,
-    impact_function_set: Any,
+    impfset_specs: Any,
 ) -> Any:
-    from backend.engine.adapter import build_exposures, build_hazard, run_impact
-    from backend.engine.types import ExposureArrays, HazardArrays
+    """Run an engine impact calc against domain-typed inputs.
+
+    Consumes ``ExposureArrays``, ``HazardArrays``, and a list of
+    ``ImpactFunctionSpec``; converts at the boundary via the engine
+    adapter; returns the engine ``Impact`` directly.
+    """
+    from backend.engine.adapter import (
+        assign_centroids,
+        build_exposures,
+        build_hazard,
+        build_impfset,
+        run_impact,
+    )
 
     try:
-        exposure.assign_centroids(hazard, overwrite=False)
-
-        gdf = exposure.gdf
-        centr_col = f"centr_{hazard.haz_type}"
-        centroid_idx = gdf[centr_col].values
-
-        impf_col = f"impf_{hazard.haz_type}"
-        impf_id = (
-            gdf[impf_col].values
-            if impf_col in gdf.columns
-            else np.ones(len(gdf), dtype=np.int64)
-        )
-
-        hazard_arrays = HazardArrays(
-            haz_type=hazard.haz_type,
-            intensity_unit=hazard.units,
-            intensity=hazard.intensity,
-            frequency=hazard.frequency,
-            centroid_lat=hazard.centroids.lat,
-            centroid_lon=hazard.centroids.lon,
-            event_names=tuple(hazard.event_name) if hazard.event_name else None,
-        )
-
-        exposure_arrays = ExposureArrays(
-            values=gdf["value"].values,
-            centroid_idx=centroid_idx,
-            impf_id=impf_id,
-            lat=gdf.geometry.y.values,
-            lon=gdf.geometry.x.values,
-            value_unit=getattr(exposure, "value_unit", "USD"),
-        )
-
-        cc_hazard = build_hazard(hazard_arrays)
-        cc_exposure = build_exposures(exposure_arrays)
-
-        return run_impact(cc_hazard, cc_exposure, impact_function_set, save_mat=True)
+        exposure = assign_centroids(exposure, hazard)
+        cc_hazard = build_hazard(hazard)
+        cc_exposure = build_exposures(exposure)
+        cc_impfset = build_impfset(impfset_specs)
+        return run_impact(cc_hazard, cc_exposure, cc_impfset, save_mat=True)
     except Exception as exception:
         logger.log(
             "error",
@@ -185,20 +164,15 @@ class ImpactHandler:
         impf_ids = {"TC": 1, "RF": 3, "BF": 4, "FL": 5, "EQ": 6, "DEFAULT": 9}
         return impf_ids.get(hazard_type, impf_ids["DEFAULT"])
 
-    def calculate_impact(
-        self, exposure: Any, hazard: Any, impact_function_set: Any
-    ) -> Any:
-        """
-        Calculate the impact of a hazard on exposure data using specified impact functions.
+    def calculate_impact(self, exposure: Any, hazard: Any, impfset_specs: Any) -> Any:
+        """Run an engine impact calc on domain-typed inputs.
 
-        Routes through the climate-lama-engine adapter.
-
-        :param exposure: The exposure data.
-        :param hazard: The hazard data.
-        :param impact_function_set: The set of impact functions corresponding to the hazard.
-        :return: The Impact object representing the calculated impact, or None if an error occurs.
+        :param exposure: An :class:`ExposureArrays`.
+        :param hazard: A :class:`HazardArrays`.
+        :param impfset_specs: ``list[ImpactFunctionSpec]`` (e.g. ``entity.impfset_specs``).
+        :return: The engine ``Impact`` object, or ``None`` on failure.
         """
-        return _calculate_via_engine(exposure, hazard, impact_function_set)
+        return _calculate_via_engine(exposure, hazard, impfset_specs)
 
     def get_circle_radius(self, hazard_type: str, country_iso3: str, exposure_type: str) -> int:
         """
@@ -262,6 +236,7 @@ class ImpactHandler:
     def generate_impact_geojson(
         self,
         impact: Any,
+        exposure: Any,
         country_name: str,
         return_periods: tuple = (25, 20, 15, 10),
         asset_type: str = "economic",
@@ -276,21 +251,24 @@ class ImpactHandler:
         information about impact values at different return periods, along with metadata
         such as the unit and radius.
 
-        :param impact: The impact data to be visualized.
-        :type impact: Impact
+        :param impact: The engine ``Impact`` object holding ``imp_mat`` and ``frequency``.
+        :param exposure: The :class:`ExposureArrays` whose ``lat`` / ``lon`` index the
+            columns of ``impact.imp_mat`` (the engine ``Impact`` does not store
+            per-point coordinates).
         :param country_name: The name of the country for which to generate the GeoJSON file.
-        :type country_name: str
         :param return_periods: The return periods for which impact data is available.
-        :type return_periods: tuple, optional
         :param asset_type: The type of asset (economic or non_economic).
-        :type asset_type: str, optional
         """
         try:
+            from backend.engine.adapter import local_exceedance_imp as _local_exceedance_imp
+
             country_iso3 = self.base_handler.get_iso3_country_code(country_name)
             admin_gdf = self.base_handler.get_admin_data(country_iso3, 2)
-            coords = np.array(impact.coord_exp)
-            local_exceedance_imp = impact.local_exceedance_imp(return_periods)
-            local_exceedance_imp = pd.DataFrame(local_exceedance_imp).T
+            lat = np.asarray(exposure.lat, dtype=np.float64)
+            lon = np.asarray(exposure.lon, dtype=np.float64)
+            coords = np.column_stack([lat, lon])
+            rp_per_point = _local_exceedance_imp(impact.imp_mat, impact.frequency, return_periods)
+            local_exceedance_imp = pd.DataFrame(rp_per_point).T
             data = np.column_stack((coords, local_exceedance_imp))
             columns = ["latitude", "longitude"] + [f"rp{rp}" for rp in return_periods]
 
@@ -302,8 +280,12 @@ class ImpactHandler:
             elif asset_type == "non_economic":
                 impact_df.update(impact_df[[f"rp{rp}" for rp in return_periods]].apply(np.ceil))
 
-            geometry = [Point(xy) for xy in zip(impact_df["longitude"], impact_df["latitude"])]
-            impact_gdf = gpd.GeoDataFrame(impact_df, geometry=geometry, crs="EPSG:4326")
+            impact_gdf = gpd.GeoDataFrame(
+                impact_df,
+                geometry=gpd.points_from_xy(
+                    impact_df["longitude"], impact_df["latitude"], crs="EPSG:4326"
+                ),
+            )
 
             # Filter impact_gdf to exclude rows where all return period values are zero or negative
             impact_gdf = impact_gdf[
@@ -346,37 +328,35 @@ class ImpactHandler:
             logger.log("error", f"An unexpected error occurred. More info: {exception}")
 
     def generate_impact_report_dataset(
-        self, impact: Any, country_name: str, return_periods: tuple, asset_type: str
+        self,
+        impact: Any,
+        exposure: Any,
+        country_name: str,
+        return_periods: tuple,
+        asset_type: str,
     ) -> pd.DataFrame:
         """
         Generate a dataset for impact reporting.
 
-        This method generates a dataset by spatially joining impact data with administrative boundaries.
-        It creates a DataFrame that includes columns for impact return periods and administrative layers.
+        Spatially joins per-exposure-point return-period intensities with
+        administrative boundaries.
 
-        :param impact: The Impact object containing the impact data.
-        :type impact: Impact
-        :param country_name: The name of the country for which the dataset is generated.
-        :type country_name: str
-        :param return_periods: Tuple of return periods to include in the dataset.
-        :type return_periods: tuple
-        :param asset_type: The type of asset (economic or non_economic).
-        :type asset_type: str
-        :return: A DataFrame containing the merged impact and administrative data.
-        :rtype: pd.DataFrame
-
-        Example usage:
-
-        .. code-block:: python
-
-            final_df = base_handler.generate_impact_report_dataset(impact, "EGY", (10, 15, 20, 25), "economic")
-            print(final_df.head())
+        :param impact: The engine ``Impact`` object holding ``imp_mat`` and ``frequency``.
+        :param exposure: The :class:`ExposureArrays` providing per-point ``lat`` / ``lon``.
+        :param country_name: The country name for the spatial join.
+        :param return_periods: Return periods to include.
+        :param asset_type: ``"economic"`` or ``"non_economic"``.
+        :return: A DataFrame with merged impact and administrative columns.
         """
         try:
+            from backend.engine.adapter import local_exceedance_imp as _local_exceedance_imp
+
             # Cast impact data to a DataFrame
-            coords = np.array(impact.coord_exp)
-            local_exceedance_imp = impact.local_exceedance_imp(return_periods)
-            local_exceedance_imp = pd.DataFrame(local_exceedance_imp).T
+            lat = np.asarray(exposure.lat, dtype=np.float64)
+            lon = np.asarray(exposure.lon, dtype=np.float64)
+            coords = np.column_stack([lat, lon])
+            rp_per_point = _local_exceedance_imp(impact.imp_mat, impact.frequency, return_periods)
+            local_exceedance_imp = pd.DataFrame(rp_per_point).T
             data = np.column_stack((coords, local_exceedance_imp))
             columns = ["latitude", "longitude"] + [f"rp{rp}" for rp in return_periods]
 
@@ -388,8 +368,12 @@ class ImpactHandler:
             elif asset_type == "non_economic":
                 impact_df.update(impact_df[[f"rp{rp}" for rp in return_periods]].apply(np.ceil))
 
-            geometry = [Point(xy) for xy in zip(impact_df["longitude"], impact_df["latitude"])]
-            impact_gdf = gpd.GeoDataFrame(impact_df, geometry=geometry, crs="EPSG:4326")
+            impact_gdf = gpd.GeoDataFrame(
+                impact_df,
+                geometry=gpd.points_from_xy(
+                    impact_df["longitude"], impact_df["latitude"], crs="EPSG:4326"
+                ),
+            )
 
             # Filter out rows where all return period values are zero
             impact_gdf = impact_gdf[

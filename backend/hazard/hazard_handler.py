@@ -48,8 +48,8 @@ from backend.constants import (
     DATA_HAZARDS_DIR,
     DATA_TEMP_DIR,
 )
+from backend.engine.adapter import intensity_to_dense
 from backend.logger_config import LoggerConfig
-from shapely.geometry import Point
 
 logger = LoggerConfig(logger_types=["file"])
 
@@ -72,7 +72,7 @@ class HazardHandler:
         filepath: Path = None,
     ) -> Any:
         """
-        Retrieve a Hazard object via the climate-lama-engine adapter.
+        Retrieve a hazard as an :class:`backend.engine.types.HazardArrays`.
 
         Loads from a local HDF5 or raster file. When ``source`` is omitted it defaults
         from ``hazard_type`` (drought→hdf5, flood→raster, heatwaves→hdf5).
@@ -80,7 +80,7 @@ class HazardHandler:
         :param hazard_type: The type of hazard dataset to retrieve.
         :param source: The source of the hazard dataset (``"hdf5"`` or ``"raster"``).
         :param filepath: The filepath to the hazard dataset file.
-        :return: A ``climate_lama_engine.Hazard`` representing the retrieved dataset.
+        :return: A ``HazardArrays`` (riskwise-side domain dataclass).
         :raises ValueError: If the specified source is invalid.
         """
         if source and source not in ["hdf5", "raster"]:
@@ -101,13 +101,12 @@ class HazardHandler:
         return self._get_hazard_via_engine(hazard_type, source, filepath)
 
     def _get_hazard_via_engine(self, hazard_type: str, source: str, filepath: Path) -> Any:
-        """Load a hazard via the engine loaders + adapter.
+        """Load a hazard via the engine loaders, returning ``HazardArrays``.
 
-        Routes through ``backend.engine.loaders.{hdf5,raster}`` and
-        ``backend.engine.adapter.build_hazard`` so the produced object is a
-        ``climate_lama_engine.Hazard``.
+        The domain ``HazardArrays`` flows through the scenario pipeline; the
+        adapter's ``build_hazard`` is only invoked at the engine boundary
+        inside :class:`ImpactHandler` / :class:`CostBenefitHandler`.
         """
-        from backend.engine.adapter import build_hazard
         from backend.engine.loaders.hdf5 import load_hazard_h5
         from backend.engine.loaders.raster import load_hazard_raster
 
@@ -128,7 +127,7 @@ class HazardHandler:
             if hazard_type == "drought":
                 arrays = replace(arrays, haz_type="D")
 
-        return build_hazard(arrays)
+        return arrays
 
     def get_hazard_intensity_thres(self, hazard_type: str) -> float:
         """
@@ -154,34 +153,20 @@ class HazardHandler:
 
     def get_hazard_intensity_units_from_entity(self, entity: Any) -> str:
         """
-        Retrieve the intensity unit associated from the Entity impact function.
+        Return the intensity unit for the entity's impact functions.
 
-        This method extracts the unique category ID from an entity's exposures and uses it to
-        fetch the corresponding impact function. It then retrieves the intensity unit from this
-        impact function. If the entity's exposures have more than one unique category ID,
-        a ValueError is raised.
+        Reads from :attr:`EntityBundle.impfset_specs`. The entity loader
+        already validates that all specs sharing a ``haz_type`` use the
+        same ``intensity_unit`` (see ``_validate_specs`` in the xlsx
+        loader), so any matching spec yields the canonical answer.
 
-        :param entity: The entity containing exposure data and impact functions.
-        :type entity: Entity
-        :return: The intensity unit associated with the entity's category ID.
-        :rtype: str
-        :raises ValueError: If there are multiple different category IDs in the impact functions.
+        :param entity: An :class:`EntityBundle` carrying exposures + specs.
+        :return: The intensity unit string, or ``""`` when no specs exist.
         """
-        # Extract unique category IDs from the entity's geodataframe
-        category_ids = entity.exposures.gdf["category_id"].unique()
-
-        # Check if all category IDs are identical (only one unique value)
-        if len(np.unique(category_ids)) != 1:
-            # If there are multiple unique category IDs, raise an error
-            raise ValueError(
-                "There are multiple different 'category_id' values in the entity's exposures."
-            )
-
-        # Retrieve the impact function associated with the first (and only) category ID
-        impf = entity.impact_funcs.get_func(fun_id=category_ids[0])[0]
-
-        # Return the intensity unit, default to an empty string if not present
-        return impf.intensity_unit or ""
+        specs = getattr(entity, "impfset_specs", None) or []
+        for spec in specs:
+            return getattr(spec, "intensity_unit", "") or ""
+        return ""
 
     def get_custom_rp_per_hazard(self, hazard_code: str) -> tuple:
         """
@@ -242,27 +227,16 @@ class HazardHandler:
             country_iso3 = self.base_handler.get_iso3_country_code(country_name)
             admin_gdf = self.base_handler.get_admin_data(country_iso3, 2)
 
-            # The latest .h5 Thailand - Drought hazard files have minor inconsistencies compared
-            # to the other ones (lat/lon values not present). Use this to populate the coord
-            # hazard attribute from the meta group if no centroid lat/lon values are available.
-            hazard._set_coords_centroids()
-
-            coords = np.array(hazard.centroids.coord)
-            # TODO: There's an issue with the UNU EHS ERA hazard datasets. These datasets contain
-            # the RPL calculated values and not the absolute hazard intensity values.
-            # This means that calculating the local exceedance intensity values is wrong,
-            # as it's already pre-calculated. Each dataset contains bands that represent
-            # the separate return periods, so hazard.intensity can be used directly to
-            # get the return period losses, without using the local_exceedance_inten method.
-
-            # Local exceedance intensity calculation
-            # local_exceedance_inten = hazard.local_exceedance_inten(return_periods)
-            # local_exceedance_inten = pd.DataFrame(local_exceedance_inten).T
-
+            intensity_dense = intensity_to_dense(hazard.intensity)
+            lat = np.asarray(hazard.centroid_lat, dtype=np.float64)
+            lon = np.asarray(hazard.centroid_lon, dtype=np.float64)
+            # The UNU EHS ERA hazard datasets store RP-banded intensities directly,
+            # so each event row already corresponds to a return period. Match that
+            # ordering to ``return_periods`` rather than re-computing exceedance.
             local_exceedance_inten = pd.DataFrame(
-                hazard.intensity.toarray().T, columns=[f"rp{year}" for year in return_periods]
+                intensity_dense.T, columns=[f"rp{year}" for year in return_periods]
             )
-            data = np.column_stack((coords, local_exceedance_inten))
+            data = np.column_stack((lat, lon, local_exceedance_inten))
             columns = ["latitude", "longitude"] + [f"rp{rp}" for rp in return_periods]
 
             hazard_df = pd.DataFrame(data, columns=columns)
@@ -270,8 +244,12 @@ class HazardHandler:
             # Round the hazard rp values to 2 decimal places. Update is vectorized and efficient
             # for large datasets
             hazard_df.update(hazard_df[[f"rp{rp}" for rp in return_periods]].round(1))
-            geometry = [Point(xy) for xy in zip(hazard_df["longitude"], hazard_df["latitude"])]
-            hazard_gdf = gpd.GeoDataFrame(hazard_df, geometry=geometry, crs="EPSG:4326")
+            hazard_gdf = gpd.GeoDataFrame(
+                hazard_df,
+                geometry=gpd.points_from_xy(
+                    hazard_df["longitude"], hazard_df["latitude"], crs="EPSG:4326"
+                ),
+            )
 
             # Filter hazard_gdf to exclude rows where all return period values are zero
             hazard_gdf = hazard_gdf[
@@ -302,14 +280,15 @@ class HazardHandler:
 
             radius = self.get_circle_radius(hazard.haz_type)
 
+            unit = hazard.intensity_unit or ""
             # Convert to GeoJSON for this layer and add to all_layers_geojson
             hazard_geojson = joined_gdf.__geo_interface__
             hazard_geojson["_metadata"] = {
                 "percentile_values": percentile_values,
                 "radius": radius,
                 "return_periods": return_periods,
-                "title": f"Hazard ({hazard.units})" if hazard.units else "Hazard",
-                "unit": hazard.units,
+                "title": f"Hazard ({unit})" if unit else "Hazard",
+                "unit": unit,
             }
 
             # Save the combined GeoJSON file
@@ -441,17 +420,23 @@ class HazardHandler:
         """
         try:
             # Cast hazard data to a DataFrame
-            coords = np.array(hazard.centroids.coord)
+            intensity_dense = intensity_to_dense(hazard.intensity)
+            lat = np.asarray(hazard.centroid_lat, dtype=np.float64)
+            lon = np.asarray(hazard.centroid_lon, dtype=np.float64)
             local_exceedance_inten = pd.DataFrame(
-                hazard.intensity.toarray().T, columns=[f"rp{year}" for year in return_periods]
+                intensity_dense.T, columns=[f"rp{year}" for year in return_periods]
             )
-            data = np.column_stack((coords, local_exceedance_inten))
+            data = np.column_stack((lat, lon, local_exceedance_inten))
             columns = ["latitude", "longitude"] + [f"rp{rp}" for rp in return_periods]
 
             hazard_df = pd.DataFrame(data, columns=columns)
             hazard_df.update(hazard_df[[f"rp{rp}" for rp in return_periods]].round(1))
-            geometry = [Point(xy) for xy in zip(hazard_df["longitude"], hazard_df["latitude"])]
-            hazard_gdf = gpd.GeoDataFrame(hazard_df, geometry=geometry, crs="EPSG:4326")
+            hazard_gdf = gpd.GeoDataFrame(
+                hazard_df,
+                geometry=gpd.points_from_xy(
+                    hazard_df["longitude"], hazard_df["latitude"], crs="EPSG:4326"
+                ),
+            )
 
             # Filter out rows where all return period values are zero
             hazard_gdf = hazard_gdf[
