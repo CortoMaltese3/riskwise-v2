@@ -72,6 +72,7 @@
     "react-joyride": "^3.0.2",
     "react-leaflet": "5.0.0",
     "react-markdown": "^10.1.0",
+    "tree-kill": "^1.2.2",
     "zustand": "5.0.12"
   },
   "devDependencies": {

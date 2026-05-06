@@ -16,6 +16,7 @@ const { startTileServer } = require("./tileServer");
 const { TILES_FILENAME } = require("./offlineConstants");
 const { buildDiagnosticsZip, sanitizeScenarioRow } = require("./diagnostics");
 const os = require("node:os");
+const treeKill = require("tree-kill");
 
 global.pythonProcess = null;
 
@@ -157,12 +158,24 @@ const pruneOldLogs = (logDir) => {
 };
 
 const cleanupPython = () => {
-  if (global.pythonProcess && !global.pythonProcess.killed) {
+  // The Nuitka onefile bundle is a bootstrap that self-extracts and re-execs
+  // into a child Python process. ``ChildProcess.kill()`` only signals the PID
+  // we spawned (the bootstrap), leaving the child FastAPI server running and
+  // holding the engine port + DB. ``tree-kill`` walks the descendant tree so
+  // the child gets SIGKILL too. The legacy stock-CPython path is a single
+  // process and works the same way under tree-kill.
+  const proc = global.pythonProcess;
+  if (proc && !proc.killed && proc.pid) {
     try {
-      global.pythonProcess.kill();
-      log.info("[electron] Python process terminated in cleanup");
+      treeKill(proc.pid, "SIGKILL", (err) => {
+        if (err) {
+          log.error("[electron] tree-kill failed:", err.message);
+        } else {
+          log.info("[electron] Python process tree terminated in cleanup");
+        }
+      });
     } catch (error) {
-      log.error("[electron] error killing Python process in cleanup:", error);
+      log.error("[electron] error invoking tree-kill in cleanup:", error);
     }
   }
   global.pythonProcess = null;
