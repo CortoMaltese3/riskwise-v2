@@ -1030,5 +1030,9 @@
     "home_firstrun_body": "Set a country, a hazard and a time horizon to run your first risk scenario.",
     "home_firstrun_cta": "Get started",
     "workspace_pin_aria": "Pin scenario {{id}}",
-    "workspace_unpin_aria": "Unpin scenario {{id}}"
+    "workspace_unpin_aria": "Unpin scenario {{id}}",
+    "theme_mode_selector_aria": "Select theme mode",
+    "theme_mode_light": "Light",
+    "theme_mode_dark": "Dark",
+    "theme_mode_system": "System"
 }
