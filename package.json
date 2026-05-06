@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "start:electron": "npm run build && electron .",
+    "start:dev": "cross-env RISKWISE_ENGINE_DEV_PYTHON=.venv/Scripts/python.exe npm run start:electron",
     "quickstart": "electron .",
     "pack": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.cjs --win zip",
     "dist": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.cjs --win nsis",

@@ -309,9 +309,19 @@ skips the bundle entirely, so Nuitka-only failure modes (extraction,
 process-tree shutdown, signing) only surface after a real rebuild —
 test through the bundle before shipping.
 
+The `start:dev` npm script wires this up against the standard
+`.venv/Scripts/python.exe`:
+
 ```powershell
-$env:RISKWISE_ENGINE_DEV_PYTHON = "$PWD\.venv\Scripts\python.exe"
-npm run start:electron                       # live backend, no rebuild
+npm run start:dev                            # live backend, no rebuild
+```
+
+For a non-standard venv layout, set the env var manually and use the
+plain `start:electron` script:
+
+```powershell
+$env:RISKWISE_ENGINE_DEV_PYTHON = "C:\path\to\python.exe"
+npm run start:electron
 ```
 
 ---
