@@ -91,6 +91,10 @@ const RELEASE_REPO = "riskwise-v2";
 const ENGINE_MANIFEST_URL = `https://github.com/${RELEASE_OWNER}/${RELEASE_REPO}/releases/latest/download/engine-manifest.json`;
 const GITHUB_RELEASE_API = `https://api.github.com/repos/${RELEASE_OWNER}/${RELEASE_REPO}/releases`;
 const ENGINE_PUB_KEY_FILENAME = "engine-manifest.pub";
+// Engine cache directory under %LOCALAPPDATA%. Distinct from v1's
+// ``RiskWiseEngine`` so both apps can coexist on the same machine — wiping
+// or replacing the v2 engine binary must never touch v1's CPython install.
+const ENGINE_DIR_NAME = "RiskWiseEngineV2";
 
 let updateCheckTimer = null;
 let updateStore = null;
@@ -286,9 +290,9 @@ const downloadAndInstallEngine = async (loaderWindow) => {
     throw new Error("Failed to resolve LOCALAPPDATA environment variable");
   }
 
-  const enginePath = path.join(engineRoot, "RiskWiseEngine");
+  const enginePath = path.join(engineRoot, ENGINE_DIR_NAME);
   const pythonExecutable = path.join(enginePath, "python.exe");
-  const archivePath = path.join(engineRoot, "RiskWiseEngine.zip");
+  const archivePath = path.join(engineRoot, `${ENGINE_DIR_NAME}.zip`);
 
   // Check if already installed
   if (fs.existsSync(pythonExecutable)) {
@@ -1016,33 +1020,54 @@ const restartBackendWithBackoff = async () => {
   stopHealthSupervisor();
 };
 
-// Create a long-running Python process
+// Create a long-running Python process.
+//
+// Two engine shapes are supported:
+//   1. Nuitka onefile bundle: a self-contained ``riskwise-engine.exe`` with
+//      ``backend.__main__`` baked in. Spawned with no args; backend package
+//      and shipped data resolve via ``NUITKA_ONEFILE_BINARY`` (see
+//      ``backend/constants.get_base_dir``).
+//   2. Stock CPython portable: ``python.exe -m backend`` against the repo's
+//      source tree at ``basePath``. This is the historical path that
+//      ``downloadAndInstallEngine`` provisions when neither shape is on disk.
+//
+// The Nuitka shape wins when present so a locally-built engine can be tested
+// against the real Electron client without ripping out the legacy path.
 const createPythonProcess = async () => {
-  // The backend package is invoked as ``python -m backend`` with cwd set to
-  // the repo root so the ``from backend.X`` imports resolve. See issue #195.
-  const backendDir = path.join(basePath, "backend");
-
-  // Engine is installed under %LOCALAPPDATA%\RiskWiseEngine\python.exe
   const engineRoot = process.env.LOCALAPPDATA;
   if (!engineRoot) {
     throw new Error("Failed to resolve LOCALAPPDATA environment variable");
   }
 
-  const enginePath = path.join(engineRoot, "RiskWiseEngine");
+  const enginePath = path.join(engineRoot, ENGINE_DIR_NAME);
+  const nuitkaExecutable = path.join(enginePath, "riskwise-engine.exe");
   let pythonExecutable = path.join(enginePath, "python.exe");
 
-  // Download and install engine if missing
-  if (!fs.existsSync(pythonExecutable)) {
+  const useNuitkaBundle = fs.existsSync(nuitkaExecutable);
+
+  if (!useNuitkaBundle && !fs.existsSync(pythonExecutable)) {
     log.info("[electron] Python engine not found, initiating download...");
     pythonExecutable = await downloadAndInstallEngine(loaderWindow);
   }
 
-  if (!fs.existsSync(backendDir)) {
-    throw new Error("Backend package not found at: " + backendDir);
+  let executable;
+  let args;
+  if (useNuitkaBundle) {
+    log.info("[electron] Using Nuitka engine bundle at:", nuitkaExecutable);
+    executable = nuitkaExecutable;
+    args = [];
+  } else {
+    const backendDir = path.join(basePath, "backend");
+    if (!fs.existsSync(backendDir)) {
+      throw new Error("Backend package not found at: " + backendDir);
+    }
+    log.info("[electron] Using CPython interpreter at:", pythonExecutable);
+    executable = pythonExecutable;
+    args = ["-m", "backend"];
   }
 
   try {
-    const py = spawn(pythonExecutable, ["-m", "backend"], {
+    const py = spawn(executable, args, {
       cwd: basePath,
       stdio: ["pipe", "pipe", "pipe"],
       env: {
@@ -2199,7 +2224,7 @@ ipcMain.handle("engine:download-update", async () => {
     const manifest = await fetchVerifiedEngineManifest();
     const engineRoot = process.env.LOCALAPPDATA;
     if (!engineRoot) throw new Error("LOCALAPPDATA is not defined");
-    const destPath = path.join(engineRoot, "RiskWiseEngine.download");
+    const destPath = path.join(engineRoot, `${ENGINE_DIR_NAME}.download`);
     await downloadEngineWithResume(manifest, destPath);
     if (updateStore) updateStore.set("engine.version", manifest.version);
     return { ok: true, version: manifest.version };
