@@ -27,7 +27,7 @@ import thGlossary from "../../content/glossary/th.md?raw";
 // than imported because pulling Sidebar into this module breaks the
 // glossary_drawer test setup (Sidebar's MUI-icon imports trigger a module
 // load failure in the test runner).
-const TOP_BAR_HEIGHT = 80;
+const TOP_BAR_HEIGHT = 56;
 
 const GLOSSARIES = { en: enGlossary, ar: arGlossary, th: thGlossary };
 

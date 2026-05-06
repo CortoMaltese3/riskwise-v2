@@ -44,9 +44,15 @@ const lightInputCardColors = {
   disabledText: "#A6A6A6",
 };
 
+// `contrastText` darkened from `#0F172A` → `#0A4750` in #287 to recolor the
+// TopBar away from generic dark slate and onto the brand teal family. The
+// spec'd `primary.dark` (`#0E5A66`) measured 4.08:1 against `header.main`
+// (`#8fc3d1`) — below the WCAG 2.1 AA 4.5:1 floor enforced by the contrast
+// suite below — so we use a slightly deeper teal (5.37:1) that stays on
+// palette while clearing AA with headroom.
 const lightHeaderColors = {
   main: "#8fc3d1",
-  contrastText: "#0F172A",
+  contrastText: "#0A4750",
 };
 
 // Salmon/pink action palette used across card titles, primary action buttons

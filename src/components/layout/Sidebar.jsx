@@ -24,10 +24,10 @@ import { layoutTransition } from "../../theme/theme";
 
 export const SIDEBAR_WIDTH = 220;
 export const SIDEBAR_COLLAPSED_WIDTH = 60;
-// Matches the GIZ logo in TopBar.jsx (64px tall + 8px top/bottom margins).
+// Matches the GIZ logo in TopBar.jsx (40px tall + 8px top/bottom margins).
 // Toolbar in TopBar.jsx is pinned to this height so AppViewport's pt offset
-// clears the fixed AppBar.
-export const TOP_BAR_HEIGHT = 80;
+// clears the fixed AppBar. Slimmed from 80 → 56 in #287.
+export const TOP_BAR_HEIGHT = 56;
 
 const ITEM_META = {
   home: { labelKey: "sidebar_home", icon: HomeIcon },

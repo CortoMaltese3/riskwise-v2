@@ -127,6 +127,16 @@ describe("theme — color schemes", () => {
     expect(theme.colorSchemes.light.palette.background.paper).toBe("#ffffff");
   });
 
+  it("light scheme header pairs the dusty-blue band with deep-teal text (#287)", () => {
+    // #287 recolored the TopBar away from generic dark slate (#0F172A) and
+    // onto the brand teal family. The literal here is slightly deeper than
+    // `primary.dark` because `primary.dark` itself measures 4.08:1 on
+    // `header.main` — below AA — so we use a darker swatch with headroom.
+    const lightHeader = theme.colorSchemes.light.palette.header;
+    expect(lightHeader.main).toBe("#8fc3d1");
+    expect(lightHeader.contrastText).toBe("#0A4750");
+  });
+
   it("dark scheme uses dark backgrounds and light text", () => {
     const dark = theme.colorSchemes.dark.palette;
     expect(dark.background.default).toBe("#0F172A");

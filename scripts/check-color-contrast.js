@@ -96,9 +96,11 @@ const PAIRS = [
   { name: "text.primary on background.paper", fg: "#0F172A", bg: "#ffffff", size: "normal" },
   { name: "text.secondary on background.default", fg: "#334155", bg: "#f8fafc", size: "normal" },
   { name: "text.secondary on background.paper", fg: "#334155", bg: "#ffffff", size: "normal" },
-  // Header AppBar — `header.contrastText` is dark slate so the pale teal bg
-  // works for body-size labels.
-  { name: "header.contrastText on header.main", fg: "#0F172A", bg: "#8fc3d1", size: "normal" },
+  // Header AppBar — `header.contrastText` recolored to a deep teal in #287
+  // (away from the prior dark slate `#0F172A`) to tie the chrome to the brand
+  // palette. Slightly darker than `primary.dark` because `primary.dark` itself
+  // measured 4.08:1 on `header.main` — see comment in theme.ts.
+  { name: "header.contrastText on header.main", fg: "#0A4750", bg: "#8fc3d1", size: "normal" },
   // Accent palette (salmon) — used for primary CTAs. Dark contrastText sits
   // on the salmon main; ensure both the main and dark fills clear AA against
   // their dark text.
