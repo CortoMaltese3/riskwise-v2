@@ -26,8 +26,8 @@ const MainViewControls = () => {
   return (
     <Card
       sx={{
-        // maxWidth: controls.length === 1 ? "50%" : "100%",
-        maxWidth: "100%",
+        width: "100%",
+        maxWidth: 480,
         margin: "auto",
         bgcolor: "accent.light",
         border: 1,

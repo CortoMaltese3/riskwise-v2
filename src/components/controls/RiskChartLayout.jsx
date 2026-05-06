@@ -40,11 +40,19 @@ const RiskChartLayout = () => {
   }, []);
 
   return (
-    <div style={{ height: "80%", display: "flex", flexDirection: "column" }}>
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <Paper
         elevation={3}
         sx={{
           flex: 1,
+          minHeight: 0,
           borderRadius: (theme) => theme.spacing(2),
           marginBottom: 2,
           display: "flex",

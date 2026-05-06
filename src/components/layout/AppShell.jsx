@@ -47,7 +47,7 @@ export const RiskAssessmentView = () => {
           }}
         >
           <ScrollableRegion>
-            <Box sx={{ p: 1 }}>
+            <Box sx={{ pt: 2, px: 1, pb: 1 }}>
               <DataInput />
               <AdaptationMeasuresInput />
             </Box>
@@ -67,7 +67,16 @@ export const RiskAssessmentView = () => {
         </Box>
       </FixedColumn>
       <ScrollableRegion>
-        <Box sx={{ p: 2 }}>
+        <Box
+          sx={{
+            pt: 2,
+            px: 2,
+            pb: 2,
+            minHeight: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           <MainView />
         </Box>
       </ScrollableRegion>
@@ -86,7 +95,7 @@ export const RiskAssessmentView = () => {
           }}
         >
           <ScrollableRegion>
-            <Box sx={{ p: 1 }}>
+            <Box sx={{ pt: 2, px: 1, pb: 1 }}>
               <ResultsView />
             </Box>
           </ScrollableRegion>
@@ -110,7 +119,7 @@ const MacroeconomicView = () => {
           }}
         >
           <ScrollableRegion>
-            <Box sx={{ p: 1 }}>
+            <Box sx={{ pt: 2, px: 1, pb: 1 }}>
               <MacroEconomicInput />
             </Box>
           </ScrollableRegion>
@@ -127,7 +136,16 @@ const MacroeconomicView = () => {
         </Box>
       </FixedColumn>
       <ScrollableRegion>
-        <Box sx={{ p: 2 }}>
+        <Box
+          sx={{
+            pt: 2,
+            px: 2,
+            pb: 2,
+            minHeight: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           <MainView />
         </Box>
       </ScrollableRegion>

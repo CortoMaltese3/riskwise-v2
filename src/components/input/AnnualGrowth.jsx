@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
 import ContextualTooltip from "../help/ContextualTooltip";
-import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
+import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const AnnualGrowth = () => {
   const {
@@ -84,7 +84,7 @@ const AnnualGrowth = () => {
     >
       <CardContent>
         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-          <Typography id="annual-growth-label" variant="h6" component="div" m={0}>
+          <Typography id="annual-growth-label" variant="h6" component="div" m={0} sx={cardTitleSx}>
             {t(titleKey)}
           </Typography>
           <ContextualTooltip titleKey="input_tooltip_annual_growth" />

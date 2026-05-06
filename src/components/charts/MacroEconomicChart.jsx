@@ -134,6 +134,12 @@ const MacroEconomicChart = () => {
     // with the locale-aware tick formatter below, this keeps Arabic renders
     // visually correct without duplicating chart code per locale.
     rtl,
+    responsive: true,
+    // Without this, Chart.js sizes the canvas as width/aspectRatio (default 2),
+    // so on wide right-panes the empty plot becomes ~700-900px tall and pushes
+    // the controls bar past the viewport, triggering a scrollbar in the parent
+    // ScrollableRegion. Pair with the fixed-height wrapper below.
+    maintainAspectRatio: false,
     scales: {
       x: {
         type: "category",
@@ -199,7 +205,10 @@ const MacroEconomicChart = () => {
     <Box
       data-testid="macro-chart-frame"
       sx={{
-        margin: "auto",
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
         bgcolor: "card.bg",
         border: 2,
         borderColor: "primary.dark",
@@ -209,7 +218,9 @@ const MacroEconomicChart = () => {
         overflow: "hidden",
       }}
     >
-      <Box sx={{ height: "100%", overflowY: "auto" }}>
+      <Box
+        sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflowY: "auto" }}
+      >
         {hasData && (
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
             <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -228,7 +239,9 @@ const MacroEconomicChart = () => {
             </Button>
           </Stack>
         )}
-        <Line data={transformedData} options={options} aria-label={ariaLabel} role="img" />
+        <Box sx={{ position: "relative", flex: 1, minHeight: 320, mb: 1 }}>
+          <Line data={transformedData} options={options} aria-label={ariaLabel} role="img" />
+        </Box>
         {hasData ? (
           <ChartDataTable
             caption={macroEconomicChartTitle}

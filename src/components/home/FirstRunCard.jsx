@@ -31,7 +31,7 @@ const FirstRunCard = () => {
           {t("home_firstrun_body")}
         </Typography>
       </Stack>
-      <Button variant="contained" size="large" onClick={() => setActiveSection("risk")}>
+      <Button variant="contained" onClick={() => setActiveSection("risk")}>
         {t("home_firstrun_cta")}
       </Button>
     </Paper>

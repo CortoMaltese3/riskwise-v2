@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
 import ContextualTooltip from "../help/ContextualTooltip";
-import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
+import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const Scenario = () => {
   const { selectedScenario, setSelectedCard, setSelectedTab } = useStore();
@@ -40,7 +40,7 @@ const Scenario = () => {
     >
       <CardContent>
         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-          <Typography id="scenario-dropdown" variant="h6" component="div" m={0}>
+          <Typography id="scenario-dropdown" variant="h6" component="div" m={0} sx={cardTitleSx}>
             {t("scenario_title")}
           </Typography>
           <ContextualTooltip titleKey="input_tooltip_scenario" />

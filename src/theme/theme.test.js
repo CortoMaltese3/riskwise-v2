@@ -70,6 +70,16 @@ describe("theme — design tokens", () => {
     expect(focusVisible.outline).toMatch(/2px solid/);
     expect(focusVisible.outlineOffset).toBe("2px");
   });
+
+  it("MuiButton defaults flatten elevation and anchor contained min-width", () => {
+    // Spec § Buttons (issue #285): theme owns button sizing. Contained CTAs
+    // anchor at `minWidth: 140` so short labels don't shrink to a tab; small
+    // contained buttons drop back to MUI's natural minimum for dense uses.
+    const button = theme.components?.MuiButton;
+    expect(button?.defaultProps?.disableElevation).toBe(true);
+    expect(button?.styleOverrides?.contained?.minWidth).toBe(140);
+    expect(button?.styleOverrides?.sizeSmall?.minWidth).toBe(0);
+  });
 });
 
 describe("theme — WCAG AA contrast", () => {

@@ -5,7 +5,7 @@ import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 
 import useStore from "../../store";
 import ContextualTooltip from "../help/ContextualTooltip";
-import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
+import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const TimeHorizon = () => {
   const {
@@ -61,7 +61,13 @@ const TimeHorizon = () => {
     >
       <CardContent>
         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-          <Typography id="time-horizon-dropdown" variant="h6" component="div" m={0}>
+          <Typography
+            id="time-horizon-dropdown"
+            variant="h6"
+            component="div"
+            m={0}
+            sx={cardTitleSx}
+          >
             {t("time_horizon_title")}
           </Typography>
           <ContextualTooltip titleKey="input_tooltip_time_horizon" />

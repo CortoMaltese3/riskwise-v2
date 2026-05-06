@@ -23,6 +23,12 @@ import enGlossary from "../../content/glossary/en.md?raw";
 import arGlossary from "../../content/glossary/ar.md?raw";
 import thGlossary from "../../content/glossary/th.md?raw";
 
+// Mirrors TOP_BAR_HEIGHT in components/layout/Sidebar.jsx. Inlined rather
+// than imported because pulling Sidebar into this module breaks the
+// glossary_drawer test setup (Sidebar's MUI-icon imports trigger a module
+// load failure in the test runner).
+const TOP_BAR_HEIGHT = 80;
+
 const GLOSSARIES = { en: enGlossary, ar: arGlossary, th: thGlossary };
 
 const parseGlossary = (source) => {
@@ -105,7 +111,17 @@ const GlossaryDrawer = () => {
       anchor="right"
       open={open}
       onClose={() => setOpen(false)}
-      PaperProps={{ sx: { width: { xs: "100%", sm: 400 } } }}
+      // TopBar is `position: fixed` with zIndex `drawer + 1`, so the AppBar
+      // paints over the default drawer paper (top: 0). Override via the
+      // `& .MuiDrawer-paper` selector — sx specificity from this Drawer root
+      // wins over MUI's internal `top: 0`, which PaperProps.sx alone does not.
+      sx={{
+        "& .MuiDrawer-paper": {
+          top: `${TOP_BAR_HEIGHT}px`,
+          height: `calc(100% - ${TOP_BAR_HEIGHT}px)`,
+          width: { xs: "100%", sm: 400 },
+        },
+      }}
     >
       <Box role="presentation" sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <Stack

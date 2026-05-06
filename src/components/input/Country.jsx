@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, Stack, Typography, TextField } from "@mui/material";
 import useStore from "../../store";
 import ContextualTooltip from "../help/ContextualTooltip";
-import { disabledFieldSx, getInputCardSx } from "./inputCardStyles";
+import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const Country = () => {
   const { selectedCountry, setSelectedCard, setSelectedTab } = useStore();
@@ -40,7 +40,7 @@ const Country = () => {
     >
       <CardContent sx={{ p: 2 }}>
         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-          <Typography id="country-label" variant="h6" component="div" m={0}>
+          <Typography id="country-label" variant="h6" component="div" m={0} sx={cardTitleSx}>
             {t("country")}
           </Typography>
           <ContextualTooltip titleKey="input_tooltip_country" />

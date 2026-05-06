@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Card, CardContent, TextField, Typography } from "@mui/material";
 import useStore from "../../store";
-import { disabledFieldSx, getInputCardSx } from "../input/inputCardStyles";
+import { cardTitleSx, disabledFieldSx, getInputCardSx } from "../input/inputCardStyles";
 
 const Scenario = () => {
   const { selectedMacroScenario, setActiveViewControl, setSelectedMacroCard } = useStore();
@@ -38,7 +38,14 @@ const Scenario = () => {
       sx={getInputCardSx(cardState, { clicked })}
     >
       <CardContent sx={{ p: 2 }}>
-        <Typography id="scenario-dropdown" gutterBottom variant="h6" component="div" m={0}>
+        <Typography
+          id="scenario-dropdown"
+          gutterBottom
+          variant="h6"
+          component="div"
+          m={0}
+          sx={cardTitleSx}
+        >
           {t("scenario_title")}
         </Typography>
         <TextField

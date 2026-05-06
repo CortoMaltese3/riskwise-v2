@@ -52,7 +52,7 @@ const WorkspaceImportExport: React.FC<WorkspaceImportExportProps> = ({ onImporte
   };
 
   return (
-    <Stack direction="row" spacing={1}>
+    <Stack direction="row" spacing={2}>
       <Button
         variant="outlined"
         size="small"
