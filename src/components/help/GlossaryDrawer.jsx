@@ -111,14 +111,15 @@ const GlossaryDrawer = () => {
       anchor="right"
       open={open}
       onClose={() => setOpen(false)}
-      PaperProps={{
-        sx: {
-          width: { xs: "100%", sm: 400 },
-          // TopBar is `position: fixed` with zIndex `drawer + 1`, so without
-          // this offset the AppBar paints over the drawer's top 80px (search
-          // field gets clipped). Sit the drawer paper below the AppBar.
-          top: TOP_BAR_HEIGHT,
+      // TopBar is `position: fixed` with zIndex `drawer + 1`, so the AppBar
+      // paints over the default drawer paper (top: 0). Override via the
+      // `& .MuiDrawer-paper` selector — sx specificity from this Drawer root
+      // wins over MUI's internal `top: 0`, which PaperProps.sx alone does not.
+      sx={{
+        "& .MuiDrawer-paper": {
+          top: `${TOP_BAR_HEIGHT}px`,
           height: `calc(100% - ${TOP_BAR_HEIGHT}px)`,
+          width: { xs: "100%", sm: 400 },
         },
       }}
     >
