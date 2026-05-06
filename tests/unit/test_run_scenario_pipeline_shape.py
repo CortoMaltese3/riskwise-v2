@@ -99,11 +99,14 @@ class _FixedLoadStrategy:
 
 def _build_fixed_strategy():
     exposures = MagicMock(name="exposures")
-    impact_funcs = MagicMock(name="impact_funcs")
+    impfset_specs = MagicMock(name="impfset_specs")
+    measures = []
     entity = SimpleNamespace(
         exposures=exposures,
-        impact_funcs=impact_funcs,
-        disc_rates=None,
+        impfset_specs=impfset_specs,
+        measures=measures,
+        discount_rate=0.02,
+        ref_year=2020,
     )
     hazard_present = MagicMock(name="hazard_present")
     hazard_future = MagicMock(name="hazard_future")

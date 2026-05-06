@@ -18,10 +18,11 @@ Methods:
     Generate a future EntityBundle based on the provided entity and parameters.
 """
 
-from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from backend.cache import file_cache_key, get_entity_cache
@@ -84,36 +85,19 @@ class EntityHandler:
         return bundle
 
     def get_future_entity(self, entity: Any, future_year: int, aag: float) -> Any:
-        """
-        Generate a future entity based on the provided entity and year.
+        """Project an :class:`EntityBundle` forward by an annual growth rate.
 
-        :param entity: The entity object to be used as a base for the future entity.
-        :type entity: Entity
-        :param year: The year for which the future entity should be generated.
-        :type year: int
-        :param aag: The annual average growth rate for the future entity.
-        :type aag: float
-        :return: A future entity object based on the provided entity and year.
-        :rtype: Entity
+        Returns a new bundle with ``exposures.values`` scaled by
+        ``(1 + aag) ** (future_year - entity.ref_year)`` and ``ref_year``
+        set to ``future_year``. ``EntityBundle`` and ``ExposureArrays``
+        are frozen, so mutation-by-copy via :func:`dataclasses.replace`
+        is the only valid path; the input bundle is unchanged.
         """
         try:
-            present_year = entity.exposures.ref_year
-            entity_future = deepcopy(entity)
-            entity_future.exposures.ref_year = future_year
-
-            # Approach #1
-            entity_future.exposures.gdf["value"] = entity_future.exposures.gdf["value"].values * (
-                1 + aag
-            ) ** (future_year - present_year)
-
-            # Approach #2
-            # number_of_years = future_year - present_year  # + 1
-            # growth = aag**number_of_years
-            # entity_future.exposures.gdf["value"] = entity_future.exposures.gdf["value"] * growth
-
-            entity_future.check()
-
-            return entity_future
+            multiplier = (1 + aag) ** (future_year - entity.ref_year)
+            new_values = np.asarray(entity.exposures.values, dtype=np.float64) * multiplier
+            new_exposures = replace(entity.exposures, values=new_values)
+            return replace(entity, exposures=new_exposures, ref_year=future_year)
         except Exception as e:
             logger.log("error", f"Failed to generate future entity: {e}")
             return None

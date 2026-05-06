@@ -24,10 +24,13 @@ notice.
 
 from backend.engine.adapter import (
     EngineUnavailableError,
+    assign_centroids,
     build_exposures,
     build_hazard,
     build_impfset,
     build_measure,
+    intensity_to_dense,
+    local_exceedance_imp,
     run_cost_benefit,
     run_impact,
 )
@@ -46,10 +49,13 @@ __all__ = [
     "HazardArrays",
     "ImpactFunctionSpec",
     "MeasureSpec",
+    "assign_centroids",
     "build_exposures",
     "build_hazard",
     "build_impfset",
     "build_measure",
+    "intensity_to_dense",
+    "local_exceedance_imp",
     "run_cost_benefit",
     "run_impact",
 ]

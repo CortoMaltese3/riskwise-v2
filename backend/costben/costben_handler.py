@@ -26,75 +26,16 @@ import json
 from typing import Any
 
 import duckdb
-import numpy as np
 from backend.constants import DATA_TEMP_DIR
+from backend.engine.types import CostBenefitResult
 from backend.hazard.hazard_handler import HazardHandler
 from backend.logger_config import LoggerConfig
-
-from backend.engine.types import CostBenefitResult, MeasureSpec
 
 WATERFALL_DATA_FILENAME = "risks_waterfall_data.json"
 COSTBEN_DATA_FILENAME = "cost_benefit_data.json"
 
 hazard_handler = HazardHandler()
 logger = LoggerConfig(logger_types=["file"])
-
-
-def _measure_specs_from_entity(entity: Any) -> list[MeasureSpec]:
-    """Convert an entity's measures into the engine adapter's ``MeasureSpec`` list.
-
-    The entity's ``MeasureSet`` is walked and each per-hazard measure is copied across.
-    Field names already align with the engine adapter contract.
-    """
-    specs: list[MeasureSpec] = []
-    measure_set = entity.measures
-    if measure_set is None:
-        return specs
-
-    for haz_type, names in measure_set.get_names().items():
-        for name in names:
-            m = measure_set.get_measure(haz_type=haz_type, name=name)
-            specs.append(
-                MeasureSpec(
-                    name=str(m.name),
-                    haz_type=str(haz_type),
-                    cost=float(getattr(m, "cost", 0.0) or 0.0),
-                    cost_unit="USD",
-                    hazard_freq_cutoff=_opt_float(getattr(m, "hazard_freq_cutoff", None)),
-                    hazard_inten_imp=_opt_float(getattr(m, "hazard_inten_imp", (None, None))[0]),
-                    mdd_impact_a=_opt_float(getattr(m, "mdd_impact", (None, None))[0]),
-                    mdd_impact_b=_opt_float(getattr(m, "mdd_impact", (None, None))[1]),
-                    paa_impact_a=_opt_float(getattr(m, "paa_impact", (None, None))[0]),
-                    paa_impact_b=_opt_float(getattr(m, "paa_impact", (None, None))[1]),
-                )
-            )
-    return specs
-
-
-def _opt_float(value) -> float | None:
-    if value is None:
-        return None
-    try:
-        f = float(value)
-    except (TypeError, ValueError):
-        return None
-    return f
-
-
-def _disc_rate_scalar(disc_rates: Any, default: float = 0.02) -> float:
-    """Collapse a per-year discount-rate array (or scalar) to a single scalar.
-
-    Uses the arithmetic mean when an iterable of per-year rates is supplied;
-    falls back to ``default`` when nothing usable is provided.
-    """
-    if disc_rates is None:
-        return default
-    if isinstance(disc_rates, (int, float)):
-        return float(disc_rates)
-    rates = getattr(disc_rates, "rates", None)
-    if rates is None or len(rates) == 0:
-        return default
-    return float(np.mean(np.asarray(rates, dtype=np.float64)))
 
 
 def _calculate_via_engine(
@@ -106,65 +47,43 @@ def _calculate_via_engine(
 ) -> list[CostBenefitResult]:
     """Run ``cc.calc_cost_benefit`` via the engine adapter and normalise the output.
 
-    Builds engine ``Hazard`` / ``Exposures`` / ``ImpactFuncSet`` from the
-    incoming CLIMADA objects (mirroring ``impact_handler._calculate_via_engine``),
-    converts the entity's ``MeasureSet`` to ``MeasureSpec``s and feeds them to
-    ``build_measure``, collapses ``DiscRates`` to a scalar, and projects the
-    engine's ``CostBenefitResult`` list into riskwise's domain shape.
+    Consumes domain-typed inputs (:class:`HazardArrays`,
+    :class:`EntityBundle`) — the entity loader already produces
+    ``EntityBundle.measures`` as ``list[MeasureSpec]`` and stores the
+    discount rate as a scalar, so no per-call conversion is needed.
     """
     if not _has_measures(entity_present):
         return []
 
-    from backend.engine.adapter import build_exposures, build_hazard, build_measure
-    from backend.engine.types import ExposureArrays
+    from backend.engine.adapter import (
+        assign_centroids,
+        build_exposures,
+        build_hazard,
+        build_impfset,
+        build_measure,
+        run_cost_benefit,
+    )
 
     try:
-        exposure = entity_present.exposures
-        exposure.assign_centroids(hazard_present, overwrite=False)
-        gdf = exposure.gdf
-
-        centr_col = f"centr_{hazard_present.haz_type}"
-        centroid_idx = gdf[centr_col].values
-
-        impf_col = f"impf_{hazard_present.haz_type}"
-        impf_id = (
-            gdf[impf_col].values if impf_col in gdf.columns else np.ones(len(gdf), dtype=np.int64)
-        )
-
-        cc_exposure = build_exposures(
-            ExposureArrays(
-                values=gdf["value"].values,
-                centroid_idx=centroid_idx,
-                impf_id=impf_id,
-                lat=gdf.geometry.y.values,
-                lon=gdf.geometry.x.values,
-                value_unit=getattr(exposure, "value_unit", "USD"),
-            )
-        )
-        cc_hazard_present = build_hazard(_hazard_arrays(hazard_present))
+        exposure = assign_centroids(entity_present.exposures, hazard_present)
+        cc_exposure = build_exposures(exposure)
+        cc_hazard_present = build_hazard(hazard_present)
         cc_hazard_future = (
-            build_hazard(_hazard_arrays(hazard_future))
-            if hazard_future is not None
-            else cc_hazard_present
+            build_hazard(hazard_future) if hazard_future is not None else cc_hazard_present
         )
+        cc_impfset = build_impfset(entity_present.impfset_specs)
+        cc_measures = [build_measure(s) for s in entity_present.measures]
 
-        specs = _measure_specs_from_entity(entity_present)
-        cc_measures = [build_measure(s) for s in specs]
-
-        discount_rate = _disc_rate_scalar(getattr(entity_present, "disc_rates", None))
-
-        present_year = int(getattr(exposure, "ref_year", 2020))
+        present_year = entity_present.ref_year
         future_year_int = int(future_year) if future_year is not None else present_year
-
-        from backend.engine.adapter import run_cost_benefit
 
         engine_results = run_cost_benefit(
             hazard_present=cc_hazard_present,
             hazard_future=cc_hazard_future,
             exposures=cc_exposure,
-            impfset=entity_present.impact_funcs,
+            impfset=cc_impfset,
             measures=cc_measures,
-            discount_rate=discount_rate,
+            discount_rate=entity_present.discount_rate,
             present_year=present_year,
             future_year=future_year_int,
         )
@@ -184,33 +103,31 @@ def _calculate_via_engine(
     ]
 
 
-def _hazard_arrays(haz: Any):
-    from backend.engine.types import HazardArrays
-
-    return HazardArrays(
-        haz_type=haz.haz_type,
-        intensity_unit=haz.units,
-        intensity=haz.intensity,
-        frequency=haz.frequency,
-        centroid_lat=haz.centroids.lat,
-        centroid_lon=haz.centroids.lon,
-        event_names=tuple(haz.event_name) if haz.event_name else None,
+def _aai_via_engine(entity: Any, hazard: Any) -> float:
+    """Compute the average annual impact (``aai_agg``) for an :class:`EntityBundle`
+    against a :class:`HazardArrays`.
+    """
+    from backend.engine.adapter import (
+        assign_centroids,
+        build_exposures,
+        build_hazard,
+        build_impfset,
+        run_impact,
     )
 
-
-def _aai_via_engine(exposures: Any, impfset: Any, hazard: Any) -> float:
-    """Compute the average annual impact (``aai_agg``) via the engine adapter."""
-    from backend.engine.adapter import run_impact
-
-    impact = run_impact(hazard, exposures, impfset, save_mat=False)
+    exposure = assign_centroids(entity.exposures, hazard)
+    cc_exposure = build_exposures(exposure)
+    cc_hazard = build_hazard(hazard)
+    cc_impfset = build_impfset(entity.impfset_specs)
+    impact = run_impact(cc_hazard, cc_exposure, cc_impfset, save_mat=False)
     return float(impact.aai_agg)
 
 
 def _has_measures(entity: Any) -> bool:
-    if entity is None or entity.measures is None:
+    if entity is None:
         return False
-    names_by_haz = entity.measures.get_names()
-    return any(len(v) > 0 for v in names_by_haz.values())
+    measures = getattr(entity, "measures", None) or []
+    return len(measures) > 0
 
 
 class CostBenefitHandler:
@@ -339,23 +256,17 @@ class CostBenefitHandler:
         completes.
         """
         try:
-            present_year = entity_present.exposures.ref_year
-            future_year = entity_future.exposures.ref_year
+            present_year = entity_present.ref_year
+            future_year = entity_future.ref_year
 
             if cost_benefit_results:
                 risk_present = float(cost_benefit_results[0].risk_baseline_present)
                 risk_future = float(cost_benefit_results[0].risk_baseline_future)
             else:
-                risk_present = _aai_via_engine(
-                    entity_present.exposures, entity_present.impact_funcs, hazard_present
-                )
-                risk_future = _aai_via_engine(
-                    entity_future.exposures, entity_future.impact_funcs, hazard_future
-                )
+                risk_present = _aai_via_engine(entity_present, hazard_present)
+                risk_future = _aai_via_engine(entity_future, hazard_future)
 
-            risk_dev = _aai_via_engine(
-                entity_future.exposures, entity_future.impact_funcs, hazard_present
-            )
+            risk_dev = _aai_via_engine(entity_future, hazard_present)
 
             economic_development = risk_dev - risk_present
             climate_change = risk_future - risk_dev
@@ -431,8 +342,8 @@ class CostBenefitHandler:
 
             payload = {
                 "currency_unit": str(entity_present.exposures.value_unit or ""),
-                "present_year": int(entity_present.exposures.ref_year),
-                "future_year": int(entity_future.exposures.ref_year),
+                "present_year": int(entity_present.ref_year),
+                "future_year": int(entity_future.ref_year),
                 "measures": measures,
             }
 

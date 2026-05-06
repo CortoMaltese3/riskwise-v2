@@ -223,9 +223,9 @@ class RunScenario:
 
         Returns an empty string when no entity is loaded, matching
         ``HazardHandler.get_hazard_intensity_units_from_entity``'s own
-        ``impf.intensity_unit or ""`` fallback so downstream
-        ``hazard.units = ...`` assignments behave identically on both
-        branches.
+        empty-string fallback so the downstream
+        ``HazardArrays.intensity_unit`` propagation is well-defined on
+        both branches.
         """
         if entity is None:
             return ""
@@ -250,8 +250,6 @@ class RunScenario:
         hazard_intensity_unit = self._resolve_hazard_intensity_unit(entity_present)
         return_periods = self._resolve_return_periods()
 
-        exposure_present.ref_year = self.request_data.ref_year
-
         aag = self._get_average_annual_growth()
 
         entity_future = None
@@ -259,8 +257,6 @@ class RunScenario:
             entity_future = self.entity_handler.get_future_entity(
                 entity_present, self.request_data.future_year, aag
             )
-            if entity_present.disc_rates:
-                entity_future.disc_rates = entity_present.disc_rates
 
         # --- Exposure ---
         self.base_handler.update_progress(20, strategy.exposure_progress_message)
@@ -307,12 +303,12 @@ class RunScenario:
         # --- Impact ---
         self.base_handler.update_progress(60, strategy.impact_progress_message)
         impact_present = self.impact_handler.calculate_impact(
-            exposure_present, hazard_present, entity_present.impact_funcs
+            exposure_present, hazard_present, entity_present.impfset_specs
         )
         impact_future = None
         if is_future:
             impact_future = self.impact_handler.calculate_impact(
-                exposure_future, hazard_future, entity_future.impact_funcs
+                exposure_future, hazard_future, entity_future.impfset_specs
             )
 
         # Downstream artifacts use the future-scenario objects when available,
@@ -355,6 +351,7 @@ class RunScenario:
         self.base_handler.update_progress(95, "Generating Impact report data files...")
         imp_rep_df = self.impact_handler.generate_impact_report_dataset(
             impact_active,
+            exposure_active,
             self.request_data.country_name,
             return_periods,
             self.request_data.asset_type,
@@ -420,6 +417,7 @@ class RunScenario:
             )
             self.impact_handler.generate_impact_geojson(
                 impact_active,
+                exposure_active,
                 country_name,
                 return_periods,
                 asset_type,

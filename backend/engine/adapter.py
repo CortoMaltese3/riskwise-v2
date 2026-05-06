@@ -18,6 +18,10 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
+from scipy import sparse
+from scipy.spatial import cKDTree
+
 from backend.engine.types import (
     ExposureArrays,
     HazardArrays,
@@ -116,6 +120,99 @@ def replace_exposures_value(exposures: cc.Exposures, value: Any) -> cc.Exposures
     """
     _cc, np = _import_engine()
     return replace(exposures, value=np.asarray(value, dtype=np.float64))
+
+
+def intensity_to_dense(intensity: Any) -> np.ndarray:
+    """Coerce a ``HazardArrays.intensity`` payload to a dense 2-D ndarray.
+
+    Loaders may store intensity as a sparse CSR matrix (HDF5 path) or as
+    a plain ndarray (raster path); downstream code that needs to slice
+    rows/columns works against a dense array regardless.
+    """
+    if sparse.issparse(intensity):
+        return intensity.toarray()
+    return np.asarray(intensity)
+
+
+def assign_centroids(arrays: ExposureArrays, hazard: HazardArrays) -> ExposureArrays:
+    """Return a new ``ExposureArrays`` with ``centroid_idx`` set to the
+    nearest hazard centroid for each exposure point.
+
+    The xlsx loader fills ``centroid_idx`` with ``np.arange(n)`` as a
+    placeholder; this helper replaces it with the real nearest-neighbor
+    assignment against the hazard's centroid grid before impact /
+    cost-benefit calcs. ``ExposureArrays.lat`` / ``lon`` must be set.
+
+    Implementation projects (lat, lon) → 3D unit vectors and queries a
+    scipy ``cKDTree`` on chord (Euclidean) distance, which is strictly
+    monotonic with great-circle distance, so nearest-neighbor selection
+    is identical to a haversine search. Avoids the ``scikit-learn``
+    dependency that ``BallTree(metric="haversine")`` would require.
+    """
+    if arrays.lat is None or arrays.lon is None:
+        raise ValueError("assign_centroids requires ExposureArrays.lat and .lon to be populated")
+
+    def _to_unit_xyz(lat: Any, lon: Any) -> Any:
+        lat_rad = np.deg2rad(np.asarray(lat, dtype=np.float64))
+        lon_rad = np.deg2rad(np.asarray(lon, dtype=np.float64))
+        cos_lat = np.cos(lat_rad)
+        return np.column_stack(
+            [cos_lat * np.cos(lon_rad), cos_lat * np.sin(lon_rad), np.sin(lat_rad)]
+        )
+
+    haz_xyz = _to_unit_xyz(hazard.centroid_lat, hazard.centroid_lon)
+    exp_xyz = _to_unit_xyz(arrays.lat, arrays.lon)
+    tree = cKDTree(haz_xyz)
+    _, indices = tree.query(exp_xyz, k=1)
+    return replace(arrays, centroid_idx=np.asarray(indices, dtype=np.intp))
+
+
+def local_exceedance_imp(
+    imp_mat: Any,
+    frequency: Any,
+    return_periods: Any,
+) -> Any:
+    """Compute per-exposure-point intensities at given return periods.
+
+    Engine ``Impact`` exposes a global ``calc_freq_curve`` but no per-point
+    exceedance method, so riskwise computes it here from the impact matrix
+    (events × points) and per-event frequencies. For each point we sort
+    events by impact descending, build a cumulative-frequency exceedance
+    curve, and interpolate to ``1/return_period``.
+
+    Vectorised across points (column-wise ``argsort`` + ``cumsum``); the
+    only Python-level loop is over the small ``return_periods`` list
+    inside ``np.interp``.
+
+    :param imp_mat: ``(n_events, n_points)`` impact matrix (sparse or dense).
+    :param frequency: ``(n_events,)`` per-event frequency vector.
+    :param return_periods: iterable of return periods (years).
+    :return: ``(n_rps, n_points)`` ``np.ndarray`` with the impact value at
+        each requested return period for each exposure point.
+    """
+    imp_dense = intensity_to_dense(imp_mat)
+    freq = np.asarray(frequency, dtype=np.float64)
+    rps = np.asarray(return_periods, dtype=np.float64)
+    target_freqs = 1.0 / rps
+
+    n_events, n_points = imp_dense.shape
+    if n_events == 0 or n_points == 0:
+        return np.zeros((rps.size, n_points), dtype=np.float64)
+
+    # Column-wise descending sort: order[:, j] is the event ranking for point j.
+    order = np.argsort(-imp_dense, axis=0)
+    sorted_imp = np.take_along_axis(imp_dense, order, axis=0)
+    cum_freq = np.cumsum(freq[order], axis=0)
+
+    out = np.zeros((rps.size, n_points), dtype=np.float64)
+    for j in range(n_points):
+        col = sorted_imp[:, j]
+        if col[0] <= 0:
+            continue
+        # cum_freq is non-decreasing per column; sorted_imp is non-increasing.
+        # np.interp needs xp non-decreasing, so this works directly.
+        out[:, j] = np.interp(target_freqs, cum_freq[:, j], col, left=col[0], right=0.0)
+    return out
 
 
 def build_exposures(arrays: ExposureArrays) -> cc.Exposures:

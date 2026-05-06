@@ -18,6 +18,7 @@ Two concrete strategies:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import replace
 from typing import Any
 
 
@@ -108,8 +109,7 @@ class EraDataStrategy(ScenarioDataStrategy):
             hazard_type=request_data.hazard_type,
             filepath=filename,
         )
-        hazard.units = hazard_intensity_unit
-        return hazard
+        return replace(hazard, intensity_unit=hazard_intensity_unit)
 
     def load_hazard_future(
         self,
@@ -127,8 +127,7 @@ class EraDataStrategy(ScenarioDataStrategy):
             hazard_type=request_data.hazard_type,
             filepath=filename,
         )
-        hazard.units = hazard_intensity_unit
-        return hazard
+        return replace(hazard, intensity_unit=hazard_intensity_unit)
 
 
 _MISSING_UPLOAD_MSG = (
@@ -188,8 +187,7 @@ class CustomDataStrategy(ScenarioDataStrategy):
                 hazard_type=request_data.hazard_type,
                 filepath=historical_filename,
             )
-        hazard.units = hazard_intensity_unit
-        return hazard
+        return replace(hazard, intensity_unit=hazard_intensity_unit)
 
     def load_hazard_future(
         self,
@@ -206,8 +204,7 @@ class CustomDataStrategy(ScenarioDataStrategy):
             filepath=request_data.hazard_filename,
             source=file_type,
         )
-        hazard.units = hazard_intensity_unit
-        return hazard
+        return replace(hazard, intensity_unit=hazard_intensity_unit)
 
 
 def make_strategy(is_era: bool) -> ScenarioDataStrategy:

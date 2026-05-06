@@ -1,19 +1,20 @@
 """Engine-backend tests for ``HazardHandler.get_hazard``.
 
-After #166 CLIMADA is removed entirely; the engine path is the only path.
-``HazardHandler.get_hazard`` returns a ``climate_lama_engine.Hazard``.
+After Phase 6 closeout (#293) ``HazardHandler.get_hazard`` returns a
+:class:`backend.engine.types.HazardArrays` — the riskwise-side domain
+dataclass — rather than a ``climate_lama_engine.Hazard``. The engine
+``Hazard`` is built at the boundary inside the impact / cost-benefit
+handlers via ``backend.engine.adapter.build_hazard``.
 """
 
 from __future__ import annotations
 
 import pytest
 
-pytest.importorskip("climate_lama_engine")
 pytest.importorskip("rasterio")
 
-import climate_lama_engine as cc  # noqa: E402
-
 from backend.constants import DATA_HAZARDS_DIR  # noqa: E402
+from backend.engine.types import HazardArrays  # noqa: E402
 from backend.hazard.hazard_handler import HazardHandler  # noqa: E402
 
 _FLOOD_FILE = "hazard_FL_EGY_historical.tif"
@@ -29,8 +30,8 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def test_engine_backend_returns_cc_hazard() -> None:
+def test_engine_backend_returns_hazard_arrays() -> None:
     haz = HazardHandler().get_hazard("flood", source="raster", filepath=_FLOOD_FILE)
-    assert isinstance(haz, cc.Hazard)
+    assert isinstance(haz, HazardArrays)
     assert haz.haz_type == "FL"
-    assert haz.n_events > 0
+    assert len(haz.frequency) > 0
