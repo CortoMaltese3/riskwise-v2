@@ -1,11 +1,15 @@
 /* Default RISK WISE splash theme. Per-client themes copy this directory and
    override the custom properties below; loader.html consumes these tokens
-   only — no hex colours or asset names should appear in the markup. */
+   only — no hex colours or asset names should appear in the markup.
+   Palette references trace back to `src/theme/theme.ts`:
+     --loader-bg          -> palette.loader.main
+     --loader-wordmark-fg -> palette.header.main
+     --loader-accent      -> palette.accent.main */
 :root {
   --loader-bg: #2a4d69;
   --loader-fg: #e2ecf3;
-  --loader-wordmark-fg: #ffffff;
-  --loader-accent: #8ac8d0;
+  --loader-wordmark-fg: #8fc3d1;
+  --loader-accent: #f79191;
   --loader-status-fg: #b7cada;
   --loader-version-fg: rgba(255, 255, 255, 0.35);
   --loader-font: -apple-system, "Segoe UI", Roboto, sans-serif;
