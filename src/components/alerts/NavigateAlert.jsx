@@ -182,7 +182,7 @@ const NavigateAlert = () => {
             maxWidth: 800,
             margin: "auto",
             marginBottom: 2,
-            bgcolor: "primary.bg",
+            bgcolor: "primary.bgStrong",
             border: 2,
             borderColor: "primary.dark",
             borderRadius: (theme) => theme.spacing(2),

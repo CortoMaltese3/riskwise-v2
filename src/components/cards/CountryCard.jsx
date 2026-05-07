@@ -64,7 +64,7 @@ const CountryCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "primary.bg",
+        bgcolor: "primary.bgStrong",
         border: 2,
         borderColor: "primary.dark",
         borderRadius: (theme) => theme.spacing(2),

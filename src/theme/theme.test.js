@@ -62,6 +62,7 @@ describe("theme — design tokens", () => {
 
   it("exposes the new #298 semantic palette tokens", () => {
     expect(theme.palette.primary.bg).toBeDefined();
+    expect(theme.palette.primary.bgStrong).toBeDefined();
     expect(theme.palette.secondary.main).toBeDefined();
     expect(theme.palette.secondary.bg).toBeDefined();
     expect(theme.palette.surface.subdued).toBeDefined();

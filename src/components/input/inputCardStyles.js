@@ -5,7 +5,8 @@
  *
  * `state` is one of "default" | "valid" | "invalid" | "neutral", each
  * resolved to a token in the semantic palette (#298):
- *   default → primary.bg
+ *   default → primary.bgStrong   (one step deeper than the panel `primary.bg`
+ *                                 so the card sits visibly on the panel)
  *   valid   → feedback.success.bg
  *   invalid → feedback.error.bg
  *   neutral → surface.subdued
@@ -28,7 +29,7 @@ export const cardTitleSx = {
 };
 
 const stateBgcolor = {
-  default: "primary.bg",
+  default: "primary.bgStrong",
   valid: "feedback.success.bg",
   invalid: "feedback.error.bg",
   neutral: "surface.subdued",

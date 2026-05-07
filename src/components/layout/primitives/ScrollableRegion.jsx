@@ -10,10 +10,31 @@ import { Box } from "@mui/material";
 
 const LOCKED_STYLE = { minHeight: 0 };
 
+// Subtle scrollbar styling. The default Chromium scrollbar is a thick grey
+// bar that draws the eye and breaks the calm of the surrounding chrome —
+// especially on the home view where the right column scrolls inside an
+// otherwise-quiet card grid. Use a thin, semi-transparent thumb that picks
+// up the active text colour so it stays legible in both light and dark
+// modes without becoming a focal element. Track is transparent so the
+// underlying surface shows through.
+const SCROLLBAR_SX = {
+  scrollbarWidth: "thin",
+  scrollbarColor: (theme) => `${theme.palette.action.disabled ?? "rgba(0,0,0,0.25)"} transparent`,
+  "&::-webkit-scrollbar": { width: 8, height: 8 },
+  "&::-webkit-scrollbar-track": { background: "transparent" },
+  "&::-webkit-scrollbar-thumb": {
+    backgroundColor: (theme) => theme.palette.action.disabled ?? "rgba(0,0,0,0.25)",
+    borderRadius: 4,
+  },
+  "&::-webkit-scrollbar-thumb:hover": {
+    backgroundColor: (theme) => theme.palette.action.active ?? "rgba(0,0,0,0.4)",
+  },
+};
+
 const AXIS_SX = {
-  y: { flexGrow: 1, overflowX: "hidden", overflowY: "auto" },
-  x: { flexGrow: 1, overflowX: "auto", overflowY: "hidden" },
-  both: { flexGrow: 1, overflow: "auto" },
+  y: { flexGrow: 1, overflowX: "hidden", overflowY: "auto", ...SCROLLBAR_SX },
+  x: { flexGrow: 1, overflowX: "auto", overflowY: "hidden", ...SCROLLBAR_SX },
+  both: { flexGrow: 1, overflow: "auto", ...SCROLLBAR_SX },
 };
 
 const ScrollableRegion = ({ children, print = false, axis = "y", className }) => {

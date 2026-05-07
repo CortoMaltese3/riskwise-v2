@@ -80,7 +80,7 @@ const AdaptationMeasuresInput = () => {
                 <Card
                   variant="outlined"
                   sx={{
-                    bgcolor: (theme) => theme.palette.primary.bg,
+                    bgcolor: (theme) => theme.palette.primary.bgStrong,
                     mb: 2,
                     minHeight: 3,
                   }}

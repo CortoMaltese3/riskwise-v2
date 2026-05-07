@@ -41,8 +41,15 @@ export const layoutTransition = (props: readonly string[] = ["all"]): string =>
 // Primary teal. `light` slightly paler than the spec'd `#8FC3D1` so
 // `primary.dark` (`#0E5A66`) on `primary.light` clears WCAG 2.1 AA 4.5:1 with
 // headroom — the original swatch measured 4.07:1.
+//
+// `bg` and `bgStrong` are two pale-teal steps used together: `bg` for the
+// outer panel surrounding a group of cards, `bgStrong` for the cards
+// themselves. The two-step hierarchy matches the v1 inputCard panel/default
+// pairing (#DDEBEF panel, #CCE1E7 card) so cards sit visibly on the panel
+// instead of dissolving into it.
 const lightPrimary = {
   bg: "#DDEBEF",
+  bgStrong: "#C9DEE3",
   light: "#9CCDDA",
   main: "#2F7A86",
   dark: "#0E5A66",
@@ -124,8 +131,13 @@ const lightViz = {
 // remains AA-readable on it — the spec'd `#5FA0AE` measured 2.67:1. This
 // follows Material 3's dark-mode convention of pale tinted primaries paired
 // with dark contrast text.
+//
+// `bgStrong` is *lighter* than `bg` in dark mode: dark surfaces follow
+// elevation conventions where higher-emphasis elements move toward white,
+// so cards on a panel pop one step lighter than the panel itself.
 const darkPrimary = {
   bg: "#1E3A42",
+  bgStrong: "#2A4F58",
   light: "#A0CDD8",
   main: "#5FB3C2",
   dark: "#0E5A66",
@@ -219,6 +231,11 @@ export const theme = createTheme({
         },
         text: lightText,
         background: { default: "#F8FAFC", paper: "#FFFFFF" },
+        // MUI's default `action.disabledBackground` (rgba(0,0,0,0.12)) is too
+        // translucent to read against tinted card surfaces — the disabled
+        // OutlinedInput slot dissolves into the card. Override with a solid
+        // neutral grey that sits clearly on top of `primary.bgStrong`.
+        action: { disabledBackground: "#E6E6E6" },
         surface: lightSurface,
         border: lightBorder,
         feedback: lightFeedback,
@@ -236,6 +253,7 @@ export const theme = createTheme({
         },
         text: darkText,
         background: { default: "#0F172A", paper: "#1E293B" },
+        action: { disabledBackground: "#2A3340" },
         surface: darkSurface,
         border: darkBorder,
         feedback: darkFeedback,

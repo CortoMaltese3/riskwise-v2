@@ -72,7 +72,7 @@ const ReportCard = ({ data, image, id, isSelected, onCardClick, onReportAction, 
         onClick={handleClick}
         sx={{
           alignItems: "flex-start",
-          backgroundColor: isSelected ? "primary.bg" : "common.white",
+          backgroundColor: isSelected ? "primary.bgStrong" : "common.white",
           border: 1,
           borderColor: "border.default",
           borderRadius: (theme) => theme.spacing(2),
