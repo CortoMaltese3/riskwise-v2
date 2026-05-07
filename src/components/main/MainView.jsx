@@ -7,6 +7,7 @@ import AdaptationChartLayout from "../controls/AdaptationChartLayout";
 import RiskChartLayout from "../controls/RiskChartLayout";
 import MacroEconomicChart from "../charts/MacroEconomicChart";
 import MainViewControls from "../controls/MainViewControls";
+import MainViewToolbar from "./MainViewToolbar";
 import MacroViewControls from "../controls/MacroViewControls";
 import MainViewTitle from "../title/MainViewTitle";
 import MapLayout from "../map/MapLayout";
@@ -29,6 +30,13 @@ const COLUMN_SX = {
 // pinned to the top while controls remain at the bottom of MainView.
 const STRETCH_SX = { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" };
 const TOP_SX = { flex: 1, minHeight: 0, overflowY: "auto" };
+const CONTROLS_ROW_SX = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexWrap: "wrap",
+  gap: 2,
+};
 
 const MainView = () => {
   const { activeViewControl, selectedSubTab, selectedTab } = useStore();
@@ -47,7 +55,10 @@ const MainView = () => {
             {activeViewControl === "display_map" && <MapLayout />}
             {activeViewControl === "display_chart" && <RiskChartLayout />}
           </Box>
-          <MainViewControls />
+          <Box sx={CONTROLS_ROW_SX}>
+            <MainViewControls />
+            <MainViewToolbar />
+          </Box>
         </>
       )}
       {selectedTab === 1 && selectedSubTab === 1 && (
@@ -56,7 +67,10 @@ const MainView = () => {
             {activeViewControl === "display_map" && <AdaptationMap />}
             {activeViewControl === "display_chart" && <AdaptationChartLayout />}
           </Box>
-          <MainViewControls />
+          <Box sx={CONTROLS_ROW_SX}>
+            <MainViewControls />
+            <MainViewToolbar />
+          </Box>
         </>
       )}
       {selectedTab === 2 && (

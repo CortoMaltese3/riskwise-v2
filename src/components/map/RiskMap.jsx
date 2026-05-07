@@ -246,7 +246,9 @@ const RiskMap = () => {
       key={selectedCountry}
       center={countryCoordinates[selectedCountry] || [30.0, 31.0]}
       zoom={6}
-      style={{ position: "relative", height: "100%", width: "100%" }}
+      // See HazardMap: percentage height inside flex-column Paper resolves
+      // to 0; switch to flex sizing on the main axis.
+      style={{ position: "relative", flex: 1, minHeight: 0, width: "100%" }}
     >
       <TileLayer url={tileLayerUrl} maxZoom={15} minZoom={5} />
       <MapEvents />

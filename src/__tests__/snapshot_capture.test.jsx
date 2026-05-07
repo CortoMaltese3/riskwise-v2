@@ -73,10 +73,10 @@ vi.mock("../utils/reportTools", () => ({
   useReportTools: () => ({ fetchReports: vi.fn() }),
 }));
 
-let MainSubTabs;
+let MainViewToolbar;
 
 beforeAll(async () => {
-  ({ default: MainSubTabs } = await import("../components/main/MainSubTabs"));
+  ({ default: MainViewToolbar } = await import("../components/main/MainViewToolbar"));
 });
 
 beforeEach(() => {
@@ -94,7 +94,7 @@ beforeEach(() => {
 
 describe("snapshot capture button", () => {
   it("is disabled before a scenario run completes", async () => {
-    render(<MainSubTabs />);
+    render(<MainViewToolbar />);
     const button = screen.getByLabelText("workspace_snapshot_capture_aria");
     expect(button).toBeDisabled();
   });
@@ -111,7 +111,7 @@ describe("snapshot capture button", () => {
       result: { status: { code: 2000 }, data: { id: "snap-1" } },
     });
 
-    render(<MainSubTabs />);
+    render(<MainViewToolbar />);
     const button = screen.getByLabelText("workspace_snapshot_capture_aria");
     expect(button).not.toBeDisabled();
     fireEvent.click(button);
