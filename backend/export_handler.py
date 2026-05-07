@@ -49,6 +49,10 @@ PROVENANCE_FILENAME = "provenance.json"
 README_FILENAME = "README.txt"
 RESULTS_DIR = "results"
 SNAPSHOTS_DIR = "snapshots"
+# Sidecar manifest carrying per-snapshot metadata (caption, snapshot_type)
+# alongside the PNG blobs. Bundles produced before #303 omit it; the import
+# path tolerates that and falls back to NULL captions.
+SNAPSHOTS_MANIFEST = "snapshots/manifest.json"
 
 # Provenance fields the import path requires. ``computed_at`` is the
 # original run's timestamp — preserved so an imported row does not look
@@ -152,11 +156,24 @@ def _write_archive(
         zf.writestr(README_FILENAME, readme)
         for result_type, payload in detail.results.items():
             zf.writestr(f"{RESULTS_DIR}/{result_type}.json", payload)
+        manifest_entries: list[dict[str, Any]] = []
         for snap in snapshots:
             image = snap.get("image")
             if image is None:
                 continue
             zf.writestr(f"{SNAPSHOTS_DIR}/{snap['id']}.png", image)
+            manifest_entries.append(
+                {
+                    "id": snap["id"],
+                    "snapshot_type": snap.get("snapshot_type"),
+                    "caption": snap.get("caption"),
+                }
+            )
+        if manifest_entries:
+            zf.writestr(
+                SNAPSHOTS_MANIFEST,
+                json.dumps({"snapshots": manifest_entries}, indent=2),
+            )
     return provenance
 
 
@@ -239,15 +256,32 @@ def _read_results_from_zip(zf: zipfile.ZipFile) -> dict[str, bytes]:
 def _read_snapshots_from_zip(zf: zipfile.ZipFile) -> list[dict[str, Any]]:
     snapshots: list[dict[str, Any]] = []
     now = datetime.now(UTC)
+    manifest_lookup: dict[str, dict[str, Any]] = {}
+    if SNAPSHOTS_MANIFEST in set(zf.namelist()):
+        try:
+            manifest = json.loads(zf.read(SNAPSHOTS_MANIFEST))
+        except json.JSONDecodeError:
+            manifest = None
+        if isinstance(manifest, dict):
+            for entry in manifest.get("snapshots", []) or []:
+                if isinstance(entry, dict) and isinstance(entry.get("id"), str):
+                    manifest_lookup[entry["id"]] = entry
     for entry in zf.infolist():
-        if entry.is_dir() or not entry.filename.startswith(f"{SNAPSHOTS_DIR}/"):
+        if (
+            entry.is_dir()
+            or not entry.filename.startswith(f"{SNAPSHOTS_DIR}/")
+            or not entry.filename.endswith(".png")
+        ):
             continue
+        snapshot_id = Path(entry.filename).stem
+        meta = manifest_lookup.get(snapshot_id, {})
         snapshots.append(
             {
-                "id": Path(entry.filename).stem,
-                "snapshot_type": "chart",
+                "id": snapshot_id,
+                "snapshot_type": meta.get("snapshot_type") or "chart",
                 "image": zf.read(entry.filename),
                 "created_at": now,
+                "caption": meta.get("caption"),
             }
         )
     return snapshots

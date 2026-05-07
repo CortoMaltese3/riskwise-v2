@@ -134,8 +134,10 @@ class TestExportArchiveLayout:
                 f"{RESULTS_DIR}/impact_summary.json",
                 f"{RESULTS_DIR}/waterfall_data.json",
             ]
-            snap_entries = [n for n in names if n.startswith(f"{SNAPSHOTS_DIR}/")]
-            assert snap_entries == [f"{SNAPSHOTS_DIR}/snap-1.png"]
+            snap_pngs = [
+                n for n in names if n.startswith(f"{SNAPSHOTS_DIR}/") and n.endswith(".png")
+            ]
+            assert snap_pngs == [f"{SNAPSHOTS_DIR}/snap-1.png"]
             assert zf.read(f"{SNAPSHOTS_DIR}/snap-1.png").startswith(b"\x89PNG")
 
         # provenance.json field shape matches the issue's spec exactly.

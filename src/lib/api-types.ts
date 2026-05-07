@@ -503,7 +503,8 @@ export interface paths {
         /** List Snapshots Endpoint */
         get: operations["list_snapshots_endpoint_api_v1_scenarios__scenario_id__snapshots_get"];
         put?: never;
-        post?: never;
+        /** Create Snapshot Endpoint */
+        post: operations["create_snapshot_endpoint_api_v1_scenarios__scenario_id__snapshots_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -522,6 +523,24 @@ export interface paths {
         post?: never;
         /** Delete Snapshot Endpoint */
         delete: operations["delete_snapshot_endpoint_api_v1_snapshots__snapshot_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Snapshot Endpoint */
+        patch: operations["update_snapshot_endpoint_api_v1_snapshots__snapshot_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/snapshots/{snapshot_id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Snapshot Image Endpoint */
+        get: operations["get_snapshot_image_endpoint_api_v1_snapshots__snapshot_id__image_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -660,6 +679,23 @@ export interface components {
              * @enum {string}
              */
             source: "builtin" | "custom";
+        };
+        /**
+         * CreateSnapshotRequest
+         * @description Body for ``POST /api/v1/scenarios/{id}/snapshots``.
+         */
+        CreateSnapshotRequest: {
+            /** Caption */
+            caption?: string | null;
+            /** Image Base64 */
+            image_base64: string;
+            /** Snapshot Type */
+            snapshot_type: string;
+        };
+        /** CreateSnapshotResponse */
+        CreateSnapshotResponse: {
+            data: components["schemas"]["SnapshotItem"];
+            status: components["schemas"]["Status"];
         };
         /** CredDataset */
         CredDataset: {
@@ -1214,6 +1250,8 @@ export interface components {
         };
         /** SnapshotItem */
         SnapshotItem: {
+            /** Caption */
+            caption?: string | null;
             /** Created At */
             created_at?: string | null;
             /** Id */
@@ -1247,6 +1285,16 @@ export interface components {
             message?: string | null;
             /** Success */
             success: boolean;
+        };
+        /** UpdateSnapshotRequest */
+        UpdateSnapshotRequest: {
+            /** Caption */
+            caption?: string | null;
+        };
+        /** UpdateSnapshotResponse */
+        UpdateSnapshotResponse: {
+            data: components["schemas"]["SnapshotItem"];
+            status: components["schemas"]["Status"];
         };
         /** ValidationError */
         ValidationError: {
@@ -2274,6 +2322,41 @@ export interface operations {
             };
         };
     };
+    create_snapshot_endpoint_api_v1_scenarios__scenario_id__snapshots_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSnapshotRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateSnapshotResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     delete_snapshot_endpoint_api_v1_snapshots__snapshot_id__delete: {
         parameters: {
             query?: never;
@@ -2292,6 +2375,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeleteSnapshotResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_snapshot_endpoint_api_v1_snapshots__snapshot_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSnapshotRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateSnapshotResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_snapshot_image_endpoint_api_v1_snapshots__snapshot_id__image_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

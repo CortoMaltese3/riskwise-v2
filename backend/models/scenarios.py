@@ -101,10 +101,37 @@ class SnapshotItem(BaseModel):
     scenario_id: str
     snapshot_type: str
     created_at: datetime | None = None
+    caption: str | None = None
 
 
 class SnapshotListResponse(BaseModel):
     data: list[SnapshotItem]
+    status: Status
+
+
+class CreateSnapshotRequest(BaseModel):
+    """Body for ``POST /api/v1/scenarios/{id}/snapshots``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    snapshot_type: str = Field(..., min_length=1)
+    image_base64: str = Field(..., min_length=1)
+    caption: str | None = Field(default=None, max_length=500)
+
+
+class CreateSnapshotResponse(BaseModel):
+    data: SnapshotItem
+    status: Status
+
+
+class UpdateSnapshotRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    caption: str | None = Field(default=None, max_length=500)
+
+
+class UpdateSnapshotResponse(BaseModel):
+    data: SnapshotItem
     status: Status
 
 

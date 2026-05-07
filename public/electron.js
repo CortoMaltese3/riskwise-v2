@@ -1292,6 +1292,12 @@ withRequestIdHandling("http:cancelScenario", (payload, requestId) => {
   return httpRequest("POST", `/api/v1/scenario/${jobId}/cancel`, {}, requestId);
 });
 
+// The renderer occasionally needs to address the backend directly
+// (e.g. ``<img src>`` for snapshot bytes — the IPC bridge only carries
+// JSON envelopes). Returning ``null`` until the loopback server signals
+// ready lets call sites guard cleanly.
+ipcMain.handle("http:baseUrl", () => backendBaseUrl);
+
 // Renderer logger bridge: the frontend ``logger.ts`` wrapper sends records
 // here; we fan them out into electron-log so one ``app.log`` has entries
 // from every layer, correlated by request_id.

@@ -154,6 +154,10 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("http:scenarioRun", { body, requestId }),
     cancelScenario: (jobId, requestId) =>
       ipcRenderer.invoke("http:cancelScenario", { jobId, requestId }),
+    // Returns the loopback backend's absolute base URL (or ``null`` if the
+    // process has not signalled ready yet). Used by ``<img src>`` flows
+    // that cannot route through the JSON IPC bridge.
+    getBaseUrl: () => ipcRenderer.invoke("http:baseUrl"),
   },
   // Backend supervisor surfaces an `IpcError` envelope when restarts are
   // exhausted; subscribers receive it directly and the returned function

@@ -42,6 +42,10 @@ export type DeleteScenarioResponse = Schema<"DeleteScenarioResponse">;
 export type SnapshotItem = Schema<"SnapshotItem">;
 export type SnapshotListResponse = Schema<"SnapshotListResponse">;
 export type DeleteSnapshotResponse = Schema<"DeleteSnapshotResponse">;
+export type CreateSnapshotRequest = Schema<"CreateSnapshotRequest">;
+export type CreateSnapshotResponse = Schema<"CreateSnapshotResponse">;
+export type UpdateSnapshotRequest = Schema<"UpdateSnapshotRequest">;
+export type UpdateSnapshotResponse = Schema<"UpdateSnapshotResponse">;
 export type MacroChartDataRequest = Schema<"MacroChartDataRequest">;
 export type MacroChartDataResponse = Schema<"MacroChartDataResponse">;
 export type MacroCredOutputResponse = Schema<"MacroCredOutputResponse">;
@@ -135,6 +139,21 @@ const RiskWiseClient = {
 
   listSnapshots: (scenarioId: string) =>
     get<SnapshotListResponse>(`/api/v1/scenarios/${encodeURIComponent(scenarioId)}/snapshots`),
+
+  createSnapshot: (scenarioId: string, body: CreateSnapshotRequest) =>
+    post<CreateSnapshotResponse>(
+      `/api/v1/scenarios/${encodeURIComponent(scenarioId)}/snapshots`,
+      body
+    ),
+
+  updateSnapshot: (snapshotId: string, body: UpdateSnapshotRequest) =>
+    patch<UpdateSnapshotResponse>(`/api/v1/snapshots/${encodeURIComponent(snapshotId)}`, body),
+
+  // Exposed as a string-builder rather than a fetcher because the drawer
+  // consumes it via ``<img src>``: the browser then handles caching,
+  // lazy-loading, and progressive decode for free.
+  snapshotImageUrl: (snapshotId: string) =>
+    `/api/v1/snapshots/${encodeURIComponent(snapshotId)}/image`,
 
   deleteSnapshot: (id: string) =>
     del<DeleteSnapshotResponse>(`/api/v1/snapshots/${encodeURIComponent(id)}`),

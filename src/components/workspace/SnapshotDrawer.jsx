@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
-import { Box, IconButton, Stack, Typography } from "@mui/material";
+import { Box, IconButton, Stack, TextField, Typography } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
@@ -22,6 +22,23 @@ const SnapshotDrawer = ({ scenarioId }) => {
   const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const url = await window.api?.http?.getBaseUrl?.();
+        if (!cancelled && url) setBaseUrl(url);
+      } catch {
+        // Backend URL is best-effort: drawer still renders without
+        // thumbnails, falling back to alt text and metadata.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +79,26 @@ const SnapshotDrawer = ({ scenarioId }) => {
     }
   };
 
+  const handleCaptionCommit = async (snap, nextCaption) => {
+    const trimmed = nextCaption.trim();
+    const value = trimmed.length === 0 ? null : trimmed;
+    if ((snap.caption ?? null) === value) return;
+    const previous = snapshots;
+    setSnapshots((current) =>
+      current.map((s) => (s.id === snap.id ? { ...s, caption: value } : s))
+    );
+    try {
+      const response = await RiskWiseClient.updateSnapshot(snap.id, { caption: value });
+      if (!(response?.success && response.result?.status?.code === 2000)) {
+        setSnapshots(previous);
+        setError(response?.error?.message || "Caption update failed");
+      }
+    } catch (err) {
+      setSnapshots(previous);
+      setError(err?.message || "Caption update failed");
+    }
+  };
+
   if (loading) return <Typography variant="body2">{t("workspace_snapshots_loading")}</Typography>;
   if (error)
     return (
@@ -73,7 +110,7 @@ const SnapshotDrawer = ({ scenarioId }) => {
     return <Typography variant="body2">{t("workspace_snapshots_empty")}</Typography>;
 
   return (
-    <Stack spacing={1}>
+    <Stack spacing={1} data-testid="snapshot-drawer">
       <Typography variant="subtitle2">{t("workspace_snapshots_title")}</Typography>
       {snapshots.map((snap) => (
         <Box
@@ -81,17 +118,36 @@ const SnapshotDrawer = ({ scenarioId }) => {
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            gap: 1.5,
             px: 1,
             py: 0.5,
             borderRadius: 1,
             backgroundColor: "background.paper",
           }}
         >
-          <Box>
-            <Typography variant="body2">{snap.snapshot_type}</Typography>
+          {baseUrl ? (
+            <Box
+              component="img"
+              src={`${baseUrl}${RiskWiseClient.snapshotImageUrl(snap.id)}`}
+              loading="lazy"
+              alt={snap.caption || snap.snapshot_type}
+              sx={{
+                maxWidth: 240,
+                maxHeight: 160,
+                objectFit: "contain",
+                backgroundColor: "background.default",
+                borderRadius: 1,
+              }}
+            />
+          ) : null}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <SnapshotCaptionField
+              snapshot={snap}
+              onCommit={(value) => handleCaptionCommit(snap, value)}
+              placeholder={t("workspace_snapshot_caption_placeholder")}
+            />
             <Typography variant="caption" color="text.secondary">
-              {formatCreatedAt(snap.created_at, locale)}
+              {snap.snapshot_type} · {formatCreatedAt(snap.created_at, locale)}
             </Typography>
           </Box>
           <IconButton
@@ -105,6 +161,47 @@ const SnapshotDrawer = ({ scenarioId }) => {
       ))}
     </Stack>
   );
+};
+
+const SnapshotCaptionField = ({ snapshot, onCommit, placeholder }) => {
+  const [value, setValue] = useState(snapshot.caption || "");
+
+  useEffect(() => {
+    setValue(snapshot.caption || "");
+  }, [snapshot.caption]);
+
+  return (
+    <TextField
+      variant="standard"
+      size="small"
+      fullWidth
+      value={value}
+      placeholder={placeholder}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => onCommit(value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.target.blur();
+        }
+      }}
+      slotProps={{
+        htmlInput: {
+          "aria-label": `caption-${snapshot.id}`,
+          maxLength: 500,
+        },
+      }}
+    />
+  );
+};
+
+SnapshotCaptionField.propTypes = {
+  snapshot: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    caption: PropTypes.string,
+  }).isRequired,
+  onCommit: PropTypes.func.isRequired,
+  placeholder: PropTypes.string.isRequired,
 };
 
 SnapshotDrawer.propTypes = {
