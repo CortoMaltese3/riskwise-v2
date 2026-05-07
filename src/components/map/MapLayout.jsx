@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Paper } from "@mui/material";
+import { Box, Paper } from "@mui/material";
 
 import ExposureMap from "./ExposureMap";
 import HazardMap from "./HazardMap";
@@ -9,6 +9,21 @@ import MapEmptyState from "./MapEmptyState";
 import LoadingSkeleton from "../layout/LoadingSkeleton";
 import useStore from "../../store";
 
+const CenteredPlaceholder = ({ children }) => (
+  <Box
+    sx={{
+      width: "100%",
+      height: "100%",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
+    {children}
+  </Box>
+);
+
 const MapLayout = () => {
   const activeMap = useStore((state) => state.activeMap);
   const isScenarioRunning = useStore((state) => state.isScenarioRunning);
@@ -16,10 +31,18 @@ const MapLayout = () => {
 
   const renderContent = () => {
     if (isScenarioRunning) {
-      return <LoadingSkeleton variant="map" data-testid="map-skeleton" />;
+      return (
+        <CenteredPlaceholder>
+          <LoadingSkeleton variant="map" data-testid="map-skeleton" />
+        </CenteredPlaceholder>
+      );
     }
     if (!isScenarioRunCompleted) {
-      return <MapEmptyState />;
+      return (
+        <CenteredPlaceholder>
+          <MapEmptyState />
+        </CenteredPlaceholder>
+      );
     }
     return (
       <>
