@@ -14,8 +14,12 @@
 
 import { layoutTransition } from "../../theme/theme";
 
-// Per ui-design-spec § Density.
-export const INPUT_CARD_HEIGHT = 110;
+// Per ui-design-spec § Density. Set to fit a two-line title plus the disabled
+// TextField with the same top/bottom padding as a one-line title — the
+// previous 110 was tight enough that 2-line cards (e.g. "Exposure of
+// Non-Economic Assets") collapsed their bottom margin against shorter cards
+// like "Scenario", making the grid look uneven.
+export const INPUT_CARD_HEIGHT = 130;
 
 // Shrunk from MUI h6 default (1.25rem / line-height 1.6) so two-line titles
 // like "Exposure of Non-Economic Assets" fit inside INPUT_CARD_HEIGHT without

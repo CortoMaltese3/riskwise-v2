@@ -168,11 +168,18 @@ const darkBorder = {
   strong: "#475569",
 };
 
+// Dark-mode feedback `bg` swatches are tuned to share luminance with
+// `primary.bgStrong` (~L 0.07) so a grid of cards in mixed states reads as
+// a coherent set of muted dark tints rather than a patchwork of saturated
+// hues. The spec'd `#0F3D26` / `#3D1414` / `#0F2647` / `#3D3300` were too
+// distant from the card colour and pulled focus away from the content.
+// `main` swatches (used as icon / badge fills, not as backgrounds) keep
+// their full vibrance so they still pop on the toned-down `bg`.
 const darkFeedback = {
-  success: { main: "#39D98A", bg: "#0F3D26" },
-  warning: { main: "#FDDD48", bg: "#3D3300" },
-  error: { main: "#FF5C5C", bg: "#3D1414" },
-  info: { main: "#5B8DEF", bg: "#0F2647" },
+  success: { main: "#39D98A", bg: "#2A5240" },
+  warning: { main: "#FDDD48", bg: "#524A2E" },
+  error: { main: "#FF5C5C", bg: "#5F3A34" },
+  info: { main: "#5B8DEF", bg: "#2E4860" },
 };
 
 const darkViz = {
