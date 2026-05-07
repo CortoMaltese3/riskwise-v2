@@ -32,16 +32,14 @@ vi.mock("../utils/reportTools", () => ({
 }));
 
 const setStateBag = {
-  activeMap: "risk",
-  activeMapRef: { _fake: "map" },
   activeViewControl: "display_map",
   isScenarioRunCompleted: true,
   mapTitle: "Egypt — flood rcp85",
   scenarioRunCode: "scen-1",
   selectedSubTab: 0,
   selectedTab: 1,
-  setSelectedSubTab: vi.fn(),
-  setActiveViewControl: vi.fn(),
+  activeMap: "risk",
+  activeMapRef: { _fake: "map" },
   setAlertMessage: vi.fn(),
   setAlertSeverity: vi.fn(),
   setAlertShowMessage: vi.fn(),
@@ -71,10 +69,10 @@ vi.mock("../store/workspaceSlice", () => {
   return { default: useWorkspaceStore };
 });
 
-let MainSubTabs;
+let MainViewToolbar;
 
 beforeAll(async () => {
-  ({ default: MainSubTabs } = await import("../components/main/MainSubTabs"));
+  ({ default: MainViewToolbar } = await import("../components/main/MainViewToolbar"));
 });
 
 beforeEach(() => {
@@ -85,35 +83,38 @@ beforeEach(() => {
 });
 
 describe("Save scenario button (analysis tab toolbar)", () => {
+  it("does not render outside the analysis tab", () => {
+    stateRef.current = { ...setStateBag, selectedTab: 0 };
+    const { container } = render(<MainViewToolbar />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("is disabled before any scenario has been run", () => {
     stateRef.current = {
       ...setStateBag,
       isScenarioRunCompleted: false,
       scenarioRunCode: "",
     };
-    render(<MainSubTabs />);
+    render(<MainViewToolbar />);
     const button = screen.getByRole("button", { name: "save_scenario_button_aria" });
     expect(button).toBeDisabled();
   });
 
   it("re-opens the save dialog with the run's id and prefilled name after dismissal", async () => {
-    render(<MainSubTabs />);
+    render(<MainViewToolbar />);
     const button = screen.getByRole("button", { name: "save_scenario_button_aria" });
     expect(button).not.toBeDisabled();
 
-    // First open
     fireEvent.click(button);
     expect(screen.getByText("save_scenario_dialog_title")).toBeInTheDocument();
     const nameInput = screen.getByLabelText("save_scenario_name_label", { exact: false });
     expect(nameInput.value).toBe("Egypt — flood rcp85");
 
-    // Dismiss via Cancel
     fireEvent.click(screen.getByRole("button", { name: "cancel" }));
     await waitFor(() =>
       expect(screen.queryByText("save_scenario_dialog_title")).not.toBeInTheDocument()
     );
 
-    // Re-open from the toolbar button — the dialog comes back with the same props
     fireEvent.click(button);
     expect(screen.getByText("save_scenario_dialog_title")).toBeInTheDocument();
     expect(screen.getByLabelText("save_scenario_name_label", { exact: false }).value).toBe(
@@ -127,7 +128,7 @@ describe("Save scenario button (analysis tab toolbar)", () => {
       result: { status: { code: 2000 }, data: { id: "scen-1" } },
     });
 
-    render(<MainSubTabs />);
+    render(<MainViewToolbar />);
     fireEvent.click(screen.getByRole("button", { name: "save_scenario_button_aria" }));
     fireEvent.click(screen.getByRole("button", { name: "save_scenario_action" }));
 
