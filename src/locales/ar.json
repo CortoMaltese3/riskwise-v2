@@ -975,6 +975,8 @@
     "save_scenario_notes_label": "Notes",
     "save_scenario_tags_label": "Tags (comma-separated)",
     "save_scenario_action": "Save",
+    "save_scenario_button_label": "Save scenario…",
+    "save_scenario_button_aria": "Save scenario",
     "nav_minimize_aria": "Minimize",
     "nav_refresh_aria": "Refresh",
     "nav_shutdown_aria": "Shutdown",
