@@ -13,7 +13,6 @@ import ScenarioPrintView from "./components/workspace/ScenarioPrintView";
 import HelpMenu from "./components/help/HelpMenu";
 import GlossaryDrawer from "./components/help/GlossaryDrawer";
 import baseTheme from "./theme/theme";
-import useColorSchemeAttribute from "./theme/useColorSchemeAttribute";
 import { isRtl } from "./i18nConfig";
 import useStore from "./store";
 
@@ -21,27 +20,32 @@ const printParams = new URLSearchParams(window.location.search);
 const isPrintView = printParams.get("view") === "print";
 const printScenarioId = printParams.get("scenarioId") ?? "";
 
+// MUI's CssVarsProvider (the implementation behind <ThemeProvider> when the
+// theme has `colorSchemes`) owns mode persistence and the
+// `data-mui-color-scheme` attribute on <html>. Pointing it at our storage key
+// keeps existing user preferences working and stops it from fighting any
+// custom logic over the same attribute.
+const THEME_MODE_STORAGE_KEY = "riskwise.themeMode";
+// Print view forces light regardless of user choice (paper-white background).
+// Using a separate storage key isolates print from the main app preference.
+const PRINT_THEME_MODE_STORAGE_KEY = "riskwise.themeMode.print";
+
 const App = () => {
   const { selectedAppOption } = useStore();
   const setHelpMenuOpen = useStore((s) => s.setHelpMenuOpen);
   const toggleHelpMenu = useStore((s) => s.toggleHelpMenu);
-  const themeMode = useStore((s) => s.themeMode);
   const { i18n } = useTranslation();
 
   // Re-create the theme when the active language flips between LTR and RTL so
   // MUI components (LinearProgress, Menu anchors, TextField alignment) mirror
   // correctly. This is the idiomatic MUI handshake for bidirectional support.
-  // Color-scheme switching is independent: the hook below flips the
-  // `data-mui-color-scheme` attribute on `<html>` and MUI swaps the underlying
+  // Color-scheme switching is independent: MUI's ThemeProvider flips the
+  // `data-mui-color-scheme` attribute on `<html>` and swaps the underlying
   // CSS variables — no theme re-creation needed.
   const theme = useMemo(
     () => createTheme(baseTheme, { direction: isRtl(i18n.language) ? "rtl" : "ltr" }),
     [i18n.language]
   );
-
-  // Print view ignores user choice and always renders light — print
-  // stylesheets and exported PDFs assume a paper-white background.
-  useColorSchemeAttribute(themeMode, isPrintView ? "light" : null);
 
   // Global help shortcuts (issue #88). F1 toggles; Shift+? opens. Esc is left
   // to the Drawer's built-in close handling, so we don't handle it here.
@@ -71,7 +75,11 @@ const App = () => {
 
   if (isPrintView) {
     return (
-      <ThemeProvider theme={theme}>
+      <ThemeProvider
+        theme={theme}
+        defaultMode="light"
+        modeStorageKey={PRINT_THEME_MODE_STORAGE_KEY}
+      >
         <CssBaseline />
         <ScenarioPrintView scenarioId={printScenarioId} />
       </ThemeProvider>
@@ -80,7 +88,7 @@ const App = () => {
 
   return (
     <ErrorBoundary>
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={theme} defaultMode="system" modeStorageKey={THEME_MODE_STORAGE_KEY}>
         <CssBaseline />
         <ToastProvider>
           {selectedAppOption === "" ? (
