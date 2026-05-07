@@ -700,6 +700,8 @@
     "map_hazard_legend_title_drought_prefix": "مؤشر الأمطار القياسي",
     "map_hazard_legend_title_heatwaves_prefix": "مؤشر مدة فترات الدفء",
     "map_empty_state_message": "قم بتشغيل سيناريو لعرض الخريطة",
+    "waterfall_empty_state_message": "قم بتشغيل سيناريو مستقبلي لعرض الرسم البياني الشلالي",
+    "waterfall_empty_state_hint": "يقارن مكونات المخاطر الأساسية بالمستقبلية.",
     "map_legend_title_billions_suffix": "مليارات",
     "map_legend_title_millions_suffix": "ملايين",
     "map_legend_title_thousands_suffix": "الآلاف",

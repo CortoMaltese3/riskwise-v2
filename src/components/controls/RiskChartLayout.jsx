@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper } from "@mui/material";
+import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import WaterfallChart from "../charts/WaterfallChart";
+import EmptyChartState from "../layout/EmptyChartState";
+import LoadingSkeleton from "../layout/LoadingSkeleton";
 import useStore from "../../store";
 
 const STATUS_OK = 2000;
@@ -12,6 +15,8 @@ const STATUS_OK = 2000;
 const RiskChartLayout = () => {
   const { t } = useTranslation();
   const setWaterfallChartRef = useStore((state) => state.setWaterfallChartRef);
+  const isScenarioRunning = useStore((state) => state.isScenarioRunning);
+  const isScenarioRunCompleted = useStore((state) => state.isScenarioRunCompleted);
   const [waterfallData, setWaterfallData] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -38,6 +43,25 @@ const RiskChartLayout = () => {
       cancelled = true;
     };
   }, []);
+
+  const renderContent = () => {
+    if (isScenarioRunning) {
+      return <LoadingSkeleton variant="chart" data-testid="waterfall-skeleton" />;
+    }
+    if (!isScenarioRunCompleted || !waterfallData) {
+      return (
+        <EmptyChartState
+          data-testid="waterfall-empty-state"
+          icon={BarChartOutlinedIcon}
+          message={t("waterfall_empty_state_message")}
+          hint={t("waterfall_empty_state_hint")}
+        />
+      );
+    }
+    return (
+      <WaterfallChart ref={setWaterfallChartRef} data={waterfallData} errorMessage={errorMessage} />
+    );
+  };
 
   return (
     <div
@@ -68,17 +92,7 @@ const RiskChartLayout = () => {
           style={{ width: "100%", height: "100%" }}
           aria-label={t("economic_non_economic_risk_display_chart_title")}
         >
-          {waterfallData ? (
-            <WaterfallChart
-              ref={setWaterfallChartRef}
-              data={waterfallData}
-              errorMessage={errorMessage}
-            />
-          ) : (
-            <Typography variant="body1">
-              {errorMessage || t("economic_non_economic_risk_display_chart_loading_error")}
-            </Typography>
-          )}
+          {renderContent()}
         </Box>
       </Paper>
     </div>
