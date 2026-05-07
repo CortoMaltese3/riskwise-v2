@@ -28,9 +28,9 @@ const ExposureMap = () => {
 
   const fetchGeoJson = async (layer) => {
     try {
-      const tempPath = await window.electron.fetchTempDir();
-      const fileUrl = "file:///" + tempPath.replace(/\\/g, "/") + "/exposures_geodata.json";
-      const response = await fetch(fileUrl);
+      // Served by the main-process `app://` handler (`/__temp/<file>`) — see
+      // HazardMap for the rationale on the same-origin URL.
+      const response = await fetch("app://./__temp/exposures_geodata.json");
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -144,6 +144,13 @@ const ExposureMap = () => {
         setActiveMapRef(map);
         mapRefSet.current = true; // Update the ref to indicate that setActiveMapRef has been called
       }
+      // Leaflet measures the container at mount time. When the map is mounted
+      // inside a freshly-shown flex pane (Display Map toggle, Risk Assessment
+      // re-entry) the container can briefly be 0×0, which leaves the tile
+      // layer un-rendered until a manual resize. Force a remeasure on next
+      // tick so tiles always paint.
+      const id = window.requestAnimationFrame(() => map.invalidateSize());
+      return () => window.cancelAnimationFrame(id);
     }, [map, setActiveMapRef]);
 
     return null;

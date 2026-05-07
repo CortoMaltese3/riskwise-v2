@@ -55,9 +55,11 @@ const HazardMap = () => {
   const fetchGeoJson = useCallback(
     async (rpLayer) => {
       try {
-        const tempPath = await window.electron.fetchTempDir();
-        const fileUrl = "file:///" + tempPath.replace(/\\/g, "/") + "/hazards_geodata.json";
-        const response = await fetch(fileUrl);
+        // Served by the main-process `app://` handler (`/__temp/<file>`)
+        // out of `userData/data/temp`. Same origin as the renderer, so we
+        // dodge Chromium's "Not allowed to load local resource" block on
+        // direct `file://` reads from an `app://` page.
+        const response = await fetch("app://./__temp/hazards_geodata.json");
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -75,12 +77,19 @@ const HazardMap = () => {
         setRadius(data._metadata.radius);
         setUnit(data._metadata.unit);
 
-        if (data._metadata.percentile_values && data._metadata.percentile_values[`rp${rpLayer}`]) {
-          const scale = getScale(selectedHazard, data._metadata.percentile_values[`rp${rpLayer}`]);
+        // On the very first render `activeRPLayer` is still ``null`` so the
+        // effect fires fetchGeoJson(null). Falling back to the first return
+        // period lets us paint the map immediately AND avoids a race where
+        // the failing null-fetch's catch block clobbers a successful follow-
+        // up fetch's mapInfo (white-map regression).
+        const effectiveRP = rpLayer ?? (returnPeriods.length > 0 ? returnPeriods[0] : null);
+        const rpKey = effectiveRP === null ? null : `rp${effectiveRP}`;
+        if (rpKey && data._metadata.percentile_values && data._metadata.percentile_values[rpKey]) {
+          const scale = getScale(selectedHazard, data._metadata.percentile_values[rpKey]);
           setMapInfo({ geoJson: data, colorScale: scale });
 
           // Calculate minimum non-zero value
-          const values = data._metadata.percentile_values[`rp${rpLayer}`];
+          const values = data._metadata.percentile_values[rpKey];
           const minAbsValue = Math.min(...values.filter((v) => v !== 0).map(Math.abs));
           const { suffix, divisor } = getSuffixAndDivisor(minAbsValue);
           setDivisor(divisor);
@@ -187,6 +196,13 @@ const HazardMap = () => {
         setActiveMapRef(map);
         mapRefSet.current = true; // Update the ref to indicate that setActiveMapRef has been called
       }
+      // Leaflet measures the container at mount time. When the map is mounted
+      // inside a freshly-shown flex pane (Display Map toggle, Risk Assessment
+      // re-entry) the container can briefly be 0×0, which leaves the tile
+      // layer un-rendered until a manual resize. Force a remeasure on next
+      // tick so tiles always paint.
+      const id = window.requestAnimationFrame(() => map.invalidateSize());
+      return () => window.cancelAnimationFrame(id);
     }, [map, setActiveMapRef]);
 
     return null;

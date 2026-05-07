@@ -35,6 +35,7 @@ const RunScenarioButton = () => {
     setIsScenarioRunCompleted,
     setScenarioRunCode,
     setSelectedReport,
+    setSelectedTab,
   } = useStore();
 
   const [isRunButtonLoading, setIsRunButtonLoading] = useState(false);
@@ -106,6 +107,11 @@ const RunScenarioButton = () => {
         setMapTitle(response.result.data.mapTitle);
         setScenarioRunCode(response.result.data.scenarioId);
         setIsScenarioRunCompleted(true);
+        // Land the user on the analysis tab so the map/chart toggle and the
+        // newly-generated geodata are visible the moment the save dialog
+        // closes. Without this they stay on selectedTab=0 (Input Selection)
+        // and only see the toggle after navigating away and back.
+        setSelectedTab(1);
         if (response.result.data.scenarioId) {
           setSaveDialog({
             open: true,
