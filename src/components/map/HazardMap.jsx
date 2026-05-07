@@ -232,7 +232,11 @@ const HazardMap = () => {
       key={selectedCountry}
       center={countryCoordinates[selectedCountry] || [30.0, 31.0]}
       zoom={6}
-      style={{ position: "relative", height: "100%", width: "100%" }}
+      // Paper is `display: flex; flex-direction: column`. A flex-column child
+      // with `height: 100%` resolves to 0 in current Chromium (#white-map),
+      // so fill the cross-axis with width:100% but the main axis via flex
+      // sizing — that gives the leaflet container the parent's actual height.
+      style={{ position: "relative", flex: 1, minHeight: 0, width: "100%" }}
     >
       <TileLayer url={tileLayerUrl} maxZoom={15} minZoom={5} />
       <MapEvents />

@@ -1061,13 +1061,28 @@ const createMainWindow = () => {
       mainWindow.webContents.openDevTools();
     }
 
-    // Pipe renderer console messages into unified log. Uses the modern
-    // event-object signature (``WebContentsConsoleMessageEventParams``); the
-    // legacy positional-arg form is deprecated and emits a console warning.
-    mainWindow.webContents.on("console-message", (event) => {
+    // Pipe renderer console messages into unified log. Electron has shipped
+    // both shapes for this event over the years and the docs lag the runtime,
+    // so detect which one we got: modern is a single
+    // ``WebContentsConsoleMessageEventParams`` object whose ``level`` is a
+    // string ('info' | 'warning' | 'error' | 'debug'); legacy is positional
+    // ``(event, level, message, line, sourceId)`` with an integer level
+    // (0=verbose, 1=info, 2=warning, 3=error). Reading ``event.level`` on
+    // the legacy form yields ``undefined`` and silently drops every renderer
+    // log -- which is what bit us: the unified log had zero ``[renderer]``
+    // entries even though the renderer was emitting console.error.
+    mainWindow.webContents.on("console-message", (event, level, message, lineNumber, sourceId) => {
+      const params = event && typeof event === "object" && "message" in event ? event : null;
+      const rawLevel = params ? params.level : level;
+      const text = params
+        ? `[renderer] ${params.message} (${params.sourceId}:${params.lineNumber})`
+        : `[renderer] ${message} (${sourceId}:${lineNumber})`;
       const lvl =
-        event.level === "warning" ? "warn" : event.level === "error" ? "error" : "info";
-      const text = `[renderer] ${event.message} (${event.sourceId}:${event.lineNumber})`;
+        rawLevel === "warning" || rawLevel === 2
+          ? "warn"
+          : rawLevel === "error" || rawLevel === 3
+            ? "error"
+            : "info";
       if (lvl === "warn") log.warn(text);
       else if (lvl === "error") log.error(text);
       else log.info(text);
