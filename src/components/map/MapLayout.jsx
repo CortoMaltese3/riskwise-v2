@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Paper } from "@mui/material";
+import { Box, Paper } from "@mui/material";
 
 import ExposureMap from "./ExposureMap";
 import HazardMap from "./HazardMap";
@@ -9,6 +9,22 @@ import MapEmptyState from "./MapEmptyState";
 import LoadingSkeleton from "../layout/LoadingSkeleton";
 import useStore from "../../store";
 
+const CenteredPlaceholder = ({ children }) => (
+  <Box
+    sx={{
+      flex: 1,
+      minHeight: 0,
+      width: "100%",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
+    {children}
+  </Box>
+);
+
 const MapLayout = () => {
   const activeMap = useStore((state) => state.activeMap);
   const isScenarioRunning = useStore((state) => state.isScenarioRunning);
@@ -16,10 +32,18 @@ const MapLayout = () => {
 
   const renderContent = () => {
     if (isScenarioRunning) {
-      return <LoadingSkeleton variant="map" data-testid="map-skeleton" />;
+      return (
+        <CenteredPlaceholder>
+          <LoadingSkeleton variant="map" data-testid="map-skeleton" />
+        </CenteredPlaceholder>
+      );
     }
     if (!isScenarioRunCompleted) {
-      return <MapEmptyState />;
+      return (
+        <CenteredPlaceholder>
+          <MapEmptyState />
+        </CenteredPlaceholder>
+      );
     }
     return (
       <>
@@ -46,6 +70,8 @@ const MapLayout = () => {
           minHeight: 0,
           borderRadius: (theme) => theme.spacing(2),
           marginBottom: 2,
+          display: "flex",
+          flexDirection: "column",
           overflow: "hidden",
         }}
       >

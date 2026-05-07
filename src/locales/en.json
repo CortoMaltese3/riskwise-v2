@@ -700,6 +700,8 @@
     "map_hazard_legend_title_drought_prefix": "Standard Precipitation Index",
     "map_hazard_legend_title_heatwaves_prefix": "Warm Spell Duration Index",
     "map_empty_state_message": "Run a scenario to see the map",
+    "waterfall_empty_state_message": "Run a future scenario to see the waterfall",
+    "waterfall_empty_state_hint": "Compares baseline vs. future risk components.",
     "map_legend_title_billions_suffix": "Billions",
     "map_legend_title_millions_suffix": "Millions",
     "map_legend_title_thousands_suffix": "Thousands",
