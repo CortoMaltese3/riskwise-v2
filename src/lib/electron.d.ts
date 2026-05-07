@@ -27,6 +27,7 @@ export interface ApiHttpBridge {
   ): Promise<IpcResult<T>>;
   runScenario<T>(body: unknown, requestId?: string): Promise<IpcResult<T>>;
   cancelScenario<T>(jobId: string, requestId?: string): Promise<IpcResult<T>>;
+  getBaseUrl(): Promise<string | null>;
 }
 
 export interface ApiBridge {

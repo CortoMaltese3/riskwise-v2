@@ -63,6 +63,8 @@ from backend.logging_config import (
 from backend.models import (
     CostBenefitResponse,
     CountriesResponse,
+    CreateSnapshotRequest,
+    CreateSnapshotResponse,
     CredDatasetDeleteResponse,
     CredDatasetsResponse,
     CredDatasetUploadRequest,
@@ -101,6 +103,8 @@ from backend.models import (
     ScenarioRunRequest,
     SnapshotListResponse,
     TempClearResponse,
+    UpdateSnapshotRequest,
+    UpdateSnapshotResponse,
     WaterfallResponse,
     WorkspaceExportResponse,
     WorkspaceImportRequest,
@@ -629,6 +633,71 @@ async def list_snapshots_endpoint(scenario_id: str) -> dict:
 
     rows = await asyncio.to_thread(list_snapshots, scenario_id)
     return {"data": [asdict(r) for r in rows], "status": _status_ok()}
+
+
+# Cap on a single uploaded snapshot. Native-resolution map screenshots and
+# Chart.js exports are routinely <1 MiB; 10 MiB is a sanity guard that still
+# absorbs an oversized retina capture without abusing the DB blob.
+_SNAPSHOT_MAX_BYTES = 10 * 1024 * 1024
+
+
+@app.post(
+    f"{API_PREFIX}/scenarios/{{scenario_id}}/snapshots",
+    response_model=CreateSnapshotResponse,
+)
+async def create_snapshot_endpoint(scenario_id: str, payload: CreateSnapshotRequest) -> dict:
+    import base64
+    import binascii
+    from dataclasses import asdict
+
+    from backend.db import ScenarioNotFound, create_snapshot
+
+    try:
+        image_bytes = base64.b64decode(payload.image_base64, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=f"image_base64 invalid: {exc}") from exc
+    if len(image_bytes) > _SNAPSHOT_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="snapshot image exceeds 10 MiB")
+
+    try:
+        row = await asyncio.to_thread(
+            create_snapshot,
+            scenario_id=scenario_id,
+            snapshot_type=payload.snapshot_type,
+            image=image_bytes,
+            caption=payload.caption,
+        )
+    except ScenarioNotFound as exc:
+        raise HTTPException(status_code=404, detail="Scenario not found") from exc
+    return {"data": asdict(row), "status": _status_ok()}
+
+
+@app.get(f"{API_PREFIX}/snapshots/{{snapshot_id}}/image")
+async def get_snapshot_image_endpoint(snapshot_id: str):
+    from fastapi.responses import Response
+
+    from backend.db import get_snapshot_image
+
+    result = await asyncio.to_thread(get_snapshot_image, snapshot_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Snapshot not found")
+    image_bytes, mime = result
+    return Response(content=image_bytes, media_type=mime)
+
+
+@app.patch(
+    f"{API_PREFIX}/snapshots/{{snapshot_id}}",
+    response_model=UpdateSnapshotResponse,
+)
+async def update_snapshot_endpoint(snapshot_id: str, payload: UpdateSnapshotRequest) -> dict:
+    from dataclasses import asdict
+
+    from backend.db import update_snapshot_caption
+
+    row = await asyncio.to_thread(update_snapshot_caption, snapshot_id, payload.caption)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Snapshot not found")
+    return {"data": asdict(row), "status": _status_ok()}
 
 
 @app.delete(f"{API_PREFIX}/snapshots/{{snapshot_id}}", response_model=DeleteSnapshotResponse)

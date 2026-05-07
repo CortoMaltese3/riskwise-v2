@@ -3,7 +3,43 @@ import { useTranslation } from "react-i18next";
 import L from "leaflet";
 import "leaflet-simple-map-screenshoter";
 
+import RiskWiseClient from "../lib/RiskWiseClient";
 import useStore from "../store";
+import useWorkspaceStore from "../store/workspaceSlice";
+
+const captureMapBase64 = (map) =>
+  new Promise((resolve, reject) => {
+    const screenshoter = L.simpleMapScreenshoter().addTo(map);
+    screenshoter
+      .takeScreen("blob")
+      .then((blob) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      })
+      .catch(reject);
+  });
+
+const captureChartBase64 = (chartInstance) => {
+  if (!chartInstance || typeof chartInstance.toBase64Image !== "function") {
+    return Promise.reject(new Error("Chart instance not ready for snapshot."));
+  }
+  return Promise.resolve(chartInstance.toBase64Image("image/png", 1).split(",")[1]);
+};
+
+const captureToScenario = async ({ scenarioId, snapshotType, base64 }) => {
+  const response = await RiskWiseClient.createSnapshot(scenarioId, {
+    snapshot_type: snapshotType,
+    image_base64: base64,
+  });
+  if (!(response?.success && response.result?.status?.code === 2000)) {
+    throw new Error(response?.error?.message || "Snapshot save failed");
+  }
+  return response.result.data;
+};
+
+export { captureMapBase64, captureChartBase64, captureToScenario };
 
 export const useMapTools = () => {
   const { t } = useTranslation();
@@ -268,9 +304,53 @@ export const useMapTools = () => {
     }
   };
 
+  // Capture the active surface (map / waterfall / cost-benefit chart) and
+  // POST the bytes to ``/scenarios/{id}/snapshots``. The backend flips the
+  // parent scenario's ``saved`` flag (#302) so captured snapshots cannot be
+  // GC'd with the unsaved row. Caller surfaces success/failure via the
+  // existing alert pipeline; on success it triggers a workspace refresh
+  // so the expand-row picks up the new entry.
+  const handleCaptureSnapshot = async () => {
+    if (!scenarioRunCode || !isScenarioRunCompleted) return null;
+    try {
+      let base64;
+      let snapshotType;
+      if (activeViewControl === "display_map") {
+        base64 = await captureMapBase64(activeMapRef);
+        snapshotType = "map";
+      } else if (activeViewControl === "display_chart" && selectedSubTab === 0) {
+        base64 = await captureChartBase64(waterfallChartRef);
+        snapshotType = "waterfall";
+      } else if (activeViewControl === "display_chart" && selectedSubTab === 1) {
+        base64 = await captureChartBase64(costBenefitChartRef);
+        snapshotType = "cost_benefit";
+      } else {
+        return null;
+      }
+      const data = await captureToScenario({
+        scenarioId: scenarioRunCode,
+        snapshotType,
+        base64,
+      });
+      setAlertMessage(t("alert_message_snapshot_saved"));
+      setAlertSeverity("success");
+      setAlertShowMessage(true);
+      // Refresh the workspace so the (possibly newly-saved) scenario row and
+      // its snapshot drawer pick up the new entry without a manual reload.
+      useWorkspaceStore.getState().loadScenarios({ force: true });
+      return data;
+    } catch (err) {
+      setAlertMessage(`${t("alert_message_snapshot_failed")}: ${err?.message || err}`);
+      setAlertSeverity("error");
+      setAlertShowMessage(true);
+      return null;
+    }
+  };
+
   return {
     copyFolderToTemp,
     handleAddToOutput,
+    handleCaptureSnapshot,
     handleSaveImage,
     handleSaveMap,
   };

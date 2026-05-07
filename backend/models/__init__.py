@@ -55,6 +55,8 @@ from backend.models.scenario import (
     ScenarioRunRequest,
 )
 from backend.models.scenarios import (
+    CreateSnapshotRequest,
+    CreateSnapshotResponse,
     DeleteScenarioResponse,
     DeleteSnapshotResponse,
     ExportReportData,
@@ -74,6 +76,8 @@ from backend.models.scenarios import (
     ScenarioWorkspaceItem,
     SnapshotItem,
     SnapshotListResponse,
+    UpdateSnapshotRequest,
+    UpdateSnapshotResponse,
 )
 from backend.models.temp import TempClearResponse
 from backend.models.waterfall import WaterfallCategory, WaterfallPayload, WaterfallResponse
@@ -97,6 +101,8 @@ __all__ = [
     "CostBenefitMeasure",
     "CostBenefitPayload",
     "CostBenefitResponse",
+    "CreateSnapshotRequest",
+    "CreateSnapshotResponse",
     "CountriesData",
     "CountriesResponse",
     "Country",
@@ -155,6 +161,8 @@ __all__ = [
     "Status",
     "StatusEnvelope",
     "TempClearResponse",
+    "UpdateSnapshotRequest",
+    "UpdateSnapshotResponse",
     "WaterfallCategory",
     "WaterfallPayload",
     "WaterfallResponse",

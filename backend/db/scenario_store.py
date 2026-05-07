@@ -13,12 +13,18 @@ return them verbatim without an extra decode step. The blob-agnostic
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from backend.db.connection import get_connection
+
+
+class ScenarioNotFound(LookupError):
+    """Raised when an operation targets a scenario id that does not exist."""
+
 
 # Provenance keys whose value cannot be ``None`` on a fresh insert. The
 # dual-backend split (#162) made ``engine_version`` and ``climada_version``
@@ -182,8 +188,9 @@ def insert_scenario(
             for snap in snapshots:
                 conn.execute(
                     """
-                    INSERT INTO snapshots (id, scenario_id, snapshot_type, image, created_at)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO snapshots
+                        (id, scenario_id, snapshot_type, image, created_at, caption)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     [
                         snap["id"],
@@ -191,6 +198,7 @@ def insert_scenario(
                         snap["snapshot_type"],
                         snap.get("image"),
                         snap.get("created_at"),
+                        snap.get("caption"),
                     ],
                 )
     finally:
@@ -208,7 +216,7 @@ def get_scenario_snapshots_with_image(scenario_id: str) -> list[dict[str, Any]]:
     try:
         rows = conn.execute(
             """
-            SELECT id, scenario_id, snapshot_type, image, created_at
+            SELECT id, scenario_id, snapshot_type, image, created_at, caption
             FROM snapshots WHERE scenario_id = ?
             ORDER BY created_at ASC
             """,
@@ -223,6 +231,7 @@ def get_scenario_snapshots_with_image(scenario_id: str) -> list[dict[str, Any]]:
             "snapshot_type": r[2],
             "image": bytes(r[3]) if r[3] is not None else None,
             "created_at": r[4],
+            "caption": r[5],
         }
         for r in rows
     ]
@@ -346,6 +355,7 @@ class SnapshotRow:
     scenario_id: str
     snapshot_type: str
     created_at: datetime | None
+    caption: str | None = None
 
 
 def list_snapshots(scenario_id: str) -> list[SnapshotRow]:
@@ -353,7 +363,7 @@ def list_snapshots(scenario_id: str) -> list[SnapshotRow]:
     try:
         rows = conn.execute(
             """
-            SELECT id, scenario_id, snapshot_type, created_at
+            SELECT id, scenario_id, snapshot_type, created_at, caption
             FROM snapshots WHERE scenario_id = ?
             ORDER BY created_at DESC
             """,
@@ -362,8 +372,94 @@ def list_snapshots(scenario_id: str) -> list[SnapshotRow]:
     finally:
         conn.close()
     return [
-        SnapshotRow(id=r[0], scenario_id=r[1], snapshot_type=r[2], created_at=r[3]) for r in rows
+        SnapshotRow(id=r[0], scenario_id=r[1], snapshot_type=r[2], created_at=r[3], caption=r[4])
+        for r in rows
     ]
+
+
+def create_snapshot(
+    *,
+    scenario_id: str,
+    snapshot_type: str,
+    image: bytes,
+    caption: str | None = None,
+) -> SnapshotRow:
+    """Insert one snapshot row and promote the parent scenario to ``saved=TRUE``.
+
+    Raises :class:`ScenarioNotFound` if ``scenario_id`` does not exist;
+    no row is created. Returns the inserted row (without the image bytes).
+    """
+    snapshot_id = str(uuid.uuid4())
+    conn = get_connection()
+    try:
+        parent = conn.execute("SELECT id FROM scenarios WHERE id = ?", [scenario_id]).fetchone()
+        if parent is None:
+            raise ScenarioNotFound(scenario_id)
+        conn.execute(
+            """
+            INSERT INTO snapshots (id, scenario_id, snapshot_type, image, caption)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            [snapshot_id, scenario_id, snapshot_type, image, caption],
+        )
+        # Save promotion (#302): the user has invested effort in this scenario,
+        # so it must remain visible in the workspace. Capturing without this
+        # would let an unsaved row's snapshots vanish on GC.
+        conn.execute(
+            "UPDATE scenarios SET saved = TRUE WHERE id = ?",
+            [scenario_id],
+        )
+        row = conn.execute(
+            """
+            SELECT id, scenario_id, snapshot_type, created_at, caption
+            FROM snapshots WHERE id = ?
+            """,
+            [snapshot_id],
+        ).fetchone()
+    finally:
+        conn.close()
+    return SnapshotRow(
+        id=row[0],
+        scenario_id=row[1],
+        snapshot_type=row[2],
+        created_at=row[3],
+        caption=row[4],
+    )
+
+
+def get_snapshot_image(snapshot_id: str) -> tuple[bytes, str] | None:
+    """Return ``(image_bytes, mime)`` or ``None`` if the snapshot is missing."""
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT image FROM snapshots WHERE id = ?", [snapshot_id]).fetchone()
+    finally:
+        conn.close()
+    if row is None or row[0] is None:
+        return None
+    return bytes(row[0]), "image/png"
+
+
+def update_snapshot_caption(snapshot_id: str, caption: str | None) -> SnapshotRow | None:
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            """
+            UPDATE snapshots SET caption = ? WHERE id = ?
+            RETURNING id, scenario_id, snapshot_type, created_at, caption
+            """,
+            [caption, snapshot_id],
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        return None
+    return SnapshotRow(
+        id=row[0],
+        scenario_id=row[1],
+        snapshot_type=row[2],
+        created_at=row[3],
+        caption=row[4],
+    )
 
 
 def delete_snapshot(snapshot_id: str) -> bool:

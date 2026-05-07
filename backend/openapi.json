@@ -191,6 +191,56 @@
         "title": "Country",
         "type": "object"
       },
+      "CreateSnapshotRequest": {
+        "additionalProperties": false,
+        "description": "Body for ``POST /api/v1/scenarios/{id}/snapshots``.",
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "image_base64": {
+            "minLength": 1,
+            "title": "Image Base64",
+            "type": "string"
+          },
+          "snapshot_type": {
+            "minLength": 1,
+            "title": "Snapshot Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_type",
+          "image_base64"
+        ],
+        "title": "CreateSnapshotRequest",
+        "type": "object"
+      },
+      "CreateSnapshotResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SnapshotItem"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "CreateSnapshotResponse",
+        "type": "object"
+      },
       "CredDataset": {
         "properties": {
           "id": {
@@ -1781,6 +1831,17 @@
       },
       "SnapshotItem": {
         "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
           "created_at": {
             "anyOf": [
               {
@@ -1885,6 +1946,41 @@
           "success"
         ],
         "title": "TempClearResponse",
+        "type": "object"
+      },
+      "UpdateSnapshotRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          }
+        },
+        "title": "UpdateSnapshotRequest",
+        "type": "object"
+      },
+      "UpdateSnapshotResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SnapshotItem"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "UpdateSnapshotResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -3222,6 +3318,53 @@
           }
         },
         "summary": "List Snapshots Endpoint"
+      },
+      "post": {
+        "operationId": "create_snapshot_endpoint_api_v1_scenarios__scenario_id__snapshots_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSnapshotRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateSnapshotResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Snapshot Endpoint"
       }
     },
     "/api/v1/snapshots/{snapshot_id}": {
@@ -3261,6 +3404,90 @@
           }
         },
         "summary": "Delete Snapshot Endpoint"
+      },
+      "patch": {
+        "operationId": "update_snapshot_endpoint_api_v1_snapshots__snapshot_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSnapshotRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateSnapshotResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Snapshot Endpoint"
+      }
+    },
+    "/api/v1/snapshots/{snapshot_id}/image": {
+      "get": {
+        "operationId": "get_snapshot_image_endpoint_api_v1_snapshots__snapshot_id__image_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Snapshot Image Endpoint"
       }
     },
     "/api/v1/temp/clear": {

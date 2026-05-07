@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Button, Tabs, Tab, Paper } from "@mui/material";
+import { Box, Button, IconButton, Tabs, Tab, Paper, Tooltip } from "@mui/material";
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 
 import useStore from "../../store";
 import { useMapTools } from "../../utils/mapTools";
@@ -10,13 +11,35 @@ import { layoutTransition } from "../../theme/theme";
 const MainSubTabs = () => {
   const {
     activeViewControl,
+    isScenarioRunCompleted,
+    scenarioRunCode,
     selectedSubTab,
     selectedTab,
     setSelectedSubTab,
     setActiveViewControl,
   } = useStore();
-  const { handleSaveImage, handleSaveMap, handleAddToOutput } = useMapTools();
+  const { handleSaveImage, handleSaveMap, handleAddToOutput, handleCaptureSnapshot } =
+    useMapTools();
   const { t } = useTranslation();
+  const [snapshotBusy, setSnapshotBusy] = useState(false);
+
+  const captureDisabled =
+    snapshotBusy ||
+    !scenarioRunCode ||
+    !isScenarioRunCompleted ||
+    !(
+      activeViewControl === "display_map" ||
+      (activeViewControl === "display_chart" && (selectedSubTab === 0 || selectedSubTab === 1))
+    );
+
+  const onCapture = async () => {
+    setSnapshotBusy(true);
+    try {
+      await handleCaptureSnapshot();
+    } finally {
+      setSnapshotBusy(false);
+    }
+  };
 
   const subTabsMap = {
     0: [], // Subtabs for "Parameters section"
@@ -66,6 +89,35 @@ const MainSubTabs = () => {
         bgcolor: "primary.light",
       }}
     >
+      {selectedTab === 1 && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            right: 200,
+            zIndex: 1,
+            display: "flex",
+            alignItems: "center",
+            height: "100%",
+            px: 1,
+          }}
+        >
+          <Tooltip title={t("workspace_snapshot_capture_tooltip")}>
+            <span>
+              <IconButton
+                size="small"
+                color="inherit"
+                aria-label={t("workspace_snapshot_capture_aria")}
+                disabled={captureDisabled}
+                onClick={onCapture}
+                sx={{ color: "common.white" }}
+              >
+                <PhotoCameraIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
+      )}
       <Tabs
         value={selectedSubTab}
         onChange={handleSubTabChange}
