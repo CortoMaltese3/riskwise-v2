@@ -16,9 +16,9 @@
  * Token pair list is curated rather than auto-discovered from the theme
  * file: only colour combinations that ship to users as text-on-background
  * matter for AA, and the auto-discovery would have to reason about
- * MUI-specific overlap rules. The list mirrors the MUI palette slots we
- * actually consume in components (header, accent, tab, mapControl,
- * tableHeader) plus the foundational primary/text/background pairs.
+ * MUI-specific overlap rules. The list mirrors the semantic palette slots
+ * we consume in components (#298): primary, secondary, surface, text,
+ * border, feedback, viz.
  */
 const { readFileSync } = require("node:fs");
 const { resolve } = require("node:path");
@@ -91,47 +91,139 @@ function parseThemeHexLiterals(source) {
 // applies (3:1 for "large", 4.5:1 for "normal"). When in doubt, default to
 // "normal" — large text is opted into intentionally.
 const PAIRS = [
+  // --- Light scheme ---
   // Foundational text on backgrounds.
-  { name: "text.primary on background.default", fg: "#0F172A", bg: "#f8fafc", size: "normal" },
-  { name: "text.primary on background.paper", fg: "#0F172A", bg: "#ffffff", size: "normal" },
-  { name: "text.secondary on background.default", fg: "#334155", bg: "#f8fafc", size: "normal" },
-  { name: "text.secondary on background.paper", fg: "#334155", bg: "#ffffff", size: "normal" },
-  // Header AppBar — `header.contrastText` recolored to a deep teal in #287
-  // (away from the prior dark slate `#0F172A`) to tie the chrome to the brand
-  // palette. Slightly darker than `primary.dark` because `primary.dark` itself
-  // measured 4.08:1 on `header.main` — see comment in theme.ts.
-  { name: "header.contrastText on header.main", fg: "#0A4750", bg: "#8fc3d1", size: "normal" },
-  // Accent palette (salmon) — used for primary CTAs. Dark contrastText sits
-  // on the salmon main; ensure both the main and dark fills clear AA against
-  // their dark text.
-  { name: "accent.contrastText on accent.main", fg: "#0F172A", bg: "#F79191", size: "normal" },
-  { name: "accent.contrastText on accent.light", fg: "#0F172A", bg: "#FFCCCC", size: "normal" },
-  { name: "accent.contrastText on accent.paleBg", fg: "#0F172A", bg: "#FFEBEB", size: "normal" },
-  // Tab strip — dark slate labels on teal (flipped from white in #121 to
-  // clear AA at 14px, which falls under the 4.5:1 normal-text threshold).
-  { name: "tab.contrastText on tab.main", fg: "#0F172A", bg: "#70ADB5", size: "normal" },
-  // Map controls — white icon labels on dark blue.
   {
-    name: "mapControl.contrastText on mapControl.main",
-    fg: "#FFFFFF",
-    bg: "#2A4D69",
+    name: "[light] text.primary on background.default",
+    fg: "#0F172A",
+    bg: "#F8FAFC",
     size: "normal",
   },
-  // Primary button — primary.dark is the active/hover fill that pairs with
-  // white text. Both `main` and `dark` were darkened in #121 so white text
-  // clears the 4.5:1 normal-text threshold (button labels are 14px).
-  { name: "primary.contrastText on primary.dark", fg: "#ffffff", bg: "#0E5A66", size: "normal" },
-  { name: "primary.contrastText on primary.main", fg: "#ffffff", bg: "#2F7A86", size: "normal" },
-  // Sub-tab strip — primary.light is a tinted background. Pairs with dark
-  // text in MainSubTabs (white text on this swatch is 1.87:1, not viable).
-  { name: "text.primary on primary.light", fg: "#0F172A", bg: "#8AC8D0", size: "normal" },
-  // Error palette — `error.main` background pairs with white text in toasts
-  // and validation banners.
-  { name: "error.contrastText on error.main", fg: "#ffffff", bg: "#B00020", size: "normal" },
-  { name: "error.contrastText on error.dark", fg: "#ffffff", bg: "#BA000D", size: "normal" },
-  // Surface muted — the "remarks" panels use mutedText on muted background.
-  // mutedText darkened from #6F6F6F → #5F5F5F in #121 (was 4.49:1, now 5.70:1).
-  { name: "surface.mutedText on surface.muted", fg: "#5F5F5F", bg: "#F2F2F2", size: "normal" },
+  {
+    name: "[light] text.primary on background.paper",
+    fg: "#0F172A",
+    bg: "#FFFFFF",
+    size: "normal",
+  },
+  {
+    name: "[light] text.secondary on background.default",
+    fg: "#5F5F5F",
+    bg: "#F8FAFC",
+    size: "normal",
+  },
+  {
+    name: "[light] text.secondary on background.paper",
+    fg: "#5F5F5F",
+    bg: "#FFFFFF",
+    size: "normal",
+  },
+  // TopBar header band — `primary.dark` text on `primary.light` band. The
+  // bumped `primary.light` (#9CCDDA) clears AA where the spec'd `#8FC3D1`
+  // failed at 4.07:1.
+  { name: "[light] primary.dark on primary.light", fg: "#0E5A66", bg: "#9CCDDA", size: "normal" },
+  // Primary button — white text on `primary.{main,dark}`.
+  {
+    name: "[light] primary.contrastText on primary.main",
+    fg: "#FFFFFF",
+    bg: "#2F7A86",
+    size: "normal",
+  },
+  {
+    name: "[light] primary.contrastText on primary.dark",
+    fg: "#FFFFFF",
+    bg: "#0E5A66",
+    size: "normal",
+  },
+  // Secondary salmon (used for CTAs and selected-state chips).
+  {
+    name: "[light] secondary.contrastText on secondary.main",
+    fg: "#0F172A",
+    bg: "#F79191",
+    size: "normal",
+  },
+  {
+    name: "[light] secondary.contrastText on secondary.light",
+    fg: "#0F172A",
+    bg: "#FFCCCC",
+    size: "normal",
+  },
+  {
+    name: "[light] secondary.contrastText on secondary.bg",
+    fg: "#0F172A",
+    bg: "#FFEBEB",
+    size: "normal",
+  },
+  // Feedback indicators on white paper. `main` swatches are darkened from
+  // the spec values so each clears the 4.5:1 floor — see theme.ts comment.
+  {
+    name: "[light] feedback.success.main on background.paper",
+    fg: "#047D49",
+    bg: "#FFFFFF",
+    size: "normal",
+  },
+  {
+    name: "[light] feedback.warning.main on background.paper",
+    fg: "#8C6F00",
+    bg: "#FFFFFF",
+    size: "normal",
+  },
+  {
+    name: "[light] feedback.error.main on background.paper",
+    fg: "#D32525",
+    bg: "#FFFFFF",
+    size: "normal",
+  },
+  {
+    name: "[light] feedback.info.main on background.paper",
+    fg: "#004FC4",
+    bg: "#FFFFFF",
+    size: "normal",
+  },
+  // --- Dark scheme ---
+  {
+    name: "[dark] text.primary on background.default",
+    fg: "#F1F5F9",
+    bg: "#0F172A",
+    size: "normal",
+  },
+  { name: "[dark] text.primary on background.paper", fg: "#F1F5F9", bg: "#1E293B", size: "normal" },
+  {
+    name: "[dark] text.secondary on background.default",
+    fg: "#94A3B8",
+    bg: "#0F172A",
+    size: "normal",
+  },
+  { name: "[dark] primary.dark on primary.light", fg: "#0E5A66", bg: "#A0CDD8", size: "normal" },
+  {
+    name: "[dark] primary.contrastText on primary.main",
+    fg: "#0F172A",
+    bg: "#5FB3C2",
+    size: "normal",
+  },
+  {
+    name: "[dark] feedback.success.main on background.paper",
+    fg: "#39D98A",
+    bg: "#1E293B",
+    size: "normal",
+  },
+  {
+    name: "[dark] feedback.warning.main on background.paper",
+    fg: "#FDDD48",
+    bg: "#1E293B",
+    size: "normal",
+  },
+  {
+    name: "[dark] feedback.error.main on background.paper",
+    fg: "#FF5C5C",
+    bg: "#1E293B",
+    size: "normal",
+  },
+  {
+    name: "[dark] feedback.info.main on background.paper",
+    fg: "#5B8DEF",
+    bg: "#1E293B",
+    size: "normal",
+  },
 ];
 
 // --- Main --------------------------------------------------------------------

@@ -1,12 +1,12 @@
 import { createTheme } from "@mui/material/styles";
 
-// Phase 1 design-token surface (issue #15, extended in #78). Hex literals live
-// in this file only; component code consumes these tokens via
-// `sx={{ bgcolor: "primary.light", ... }}` or `theme.palette.*`. Raw hex/rgb in
-// component files is banned by ESLint (see `eslint.config.mjs`). The same ban
-// applies to raw `px` / `em` literals in component code (issue #217 / spec
-// § Density) — spacing comes from `theme.spacing(n)` and the named-constant
-// escapes for fixed chrome (`TOP_BAR_HEIGHT`, `SIDEBAR_WIDTH`,
+// Phase 1 design-token surface (issue #15, extended in #78, rationalised in
+// #298). Hex literals live in this file only; component code consumes these
+// tokens via `sx={{ bgcolor: "primary.light", ... }}` or `theme.palette.*`.
+// Raw hex/rgb in component files is banned by ESLint (see `eslint.config.mjs`).
+// The same ban applies to raw `px` / `em` literals in component code (issue
+// #217 / spec § Density) — spacing comes from `theme.spacing(n)` and the
+// named-constant escapes for fixed chrome (`TOP_BAR_HEIGHT`, `SIDEBAR_WIDTH`,
 // `SIDEBAR_COLLAPSED_WIDTH`, `INPUT_CARD_HEIGHT`).
 
 // Light/dark color schemes (issue #288). Both schemes share the same custom
@@ -14,12 +14,13 @@ import { createTheme } from "@mui/material/styles";
 // — MUI swaps the underlying CSS variable based on the
 // `data-mui-color-scheme` attribute set on `<html>` from `App.jsx`.
 
-// Issue #298 rationalises the palette into a flat semantic system. New
-// namespaces (`primary` with `bg`, `secondary`, `surface.subdued`, `border`,
-// `feedback`, `viz`) are introduced alongside the legacy tokens (`header`,
-// `accent`, `card`, `tab`, `mapControl`, `tableHeader`, `loader`, `slider`,
-// `inputCard`). Components migrate in the next commit; the legacy slots are
-// removed once every consumer has moved.
+// Issue #298 collapses the v1 palette into seven semantic namespaces: `primary`
+// (with a `bg` step), `secondary`, `surface`, `text`, `border`, `feedback`,
+// `viz`. The legacy ad-hoc namespaces — `header`, `accent`, `card`, `tab`,
+// `mapControl`, `tableHeader`, `loader`, `slider`, `inputCard` — are gone.
+// MUI's built-in `error.main` is aliased to `feedback.error.main` so
+// `<Alert severity="error">` and other MUI internals continue to use the new
+// red without per-component migration.
 
 // Motion tokens (issue #217 / spec § Motion). One canonical duration + easing
 // applied to every layout transition (sidebar collapse / expand, card hover,
@@ -35,13 +36,11 @@ export const MOTION_EASING = "cubic-bezier(0.0, 0, 0.2, 1)";
 export const layoutTransition = (props: readonly string[] = ["all"]): string =>
   props.map((p) => `${p} ${MOTION_DURATION_MS}ms ${MOTION_EASING}`).join(", ");
 
-// --- New semantic palette (issue #298) ---------------------------------------
+// --- Light scheme ------------------------------------------------------------
 
 // Primary teal. `light` slightly paler than the spec'd `#8FC3D1` so
 // `primary.dark` (`#0E5A66`) on `primary.light` clears WCAG 2.1 AA 4.5:1 with
-// headroom (5.1:1) — the original swatch measured 4.07:1. The light-mode
-// `primary.{main,dark,contrastText}` values match the existing palette so
-// downstream UI is pixel-equivalent through the `header` migration.
+// headroom — the original swatch measured 4.07:1.
 const lightPrimary = {
   bg: "#DDEBEF",
   light: "#9CCDDA",
@@ -59,8 +58,8 @@ const lightSecondary = {
   contrastText: "#0F172A",
 };
 
-// Surface neutrals. `muted` matches the legacy value; `subdued` is the new
-// "no validation state" card background, deliberately darker than `muted`.
+// Surface neutrals. `subdued` is the "no validation state" card background,
+// deliberately darker than `muted` so the unselected card reads as inert.
 const lightSurface = {
   muted: "#F2F2F2",
   subdued: "#CFCFCF",
@@ -77,8 +76,8 @@ const lightBorder = {
   strong: "#AAAAAA",
 };
 
-// Light-mode feedback `main` swatches darkened from the spec values so each
-// passes WCAG AA 4.5:1 on `background.paper` (#FFFFFF):
+// Light-mode feedback `main` swatches darkened from the #298 spec values so
+// each passes WCAG AA 4.5:1 on `background.paper` (#FFFFFF):
 //   success: #05A660 → #047D49 (3.16:1 → 5.21:1)
 //   warning: #E5B800 → #8C6F00 (2.20:1 → 4.79:1) — yellow-on-white is the
 //     hardest pair; the spec calls this out explicitly.
@@ -108,6 +107,9 @@ const lightViz = {
   positive: "#05A660",
   neutral: "#2F7A86",
   negative: "#E53535",
+  // Light-mode ramps use D3's pre-baked schemeXxx[9] arrays sliced to the
+  // dark end (resolved in `src/utils/colorScales.js`). Domain `[0, 1]`
+  // means "use the scheme as-is".
   ramps: {
     flood: { interpolator: "Blues", domain: [0, 1] as [number, number] },
     heatwave: { interpolator: "Reds", domain: [0, 1] as [number, number] },
@@ -116,12 +118,12 @@ const lightViz = {
   },
 };
 
-// --- Dark scheme (new) -------------------------------------------------------
+// --- Dark scheme -------------------------------------------------------------
 
 // Dark `primary.light` is intentionally pale so `primary.dark` (`#0E5A66`)
-// remains AA-readable on it (5.4:1) — the spec'd `#5FA0AE` measured 2.67:1.
-// This follows Material 3's dark-mode convention of pale tinted primaries
-// paired with dark contrast text.
+// remains AA-readable on it — the spec'd `#5FA0AE` measured 2.67:1. This
+// follows Material 3's dark-mode convention of pale tinted primaries paired
+// with dark contrast text.
 const darkPrimary = {
   bg: "#1E3A42",
   light: "#A0CDD8",
@@ -177,169 +179,18 @@ const darkViz = {
   },
 };
 
-// --- Legacy palette (issues #15, #78, #288) ---------------------------------
-// Retained until every consumer migrates to the semantic tokens above. Removal
-// is the last commit of issue #298.
-
-const lightInputCardColors = {
-  default: "#CCE1E7",
-  valid: "#C0E7CF",
-  invalid: "#FFB3B3",
-  neutral: "#CFCFCF",
-  hover: "#DAE7EA",
-  panelBg: "#DDEBEF",
-  sectionBg: "#DAE7EA",
-  disabledBg: "#E6E6E6",
-  disabledText: "#A6A6A6",
-};
-
-// `contrastText` darkened from `#0F172A` → `#0A4750` in #287 to recolor the
-// TopBar away from generic dark slate and onto the brand teal family.
-const lightHeaderColors = {
-  main: "#8fc3d1",
-  contrastText: "#0A4750",
-};
-
-const lightAccentColors = {
-  main: "#F79191",
-  light: "#FFCCCC",
-  paleBg: "#FFEBEB",
-  dark: "#F35A5A",
-  contrastText: "#0F172A",
-};
-
-const lightCardColors = {
-  bg: "#DCEFF2",
-};
-
-// Old `surface` shape is a superset of the new one for the migration window.
-// `mutedText`, `border`, `borderLight` move to `text.secondary`, `border.strong`,
-// `border.default` respectively in the new system.
-const lightSurfaceColors = {
-  muted: "#F2F2F2",
-  mutedText: "#5F5F5F",
-  border: "#AAAAAA",
-  borderLight: "#CCCCCC",
-  subdued: "#CFCFCF",
-};
-
-const lightTabColors = {
-  main: "#70ADB5",
-  contrastText: "#0F172A",
-};
-
-const lightMapControlColors = {
-  main: "#2A4D69",
-  light: "#5C87B1",
-  hover: "#9886D6",
-  contrastText: "#FFFFFF",
-};
-
-const lightTableHeaderColors = {
-  main: "#73B588",
-};
-
-const lightLoaderColors = {
-  main: "#2A4D69",
-};
-
-const lightSliderColors = {
-  disabledRail: "#D8D8D8",
-};
-
-const darkInputCardColors = {
-  default: "#1E3A42",
-  valid: "#1E4030",
-  invalid: "#5C2A2A",
-  neutral: "#3A3A3A",
-  hover: "#264852",
-  panelBg: "#1E3A42",
-  sectionBg: "#264852",
-  disabledBg: "#2A3340",
-  disabledText: "#64748B",
-};
-
-const darkHeaderColors = {
-  main: "#1F4F58",
-  contrastText: "#F1F5F9",
-};
-
-const darkAccentColors = {
-  main: "#F79191",
-  light: "#5C3A3A",
-  paleBg: "#3A2828",
-  dark: "#FFB8B8",
-  contrastText: "#0F172A",
-};
-
-const darkCardColors = {
-  bg: "#1E293B",
-};
-
-const darkSurfaceColors = {
-  muted: "#334155",
-  mutedText: "#94A3B8",
-  border: "#475569",
-  borderLight: "#334155",
-  subdued: "#475569",
-};
-
-const darkTabColors = {
-  main: "#1F4F58",
-  contrastText: "#F1F5F9",
-};
-
-const darkMapControlColors = {
-  main: "#5C87B1",
-  light: "#2A4D69",
-  hover: "#9886D6",
-  contrastText: "#FFFFFF",
-};
-
-const darkTableHeaderColors = {
-  main: "#3F6E51",
-};
-
-const darkLoaderColors = {
-  main: "#0F172A",
-};
-
-const darkSliderColors = {
-  disabledRail: "#475569",
-};
-
 declare module "@mui/material/styles" {
   interface Palette {
-    // New semantic namespaces (#298)
-    surface: typeof lightSurfaceColors;
+    surface: typeof lightSurface;
     border: typeof lightBorder;
     feedback: typeof lightFeedback;
     viz: typeof lightViz;
-    // Legacy namespaces — removed once consumers migrate.
-    inputCard: typeof lightInputCardColors;
-    header: typeof lightHeaderColors;
-    accent: typeof lightAccentColors;
-    card: typeof lightCardColors;
-    tab: typeof lightTabColors;
-    mapControl: typeof lightMapControlColors;
-    tableHeader: typeof lightTableHeaderColors;
-    loader: typeof lightLoaderColors;
-    slider: typeof lightSliderColors;
   }
   interface PaletteOptions {
-    surface?: typeof lightSurfaceColors;
+    surface?: typeof lightSurface;
     border?: typeof lightBorder;
     feedback?: typeof lightFeedback;
     viz?: typeof lightViz;
-    inputCard?: typeof lightInputCardColors;
-    header?: typeof lightHeaderColors;
-    accent?: typeof lightAccentColors;
-    card?: typeof lightCardColors;
-    tab?: typeof lightTabColors;
-    mapControl?: typeof lightMapControlColors;
-    tableHeader?: typeof lightTableHeaderColors;
-    loader?: typeof lightLoaderColors;
-    slider?: typeof lightSliderColors;
   }
 }
 
@@ -368,19 +219,10 @@ export const theme = createTheme({
         },
         text: lightText,
         background: { default: "#F8FAFC", paper: "#FFFFFF" },
-        surface: lightSurfaceColors,
+        surface: lightSurface,
         border: lightBorder,
         feedback: lightFeedback,
         viz: lightViz,
-        inputCard: lightInputCardColors,
-        header: lightHeaderColors,
-        accent: lightAccentColors,
-        card: lightCardColors,
-        tab: lightTabColors,
-        mapControl: lightMapControlColors,
-        tableHeader: lightTableHeaderColors,
-        loader: lightLoaderColors,
-        slider: lightSliderColors,
       },
     },
     dark: {
@@ -394,19 +236,10 @@ export const theme = createTheme({
         },
         text: darkText,
         background: { default: "#0F172A", paper: "#1E293B" },
-        surface: darkSurfaceColors,
+        surface: darkSurface,
         border: darkBorder,
         feedback: darkFeedback,
         viz: darkViz,
-        inputCard: darkInputCardColors,
-        header: darkHeaderColors,
-        accent: darkAccentColors,
-        card: darkCardColors,
-        tab: darkTabColors,
-        mapControl: darkMapControlColors,
-        tableHeader: darkTableHeaderColors,
-        loader: darkLoaderColors,
-        slider: darkSliderColors,
       },
     },
   },

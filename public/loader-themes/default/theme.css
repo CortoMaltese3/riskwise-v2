@@ -1,10 +1,10 @@
 /* Default RISK WISE splash theme. Per-client themes copy this directory and
    override the custom properties below; loader.html consumes these tokens
    only — no hex colours or asset names should appear in the markup.
-   Palette references trace back to `src/theme/theme.ts`:
-     --loader-bg          -> palette.loader.main
-     --loader-wordmark-fg -> palette.header.main
-     --loader-accent      -> palette.accent.main */
+   Palette references trace back to `src/theme/theme.ts` (#298 names):
+     --loader-bg          -> palette.primary.dark
+     --loader-wordmark-fg -> palette.primary.light
+     --loader-accent      -> palette.secondary.main */
 :root {
   --loader-bg: #2a4d69;
   --loader-fg: #e2ecf3;

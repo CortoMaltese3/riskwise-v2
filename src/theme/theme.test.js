@@ -25,14 +25,12 @@ function contrastRatio(a, b) {
   return (bright + 0.05) / (dark + 0.05);
 }
 
-// New semantic palette slots (#298). Legacy slots are still present during the
-// migration window and will be dropped in the final commit of #298.
-const CUSTOM_PALETTE_SLOTS = [
-  "surface",
-  "border",
-  "feedback",
-  "viz",
-  // Legacy — to be removed.
+// Semantic palette slots (#298).
+const CUSTOM_PALETTE_SLOTS = ["surface", "border", "feedback", "viz"];
+
+// Legacy palette namespaces removed by #298. Asserted as undefined so a
+// regression — re-introducing one — fails CI rather than silently shipping.
+const REMOVED_PALETTE_SLOTS = [
   "inputCard",
   "header",
   "accent",
@@ -47,21 +45,19 @@ const CUSTOM_PALETTE_SLOTS = [
 describe("theme — design tokens", () => {
   it("opts into CSS variables and Inter font", () => {
     // `cssVariables: true` causes MUI to expose palette entries under `theme.vars`
-    // as CSS custom properties (e.g. `var(--mui-palette-header-main)`). This is
-    // the observable side effect rather than the config input.
+    // as CSS custom properties (e.g. `var(--mui-palette-primary-light)`). This
+    // is the observable side effect rather than the config input.
     expect(theme.vars).toBeDefined();
-    expect(theme.vars.palette.header.main).toMatch(/^var\(--mui-palette-header-main/);
+    expect(theme.vars.palette.primary.light).toMatch(/^var\(--mui-palette-primary-light/);
     expect(theme.typography.fontFamily).toMatch(/Inter/);
   });
 
-  it("exposes primary, background, header, and inputCard palette tokens", () => {
+  it("exposes primary, background, and text palette tokens", () => {
     expect(theme.palette.primary.main).toBeDefined();
     expect(theme.palette.primary.contrastText).toBeDefined();
     expect(theme.palette.background.default).toBeDefined();
     expect(theme.palette.background.paper).toBeDefined();
-    expect(theme.palette.header.main).toBeDefined();
-    expect(theme.palette.header.contrastText).toBeDefined();
-    expect(theme.palette.inputCard.default).toBeDefined();
+    expect(theme.palette.text.primary).toBeDefined();
   });
 
   it("exposes the new #298 semantic palette tokens", () => {
@@ -156,6 +152,15 @@ describe("theme — color schemes", () => {
     }
   );
 
+  it.each(REMOVED_PALETTE_SLOTS)(
+    "removed legacy slot %s is not present in either scheme (#298 regression guard)",
+    (slot) => {
+      expect(theme.colorSchemes.light.palette[slot]).toBeUndefined();
+      expect(theme.colorSchemes.dark.palette[slot]).toBeUndefined();
+      expect(theme.palette[slot]).toBeUndefined();
+    }
+  );
+
   it("light scheme keeps the canonical primary teal (no accidental drift)", () => {
     // Pixel-equivalence guard: the brand `main` and `dark` values are stable
     // through the #298 refactor so the existing UI looks unchanged.
@@ -169,16 +174,6 @@ describe("theme — color schemes", () => {
     expect(lightPrimary.contrastText.toLowerCase()).toBe("#ffffff");
     expect(theme.colorSchemes.light.palette.background.default.toLowerCase()).toBe("#f8fafc");
     expect(theme.colorSchemes.light.palette.background.paper.toLowerCase()).toBe("#ffffff");
-  });
-
-  it("light scheme header pairs the dusty-blue band with deep-teal text (#287)", () => {
-    // #287 recolored the TopBar away from generic dark slate (#0F172A) and
-    // onto the brand teal family. The literal here is slightly deeper than
-    // `primary.dark` because `primary.dark` itself measures 4.08:1 on
-    // `header.main` — below AA — so we use a darker swatch with headroom.
-    const lightHeader = theme.colorSchemes.light.palette.header;
-    expect(lightHeader.main).toBe("#8fc3d1");
-    expect(lightHeader.contrastText).toBe("#0A4750");
   });
 
   it("dark scheme uses dark backgrounds and light text", () => {
@@ -214,11 +209,6 @@ describe("theme — WCAG AA contrast", () => {
       bg: () => lightPalette.background.default,
     },
     {
-      name: "[light] header.contrastText on header.main",
-      fg: () => lightPalette.header.contrastText,
-      bg: () => lightPalette.header.main,
-    },
-    {
       name: "[dark] text.primary on background.default",
       fg: () => darkPalette.text.primary,
       bg: () => darkPalette.background.default,
@@ -234,12 +224,6 @@ describe("theme — WCAG AA contrast", () => {
       bg: () => darkPalette.background.default,
     },
     {
-      name: "[dark] header.contrastText on header.main",
-      fg: () => darkPalette.header.contrastText,
-      bg: () => darkPalette.header.main,
-    },
-    // --- New #298 semantic pairs ---
-    {
       name: "[light] primary.contrastText on primary.main",
       fg: () => lightPalette.primary.contrastText,
       bg: () => lightPalette.primary.main,
@@ -250,12 +234,12 @@ describe("theme — WCAG AA contrast", () => {
       bg: () => darkPalette.primary.main,
     },
     {
-      name: "[light] primary.dark on primary.light (header band after migration)",
+      name: "[light] primary.dark on primary.light (TopBar header band)",
       fg: () => lightPalette.primary.dark,
       bg: () => lightPalette.primary.light,
     },
     {
-      name: "[dark] primary.dark on primary.light (header band after migration)",
+      name: "[dark] primary.dark on primary.light (TopBar header band)",
       fg: () => darkPalette.primary.dark,
       bg: () => darkPalette.primary.light,
     },
