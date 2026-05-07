@@ -7,8 +7,9 @@ Exercises the full handshake end-to-end without booting CLIMADA:
 2. The in-process worker (stubbed to skip CLIMADA and persist directly to
    DuckDB, matching what the real :class:`RunScenario` does) emits a
    result event on the SSE stream and closes it.
-3. ``GET /api/v1/scenarios`` surfaces the persisted row so the frontend
-   workspace list can render it.
+3. The persisted row is reachable via single-row GET even before the user
+   saves it, but stays out of the workspace list until ``POST
+   /scenarios/{id}/save`` flips ``saved`` to TRUE.
 
 The SSE delivery signal is the ``{"type": "result", ...}`` event emitted
 by ``backend.app._execute_scenario`` — that is what the Electron renderer
@@ -107,9 +108,25 @@ def test_scenario_run_persists_row_and_emits_result_event(api_client: TestClient
     assert len(result_events) == 1, f"expected exactly one result event, got {events}"
     assert result_events[0]["data"]["status"]["code"] == 2000
 
-    listed = api_client.get("/api/v1/scenarios")
-    assert listed.status_code == 200
-    rows = listed.json()["data"]
+    detail = api_client.get("/api/v1/scenarios/job-test-fixture")
+    assert detail.status_code == 200
+    assert detail.json()["data"]["scenario"]["id"] == "job-test-fixture"
+    assert detail.json()["data"]["scenario"]["saved"] is False
+
+    listed_before = api_client.get("/api/v1/scenarios")
+    assert listed_before.status_code == 200
+    assert all(row["id"] != "job-test-fixture" for row in listed_before.json()["data"])
+
+    saved = api_client.post(
+        "/api/v1/scenarios/job-test-fixture/save",
+        json={"name": "EGY flood 2050 (synthetic)"},
+    )
+    assert saved.status_code == 200
+    assert saved.json()["data"]["saved"] is True
+
+    listed_after = api_client.get("/api/v1/scenarios")
+    assert listed_after.status_code == 200
+    rows = listed_after.json()["data"]
     assert any(row["id"] == "job-test-fixture" for row in rows), (
-        f"persisted scenario row not visible via /api/v1/scenarios: {rows}"
+        f"saved scenario row not visible via /api/v1/scenarios: {rows}"
     )

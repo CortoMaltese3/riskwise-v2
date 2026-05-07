@@ -41,6 +41,7 @@ class ScenarioWorkspaceItem(BaseModel):
     random_seed: int | None = None
     computed_at: datetime | None = None
     is_imported: bool = False
+    saved: bool = False
 
 
 class ScenarioDetailPayload(BaseModel):

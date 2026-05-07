@@ -1167,6 +1167,8 @@ export interface components {
             country_config_sha256?: string | null;
             /** Created At */
             created_at?: string | null;
+            /** Engine */
+            engine?: string | null;
             /** Engine Version */
             engine_version?: string | null;
             /** Entity Data Sha256 */
@@ -1198,6 +1200,11 @@ export interface components {
             random_seed?: number | null;
             /** Ref Year */
             ref_year?: number | null;
+            /**
+             * Saved
+             * @default false
+             */
+            saved: boolean;
             /** Scenario */
             scenario?: string | null;
             /** Status */
@@ -1281,7 +1288,7 @@ export interface components {
         };
         /** WaterfallResponse */
         WaterfallResponse: {
-            data: components["schemas"]["WaterfallPayload"];
+            data?: components["schemas"]["WaterfallPayload"] | null;
             status: components["schemas"]["Status"];
         };
         /**

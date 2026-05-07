@@ -75,6 +75,7 @@ class ScenarioRow:
     random_seed: int | None = None
     computed_at: datetime | None = None
     is_imported: bool = False
+    saved: bool = False
 
 
 @dataclass
@@ -97,6 +98,7 @@ def insert_scenario(
     status: str = "completed",
     computed_at: datetime | None = None,
     is_imported: bool = False,
+    saved: bool = False,
     snapshots: list[dict[str, Any]] | None = None,
 ) -> None:
     """Persist a finished run: one ``scenarios`` row + N result blobs (+ optional snapshots).
@@ -113,6 +115,10 @@ def insert_scenario(
     ``is_imported=True`` plus the original ``computed_at`` (so the row
     keeps its original timestamp instead of "now") and a list of snapshot
     dicts to embed verbatim.
+
+    ``saved=False`` hides the row from :func:`list_scenarios` until
+    :func:`update_scenario_metadata` flips it; the import path passes
+    ``saved=True`` so imported bundles appear in the workspace immediately.
     """
     missing = [f for f in _PROVENANCE_FIELDS if provenance.get(f) is None]
     if missing:
@@ -128,9 +134,9 @@ def insert_scenario(
                 future_year, annual_growth, is_era, app_option, status,
                 app_version, engine, engine_version, climada_version,
                 entity_data_sha256, hazard_data_sha256, country_config_sha256,
-                config_version, random_seed, computed_at, is_imported
+                config_version, random_seed, computed_at, is_imported, saved
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                      ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?)
+                      ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?)
             """,
             [
                 scenario_id,
@@ -159,6 +165,7 @@ def insert_scenario(
                 provenance["random_seed"],
                 computed_at,
                 is_imported,
+                saved,
             ],
         )
         for result_type, blob in results.items():
@@ -280,7 +287,7 @@ def update_scenario_metadata(
     try:
         row = conn.execute(
             f"""
-            UPDATE scenarios SET name = ?, tags = ?, notes = ? WHERE id = ?
+            UPDATE scenarios SET name = ?, tags = ?, notes = ?, saved = TRUE WHERE id = ?
             RETURNING {_SCENARIO_SELECT_COLUMNS}
             """,
             [name, tags, notes, scenario_id],
@@ -297,6 +304,7 @@ def list_scenarios() -> list[ScenarioRow]:
             f"""
             SELECT {_SCENARIO_SELECT_COLUMNS}
             FROM scenarios
+            WHERE saved = TRUE
             ORDER BY created_at DESC
             """
         ).fetchall()
@@ -410,7 +418,7 @@ _SCENARIO_SELECT_COLUMNS = """
     created_at,
     app_version, engine, engine_version, climada_version,
     entity_data_sha256, hazard_data_sha256, country_config_sha256,
-    random_seed, computed_at, is_imported
+    random_seed, computed_at, is_imported, saved
 """
 
 
@@ -442,4 +450,5 @@ def _row_to_scenario(row: tuple) -> ScenarioRow:
         random_seed=row[23],
         computed_at=row[24],
         is_imported=bool(row[25]) if row[25] is not None else False,
+        saved=bool(row[26]) if row[26] is not None else False,
     )

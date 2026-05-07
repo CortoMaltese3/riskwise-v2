@@ -1582,6 +1582,17 @@
             ],
             "title": "Created At"
           },
+          "engine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine"
+          },
           "engine_version": {
             "anyOf": [
               {
@@ -1722,6 +1733,11 @@
               }
             ],
             "title": "Ref Year"
+          },
+          "saved": {
+            "default": false,
+            "title": "Saved",
+            "type": "boolean"
           },
           "scenario": {
             "anyOf": [
@@ -1977,14 +1993,20 @@
       "WaterfallResponse": {
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/WaterfallPayload"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WaterfallPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "status": {
             "$ref": "#/components/schemas/Status"
           }
         },
         "required": [
-          "data",
           "status"
         ],
         "title": "WaterfallResponse",

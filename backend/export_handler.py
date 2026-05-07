@@ -321,6 +321,7 @@ def import_scenario(zip_path: Path) -> dict[str, Any]:
         notes=f"Imported from {zip_path.name}",
         computed_at=_parse_computed_at(provenance_payload.get("computed_at")),
         is_imported=True,
+        saved=True,
         snapshots=snapshots,
     )
 
