@@ -63,10 +63,14 @@ vi.mock("../store", () => ({
   default: () => stateRef.current,
 }));
 
-vi.mock("../store/workspaceSlice", () => ({
-  default: {
-    getState: () => ({ loadScenarios: loadScenariosMock }),
-  },
+vi.mock("../store/workspaceSlice", () => {
+  const useWorkspaceStore = (selector) => selector({ loadScenarios: loadScenariosMock });
+  useWorkspaceStore.getState = () => ({ loadScenarios: loadScenariosMock });
+  return { default: useWorkspaceStore };
+});
+
+vi.mock("../utils/reportTools", () => ({
+  useReportTools: () => ({ fetchReports: vi.fn() }),
 }));
 
 let MainSubTabs;

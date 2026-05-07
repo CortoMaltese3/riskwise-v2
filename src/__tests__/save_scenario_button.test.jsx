@@ -1,0 +1,140 @@
+import React from "react";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+
+const saveScenarioMock = vi.fn();
+const fetchReportsMock = vi.fn();
+const loadScenariosMock = vi.fn();
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key) => key,
+    i18n: { language: "en", changeLanguage: vi.fn() },
+  }),
+}));
+
+vi.mock("../lib/RiskWiseClient", () => ({
+  default: {
+    saveScenario: (...args) => saveScenarioMock(...args),
+    createSnapshot: vi.fn(),
+  },
+}));
+
+vi.mock("leaflet", () => ({
+  default: {
+    simpleMapScreenshoter: () => ({ addTo: () => ({ takeScreen: vi.fn() }) }),
+  },
+}));
+vi.mock("leaflet-simple-map-screenshoter", () => ({}));
+
+vi.mock("../utils/reportTools", () => ({
+  useReportTools: () => ({ fetchReports: fetchReportsMock }),
+}));
+
+const setStateBag = {
+  activeMap: "risk",
+  activeMapRef: { _fake: "map" },
+  activeViewControl: "display_map",
+  isScenarioRunCompleted: true,
+  mapTitle: "Egypt — flood rcp85",
+  scenarioRunCode: "scen-1",
+  selectedSubTab: 0,
+  selectedTab: 1,
+  setSelectedSubTab: vi.fn(),
+  setActiveViewControl: vi.fn(),
+  setAlertMessage: vi.fn(),
+  setAlertSeverity: vi.fn(),
+  setAlertShowMessage: vi.fn(),
+  waterfallChartRef: null,
+  costBenefitChartRef: null,
+  reports: [],
+  selectedReport: null,
+  selectedAnnualGrowth: 0,
+  selectedCountry: "Egypt",
+  selectedExposureEconomic: "assets",
+  selectedExposureNonEconomic: "",
+  selectedHazard: "flood",
+  selectedScenario: "rcp85",
+  selectedTimeHorizon: 2050,
+  addReport: vi.fn(),
+};
+
+const stateRef = { current: { ...setStateBag } };
+
+vi.mock("../store", () => ({
+  default: () => stateRef.current,
+}));
+
+vi.mock("../store/workspaceSlice", () => {
+  const useWorkspaceStore = (selector) => selector({ loadScenarios: loadScenariosMock });
+  useWorkspaceStore.getState = () => ({ loadScenarios: loadScenariosMock });
+  return { default: useWorkspaceStore };
+});
+
+let MainSubTabs;
+
+beforeAll(async () => {
+  ({ default: MainSubTabs } = await import("../components/main/MainSubTabs"));
+});
+
+beforeEach(() => {
+  saveScenarioMock.mockReset();
+  fetchReportsMock.mockReset();
+  loadScenariosMock.mockReset();
+  stateRef.current = { ...setStateBag };
+});
+
+describe("Save scenario button (analysis tab toolbar)", () => {
+  it("is disabled before any scenario has been run", () => {
+    stateRef.current = {
+      ...setStateBag,
+      isScenarioRunCompleted: false,
+      scenarioRunCode: "",
+    };
+    render(<MainSubTabs />);
+    const button = screen.getByRole("button", { name: "save_scenario_button_aria" });
+    expect(button).toBeDisabled();
+  });
+
+  it("re-opens the save dialog with the run's id and prefilled name after dismissal", async () => {
+    render(<MainSubTabs />);
+    const button = screen.getByRole("button", { name: "save_scenario_button_aria" });
+    expect(button).not.toBeDisabled();
+
+    // First open
+    fireEvent.click(button);
+    expect(screen.getByText("save_scenario_dialog_title")).toBeInTheDocument();
+    const nameInput = screen.getByLabelText("save_scenario_name_label", { exact: false });
+    expect(nameInput.value).toBe("Egypt — flood rcp85");
+
+    // Dismiss via Cancel
+    fireEvent.click(screen.getByRole("button", { name: "cancel" }));
+    await waitFor(() =>
+      expect(screen.queryByText("save_scenario_dialog_title")).not.toBeInTheDocument()
+    );
+
+    // Re-open from the toolbar button — the dialog comes back with the same props
+    fireEvent.click(button);
+    expect(screen.getByText("save_scenario_dialog_title")).toBeInTheDocument();
+    expect(screen.getByLabelText("save_scenario_name_label", { exact: false }).value).toBe(
+      "Egypt — flood rcp85"
+    );
+  });
+
+  it("calls fetchReports + workspace reload after a successful save", async () => {
+    saveScenarioMock.mockResolvedValue({
+      success: true,
+      result: { status: { code: 2000 }, data: { id: "scen-1" } },
+    });
+
+    render(<MainSubTabs />);
+    fireEvent.click(screen.getByRole("button", { name: "save_scenario_button_aria" }));
+    fireEvent.click(screen.getByRole("button", { name: "save_scenario_action" }));
+
+    await waitFor(() =>
+      expect(saveScenarioMock).toHaveBeenCalledWith("scen-1", expect.any(Object))
+    );
+    await waitFor(() => expect(fetchReportsMock).toHaveBeenCalled());
+    expect(loadScenariosMock).toHaveBeenCalledWith({ force: true });
+  });
+});
