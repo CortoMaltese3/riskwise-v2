@@ -101,9 +101,13 @@ const MainSubTabs = () => {
       {selectedTab === 1 && (
         <Box
           sx={{
+            // Sits left of the existing subtab buttons ("+ Save Scenario" at
+            // right:100 ≈ width 140px → reaches right:240; "Save to Map" at
+            // right:0). Anchoring this group at right:260 keeps the icon and
+            // the new "Save scenario…" button from overlapping them.
             position: "absolute",
             top: 0,
-            right: 200,
+            right: 260,
             zIndex: 1,
             display: "flex",
             alignItems: "center",
