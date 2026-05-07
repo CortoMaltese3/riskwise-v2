@@ -4,8 +4,6 @@ import L from "leaflet";
 import "leaflet-simple-map-screenshoter";
 
 import useStore from "../store";
-import RiskWiseClient from "../lib/RiskWiseClient";
-import logger from "../lib/logger.ts";
 
 export const useMapTools = () => {
   const { t } = useTranslation();
@@ -84,24 +82,6 @@ export const useMapTools = () => {
 
   const handleAddToOutput = () => {
     const isReportExisting = reportExists(selectedReport?.id);
-    // New scenario run
-    if (isScenarioRunCompleted && !selectedReport) {
-      RiskWiseClient.saveScenario(scenarioRunCode)
-        .then((response) => {
-          setAlertMessage(response.result.status.message);
-          if (response.result.status.code === 2000) {
-            setAlertSeverity("success");
-          } else {
-            setAlertSeverity("error");
-          }
-          setAlertShowMessage(true);
-        })
-        .catch((error) => {
-          logger.error("mapTools: saveScenario failed", {
-            error: error?.message ?? String(error),
-          });
-        });
-    }
     // Restored scenario (already exists)
     if (selectedReport && isReportExisting) {
       setAlertMessage(t("alert_message_report_available"));
@@ -113,12 +93,6 @@ export const useMapTools = () => {
       setAlertMessage(t("alert_message_select_report"));
       setAlertSeverity("error");
       setAlertShowMessage(true);
-    }
-  };
-
-  const handleAddData = () => {
-    if (isScenarioRunCompleted) {
-      RiskWiseClient.saveScenario(scenarioRunCode);
     }
   };
 
@@ -171,9 +145,6 @@ export const useMapTools = () => {
       const id = new Date().getTime().toString();
       const filepath = `${reportPath}\\${scenarioRunCode}\\snapshot_${activeMap}_map_data_${id}.png`;
       takeScreenshot(activeMapRef, filepath)
-        .then(() => {
-          handleAddData();
-        })
         .then(() => {
           const outputData = {
             id: id,
@@ -239,9 +210,6 @@ export const useMapTools = () => {
 
       takeChartScreenshot(waterfallChartRef, destinationFile)
         .then(() => {
-          handleAddData();
-        })
-        .then(() => {
           const outputData = {
             id: id,
             scenarioId: `${scenarioRunCode}`,
@@ -276,9 +244,6 @@ export const useMapTools = () => {
       const destinationFile = `${reportPath}\\${scenarioRunCode}\\snapshot_adaptation_plot_data_${id}.png`;
 
       takeChartScreenshot(costBenefitChartRef, destinationFile)
-        .then(() => {
-          handleAddData();
-        })
         .then(() => {
           const outputData = {
             id: id,

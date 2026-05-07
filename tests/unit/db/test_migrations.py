@@ -152,3 +152,78 @@ def test_duplicate_version_is_rejected(conn: duckdb.DuckDBPyConnection, tmp_path
 
     with pytest.raises(MigrationError, match="Duplicate migration version"):
         run_migrations(conn, migrations_dir=migrations_dir)
+
+
+def test_0008_backfills_existing_rows_to_saved_true(
+    conn: duckdb.DuckDBPyConnection, tmp_path: Path
+) -> None:
+    # Stage migrations 0001..0007 only to simulate an upgrade from a
+    # pre-``saved``-column build: a row inserted now predates the column.
+    migrations_dir = tmp_path / "migrations"
+    migrations_dir.mkdir()
+    pre_0008 = sorted(p for p in MIGRATIONS_DIR.glob("000[1-7]_*.sql"))
+    assert pre_0008, "expected at least one pre-0008 migration on disk"
+    for src in pre_0008:
+        (migrations_dir / src.name).write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+
+    run_migrations(conn, migrations_dir=migrations_dir)
+
+    # Bypass ``insert_scenario`` because it now writes to ``saved``,
+    # which does not yet exist at this migration level.
+    conn.execute(
+        """
+        INSERT INTO scenarios (id, name, country, hazard_type, ref_year, app_version,
+            entity_data_sha256, hazard_data_sha256, country_config_sha256,
+            config_version, random_seed)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            "legacy-1",
+            "pre-upgrade scenario",
+            "EGY",
+            "flood",
+            2024,
+            "1.0.0",
+            "a" * 64,
+            "b" * 64,
+            "c" * 64,
+            "1",
+            42,
+        ],
+    )
+
+    src_0008 = MIGRATIONS_DIR / "0008_saved_flag.sql"
+    (migrations_dir / src_0008.name).write_text(
+        src_0008.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    run_migrations(conn, migrations_dir=migrations_dir)
+
+    saved = conn.execute("SELECT saved FROM scenarios WHERE id = 'legacy-1'").fetchone()
+    assert saved is not None
+    assert bool(saved[0]) is True
+
+    conn.execute(
+        """
+        INSERT INTO scenarios (id, name, country, hazard_type, ref_year, app_version,
+            entity_data_sha256, hazard_data_sha256, country_config_sha256,
+            config_version, random_seed)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            "fresh-1",
+            None,
+            "EGY",
+            "flood",
+            2024,
+            "1.0.0",
+            "a" * 64,
+            "b" * 64,
+            "c" * 64,
+            "1",
+            42,
+        ],
+    )
+    fresh = conn.execute("SELECT saved FROM scenarios WHERE id = 'fresh-1'").fetchone()
+    assert fresh is not None
+    assert bool(fresh[0]) is False

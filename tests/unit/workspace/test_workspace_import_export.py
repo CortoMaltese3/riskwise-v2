@@ -72,12 +72,15 @@ def seeded_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     db_path = tmp_path / "source.db"
     monkeypatch.setenv(DB_PATH_ENV_VAR, str(db_path))
     _migrate(db_path)
+    # ``saved=True`` so the round-trip assertions, which go through
+    # ``list_scenarios``, can see the rows — that helper hides unsaved.
     insert_scenario(
         "s-1",
         _params(),
         results={"impact_summary": b'{"ok":1}'},
         provenance=_provenance(),
         name="Egypt flood",
+        saved=True,
     )
     insert_scenario(
         "s-2",
@@ -85,6 +88,7 @@ def seeded_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         results={"impact_summary": b'{"ok":2}'},
         provenance=_provenance(),
         name="Egypt flood 2",
+        saved=True,
     )
     return db_path
 

@@ -79,6 +79,10 @@ def test_insert_and_list_scenarios(tmp_db: Path) -> None:
         notes="first save",
     )
 
+    assert list_scenarios() == []
+
+    update_scenario_metadata("s-1", name="Egypt flood run", tags="flood,egypt", notes="first save")
+
     rows = list_scenarios()
     assert len(rows) == 1
     assert rows[0].id == "s-1"
@@ -88,6 +92,26 @@ def test_insert_and_list_scenarios(tmp_db: Path) -> None:
     assert rows[0].country == "Egypt"
     assert rows[0].hazard_type == "flood"
     assert rows[0].status == "completed"
+    assert rows[0].saved is True
+
+
+def test_unsaved_row_excluded_from_list_but_visible_via_get(tmp_db: Path) -> None:
+    # Splits visibility (workspace list) from persistence (single-row
+    # fetch): the active analysis tab and PDF export still need to read
+    # result blobs from rows the user dismissed without saving.
+    insert_scenario(
+        "s-unsaved",
+        _params(),
+        results={"impact_summary": b"{}"},
+        provenance=_provenance(),
+    )
+
+    assert list_scenarios() == []
+
+    detail = get_scenario("s-unsaved")
+    assert detail is not None
+    assert detail.scenario.id == "s-unsaved"
+    assert detail.scenario.saved is False
 
 
 def test_insert_and_get_returns_results(tmp_db: Path) -> None:
@@ -131,10 +155,12 @@ def test_update_scenario_metadata_roundtrip(tmp_db: Path) -> None:
     assert updated.name == "renamed"
     assert updated.tags == "a,b"
     assert updated.notes == "new"
+    assert updated.saved is True
 
     detail = get_scenario("s-3")
     assert detail is not None
     assert detail.scenario.name == "renamed"
+    assert detail.scenario.saved is True
 
 
 def test_update_unknown_id_returns_false(tmp_db: Path) -> None:
