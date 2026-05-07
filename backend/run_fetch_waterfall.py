@@ -16,19 +16,19 @@ class RunFetchWaterfall:
         initial_time = time()
         status_code_success = 2000
         status_code_error = 4000
-        empty = {
-            "present_year": 0,
-            "future_year": 0,
-            "measurement_unit": "",
-            "categories": [],
-        }
 
+        # ``data`` is None (not the old empty-dict sentinel) because
+        # ``WaterfallPayload.categories`` enforces ``min_length=4``. Returning
+        # an empty list there would trip Pydantic response validation and
+        # surface as a 500 to the renderer instead of the intended graceful
+        # "no waterfall yet" status. The frontend already handles
+        # ``status.code != 2000`` and a missing payload.
         path = DATA_TEMP_DIR / WATERFALL_DATA_FILENAME
         if not path.exists():
             message = "Waterfall data not available. Run a future scenario first."
             self.logger.log("info", message)
             return {
-                "data": empty,
+                "data": None,
                 "status": {"code": status_code_error, "message": message},
             }
 
@@ -50,7 +50,7 @@ class RunFetchWaterfall:
             message = f"Failed to read waterfall data. More info: {exc}"
             self.logger.log("error", message)
             return {
-                "data": empty,
+                "data": None,
                 "status": {"code": status_code_error, "message": message},
             }
 

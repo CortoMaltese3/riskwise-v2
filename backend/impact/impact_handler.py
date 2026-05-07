@@ -52,6 +52,38 @@ _HAZARD_SELECTOR_TO_HAZ_TYPE: dict[str, str] = {
 _registry_cache: ImpactFunctionRegistry | None = None
 
 
+def _compute_rp_percentile_levels(
+    impact_gdf: pd.DataFrame,
+    return_periods: tuple,
+    percentiles: tuple = (20, 40, 60, 80),
+) -> dict:
+    """Per-RP color-scale thresholds derived from positive impact values.
+
+    For each ``rp{N}`` column, takes the strictly-positive entries and returns
+    ``[0] + np.percentile(...)`` rounded to 1 decimal — the level boundaries
+    the renderer uses for the color scale.
+
+    When a return period has no strictly-positive values across all kept
+    points, the slice passed to ``np.percentile`` is empty and numpy raises
+    ``IndexError: index -1 is out of bounds for axis 0 with size 0``. The
+    caller catches all exceptions and silently skips writing
+    ``risks_geodata.json``, producing the white-impact-map symptom. Guard the
+    empty slice and emit five zeros so the geojson is still written and the
+    layer simply renders with a flat scale.
+    """
+    out: dict = {}
+    n_levels = len(percentiles) + 1
+    for rp in return_periods:
+        rp_data = impact_gdf[f"rp{rp}"][impact_gdf[f"rp{rp}"] > 0]
+        if rp_data.empty:
+            out[f"rp{rp}"] = [0.0] * n_levels
+            continue
+        values = np.percentile(rp_data, percentiles).round(1).tolist()
+        values.insert(0, 0)
+        out[f"rp{rp}"] = values
+    return out
+
+
 def _calculate_via_engine(
     exposure: Any,
     hazard: Any,
@@ -260,12 +292,21 @@ class ImpactHandler:
         :param asset_type: The type of asset (economic or non_economic).
         """
         try:
-            from backend.engine.adapter import local_exceedance_imp as _local_exceedance_imp
+            from backend.engine.adapter import (
+                local_exceedance_imp as _local_exceedance_imp,
+                valid_exposure_mask,
+            )
 
             country_iso3 = self.base_handler.get_iso3_country_code(country_name)
             admin_gdf = self.base_handler.get_admin_data(country_iso3, 2)
-            lat = np.asarray(exposure.lat, dtype=np.float64)
-            lon = np.asarray(exposure.lon, dtype=np.float64)
+            # ``Impact.imp_mat`` only carries columns for the valid (non-excluded)
+            # exposure subset — see climate_lama_engine.ImpactCalc.impact() — so
+            # ``lat`` / ``lon`` have to be subset through the same mask before
+            # stacking, otherwise np.column_stack hits a length mismatch and
+            # silently drops the GeoJSON.
+            mask = valid_exposure_mask(exposure)
+            lat = np.asarray(exposure.lat, dtype=np.float64)[mask]
+            lon = np.asarray(exposure.lon, dtype=np.float64)[mask]
             coords = np.column_stack([lat, lon])
             rp_per_point = _local_exceedance_imp(impact.imp_mat, impact.frequency, return_periods)
             local_exceedance_imp = pd.DataFrame(rp_per_point).T
@@ -294,13 +335,8 @@ class ImpactHandler:
             impact_gdf = impact_gdf.drop(columns=["latitude", "longitude"])
             impact_gdf = impact_gdf.reset_index(drop=True)
 
-            # Calculate percentiles for each return period
-            percentile_values = {}
-            percentiles = (20, 40, 60, 80)
-            for rp in return_periods:
-                rp_data = impact_gdf[f"rp{rp}"][impact_gdf[f"rp{rp}"] > 0]
-                percentile_values[f"rp{rp}"] = np.percentile(rp_data, percentiles).round(1).tolist()
-                percentile_values[f"rp{rp}"].insert(0, 0)
+            # Calculate percentiles for each return period.
+            percentile_values = _compute_rp_percentile_levels(impact_gdf, return_periods)
 
             # Assign levels based on the percentile values
             impact_gdf = self.base_handler.assign_levels(impact_gdf, percentile_values)
@@ -349,11 +385,15 @@ class ImpactHandler:
         :return: A DataFrame with merged impact and administrative columns.
         """
         try:
-            from backend.engine.adapter import local_exceedance_imp as _local_exceedance_imp
+            from backend.engine.adapter import (
+                local_exceedance_imp as _local_exceedance_imp,
+                valid_exposure_mask,
+            )
 
             # Cast impact data to a DataFrame
-            lat = np.asarray(exposure.lat, dtype=np.float64)
-            lon = np.asarray(exposure.lon, dtype=np.float64)
+            mask = valid_exposure_mask(exposure)
+            lat = np.asarray(exposure.lat, dtype=np.float64)[mask]
+            lon = np.asarray(exposure.lon, dtype=np.float64)[mask]
             coords = np.column_stack([lat, lon])
             rp_per_point = _local_exceedance_imp(impact.imp_mat, impact.frequency, return_periods)
             local_exceedance_imp = pd.DataFrame(rp_per_point).T

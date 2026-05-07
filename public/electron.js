@@ -532,9 +532,27 @@ app.whenReady().then(async () => {
   // non-null origin. This avoids the CORS null-origin block that Chromium
   // applies to `file://` pages when webSecurity is enabled and the app path
   // contains spaces (e.g. "RISK WISE").
+  //
+  // The `/__temp/` subpath is reserved for streaming JSON artefacts the
+  // backend writes under `userData/data/temp` (hazards/exposures/risks
+  // geojson). Same-origin reads keep us off the `file://` ↔ `app://` cross-
+  // scheme block ("Not allowed to load local resource") that Chromium
+  // imposes regardless of CSP. Path traversal is rejected so a malformed
+  // request cannot escape the temp dir.
   const buildRoot = path.join(basePath, "build");
+  const TEMP_PATH_PREFIX = "/__temp/";
   protocol.handle("app", (request) => {
     const url = new URL(request.url);
+    if (url.pathname.startsWith(TEMP_PATH_PREFIX)) {
+      const tempRoot = path.resolve(path.join(app.getPath("userData"), "data", "temp"));
+      const requested = decodeURIComponent(url.pathname.slice(TEMP_PATH_PREFIX.length));
+      const resolved = path.resolve(tempRoot, requested);
+      if (resolved !== tempRoot && !resolved.startsWith(tempRoot + path.sep)) {
+        log.warn(`[electron] blocked app://./__temp/ traversal: ${requested}`);
+        return new Response("Forbidden", { status: 403 });
+      }
+      return net.fetch(`file://${resolved}`);
+    }
     const filePath = path.join(buildRoot, url.pathname === "/" ? "index.html" : url.pathname);
     return net.fetch(`file://${filePath}`);
   });

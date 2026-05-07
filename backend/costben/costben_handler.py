@@ -26,6 +26,7 @@ import json
 from typing import Any
 
 import duckdb
+
 from backend.constants import DATA_TEMP_DIR
 from backend.engine.types import CostBenefitResult
 from backend.hazard.hazard_handler import HazardHandler
@@ -51,8 +52,16 @@ def _calculate_via_engine(
     :class:`EntityBundle`) — the entity loader already produces
     ``EntityBundle.measures`` as ``list[MeasureSpec]`` and stores the
     discount rate as a scalar, so no per-call conversion is needed.
+
+    Returns an empty list when there is no future projection to compare
+    against (historical runs pass ``hazard_future=None``). The engine's
+    ``calc_cost_benefit`` divides by the present-vs-future risk delta,
+    which collapses to zero when the same hazard stands in for both —
+    and the runner discards the result for historical runs anyway.
     """
     if not _has_measures(entity_present):
+        return []
+    if hazard_future is None or entity_future is None:
         return []
 
     from backend.engine.adapter import (
@@ -92,7 +101,7 @@ def _calculate_via_engine(
 
     return [
         CostBenefitResult(
-            name=str(r.name),
+            name=str(r.measure_name),
             cost=float(r.cost),
             benefit=float(r.benefit),
             bcr=float(r.bcr),

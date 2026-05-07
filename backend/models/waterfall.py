@@ -27,5 +27,11 @@ class WaterfallPayload(BaseModel):
 
 
 class WaterfallResponse(BaseModel):
-    data: WaterfallPayload
+    # ``data`` is optional because the API is polled at app start (before any
+    # scenario has run) and on stale-state reloads. Returning ``None`` lets the
+    # handler signal "no waterfall yet" via the status code without tripping
+    # ``WaterfallPayload``'s ``categories`` length invariant — which would
+    # otherwise raise ``ResponseValidationError`` and surface as a 500 to the
+    # renderer (white-chart-on-startup regression).
+    data: WaterfallPayload | None = None
     status: Status

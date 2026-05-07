@@ -167,6 +167,22 @@ def assign_centroids(arrays: ExposureArrays, hazard: HazardArrays) -> ExposureAr
     return replace(arrays, centroid_idx=np.asarray(indices, dtype=np.intp))
 
 
+def valid_exposure_mask(exposure: ExposureArrays) -> np.ndarray:
+    """Boolean mask aligning per-point arrays with ``Impact.imp_mat`` columns.
+
+    Mirrors the filter the engine's ``ImpactCalc.impact()`` applies to
+    exposures before computing the matrix:
+    ``(value > 0) & isfinite(value) & (centroid_idx >= 0)``. Excluded
+    points have no corresponding column in the resulting ``imp_mat``, so
+    handlers that line up coordinates with that matrix (e.g. for GeoJSON
+    output) must subset their ``lat`` / ``lon`` arrays through this mask
+    in the same order — ``np.where(mask)[0]`` — that the engine uses.
+    """
+    values = np.asarray(exposure.values, dtype=np.float64)
+    centroid_idx = np.asarray(exposure.centroid_idx, dtype=np.intp)
+    return (values > 0) & np.isfinite(values) & (centroid_idx >= 0)
+
+
 def local_exceedance_imp(
     imp_mat: Any,
     frequency: Any,
@@ -273,15 +289,28 @@ def build_measure(spec: MeasureSpec) -> cc.Measure:
     Mirrors the climate-lama backbone's `_build_measure` so both consumer
     adapters produce identical engine `Measure` objects from equivalent
     domain inputs.
+
+    ``hazard_freq_cutoff == 0`` is treated as "no cutoff" — CLIMADA's
+    xlsx convention stored "no cutoff" as a literal ``0.0`` (the
+    CLIMADA Measure used ``if self.hazard_freq_cutoff:`` so 0.0 was
+    falsy and skipped the filter). The engine's ``freq_cutoff`` is
+    ``None`` for "no cutoff" and applies the filter for any concrete
+    value, so passing ``0.0`` through unchanged would remove every
+    event with frequency > 0 — i.e., the entire hazard set — and
+    crash ``ImpactCalc`` on integer division by zero events.
     """
     cc, _np = _import_engine()
+
+    freq_cutoff = spec.hazard_freq_cutoff
+    if freq_cutoff is not None and freq_cutoff <= 0:
+        freq_cutoff = None
 
     return cc.Measure(
         name=spec.name,
         haz_type=spec.haz_type,
         cost=spec.cost,
         cost_unit=spec.cost_unit,
-        freq_cutoff=spec.hazard_freq_cutoff,
+        freq_cutoff=freq_cutoff,
         haz_inten_a=_or(spec.hazard_inten_imp, 1.0),
         haz_inten_b=0.0,
         mdd_a=_or(spec.mdd_impact_a, 1.0),
