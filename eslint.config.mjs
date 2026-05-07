@@ -159,8 +159,7 @@ export default [
         // alone since unrelated objects in the codebase use a `card` property.
         {
           selector: "Literal[value='card.bg']",
-          message:
-            "Legacy palette slot `card.bg` removed in #298. Use `primary.bg` instead.",
+          message: "Legacy palette slot `card.bg` removed in #298. Use `primary.bg` instead.",
         },
       ],
     },
