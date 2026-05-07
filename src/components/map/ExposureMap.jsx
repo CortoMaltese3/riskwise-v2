@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Button } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
 
 import "leaflet/dist/leaflet.css";
@@ -19,6 +20,8 @@ const ExposureMap = () => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const mapRefSet = useRef(false);
+  const theme = useTheme();
+  const vizRamps = theme.palette.viz.ramps;
 
   const [activeAdminLayer, setActiveAdminLayer] = useState(0);
   const [mapInfo, setMapInfo] = useState({ geoJson: null, colorScale: null });
@@ -46,7 +49,7 @@ const ExposureMap = () => {
       setMinValue(minValue);
       const maxValue = Math.max(...values);
       setMaxValue(maxValue);
-      const scale = getScaleLegacy(selectedHazard, maxValue, minValue);
+      const scale = getScaleLegacy(selectedHazard, maxValue, minValue, vizRamps);
 
       setMapInfo({ geoJson: filteredData, colorScale: scale });
     } catch (error) {

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Button, Stack, Typography } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
 import { Bar } from "react-chartjs-2";
 import {
   BarElement,
@@ -23,9 +24,6 @@ import ChartInfoPopover from "../help/ChartInfoPopover";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend, ChartDataLabels);
 
-const COLOR_PROFITABLE = "rgba(75, 192, 120, 0.85)";
-const COLOR_MARGINAL = "rgba(59, 145, 157, 0.85)";
-const COLOR_UNPROFITABLE = "rgba(220, 60, 60, 0.85)";
 const PATTERN_PROFITABLE = 0;
 const PATTERN_MARGINAL = 1;
 const PATTERN_UNPROFITABLE = 2;
@@ -37,10 +35,12 @@ const formatCurrency = (value, unit, locale) => {
 
 const formatRatio = (value, locale) => formatNumber(Number(value), locale);
 
-const styleFor = (ratio) => {
-  if (ratio >= 1) return { color: COLOR_PROFITABLE, patternIndex: PATTERN_PROFITABLE };
-  if (ratio > 0) return { color: COLOR_MARGINAL, patternIndex: PATTERN_MARGINAL };
-  return { color: COLOR_UNPROFITABLE, patternIndex: PATTERN_UNPROFITABLE };
+// Profitable / marginal / unprofitable map onto the semantic viz tokens
+// (#298). Bars render at 0.85 alpha against the chart canvas.
+const styleForRatio = (ratio, colors) => {
+  if (ratio >= 1) return { color: colors.profitable, patternIndex: PATTERN_PROFITABLE };
+  if (ratio > 0) return { color: colors.marginal, patternIndex: PATTERN_MARGINAL };
+  return { color: colors.unprofitable, patternIndex: PATTERN_UNPROFITABLE };
 };
 
 const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, errorMessage }, ref) {
@@ -51,6 +51,12 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
   const chartRef = ref ?? internalRef;
   const showChartValues = useStore((state) => state.showChartValues);
   const toggleShowChartValues = useStore((state) => state.toggleShowChartValues);
+  const theme = useTheme();
+  const vizColors = {
+    profitable: alpha(theme.palette.viz.positive, 0.85),
+    marginal: alpha(theme.palette.viz.neutral, 0.85),
+    unprofitable: alpha(theme.palette.viz.negative, 0.85),
+  };
 
   useEffect(() => {
     return () => {
@@ -73,7 +79,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
   const unit = data.currency_unit || "";
   const labels = data.measures.map((m) => m.name);
   const ratios = data.measures.map((m) => m.benefit_cost_ratio);
-  const styles = ratios.map(styleFor);
+  const styles = ratios.map((r) => styleForRatio(r, vizColors));
   const colors = styles.map((s) => s.color);
   const patterns = styles.map((s) => patternForIndex(s.color, s.patternIndex));
 
@@ -130,7 +136,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
         display: showChartValues,
         anchor: "end",
         align: "end",
-        color: "rgba(33, 33, 33, 0.9)",
+        color: alpha(theme.palette.text.primary, 0.9),
         font: { size: 11, weight: 600 },
         formatter: (value) => formatNumber(value, locale),
       },
