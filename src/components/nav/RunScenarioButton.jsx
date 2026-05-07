@@ -9,6 +9,7 @@ import RiskWiseClient from "../../lib/RiskWiseClient";
 import SaveScenarioDialog from "../workspace/SaveScenarioDialog";
 import { useReportTools } from "../../utils/reportTools";
 import useStore from "../../store";
+import useWorkspaceStore from "../../store/workspaceSlice";
 
 const RunScenarioButton = () => {
   const { t } = useTranslation();
@@ -42,6 +43,7 @@ const RunScenarioButton = () => {
   const [isRunButtonDisabled, setIsRunButtonDisabled] = useState(true);
   const [saveDialog, setSaveDialog] = useState({ open: false, id: null, name: "" });
   const { fetchReports } = useReportTools();
+  const reloadWorkspaceScenarios = useWorkspaceStore((s) => s.loadScenarios);
 
   const handleRunButton = () => {
     if (
@@ -140,7 +142,10 @@ const RunScenarioButton = () => {
         scenarioId={saveDialog.id}
         defaultName={saveDialog.name}
         onClose={() => setSaveDialog((s) => ({ ...s, open: false }))}
-        onSaved={() => fetchReports()}
+        onSaved={() => {
+          fetchReports();
+          reloadWorkspaceScenarios({ force: true });
+        }}
       />
       {!isRunButtonLoading ? (
         <Button
