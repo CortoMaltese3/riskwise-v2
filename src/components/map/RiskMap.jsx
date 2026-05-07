@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import L from "leaflet";
 import "leaflet-simple-map-screenshoter";
 import { Box, Button } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 
 import "leaflet/dist/leaflet.css";
@@ -25,6 +26,8 @@ const RiskMap = () => {
   } = useStore();
   const { t } = useTranslation();
   const mapRefSet = useRef(false);
+  const theme = useTheme();
+  const vizRamps = theme.palette.viz.ramps;
 
   const [activeRPLayer, setActiveRPLayer] = useState(null);
   const [legendTitle, setLegendTitle] = useState("");
@@ -82,7 +85,7 @@ const RiskMap = () => {
         const effectiveRP = rpLayer ?? (returnPeriods.length > 0 ? returnPeriods[0] : null);
         const rpKey = effectiveRP === null ? null : `rp${effectiveRP}`;
         if (rpKey && data._metadata.percentile_values && data._metadata.percentile_values[rpKey]) {
-          const scale = getScale(selectedHazard, data._metadata.percentile_values[rpKey]);
+          const scale = getScale(selectedHazard, data._metadata.percentile_values[rpKey], vizRamps);
           setMapInfo({ geoJson: data, colorScale: scale });
 
           // Calculate minimum non-zero value
@@ -112,7 +115,7 @@ const RiskMap = () => {
         }
       }
     },
-    [selectedHazard, activeRPLayer]
+    [selectedHazard, activeRPLayer, vizRamps]
   );
 
   useEffect(() => {
@@ -180,8 +183,8 @@ const RiskMap = () => {
     minWidth: 7.5,
     maxWidth: 7.5,
     fontSize: "0.75rem",
-    bgcolor: rp === activeRPLayer ? "mapControl.main" : "mapControl.light",
-    "&:hover": { bgcolor: "mapControl.hover" },
+    bgcolor: rp === activeRPLayer ? "primary.dark" : "primary.main",
+    "&:hover": { bgcolor: "secondary.main" },
   });
 
   const buttonContainerSx = {

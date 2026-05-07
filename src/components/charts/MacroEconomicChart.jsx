@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Button, Stack, Typography } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
 import { Line } from "react-chartjs-2";
 import {
   CategoryScale,
@@ -35,10 +36,23 @@ ChartJS.register(
   ChartDataLabels
 );
 
+// Adaptation values render in a fixed order — None (no adaptation) is the
+// reference series; the adaptation tiers (0.25, 0.33, 0.5, 0.67, …) read as
+// successively-better outcomes. Mapped onto the categorical viz palette so
+// dark mode picks up the same hues automatically (#298).
+const ADAPTATION_KEY_ORDER = ["None", "0.25", "0.33", "0.5", "0.67"];
+
 const MacroEconomicChart = () => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const rtl = isRtl(locale);
+  const theme = useTheme();
+  const vizCategorical = theme.palette.viz.categorical;
+  const colorForAdaptationKey = (key) => {
+    const idx = ADAPTATION_KEY_ORDER.indexOf(key);
+    // Unknown adaptation values fall through to the last categorical hue.
+    return vizCategorical[idx >= 0 ? idx : vizCategorical.length - 1];
+  };
   const {
     credOutputData,
     selectedMacroCountry,
@@ -79,34 +93,9 @@ const MacroEconomicChart = () => {
       : [];
 
   const datasets = Object.keys(groupedData).map((key) => {
-    let borderColor;
-    let backgroundColor;
-
-    if (key === "None") {
-      // No adaptation
-      borderColor = "rgba(255, 99, 132, 1)"; // Red
-      backgroundColor = "rgba(255, 99, 132, 0.2)";
-    } else if (key === "0.25") {
-      // 25% Adaptation
-      borderColor = "rgba(255, 206, 86, 1)"; // Yellow
-      backgroundColor = "rgba(255, 206, 86, 0.2)";
-    } else if (key === "0.33") {
-      // 33% Adaptation
-      borderColor = "rgba(54, 162, 235, 1)"; // Blue
-      backgroundColor = "rgba(54, 162, 235, 0.2)";
-    } else if (key === "0.5") {
-      // 50% Adaptation
-      borderColor = "rgba(255, 159, 64, 1)"; // Orange
-      backgroundColor = "rgba(255, 159, 64, 0.2)";
-    } else if (key === "0.67") {
-      // 67% Adaptation
-      borderColor = "rgba(75, 192, 192, 1)"; // Green
-      backgroundColor = "rgba(75, 192, 192, 0.2)";
-    } else {
-      // Fallback for unexpected adaptation values
-      borderColor = "rgba(153, 102, 255, 1)"; // Purple
-      backgroundColor = "rgba(153, 102, 255, 0.2)";
-    }
+    const seriesColor = colorForAdaptationKey(key);
+    const borderColor = seriesColor;
+    const backgroundColor = alpha(seriesColor, 0.2);
 
     const label =
       key === "None"
@@ -173,7 +162,7 @@ const MacroEconomicChart = () => {
       datalabels: {
         display: showChartValues,
         align: "top",
-        color: "rgba(33, 33, 33, 0.9)",
+        color: alpha(theme.palette.text.primary, 0.9),
         font: { size: 10, weight: 600 },
         formatter: (value) =>
           `${formatNumber(Number(value), locale, { maximumFractionDigits: 1, minimumFractionDigits: 1 })}%`,
@@ -209,7 +198,7 @@ const MacroEconomicChart = () => {
         minHeight: 0,
         display: "flex",
         flexDirection: "column",
-        bgcolor: "card.bg",
+        bgcolor: "primary.bgStrong",
         border: 2,
         borderColor: "primary.dark",
         borderRadius: (theme) => theme.spacing(2),

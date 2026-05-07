@@ -25,12 +25,16 @@ function contrastRatio(a, b) {
   return (bright + 0.05) / (dark + 0.05);
 }
 
-const CUSTOM_PALETTE_SLOTS = [
+// Semantic palette slots (#298).
+const CUSTOM_PALETTE_SLOTS = ["surface", "border", "feedback", "viz"];
+
+// Legacy palette namespaces removed by #298. Asserted as undefined so a
+// regression — re-introducing one — fails CI rather than silently shipping.
+const REMOVED_PALETTE_SLOTS = [
   "inputCard",
   "header",
   "accent",
   "card",
-  "surface",
   "tab",
   "mapControl",
   "tableHeader",
@@ -41,21 +45,55 @@ const CUSTOM_PALETTE_SLOTS = [
 describe("theme — design tokens", () => {
   it("opts into CSS variables and Inter font", () => {
     // `cssVariables: true` causes MUI to expose palette entries under `theme.vars`
-    // as CSS custom properties (e.g. `var(--mui-palette-header-main)`). This is
-    // the observable side effect rather than the config input.
+    // as CSS custom properties (e.g. `var(--mui-palette-primary-light)`). This
+    // is the observable side effect rather than the config input.
     expect(theme.vars).toBeDefined();
-    expect(theme.vars.palette.header.main).toMatch(/^var\(--mui-palette-header-main/);
+    expect(theme.vars.palette.primary.light).toMatch(/^var\(--mui-palette-primary-light/);
     expect(theme.typography.fontFamily).toMatch(/Inter/);
   });
 
-  it("exposes primary, background, header, and inputCard palette tokens", () => {
+  it("exposes primary, background, and text palette tokens", () => {
     expect(theme.palette.primary.main).toBeDefined();
     expect(theme.palette.primary.contrastText).toBeDefined();
     expect(theme.palette.background.default).toBeDefined();
     expect(theme.palette.background.paper).toBeDefined();
-    expect(theme.palette.header.main).toBeDefined();
-    expect(theme.palette.header.contrastText).toBeDefined();
-    expect(theme.palette.inputCard.default).toBeDefined();
+    expect(theme.palette.text.primary).toBeDefined();
+  });
+
+  it("exposes the new #298 semantic palette tokens", () => {
+    expect(theme.palette.primary.bg).toBeDefined();
+    expect(theme.palette.primary.bgStrong).toBeDefined();
+    expect(theme.palette.secondary.main).toBeDefined();
+    expect(theme.palette.secondary.bg).toBeDefined();
+    expect(theme.palette.surface.subdued).toBeDefined();
+    expect(theme.palette.border.default).toBeDefined();
+    expect(theme.palette.border.strong).toBeDefined();
+    expect(theme.palette.text.disabled).toBeDefined();
+    expect(theme.palette.feedback.success.main).toBeDefined();
+    expect(theme.palette.feedback.success.bg).toBeDefined();
+    expect(theme.palette.feedback.warning.main).toBeDefined();
+    expect(theme.palette.feedback.error.main).toBeDefined();
+    expect(theme.palette.feedback.info.main).toBeDefined();
+    expect(theme.palette.viz.categorical).toHaveLength(6);
+    expect(theme.palette.viz.positive).toBeDefined();
+    expect(theme.palette.viz.neutral).toBeDefined();
+    expect(theme.palette.viz.negative).toBeDefined();
+    expect(theme.palette.viz.ramps.flood).toBeDefined();
+    expect(theme.palette.viz.ramps.heatwave).toBeDefined();
+    expect(theme.palette.viz.ramps.drought).toBeDefined();
+    expect(theme.palette.viz.ramps.risk).toBeDefined();
+  });
+
+  it("aliases palette.error.main to feedback.error.main", () => {
+    // MUI built-ins (`<Alert severity="error">`, the form `error` state, etc.)
+    // read from `palette.error.main`. Keeping it aliased to the semantic
+    // feedback red avoids needing to migrate every MUI consumer.
+    const lightError = theme.colorSchemes.light.palette.error;
+    const lightFeedbackError = theme.colorSchemes.light.palette.feedback.error;
+    expect(lightError.main).toBe(lightFeedbackError.main);
+    const darkError = theme.colorSchemes.dark.palette.error;
+    const darkFeedbackError = theme.colorSchemes.dark.palette.feedback.error;
+    expect(darkError.main).toBe(darkFeedbackError.main);
   });
 
   it("sets a non-default shape radius", () => {
@@ -115,26 +153,28 @@ describe("theme — color schemes", () => {
     }
   );
 
+  it.each(REMOVED_PALETTE_SLOTS)(
+    "removed legacy slot %s is not present in either scheme (#298 regression guard)",
+    (slot) => {
+      expect(theme.colorSchemes.light.palette[slot]).toBeUndefined();
+      expect(theme.colorSchemes.dark.palette[slot]).toBeUndefined();
+      expect(theme.palette[slot]).toBeUndefined();
+    }
+  );
+
   it("light scheme keeps the canonical primary teal (no accidental drift)", () => {
-    // Pixel-equivalence guard: the light values match the pre-#288 palette so
-    // the existing UI is visually unchanged after the colorSchemes refactor.
+    // Pixel-equivalence guard: the brand `main` and `dark` values are stable
+    // through the #298 refactor so the existing UI looks unchanged.
+    // `primary.light` is bumped from the previous `#8AC8D0` to `#9CCDDA` so
+    // `primary.dark` (`#0E5A66`) on it clears WCAG 2.1 AA 4.5:1 — the previous
+    // pair measured 4.07:1, blocking the `header` migration.
     const lightPrimary = theme.colorSchemes.light.palette.primary;
     expect(lightPrimary.main).toBe("#2F7A86");
     expect(lightPrimary.dark).toBe("#0E5A66");
-    expect(lightPrimary.light).toBe("#8AC8D0");
-    expect(lightPrimary.contrastText).toBe("#ffffff");
-    expect(theme.colorSchemes.light.palette.background.default).toBe("#f8fafc");
-    expect(theme.colorSchemes.light.palette.background.paper).toBe("#ffffff");
-  });
-
-  it("light scheme header pairs the dusty-blue band with deep-teal text (#287)", () => {
-    // #287 recolored the TopBar away from generic dark slate (#0F172A) and
-    // onto the brand teal family. The literal here is slightly deeper than
-    // `primary.dark` because `primary.dark` itself measures 4.08:1 on
-    // `header.main` — below AA — so we use a darker swatch with headroom.
-    const lightHeader = theme.colorSchemes.light.palette.header;
-    expect(lightHeader.main).toBe("#8fc3d1");
-    expect(lightHeader.contrastText).toBe("#0A4750");
+    expect(lightPrimary.light).toBe("#9CCDDA");
+    expect(lightPrimary.contrastText.toLowerCase()).toBe("#ffffff");
+    expect(theme.colorSchemes.light.palette.background.default.toLowerCase()).toBe("#f8fafc");
+    expect(theme.colorSchemes.light.palette.background.paper.toLowerCase()).toBe("#ffffff");
   });
 
   it("dark scheme uses dark backgrounds and light text", () => {
@@ -170,11 +210,6 @@ describe("theme — WCAG AA contrast", () => {
       bg: () => lightPalette.background.default,
     },
     {
-      name: "[light] header.contrastText on header.main",
-      fg: () => lightPalette.header.contrastText,
-      bg: () => lightPalette.header.main,
-    },
-    {
       name: "[dark] text.primary on background.default",
       fg: () => darkPalette.text.primary,
       bg: () => darkPalette.background.default,
@@ -190,9 +225,64 @@ describe("theme — WCAG AA contrast", () => {
       bg: () => darkPalette.background.default,
     },
     {
-      name: "[dark] header.contrastText on header.main",
-      fg: () => darkPalette.header.contrastText,
-      bg: () => darkPalette.header.main,
+      name: "[light] primary.contrastText on primary.main",
+      fg: () => lightPalette.primary.contrastText,
+      bg: () => lightPalette.primary.main,
+    },
+    {
+      name: "[dark] primary.contrastText on primary.main",
+      fg: () => darkPalette.primary.contrastText,
+      bg: () => darkPalette.primary.main,
+    },
+    {
+      name: "[light] primary.dark on primary.light (TopBar header band)",
+      fg: () => lightPalette.primary.dark,
+      bg: () => lightPalette.primary.light,
+    },
+    {
+      name: "[dark] primary.dark on primary.light (TopBar header band)",
+      fg: () => darkPalette.primary.dark,
+      bg: () => darkPalette.primary.light,
+    },
+    {
+      name: "[light] feedback.success.main on background.paper",
+      fg: () => lightPalette.feedback.success.main,
+      bg: () => lightPalette.background.paper,
+    },
+    {
+      name: "[light] feedback.warning.main on background.paper",
+      fg: () => lightPalette.feedback.warning.main,
+      bg: () => lightPalette.background.paper,
+    },
+    {
+      name: "[light] feedback.error.main on background.paper",
+      fg: () => lightPalette.feedback.error.main,
+      bg: () => lightPalette.background.paper,
+    },
+    {
+      name: "[light] feedback.info.main on background.paper",
+      fg: () => lightPalette.feedback.info.main,
+      bg: () => lightPalette.background.paper,
+    },
+    {
+      name: "[dark] feedback.success.main on background.paper",
+      fg: () => darkPalette.feedback.success.main,
+      bg: () => darkPalette.background.paper,
+    },
+    {
+      name: "[dark] feedback.warning.main on background.paper",
+      fg: () => darkPalette.feedback.warning.main,
+      bg: () => darkPalette.background.paper,
+    },
+    {
+      name: "[dark] feedback.error.main on background.paper",
+      fg: () => darkPalette.feedback.error.main,
+      bg: () => darkPalette.background.paper,
+    },
+    {
+      name: "[dark] feedback.info.main on background.paper",
+      fg: () => darkPalette.feedback.info.main,
+      bg: () => darkPalette.background.paper,
     },
   ];
 

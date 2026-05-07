@@ -59,7 +59,6 @@ const AdaptationMeasuresInput = () => {
         <Box
           sx={{
             mt: 2,
-            backgroundColor: (theme) => theme.palette.inputCard.panelBg,
             padding: 2,
             borderRadius: (theme) => theme.spacing(1),
           }}
@@ -80,7 +79,7 @@ const AdaptationMeasuresInput = () => {
                 <Card
                   variant="outlined"
                   sx={{
-                    bgcolor: (theme) => theme.palette.inputCard.default,
+                    bgcolor: (theme) => theme.palette.primary.bgStrong,
                     mb: 2,
                     minHeight: 3,
                   }}

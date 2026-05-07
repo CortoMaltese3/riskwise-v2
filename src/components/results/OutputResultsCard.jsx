@@ -63,12 +63,12 @@ const OutputResultsCard = () => {
                 size="small"
                 sx={{
                   marginBottom: 2,
-                  bgcolor: "accent.light",
+                  bgcolor: "secondary.light",
                   transition: layoutTransition(["transform"]),
                   "&:active": {
                     transform: "scale(0.96)",
                   },
-                  "&:hover": { bgcolor: "accent.main" },
+                  "&:hover": { bgcolor: "secondary.main" },
                   textTransform: "none",
                 }}
                 onClick={() => handleButtonClick(type)}
@@ -88,12 +88,12 @@ const OutputResultsCard = () => {
                 size="small"
                 sx={{
                   marginBottom: 2,
-                  bgcolor: "accent.light",
+                  bgcolor: "secondary.light",
                   transition: layoutTransition(["transform"]),
                   "&:active": {
                     transform: "scale(0.96)",
                   },
-                  "&:hover": { bgcolor: "accent.main" },
+                  "&:hover": { bgcolor: "secondary.main" },
                   textTransform: "none",
                 }}
                 onClick={() => handleButtonClick(type)}

@@ -143,6 +143,24 @@ export default [
           message:
             "toLocaleDateString() options must include an explicit `calendar` key (e.g. 'gregory' or 'buddhist'). Prefer formatDate() from src/lib/formatDate.",
         },
+        // legacy-palette-removed (issue #298): the v1 palette namespaces
+        // (`header`, `accent`, `card`, `tab`, `mapControl`, `tableHeader`,
+        // `loader`, `slider`, `inputCard`) were dropped in favour of the
+        // semantic palette (`primary`, `secondary`, `surface`, `border`,
+        // `feedback`, `viz`). Flag string literals like `"header.main"` /
+        // `"accent.dark"` so the migration cannot regress.
+        {
+          selector:
+            "Literal[value=/^(header|accent|inputCard|tab|mapControl|tableHeader|loader|slider)\\.[A-Za-z]/]",
+          message:
+            "Legacy palette slot removed in #298. Use the semantic palette instead (primary, secondary, surface, border, feedback, viz).",
+        },
+        // The `card.bg` token specifically — leave the bare `card` namespace
+        // alone since unrelated objects in the codebase use a `card` property.
+        {
+          selector: "Literal[value='card.bg']",
+          message: "Legacy palette slot `card.bg` removed in #298. Use `primary.bg` instead.",
+        },
       ],
     },
   },

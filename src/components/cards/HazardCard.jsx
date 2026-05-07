@@ -123,7 +123,7 @@ const HazardCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "card.bg",
+        bgcolor: "primary.bgStrong",
         border: 2,
         borderColor: "primary.dark",
         borderRadius: (theme) => theme.spacing(2),
@@ -138,7 +138,7 @@ const HazardCard = () => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            backgroundColor: "accent.main",
+            backgroundColor: "secondary.main",
             borderRadius: (theme) => theme.spacing(1),
             padding: 1,
             marginBottom: 3,
@@ -154,7 +154,7 @@ const HazardCard = () => {
               key={hazard}
               onClick={() => handleCardSelect(hazard)}
               sx={{
-                backgroundColor: isButtonSelected(hazard) ? "accent.main" : "accent.light",
+                backgroundColor: isButtonSelected(hazard) ? "secondary.main" : "secondary.light",
                 borderRadius: (theme) => theme.spacing(1),
                 margin: 2,
                 marginLeft: 0,
@@ -181,11 +181,11 @@ const HazardCard = () => {
               component="span"
               onClick={handleLoadButtonClick}
               sx={{
-                bgcolor: "accent.paleBg",
+                bgcolor: "secondary.bg",
                 color: "common.black",
                 fontWeight: "bold",
                 margin: 2,
-                "&:hover": { bgcolor: "accent.light" },
+                "&:hover": { bgcolor: "secondary.light" },
                 transition: layoutTransition(["transform"]),
                 "&:active": {
                   transform: "scale(0.96)", // Slightly scale down when clicked
@@ -213,11 +213,11 @@ const HazardCard = () => {
             <Button
               component="span"
               sx={{
-                bgcolor: "accent.paleBg",
+                bgcolor: "secondary.bg",
                 color: "common.black",
                 fontWeight: "bold",
                 margin: 2,
-                "&:hover": { bgcolor: "accent.light" },
+                "&:hover": { bgcolor: "secondary.light" },
                 transition: layoutTransition(["transform"]),
                 "&:active": {
                   transform: "scale(0.96)", // Slightly scale down when clicked
@@ -248,7 +248,7 @@ const HazardCard = () => {
             <IconButton
               onClick={clearUploadedFile}
               size="small"
-              sx={{ color: "accent.dark" }}
+              sx={{ color: "secondary.dark" }}
               aria-label={t("clear_uploaded_file_aria")}
             >
               <CloseIcon />
@@ -272,7 +272,7 @@ const HazardCard = () => {
             <IconButton
               onClick={clearFetchedData}
               size="small"
-              sx={{ color: "accent.dark" }}
+              sx={{ color: "secondary.dark" }}
               aria-label={t("clear_fetched_data_aria")}
             >
               <CloseIcon />

@@ -48,8 +48,8 @@ const RunPlotMacroButton = () => {
         onClick={handleRunButton}
         startIcon={<InsightsIcon />}
         sx={{
-          bgcolor: "accent.main",
-          "&:hover": { bgcolor: "accent.light" },
+          bgcolor: "secondary.main",
+          "&:hover": { bgcolor: "secondary.light" },
         }}
         variant="contained"
       >

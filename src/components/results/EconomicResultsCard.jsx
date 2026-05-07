@@ -29,12 +29,12 @@ const EconomicResultsCard = () => {
               variant="contained"
               sx={{
                 marginBottom: 2,
-                bgcolor: isButtonSelected(type) ? "accent.main" : "accent.light",
+                bgcolor: isButtonSelected(type) ? "secondary.main" : "secondary.light",
                 transition: layoutTransition(["transform"]),
                 "&:active": {
                   transform: "scale(0.96)",
                 },
-                "&:hover": { bgcolor: "accent.main" },
+                "&:hover": { bgcolor: "secondary.main" },
               }}
               onClick={() => handleButtonClick(type)}
             >
@@ -47,7 +47,7 @@ const EconomicResultsCard = () => {
       {/* Result Details section */}
       <Box
         sx={{
-          bgcolor: "accent.light",
+          bgcolor: "secondary.light",
           padding: 2,
           borderRadius: (theme) => theme.spacing(0.5),
         }}
@@ -56,9 +56,9 @@ const EconomicResultsCard = () => {
           variant="h6"
           sx={{
             borderBottom: 1,
-            borderBottomColor: "surface.mutedText",
+            borderBottomColor: "text.secondary",
             paddingBottom: 1,
-            color: "surface.mutedText",
+            color: "text.secondary",
             textAlign: "center",
           }}
         >

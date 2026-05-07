@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { alpha, useTheme } from "@mui/material/styles";
 
 import RiskWiseClient from "../lib/RiskWiseClient";
 import logger from "../lib/logger.ts";
@@ -7,6 +8,7 @@ import useStore from "../store";
 
 export const useMacroTools = () => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const {
     setAlertMessage,
     setAlertSeverity,
@@ -72,17 +74,23 @@ export const useMacroTools = () => {
         return acc;
       }, {});
 
-      // Create datasets for the chart
-      const datasets = Object.keys(groupedData).map((label) => ({
-        label,
-        data: groupedData[label].values,
-        borderColor: label.includes("Without") ? "rgba(255, 99, 132, 1)" : "rgba(75, 192, 192, 1)",
-        backgroundColor: label.includes("Without")
-          ? "rgba(255, 99, 132, 0.2)"
-          : "rgba(75, 192, 192, 0.2)",
-        fill: true,
-        tension: 0.4,
-      }));
+      // "Without adaptation" reads as the negative reference series; the
+      // adapted scenario reads as positive. Pull both colours from the
+      // semantic viz palette so dark mode picks up the same hues automatically.
+      const baselineColor = theme.palette.viz.negative;
+      const adaptedColor = theme.palette.viz.positive;
+      const datasets = Object.keys(groupedData).map((label) => {
+        const isBaseline = label.includes("Without");
+        const seriesColor = isBaseline ? baselineColor : adaptedColor;
+        return {
+          label,
+          data: groupedData[label].values,
+          borderColor: seriesColor,
+          backgroundColor: alpha(seriesColor, 0.2),
+          fill: true,
+          tension: 0.4,
+        };
+      });
 
       const chartData = {
         labels: [...new Set(filteredData.map((row) => row.year))],

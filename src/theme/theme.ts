@@ -1,20 +1,26 @@
 import { createTheme } from "@mui/material/styles";
 
-// Phase 1 design-token surface (issue #15, extended in #78). Hex literals live
-// in this file only; component code consumes these tokens via
-// `sx={{ bgcolor: "header.main", ... }}` or `theme.palette.*`. Raw hex/rgb in
-// component files is banned by ESLint (see `eslint.config.mjs`). The same ban
-// applies to raw `px` / `em` literals in component code (issue #217 / spec
-// § Density) — spacing comes from `theme.spacing(n)` and the named-constant
-// escapes for fixed chrome (`TOP_BAR_HEIGHT`, `SIDEBAR_WIDTH`,
+// Phase 1 design-token surface (issue #15, extended in #78, rationalised in
+// #298). Hex literals live in this file only; component code consumes these
+// tokens via `sx={{ bgcolor: "primary.light", ... }}` or `theme.palette.*`.
+// Raw hex/rgb in component files is banned by ESLint (see `eslint.config.mjs`).
+// The same ban applies to raw `px` / `em` literals in component code (issue
+// #217 / spec § Density) — spacing comes from `theme.spacing(n)` and the
+// named-constant escapes for fixed chrome (`TOP_BAR_HEIGHT`, `SIDEBAR_WIDTH`,
 // `SIDEBAR_COLLAPSED_WIDTH`, `INPUT_CARD_HEIGHT`).
 
 // Light/dark color schemes (issue #288). Both schemes share the same custom
-// palette slots so component `sx={{ bgcolor: "header.main" }}` keeps working
+// palette slots so component `sx={{ bgcolor: "primary.light" }}` keeps working
 // — MUI swaps the underlying CSS variable based on the
-// `data-mui-color-scheme` attribute set on `<html>` from `App.jsx`. Light
-// values are pixel-equivalent to the previous single-scheme palette; dark
-// values are starter swatches gated by the WCAG audit follow-up (#289).
+// `data-mui-color-scheme` attribute set on `<html>` from `App.jsx`.
+
+// Issue #298 collapses the v1 palette into seven semantic namespaces: `primary`
+// (with a `bg` step), `secondary`, `surface`, `text`, `border`, `feedback`,
+// `viz`. The legacy ad-hoc namespaces — `header`, `accent`, `card`, `tab`,
+// `mapControl`, `tableHeader`, `loader`, `slider`, `inputCard` — are gone.
+// MUI's built-in `error.main` is aliased to `feedback.error.main` so
+// `<Alert severity="error">` and other MUI internals continue to use the new
+// red without per-component migration.
 
 // Motion tokens (issue #217 / spec § Motion). One canonical duration + easing
 // applied to every layout transition (sidebar collapse / expand, card hover,
@@ -32,175 +38,184 @@ export const layoutTransition = (props: readonly string[] = ["all"]): string =>
 
 // --- Light scheme ------------------------------------------------------------
 
-const lightInputCardColors = {
-  default: "#CCE1E7",
-  valid: "#C0E7CF",
-  invalid: "#FFB3B3",
-  neutral: "#CFCFCF",
-  hover: "#DAE7EA",
-  panelBg: "#DDEBEF",
-  sectionBg: "#DAE7EA",
-  disabledBg: "#E6E6E6",
-  disabledText: "#A6A6A6",
+// Primary teal. `light` slightly paler than the spec'd `#8FC3D1` so
+// `primary.dark` (`#0E5A66`) on `primary.light` clears WCAG 2.1 AA 4.5:1 with
+// headroom — the original swatch measured 4.07:1.
+//
+// `bg` and `bgStrong` are two pale-teal steps used together: `bg` for the
+// outer panel surrounding a group of cards, `bgStrong` for the cards
+// themselves. The two-step hierarchy matches the v1 inputCard panel/default
+// pairing (#DDEBEF panel, #CCE1E7 card) so cards sit visibly on the panel
+// instead of dissolving into it.
+const lightPrimary = {
+  bg: "#DDEBEF",
+  bgStrong: "#C9DEE3",
+  light: "#9CCDDA",
+  main: "#2F7A86",
+  dark: "#0E5A66",
+  contrastText: "#FFFFFF",
 };
 
-// `contrastText` darkened from `#0F172A` → `#0A4750` in #287 to recolor the
-// TopBar away from generic dark slate and onto the brand teal family. The
-// spec'd `primary.dark` (`#0E5A66`) measured 4.08:1 against `header.main`
-// (`#8fc3d1`) — below the WCAG 2.1 AA 4.5:1 floor enforced by the contrast
-// suite below — so we use a slightly deeper teal (5.37:1) that stays on
-// palette while clearing AA with headroom.
-const lightHeaderColors = {
-  main: "#8fc3d1",
-  contrastText: "#0A4750",
-};
-
-// Salmon/pink action palette used across card titles, primary action buttons
-// and selected-state chips throughout the v1 UI. Kept as a sibling to the
-// primary teal so the two can be paired without overloading MUI's primary.
-const lightAccentColors = {
-  main: "#F79191",
+// Secondary salmon (replaces the legacy `accent` namespace).
+const lightSecondary = {
+  bg: "#FFEBEB",
   light: "#FFCCCC",
-  paleBg: "#FFEBEB",
+  main: "#F79191",
   dark: "#F35A5A",
   contrastText: "#0F172A",
 };
 
-// Card chrome: pale teal fill + primary.dark border used on every input card.
-const lightCardColors = {
-  bg: "#DCEFF2",
-};
-
-// Muted neutral surface used for "remarks" sections and secondary text lines.
-// `mutedText` darkened from `#6F6F6F` → `#5F5F5F` in #121 to clear WCAG AA
-// 4.5:1 against `muted` (was 4.49:1 — one hundredth shy of AA).
-const lightSurfaceColors = {
+// Surface neutrals. `subdued` is the "no validation state" card background,
+// deliberately darker than `muted` so the unselected card reads as inert.
+const lightSurface = {
   muted: "#F2F2F2",
-  mutedText: "#5F5F5F",
-  border: "#AAAAAA",
-  borderLight: "#CCCCCC",
+  subdued: "#CFCFCF",
 };
 
-// Top-level navigation tab strip. `contrastText` flipped from white to the
-// project's dark slate in #121: white-on-`#70ADB5` was 2.52:1 (failing AA at
-// 14px); dark slate is 7.08:1.
-const lightTabColors = {
-  main: "#70ADB5",
-  contrastText: "#0F172A",
+const lightText = {
+  primary: "#0F172A",
+  secondary: "#5F5F5F",
+  disabled: "#A6A6A6",
 };
 
-// Map layer-switcher buttons (hazard/exposure/risk maps).
-const lightMapControlColors = {
-  main: "#2A4D69",
-  light: "#5C87B1",
-  hover: "#9886D6",
-  contrastText: "#FFFFFF",
+const lightBorder = {
+  default: "#CCCCCC",
+  strong: "#AAAAAA",
 };
 
-// Results table header (MUITable).
-const lightTableHeaderColors = {
-  main: "#73B588",
+// Light-mode feedback `main` swatches darkened from the #298 spec values so
+// each passes WCAG AA 4.5:1 on `background.paper` (#FFFFFF):
+//   success: #05A660 → #047D49 (3.16:1 → 5.21:1)
+//   warning: #E5B800 → #8C6F00 (2.20:1 → 4.79:1) — yellow-on-white is the
+//     hardest pair; the spec calls this out explicitly.
+//   error:   #E53535 → #D32525 (4.29:1 → 5.17:1)
+// The `bg` tints are unchanged. Dark-mode swatches keep the spec values
+// because they pair against `#1E293B` paper, which has plenty of headroom.
+const lightFeedback = {
+  success: { main: "#047D49", bg: "#D9F5E6" },
+  warning: { main: "#8C6F00", bg: "#FDF4CC" },
+  error: { main: "#D32525", bg: "#FFE4E4" },
+  info: { main: "#004FC4", bg: "#D9E8FF" },
 };
 
-// Legacy loader background swatch.
-const lightLoaderColors = {
-  main: "#2A4D69",
-};
+// Categorical chart palette (six fixed hues, used in both schemes). The order
+// is stable so chart series colours don't shift when datasets change.
+const VIZ_CATEGORICAL = [
+  "#2F7A86", // primary teal
+  "#F79191", // secondary salmon
+  "#FDDD48", // warning yellow
+  "#5B8DEF", // info blue
+  "#9966FF", // purple
+  "#39D98A", // success green
+] as const;
 
-// Slider disabled-rail swatch.
-const lightSliderColors = {
-  disabledRail: "#D8D8D8",
+const lightViz = {
+  categorical: VIZ_CATEGORICAL as readonly string[],
+  positive: "#05A660",
+  neutral: "#2F7A86",
+  negative: "#E53535",
+  // Light-mode ramps use D3's pre-baked schemeXxx[9] arrays sliced to the
+  // dark end (resolved in `src/utils/colorScales.js`). Domain `[0, 1]`
+  // means "use the scheme as-is".
+  ramps: {
+    flood: { interpolator: "Blues", domain: [0, 1] as [number, number] },
+    heatwave: { interpolator: "Reds", domain: [0, 1] as [number, number] },
+    drought: { interpolator: "YlOrBr", domain: [0, 1] as [number, number] },
+    risk: { interpolator: "YlOrRd", domain: [0, 1] as [number, number] },
+  },
 };
 
 // --- Dark scheme -------------------------------------------------------------
-// Starter values per issue #288. WCAG AA verification of every dark pair
-// lands in the audit follow-up (#289); failing pairs are corrected by moving
-// the swatch, not by relaxing the threshold.
 
-const darkInputCardColors = {
-  default: "#1E3A42",
-  valid: "#1E4030",
-  invalid: "#5C2A2A",
-  neutral: "#3A3A3A",
-  hover: "#264852",
-  panelBg: "#1E3A42",
-  sectionBg: "#264852",
-  disabledBg: "#2A3340",
-  disabledText: "#64748B",
-};
-
-const darkHeaderColors = {
-  main: "#1F4F58",
-  contrastText: "#F1F5F9",
-};
-
-const darkAccentColors = {
-  main: "#F79191",
-  light: "#5C3A3A",
-  paleBg: "#3A2828",
-  dark: "#FFB8B8",
+// Dark `primary.light` is intentionally pale so `primary.dark` (`#0E5A66`)
+// remains AA-readable on it — the spec'd `#5FA0AE` measured 2.67:1. This
+// follows Material 3's dark-mode convention of pale tinted primaries paired
+// with dark contrast text.
+//
+// `bgStrong` is *lighter* than `bg` in dark mode: dark surfaces follow
+// elevation conventions where higher-emphasis elements move toward white,
+// so cards on a panel pop one step lighter than the panel itself.
+//
+// `bg` and `bgStrong` are shifted toward navy-blue (G ↓, B ↑ at constant
+// luminance) vs the spec'd `#1E3A42` / `#2A4F58`. The original swatches
+// read green-teal against the dark navy page, fighting the slate family
+// used by `background.{default,paper}` and `surface.muted`. The cooler
+// swatches keep the brand teal direction without breaking colour cohesion.
+const darkPrimary = {
+  bg: "#1D384B",
+  bgStrong: "#2A4D5E",
+  light: "#A0CDD8",
+  main: "#5FB3C2",
+  dark: "#0E5A66",
   contrastText: "#0F172A",
 };
 
-const darkCardColors = {
-  bg: "#1E293B",
+const darkSecondary = {
+  bg: "#3D2020",
+  light: "#7A4A4A",
+  main: "#F79191",
+  dark: "#E04848",
+  contrastText: "#0F172A",
 };
 
-const darkSurfaceColors = {
-  muted: "#1E293B",
-  mutedText: "#94A3B8",
-  border: "#475569",
-  borderLight: "#334155",
+const darkSurface = {
+  muted: "#334155",
+  subdued: "#475569",
 };
 
-const darkTabColors = {
-  main: "#1F4F58",
-  contrastText: "#F1F5F9",
+const darkText = {
+  primary: "#F1F5F9",
+  secondary: "#94A3B8",
+  disabled: "#64748B",
 };
 
-const darkMapControlColors = {
-  main: "#5C87B1",
-  light: "#2A4D69",
-  hover: "#9886D6",
-  contrastText: "#FFFFFF",
+const darkBorder = {
+  default: "#334155",
+  strong: "#475569",
 };
 
-const darkTableHeaderColors = {
-  main: "#3F6E51",
+// Dark-mode feedback `bg` swatches are tuned to share luminance with
+// `primary.bgStrong` (~L 0.07) so a grid of cards in mixed states reads as
+// a coherent set of muted dark tints rather than a patchwork of saturated
+// hues. The spec'd `#0F3D26` / `#3D1414` / `#0F2647` / `#3D3300` were too
+// distant from the card colour and pulled focus away from the content.
+// `main` swatches (used as icon / badge fills, not as backgrounds) keep
+// their full vibrance so they still pop on the toned-down `bg`.
+const darkFeedback = {
+  success: { main: "#39D98A", bg: "#2A5240" },
+  warning: { main: "#FDDD48", bg: "#524A2E" },
+  error: { main: "#FF5C5C", bg: "#5F3A34" },
+  info: { main: "#5B8DEF", bg: "#2E4860" },
 };
 
-const darkLoaderColors = {
-  main: "#0F172A",
-};
-
-const darkSliderColors = {
-  disabledRail: "#475569",
+const darkViz = {
+  categorical: VIZ_CATEGORICAL as readonly string[],
+  positive: "#39D98A",
+  neutral: "#5FB3C2",
+  negative: "#FF5C5C",
+  // Dark-mode ramps clip the unreadable pale steps at the start of each D3
+  // sequential scheme, preserving direction + hue family. Resolved via
+  // `d3.interpolateXxx` in `src/utils/colorScales.js`.
+  ramps: {
+    flood: { interpolator: "Blues", domain: [0.3, 1.0] as [number, number] },
+    heatwave: { interpolator: "Reds", domain: [0.3, 1.0] as [number, number] },
+    drought: { interpolator: "YlOrBr", domain: [0.25, 1.0] as [number, number] },
+    risk: { interpolator: "YlOrRd", domain: [0.25, 1.0] as [number, number] },
+  },
 };
 
 declare module "@mui/material/styles" {
   interface Palette {
-    inputCard: typeof lightInputCardColors;
-    header: typeof lightHeaderColors;
-    accent: typeof lightAccentColors;
-    card: typeof lightCardColors;
-    surface: typeof lightSurfaceColors;
-    tab: typeof lightTabColors;
-    mapControl: typeof lightMapControlColors;
-    tableHeader: typeof lightTableHeaderColors;
-    loader: typeof lightLoaderColors;
-    slider: typeof lightSliderColors;
+    surface: typeof lightSurface;
+    border: typeof lightBorder;
+    feedback: typeof lightFeedback;
+    viz: typeof lightViz;
   }
   interface PaletteOptions {
-    inputCard?: typeof lightInputCardColors;
-    header?: typeof lightHeaderColors;
-    accent?: typeof lightAccentColors;
-    card?: typeof lightCardColors;
-    surface?: typeof lightSurfaceColors;
-    tab?: typeof lightTabColors;
-    mapControl?: typeof lightMapControlColors;
-    tableHeader?: typeof lightTableHeaderColors;
-    loader?: typeof lightLoaderColors;
-    slider?: typeof lightSliderColors;
+    surface?: typeof lightSurface;
+    border?: typeof lightBorder;
+    feedback?: typeof lightFeedback;
+    viz?: typeof lightViz;
   }
 }
 
@@ -217,67 +232,45 @@ export const theme = createTheme({
   colorSchemes: {
     light: {
       palette: {
-        // Primary teal darkened in #121 for WCAG 2.1 AA compliance:
-        //   - `main`  #45ABB9 → #2F7A86 (white-on-main was 2.70:1, now 4.94:1)
-        //   - `dark`  #3B919D → #0E5A66 (white-on-dark was 3.67:1, now 7.86:1)
-        // `light` stays as the tinted-surface swatch and is intended to pair
-        // with dark text rather than white (see MainSubTabs unselected-tab fix).
-        primary: {
-          main: "#2F7A86",
-          dark: "#0E5A66",
-          light: "#8AC8D0",
-          contrastText: "#ffffff",
-        },
+        primary: lightPrimary,
+        secondary: lightSecondary,
+        // `error.main` is aliased to `feedback.error.main` so MUI built-ins
+        // (`<Alert severity="error">`, etc.) inherit the new red without
+        // needing to be migrated component-by-component.
         error: {
-          main: "#B00020",
+          main: lightFeedback.error.main,
           dark: "#BA000D",
-          contrastText: "#ffffff",
+          contrastText: "#FFFFFF",
         },
-        text: {
-          primary: "#0F172A",
-          secondary: "#334155",
-        },
-        background: { default: "#f8fafc", paper: "#ffffff" },
-        inputCard: lightInputCardColors,
-        header: lightHeaderColors,
-        accent: lightAccentColors,
-        card: lightCardColors,
-        surface: lightSurfaceColors,
-        tab: lightTabColors,
-        mapControl: lightMapControlColors,
-        tableHeader: lightTableHeaderColors,
-        loader: lightLoaderColors,
-        slider: lightSliderColors,
+        text: lightText,
+        background: { default: "#F8FAFC", paper: "#FFFFFF" },
+        // MUI's default `action.disabledBackground` (rgba(0,0,0,0.12)) is too
+        // translucent to read against tinted card surfaces — the disabled
+        // OutlinedInput slot dissolves into the card. Override with a solid
+        // neutral grey that sits clearly on top of `primary.bgStrong`.
+        action: { disabledBackground: "#E6E6E6" },
+        surface: lightSurface,
+        border: lightBorder,
+        feedback: lightFeedback,
+        viz: lightViz,
       },
     },
     dark: {
       palette: {
-        primary: {
-          main: "#5BB5C2",
-          dark: "#7DCAD5",
-          light: "#1F4F58",
-          contrastText: "#0F172A",
-        },
+        primary: darkPrimary,
+        secondary: darkSecondary,
         error: {
-          main: "#FF6B7A",
+          main: darkFeedback.error.main,
           dark: "#FF8A95",
           contrastText: "#0F172A",
         },
-        text: {
-          primary: "#F1F5F9",
-          secondary: "#CBD5E1",
-        },
+        text: darkText,
         background: { default: "#0F172A", paper: "#1E293B" },
-        inputCard: darkInputCardColors,
-        header: darkHeaderColors,
-        accent: darkAccentColors,
-        card: darkCardColors,
-        surface: darkSurfaceColors,
-        tab: darkTabColors,
-        mapControl: darkMapControlColors,
-        tableHeader: darkTableHeaderColors,
-        loader: darkLoaderColors,
-        slider: darkSliderColors,
+        action: { disabledBackground: "#2A3340" },
+        surface: darkSurface,
+        border: darkBorder,
+        feedback: darkFeedback,
+        viz: darkViz,
       },
     },
   },
@@ -330,16 +323,10 @@ export const theme = createTheme({
     // table-row / chart-toggle actions. Avoid it on primary CTAs.
     MuiButton: {
       defaultProps: {
-        // Flat contained buttons (no MUI default elevation shadow). The
-        // existing buttons across home, workspace, and settings already render
-        // flat in their screenshots; this makes that the explicit default.
+        // Flat contained buttons (no MUI default elevation shadow).
         disableElevation: true,
       },
       styleOverrides: {
-        // `contained` slot anchors primary CTAs at a generous min-width so
-        // short-label CTAs feel balanced next to long-label ones (e.g. "Save"
-        // alongside "Run your first scenario"). `sizeSmall` overrides this
-        // back to MUI's natural minimum for legitimately-dense uses.
         contained: {
           minWidth: 140,
         },

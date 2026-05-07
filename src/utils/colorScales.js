@@ -1,21 +1,65 @@
-import { schemeReds, schemeBlues, schemeYlOrBr, schemeYlOrRd } from "d3-scale-chromatic";
+import {
+  schemeReds,
+  schemeBlues,
+  schemeYlOrBr,
+  schemeYlOrRd,
+  interpolateReds,
+  interpolateBlues,
+  interpolateYlOrBr,
+  interpolateYlOrRd,
+} from "d3-scale-chromatic";
 
-const getColorScale = (hazard) => {
-  const k = 9; // Largest set of colors
-  switch (hazard) {
-    case "flood":
-      return schemeBlues[k].slice(-5); // Get last 5 colors
-    case "drought":
-      return [...schemeYlOrBr[k]].slice(-5);
-    case "heatwaves":
-      return schemeReds[k].slice(-5);
-    default:
-      return schemeYlOrRd[k].slice(-5);
-  }
+// D3 sequential ramps referenced by name from `theme.palette.viz.ramps` so the
+// theme stays color-system-agnostic and the maps can switch ramp on hazard
+// without importing d3 themselves.
+const SCHEMES = {
+  Blues: schemeBlues,
+  Reds: schemeReds,
+  YlOrBr: schemeYlOrBr,
+  YlOrRd: schemeYlOrRd,
 };
 
-export const getScale = (hazard, percentileValues) => {
-  const colors = getColorScale(hazard);
+const INTERPOLATORS = {
+  Blues: interpolateBlues,
+  Reds: interpolateReds,
+  YlOrBr: interpolateYlOrBr,
+  YlOrRd: interpolateYlOrRd,
+};
+
+const RAMP_KEY_BY_HAZARD = {
+  flood: "flood",
+  drought: "drought",
+  heatwaves: "heatwave",
+};
+
+const SAMPLE_COUNT = 5;
+
+// Resolves a `viz.ramps.{flood,heatwave,drought,risk}` definition into 5
+// concrete colours. When the domain is the full `[0, 1]` we use D3's
+// pre-baked `schemeXxx[9]` array sliced to the dark end (matches the previous
+// light-mode behaviour). For truncated domains (the dark-mode ramps) we
+// sample the matching `interpolateXxx` continuously so the unreadable pale
+// steps are clipped cleanly.
+const resolveRamp = (rampDef) => {
+  const { interpolator, domain } = rampDef;
+  const [start, end] = domain;
+  if (start === 0 && end === 1) {
+    const scheme = SCHEMES[interpolator];
+    return scheme[9].slice(-SAMPLE_COUNT);
+  }
+  const fn = INTERPOLATORS[interpolator];
+  return Array.from({ length: SAMPLE_COUNT }, (_, i) =>
+    fn(start + ((end - start) * i) / (SAMPLE_COUNT - 1))
+  );
+};
+
+const getColorScale = (hazard, ramps) => {
+  const key = RAMP_KEY_BY_HAZARD[hazard] ?? "risk";
+  return resolveRamp(ramps[key]);
+};
+
+export const getScale = (hazard, percentileValues, ramps) => {
+  const colors = getColorScale(hazard, ramps);
   const isAscending = percentileValues[0] < percentileValues[percentileValues.length - 1];
 
   return (value) => {

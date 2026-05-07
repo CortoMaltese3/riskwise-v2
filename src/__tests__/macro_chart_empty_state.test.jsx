@@ -1,6 +1,13 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import { ThemeProvider } from "@mui/material/styles";
+import theme from "../theme/theme";
+
+// Charts read viz palette tokens via useTheme() (#298), so every render must
+// be wrapped in our ThemeProvider — the default MUI theme has no `viz` slot.
+const render = (ui, options) =>
+  rtlRender(<ThemeProvider theme={theme}>{ui}</ThemeProvider>, options);
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({

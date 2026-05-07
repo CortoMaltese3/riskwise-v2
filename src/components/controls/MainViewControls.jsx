@@ -29,7 +29,7 @@ const MainViewControls = () => {
         width: "100%",
         maxWidth: 480,
         margin: "auto",
-        bgcolor: "accent.light",
+        bgcolor: "secondary.light",
         border: 1,
         borderColor: "common.black",
         borderRadius: (theme) => theme.spacing(2),
@@ -59,7 +59,7 @@ const MainViewControls = () => {
                   flexGrow: 1,
                   color: "text.primary",
                   "&:hover": {
-                    backgroundColor: "accent.light",
+                    backgroundColor: "secondary.light",
                   },
                 }}
               >

@@ -137,7 +137,7 @@ const ExposureNonEconomicCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "card.bg",
+        bgcolor: "primary.bgStrong",
         border: 2,
         borderColor: "primary.dark",
         borderRadius: (theme) => theme.spacing(2),
@@ -152,7 +152,7 @@ const ExposureNonEconomicCard = () => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            backgroundColor: "accent.main",
+            backgroundColor: "secondary.main",
             borderRadius: (theme) => theme.spacing(1),
             padding: 1,
             marginBottom: 3,
@@ -168,7 +168,7 @@ const ExposureNonEconomicCard = () => {
               key={exposure}
               onClick={() => handleCardSelect(exposure)}
               sx={{
-                backgroundColor: isButtonSelected(exposure) ? "accent.main" : "accent.light",
+                backgroundColor: isButtonSelected(exposure) ? "secondary.main" : "secondary.light",
                 borderRadius: (theme) => theme.spacing(1),
                 my: 1,
                 mx: 0,
@@ -195,11 +195,11 @@ const ExposureNonEconomicCard = () => {
               component="span"
               onClick={handleLoadButtonClick}
               sx={{
-                bgcolor: "accent.paleBg",
+                bgcolor: "secondary.bg",
                 color: "common.black",
                 fontWeight: "bold",
                 margin: 2,
-                "&:hover": { bgcolor: "accent.light" },
+                "&:hover": { bgcolor: "secondary.light" },
                 transition: layoutTransition(["transform"]),
                 "&:active": {
                   transform: "scale(0.96)", // Slightly scale down when clicked
@@ -227,11 +227,11 @@ const ExposureNonEconomicCard = () => {
             <Button
               component="span"
               sx={{
-                bgcolor: "accent.paleBg",
+                bgcolor: "secondary.bg",
                 color: "common.black",
                 fontWeight: "bold",
                 margin: 2,
-                "&:hover": { bgcolor: "accent.light" },
+                "&:hover": { bgcolor: "secondary.light" },
                 transition: layoutTransition(["transform"]),
                 "&:active": {
                   transform: "scale(0.96)", // Slightly scale down when clicked
@@ -262,7 +262,7 @@ const ExposureNonEconomicCard = () => {
             <IconButton
               onClick={clearUploadedFile}
               size="small"
-              sx={{ color: "accent.dark" }}
+              sx={{ color: "secondary.dark" }}
               aria-label={t("clear_uploaded_file_aria")}
             >
               <CloseIcon />
@@ -286,7 +286,7 @@ const ExposureNonEconomicCard = () => {
             <IconButton
               onClick={clearFetchedData}
               size="small"
-              sx={{ color: "accent.dark" }}
+              sx={{ color: "secondary.dark" }}
               aria-label={t("clear_fetched_data_aria")}
             >
               <CloseIcon />

@@ -1,16 +1,25 @@
 /**
  * Shared sx fragments for the scenario-configuration input cards. Centralising
- * them here keeps the per-card components free of hex literals (issue #6) and
- * gives Phase 1 a single place to evolve the pattern once design tokens land.
+ * them here keeps the per-card components free of hex literals and gives a
+ * single place to evolve the pattern.
  *
- * `state` is a key of `theme.palette.inputCard` ("default" | "valid" |
- * "invalid" | "neutral").
+ * `state` is one of "default" | "valid" | "invalid" | "neutral", each
+ * resolved to a token in the semantic palette (#298):
+ *   default → primary.bgStrong   (one step deeper than the panel `primary.bg`
+ *                                 so the card sits visibly on the panel)
+ *   valid   → feedback.success.bg
+ *   invalid → feedback.error.bg
+ *   neutral → surface.subdued
  */
 
 import { layoutTransition } from "../../theme/theme";
 
-// Per ui-design-spec § Density.
-export const INPUT_CARD_HEIGHT = 110;
+// Per ui-design-spec § Density. Set to fit a two-line title plus the disabled
+// TextField with the same top/bottom padding as a one-line title — the
+// previous 110 was tight enough that 2-line cards (e.g. "Exposure of
+// Non-Economic Assets") collapsed their bottom margin against shorter cards
+// like "Scenario", making the grid look uneven.
+export const INPUT_CARD_HEIGHT = 130;
 
 // Shrunk from MUI h6 default (1.25rem / line-height 1.6) so two-line titles
 // like "Exposure of Non-Economic Assets" fit inside INPUT_CARD_HEIGHT without
@@ -23,15 +32,22 @@ export const cardTitleSx = {
   fontWeight: 600,
 };
 
+const stateBgcolor = {
+  default: "primary.bgStrong",
+  valid: "feedback.success.bg",
+  invalid: "feedback.error.bg",
+  neutral: "surface.subdued",
+};
+
 export const getInputCardSx = (state, { clicked = false } = {}) => ({
   cursor: "pointer",
-  bgcolor: (theme) => theme.palette.inputCard[state],
+  bgcolor: stateBgcolor[state],
   transition: layoutTransition(["background-color", "transform"]),
   display: "flex",
   flexDirection: "column",
   height: INPUT_CARD_HEIGHT,
   "&:hover": {
-    bgcolor: (theme) => theme.palette.inputCard.hover,
+    bgcolor: "action.hover",
   },
   ".MuiCardContent-root": {
     flexGrow: 1,
@@ -48,11 +64,18 @@ export const disabledFieldSx = {
   // inherits the notched-outline border-radius. Styling the inner native
   // `<input>` instead leaves a square grey rectangle peeking behind the pill,
   // which shows up clearly on the neutral-state card (#285).
+  //
+  // The notched-outline `<fieldset>` border is hidden because MUI's default
+  // `Mui-disabled` outline is a translucent neutral that, on a dark card,
+  // glows against the surface and reads as a "radiant" pill edge — making
+  // the field look brighter than its actual fill. With the outline removed,
+  // only the solid `action.disabledBackground` fill defines the pill.
   ".MuiOutlinedInput-root.Mui-disabled": {
-    bgcolor: (theme) => theme.palette.inputCard.disabledBg,
+    bgcolor: "action.disabledBackground",
+    "& .MuiOutlinedInput-notchedOutline": { borderColor: "transparent" },
   },
   ".MuiInputBase-input.Mui-disabled": {
-    WebkitTextFillColor: (theme) => theme.palette.inputCard.disabledText,
+    WebkitTextFillColor: (theme) => theme.palette.text.disabled,
     padding: 1,
   },
 };

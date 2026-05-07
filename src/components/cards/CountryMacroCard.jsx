@@ -60,7 +60,7 @@ const CountryMacroCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "card.bg",
+        bgcolor: "primary.bgStrong",
         border: 2,
         borderColor: "primary.dark",
         borderRadius: (theme) => theme.spacing(2),
@@ -76,7 +76,7 @@ const CountryMacroCard = () => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            backgroundColor: "accent.main",
+            backgroundColor: "secondary.main",
             borderRadius: (theme) => theme.spacing(1),
             padding: 1,
           }}
@@ -96,7 +96,7 @@ const CountryMacroCard = () => {
               key={country.code}
               onClick={() => handleSelect(country)}
               sx={{
-                backgroundColor: isButtonSelected(country) ? "accent.main" : "accent.light",
+                backgroundColor: isButtonSelected(country) ? "secondary.main" : "secondary.light",
                 flexGrow: 1,
                 borderRadius: (theme) => theme.spacing(1),
                 textAlign: "center",

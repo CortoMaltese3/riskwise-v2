@@ -26,7 +26,7 @@ const ScenarioMacroCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "card.bg",
+        bgcolor: "primary.bgStrong",
         border: 2,
         borderColor: "primary.dark",
         borderRadius: (theme) => theme.spacing(2),
@@ -42,7 +42,7 @@ const ScenarioMacroCard = () => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            backgroundColor: "accent.main",
+            backgroundColor: "secondary.main",
             borderRadius: (theme) => theme.spacing(1),
             padding: 1,
             marginBottom: 3,
@@ -55,7 +55,7 @@ const ScenarioMacroCard = () => {
             key={scenario}
             onClick={() => handleCardSelect(scenario)}
             sx={{
-              backgroundColor: isButtonSelected(scenario) ? "accent.main" : "accent.light",
+              backgroundColor: isButtonSelected(scenario) ? "secondary.main" : "secondary.light",
               borderRadius: (theme) => theme.spacing(1),
               margin: 2,
               marginLeft: 0,

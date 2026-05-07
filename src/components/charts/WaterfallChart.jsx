@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Button, Stack, Typography } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
 import { Bar } from "react-chartjs-2";
 import {
   BarElement,
@@ -24,9 +25,6 @@ import ChartInfoPopover from "../help/ChartInfoPopover";
 ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend, ChartDataLabels);
 
 const TOTAL_KEYS = new Set(["risk_present", "risk_future"]);
-const COLOR_TOTAL = "rgba(59, 145, 157, 0.85)";
-const COLOR_INCREASE = "rgba(220, 60, 60, 0.85)";
-const COLOR_DECREASE = "rgba(75, 192, 120, 0.85)";
 const PATTERN_TOTAL = 0;
 const PATTERN_INCREASE = 1;
 const PATTERN_DECREASE = 2;
@@ -56,6 +54,13 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
   const chartRef = ref ?? internalRef;
   const showChartValues = useStore((state) => state.showChartValues);
   const toggleShowChartValues = useStore((state) => state.toggleShowChartValues);
+  const theme = useTheme();
+  // Increase / decrease / total map onto the semantic viz tokens (#298). An
+  // increase in *risk* is bad (negative), a decrease is good (positive); the
+  // total bars use the neutral teal so they read as references, not deltas.
+  const COLOR_TOTAL = alpha(theme.palette.viz.neutral, 0.85);
+  const COLOR_INCREASE = alpha(theme.palette.viz.negative, 0.85);
+  const COLOR_DECREASE = alpha(theme.palette.viz.positive, 0.85);
 
   useEffect(() => {
     return () => {
@@ -144,7 +149,7 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
         display: showChartValues,
         anchor: "end",
         align: "end",
-        color: "rgba(33, 33, 33, 0.9)",
+        color: alpha(theme.palette.text.primary, 0.9),
         font: { size: 11, weight: 600 },
         formatter: (_value, ctx) => {
           const category = data.categories[ctx.dataIndex];

@@ -35,7 +35,7 @@ const AnnualGrowthCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "card.bg",
+        bgcolor: "primary.bgStrong",
         border: 2,
         borderColor: "primary.dark",
         borderRadius: (theme) => theme.spacing(2),
@@ -50,7 +50,7 @@ const AnnualGrowthCard = () => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            backgroundColor: "accent.main",
+            backgroundColor: "secondary.main",
             borderRadius: (theme) => theme.spacing(1),
             padding: 1,
             marginBottom: 2,
@@ -65,7 +65,7 @@ const AnnualGrowthCard = () => {
               flexDirection: "column",
               justifyContent: "center",
               alignItems: "center", // Center children horizontally
-              backgroundColor: "accent.light",
+              backgroundColor: "secondary.light",
               borderRadius: (theme) => theme.spacing(1),
               marginBottom: 2,
             }}
@@ -77,7 +77,7 @@ const AnnualGrowthCard = () => {
                 flexDirection: "column",
                 justifyContent: "center",
                 alignItems: "center", // Center children horizontally
-                backgroundColor: "accent.light",
+                backgroundColor: "secondary.light",
                 borderRadius: (theme) => theme.spacing(1),
                 py: 2.5,
                 px: 0,
@@ -108,7 +108,7 @@ const AnnualGrowthCard = () => {
                 valueLabelDisplay="on" // Changed to "on" to always show the value label
                 value={selectedAnnualGrowth ? parseFloat(selectedAnnualGrowth) : 0}
                 sx={{
-                  color: "accent.main", // Slider track and thumb color
+                  color: "secondary.main", // Slider track and thumb color
                   marginTop: 6,
                   width: "90%", // Adjust width to be less than container to center properly
                   "& .MuiSlider-thumb": {
@@ -127,14 +127,14 @@ const AnnualGrowthCard = () => {
                     fontWeight: "bold",
                     borderRadius: (theme) => theme.spacing(2),
                     borderColor: "black",
-                    backgroundColor: "accent.main",
+                    backgroundColor: "secondary.main",
                   },
                   "& .MuiSlider-track": {
                     height: 16,
                     borderRadius: 4,
                   },
                   "& .MuiSlider-rail": {
-                    color: "slider.disabledRail",
+                    color: "border.default",
                     opacity: 1,
                     height: 8,
                     borderRadius: 4,
@@ -151,7 +151,7 @@ const AnnualGrowthCard = () => {
               flexDirection: "column",
               justifyContent: "center",
               alignItems: "center", // Center children horizontally
-              backgroundColor: "accent.light",
+              backgroundColor: "secondary.light",
               borderRadius: (theme) => theme.spacing(1),
               marginBottom: 2,
             }}
@@ -163,7 +163,7 @@ const AnnualGrowthCard = () => {
                 flexDirection: "column",
                 justifyContent: "center",
                 alignItems: "center", // Center children horizontally
-                backgroundColor: "accent.light",
+                backgroundColor: "secondary.light",
                 borderRadius: (theme) => theme.spacing(1),
                 py: 2.5,
                 px: 0,
@@ -194,7 +194,7 @@ const AnnualGrowthCard = () => {
                 valueLabelDisplay="on" // Changed to "on" to always show the value label
                 value={selectedAnnualGrowth ? parseFloat(selectedAnnualGrowth) : 0}
                 sx={{
-                  color: "accent.main", // Slider track and thumb color
+                  color: "secondary.main", // Slider track and thumb color
                   marginTop: 6,
                   width: "90%", // Adjust width to be less than container to center properly
                   "& .MuiSlider-thumb": {
@@ -213,14 +213,14 @@ const AnnualGrowthCard = () => {
                     fontWeight: "bold",
                     borderRadius: (theme) => theme.spacing(2),
                     borderColor: "black",
-                    backgroundColor: "accent.main",
+                    backgroundColor: "secondary.main",
                   },
                   "& .MuiSlider-track": {
                     height: 16,
                     borderRadius: 4,
                   },
                   "& .MuiSlider-rail": {
-                    color: "slider.disabledRail",
+                    color: "border.default",
                     opacity: 1,
                     height: 8,
                     borderRadius: 4,
