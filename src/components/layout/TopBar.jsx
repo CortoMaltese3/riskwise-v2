@@ -26,8 +26,8 @@ const TopBar = () => {
       role="banner"
       aria-label={t("application_title")}
       sx={{
-        bgcolor: "header.main",
-        color: "header.contrastText",
+        bgcolor: "primary.light",
+        color: "primary.dark",
         top: 0,
         zIndex: (theme) => theme.zIndex.drawer + 1,
       }}

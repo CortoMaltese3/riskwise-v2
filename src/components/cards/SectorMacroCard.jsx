@@ -42,7 +42,7 @@ const SectorMacroCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "card.bg",
+        bgcolor: "primary.bg",
         border: 2,
         borderColor: "primary.dark",
         borderRadius: (theme) => theme.spacing(2),
@@ -58,7 +58,7 @@ const SectorMacroCard = () => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            backgroundColor: "accent.main",
+            backgroundColor: "secondary.main",
             borderRadius: (theme) => theme.spacing(1),
             padding: 1,
             marginBottom: 3,
@@ -72,7 +72,7 @@ const SectorMacroCard = () => {
               key={sector}
               onClick={() => handleCardSelect(sector)}
               sx={{
-                backgroundColor: isButtonSelected(sector) ? "accent.main" : "accent.light",
+                backgroundColor: isButtonSelected(sector) ? "secondary.main" : "secondary.light",
                 borderRadius: (theme) => theme.spacing(1),
                 margin: 2,
                 marginLeft: 0,

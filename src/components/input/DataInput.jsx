@@ -27,7 +27,7 @@ const DataInput = () => {
       {/* DataInput parameters section */}
       <Box
         sx={{
-          backgroundColor: (theme) => theme.palette.inputCard.panelBg,
+          backgroundColor: (theme) => theme.palette.primary.bg,
           padding: 2,
         }}
       >

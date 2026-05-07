@@ -36,11 +36,11 @@ const MainTabs = () => {
   };
 
   return (
-    <Box sx={{ bgcolor: "tab.main" }}>
+    <Box sx={{ bgcolor: "primary.light" }}>
       <AppBar
         position="fixed"
         sx={{
-          bgcolor: "tab.main",
+          bgcolor: "primary.light",
           top: `${TOP_BAR_HEIGHT}px`,
           zIndex: (theme) => theme.zIndex.drawer + 1,
         }}

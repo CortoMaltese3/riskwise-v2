@@ -17,7 +17,7 @@ const MainViewTitle = () => {
         sx={{
           margin: "auto",
           marginBottom: 2,
-          bgcolor: "accent.dark",
+          bgcolor: "secondary.dark",
           color: "white",
           fontWeight: "bold",
           textAlign: "center",

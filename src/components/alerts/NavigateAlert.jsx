@@ -60,7 +60,7 @@ const NavigateAlert = () => {
             component="div"
             sx={{
               mt: 2,
-              bgcolor: "accent.dark",
+              bgcolor: "secondary.dark",
               color: "white",
               fontWeight: "bold",
               textAlign: "center",
@@ -78,7 +78,7 @@ const NavigateAlert = () => {
               maxWidth: 800,
               mb: 2,
               border: 2,
-              borderColor: "surface.border",
+              borderColor: "border.strong",
               borderRadius: (theme) => theme.spacing(2),
             }}
           >
@@ -109,7 +109,7 @@ const NavigateAlert = () => {
                 backgroundColor: "white",
                 color: "black",
                 ":hover": {
-                  backgroundColor: "accent.light",
+                  backgroundColor: "secondary.light",
                 },
                 "text-transform": "none",
               }}
@@ -137,7 +137,7 @@ const NavigateAlert = () => {
           component="div"
           sx={{
             mt: 2,
-            bgcolor: "accent.dark",
+            bgcolor: "secondary.dark",
             color: "white",
             fontWeight: "bold",
             textAlign: "center",
@@ -153,9 +153,9 @@ const NavigateAlert = () => {
           sx={{
             maxWidth: 800,
             mb: 2,
-            // bgcolor: "card.bg",
+            // bgcolor: "primary.bg",
             border: 2,
-            borderColor: "surface.border",
+            borderColor: "border.strong",
             borderRadius: (theme) => theme.spacing(2),
           }}
         >
@@ -182,7 +182,7 @@ const NavigateAlert = () => {
             maxWidth: 800,
             margin: "auto",
             marginBottom: 2,
-            bgcolor: "card.bg",
+            bgcolor: "primary.bg",
             border: 2,
             borderColor: "primary.dark",
             borderRadius: (theme) => theme.spacing(2),
@@ -197,7 +197,7 @@ const NavigateAlert = () => {
               sx={{
                 textAlign: "center",
                 fontWeight: "bold",
-                backgroundColor: "accent.main",
+                backgroundColor: "secondary.main",
                 borderRadius: (theme) => theme.spacing(1),
                 padding: 1,
               }}
@@ -211,7 +211,7 @@ const NavigateAlert = () => {
                   key={option}
                   onClick={() => handleSelect(option)}
                   sx={{
-                    backgroundColor: "accent.light",
+                    backgroundColor: "secondary.light",
                     flexGrow: 1,
                     borderRadius: (theme) => theme.spacing(1),
                     marginLeft: 0,

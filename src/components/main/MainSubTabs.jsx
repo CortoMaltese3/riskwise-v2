@@ -104,12 +104,12 @@ const MainSubTabs = () => {
                 variant="contained"
                 size="small"
                 sx={{
-                  bgcolor: "accent.light",
+                  bgcolor: "secondary.light",
                   transition: layoutTransition(["transform"]),
                   "&:active": {
                     transform: "scale(0.96)",
                   },
-                  "&:hover": { bgcolor: "accent.main" },
+                  "&:hover": { bgcolor: "secondary.main" },
                   textTransform: "none",
                 }}
                 onClick={() => handleButtonClick(index)}

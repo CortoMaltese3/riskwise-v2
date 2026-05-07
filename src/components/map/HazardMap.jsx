@@ -170,8 +170,8 @@ const HazardMap = () => {
     minWidth: 7.5,
     maxWidth: 7.5,
     fontSize: "0.75rem",
-    bgcolor: rp === activeRPLayer ? "mapControl.main" : "mapControl.light",
-    "&:hover": { bgcolor: "mapControl.hover" },
+    bgcolor: rp === activeRPLayer ? "primary.dark" : "primary.main",
+    "&:hover": { bgcolor: "secondary.main" },
   });
 
   const buttonContainerSx = {

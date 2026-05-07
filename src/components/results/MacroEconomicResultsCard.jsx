@@ -14,7 +14,7 @@ const MacroEconomicResultsCard = () => {
       {/* Result Details section */}
       <Box
         sx={{
-          bgcolor: "accent.light",
+          bgcolor: "secondary.light",
           padding: 2,
           borderRadius: (theme) => theme.spacing(0.5),
         }}
@@ -23,16 +23,16 @@ const MacroEconomicResultsCard = () => {
           variant="h6"
           sx={{
             borderBottom: 1,
-            borderBottomColor: "surface.mutedText",
+            borderBottomColor: "text.secondary",
             paddingBottom: 1,
-            color: "surface.mutedText",
+            color: "text.secondary",
             textAlign: "center",
           }}
         >
           {t("macroeceonomic_results_information_title")}
         </Typography>
 
-        <Typography variant="body1" sx={{ marginTop: 2, flexGrow: 1, color: "surface.mutedText" }}>
+        <Typography variant="body1" sx={{ marginTop: 2, flexGrow: 1, color: "text.secondary" }}>
           {activeViewControl === "display_macro_chart"
             ? t("macroeceonomic_results_information_text")
                 .split("/n")

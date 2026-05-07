@@ -154,8 +154,8 @@ const RunScenarioButton = () => {
           onClick={onRunHandler}
           startIcon={<PlayCircleIcon />}
           sx={{
-            bgcolor: "accent.main",
-            "&:hover": { bgcolor: "accent.light" },
+            bgcolor: "secondary.main",
+            "&:hover": { bgcolor: "secondary.light" },
           }}
           variant="contained"
         >

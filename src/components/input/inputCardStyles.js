@@ -1,10 +1,14 @@
 /**
  * Shared sx fragments for the scenario-configuration input cards. Centralising
- * them here keeps the per-card components free of hex literals (issue #6) and
- * gives Phase 1 a single place to evolve the pattern once design tokens land.
+ * them here keeps the per-card components free of hex literals and gives a
+ * single place to evolve the pattern.
  *
- * `state` is a key of `theme.palette.inputCard` ("default" | "valid" |
- * "invalid" | "neutral").
+ * `state` is one of "default" | "valid" | "invalid" | "neutral", each
+ * resolved to a token in the semantic palette (#298):
+ *   default → primary.bg
+ *   valid   → feedback.success.bg
+ *   invalid → feedback.error.bg
+ *   neutral → surface.subdued
  */
 
 import { layoutTransition } from "../../theme/theme";
@@ -23,15 +27,22 @@ export const cardTitleSx = {
   fontWeight: 600,
 };
 
+const stateBgcolor = {
+  default: "primary.bg",
+  valid: "feedback.success.bg",
+  invalid: "feedback.error.bg",
+  neutral: "surface.subdued",
+};
+
 export const getInputCardSx = (state, { clicked = false } = {}) => ({
   cursor: "pointer",
-  bgcolor: (theme) => theme.palette.inputCard[state],
+  bgcolor: stateBgcolor[state],
   transition: layoutTransition(["background-color", "transform"]),
   display: "flex",
   flexDirection: "column",
   height: INPUT_CARD_HEIGHT,
   "&:hover": {
-    bgcolor: (theme) => theme.palette.inputCard.hover,
+    bgcolor: "action.hover",
   },
   ".MuiCardContent-root": {
     flexGrow: 1,
@@ -49,10 +60,10 @@ export const disabledFieldSx = {
   // `<input>` instead leaves a square grey rectangle peeking behind the pill,
   // which shows up clearly on the neutral-state card (#285).
   ".MuiOutlinedInput-root.Mui-disabled": {
-    bgcolor: (theme) => theme.palette.inputCard.disabledBg,
+    bgcolor: (theme) => theme.palette.action.disabledBackground,
   },
   ".MuiInputBase-input.Mui-disabled": {
-    WebkitTextFillColor: (theme) => theme.palette.inputCard.disabledText,
+    WebkitTextFillColor: (theme) => theme.palette.text.disabled,
     padding: 1,
   },
 };

@@ -53,7 +53,7 @@ const ResultsTypography = () => {
   };
 
   return (
-    <Typography variant="body1" sx={{ marginTop: 2, flexGrow: 1, color: "surface.mutedText" }}>
+    <Typography variant="body1" sx={{ marginTop: 2, flexGrow: 1, color: "text.secondary" }}>
       {getText()}
     </Typography>
   );

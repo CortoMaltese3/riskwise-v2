@@ -34,7 +34,7 @@ const MacroEconomicVariableCard = () => {
       sx={{
         maxWidth: 800,
         margin: "auto",
-        bgcolor: "card.bg",
+        bgcolor: "primary.bg",
         border: 2,
         borderColor: "primary.dark",
         borderRadius: (theme) => theme.spacing(2),
@@ -50,7 +50,7 @@ const MacroEconomicVariableCard = () => {
           sx={{
             textAlign: "center",
             fontWeight: "bold",
-            backgroundColor: "accent.main",
+            backgroundColor: "secondary.main",
             borderRadius: (theme) => theme.spacing(1),
             padding: 1,
             marginBottom: 3,
@@ -63,7 +63,7 @@ const MacroEconomicVariableCard = () => {
             key={variable}
             onClick={() => handleCardSelect(variable)}
             sx={{
-              backgroundColor: isButtonSelected(variable) ? "accent.main" : "accent.light",
+              backgroundColor: isButtonSelected(variable) ? "secondary.main" : "secondary.light",
               borderRadius: (theme) => theme.spacing(1),
               margin: 2,
               marginLeft: 0,

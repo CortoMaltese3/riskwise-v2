@@ -209,7 +209,7 @@ const MacroEconomicChart = () => {
         minHeight: 0,
         display: "flex",
         flexDirection: "column",
-        bgcolor: "card.bg",
+        bgcolor: "primary.bg",
         border: 2,
         borderColor: "primary.dark",
         borderRadius: (theme) => theme.spacing(2),
