@@ -89,5 +89,5 @@ def test_zero_growth_produces_identity_values() -> None:
 def test_returns_none_on_invalid_input() -> None:
     # ``aag`` of None raises a TypeError inside the multiplier; handler
     # should swallow and return None per its long-standing contract.
-    out = EntityHandler().get_future_entity(_bundle([1.0]), future_year=2050, aag=None)
+    out = EntityHandler().get_future_entity(_bundle([1.0]), future_year=2050, aag=None)  # type: ignore[arg-type]
     assert out is None
