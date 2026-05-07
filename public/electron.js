@@ -78,6 +78,75 @@ const LOG_RETENTION_DAYS = 7;
 const LOG_FILENAME_PREFIX = "app";
 
 const basePath = app.getAppPath();
+
+// ---------------------------------------------------------------------------
+// Sentry early init — MUST run before app.whenReady() resolves.
+// `@sentry/electron` v5+ throws "Sentry SDK should be initialized before the
+// Electron app 'ready' event is fired" if init is deferred. The previous
+// approach (init only after consent) silently failed at runtime, which is why
+// post-#300 Send to Support never reached Sentry. We now init at module load
+// whenever a DSN is present and gate event emission via `beforeSend` based on
+// runtime consent + offline state. Persisted opt-out + offline still drop
+// every event before it leaves the process.
+// ---------------------------------------------------------------------------
+let sentryInitialized = false;
+let sentryStatusReason = "not_configured";
+let cachedSentryDsn;
+let sentryAllowOneShot = false;
+
+const resolveSentryDsn = () => {
+  if (cachedSentryDsn !== undefined) return cachedSentryDsn;
+  try {
+    const sidecarPath = path.join(basePath, "build", "sentry-dsn.json");
+    const text = fs.readFileSync(sidecarPath, "utf8");
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed.dsn === "string" && parsed.dsn.length > 0) {
+      cachedSentryDsn = parsed.dsn;
+      return cachedSentryDsn;
+    }
+  } catch {
+    // Missing or malformed sidecar → fall through to env var.
+  }
+  cachedSentryDsn = process.env.SENTRY_DSN || "";
+  return cachedSentryDsn;
+};
+
+// Runtime gate consulted by `beforeSend`. `updateStore` may not yet be
+// initialized when an event fires very early in startup — treat that as
+// "no consent" and drop the event.
+const sentryAllowSends = () => {
+  if (sentryAllowOneShot) return true;
+  if (!updateStore) return false;
+  if (Boolean(updateStore.get("offlineMode", false))) return false;
+  return updateStore.get("sentryConsent") === "opted_in";
+};
+
+(() => {
+  const dsn = resolveSentryDsn();
+  if (!dsn) {
+    sentryStatusReason = "no_dsn";
+    return;
+  }
+  try {
+    const Sentry = require("@sentry/electron/main");
+    Sentry.init({
+      dsn,
+      release: app.getVersion(),
+      environment: app.isPackaged ? "production" : "development",
+      beforeSend(event) {
+        return sentryAllowSends() ? event : null;
+      },
+    });
+    sentryInitialized = true;
+    sentryStatusReason = "armed";
+  } catch (err) {
+    sentryStatusReason = "init_failed";
+    // `log` is required at the top of the file but `log.initialize()` runs
+    // later inside whenReady; warn on console as a fallback.
+    console.error("[electron] Sentry early init failed:", err.message);
+  }
+})();
+
 let mainWindow;
 let loaderWindow;
 let userLogDir;
@@ -598,12 +667,11 @@ app.whenReady().then(async () => {
     log.error("[electron] failed to initialize update store:", error);
   }
 
-  // Sentry crash reporting (issue #119, Area 17). Three independent gates,
-  // *all* of which must hold for Sentry to initialize: (1) build embedded
-  // a non-empty `SENTRY_DSN` (dev/fork builds skip this entirely);
-  // (2) the user opted in on first launch (or post-factory-reset); and
-  // (3) offline mode is not active (Area 14). The renderer never sees the
-  // DSN — it only sees the resolved boolean status via `diagnostics:*`.
+  // Sentry crash reporting (issue #119, Area 17). The SDK was already
+  // initialized at module load (top of file) so `@sentry/electron` v5+
+  // didn't reject the call as too late; here we just refresh the status
+  // reason now that updateStore + offline mode are known. Runtime gates
+  // (DSN present, opted in, not offline) are enforced inside `beforeSend`.
   initializeSentry();
 
   // Configure auto-updater BEFORE any other startup logic
@@ -1731,78 +1799,44 @@ const importStartupDataPacks = () => {
 
 // ---------------------------------------------------------------------------
 // Sentry + diagnostics (issue #119, Area 17)
+//
+// `Sentry.init` itself ran at module load (see top of file) — it must, because
+// `@sentry/electron` v5+ refuses to init after `app.whenReady()`. Everything
+// below is the post-ready half: deciding what reason to surface to the
+// renderer, gating events through `beforeSend`, and the Send to Support flow.
 // ---------------------------------------------------------------------------
 
-let sentryInitialized = false;
-let sentryStatusReason = "not_configured";
-let cachedSentryDsn;
-
-// CI runs `scripts/write-sentry-dsn.js` after `vite build` to write a
-// sidecar `sentry-dsn.json` with the GitHub Actions secret. We read
-// from there first so packaged builds carry the DSN exactly once, in a
-// place that's trivial to rotate or inspect; falling back to
-// `process.env.SENTRY_DSN` keeps `npm run start:electron` working in
-// dev when an engineer wants to test Sentry locally.
-const resolveSentryDsn = () => {
-  if (cachedSentryDsn !== undefined) return cachedSentryDsn;
-  try {
-    const sidecarPath = path.join(basePath, "build", "sentry-dsn.json");
-    const text = fs.readFileSync(sidecarPath, "utf8");
-    const parsed = JSON.parse(text);
-    if (parsed && typeof parsed.dsn === "string" && parsed.dsn.length > 0) {
-      cachedSentryDsn = parsed.dsn;
-      return cachedSentryDsn;
-    }
-  } catch {
-    // Missing or malformed sidecar → fall through to env var.
-  }
-  cachedSentryDsn = process.env.SENTRY_DSN || "";
-  return cachedSentryDsn;
-};
-
-// Sentry init runs in the Electron main process only — issue #119 forbids
-// adding it to the renderer because that would couple Sentry to the React
-// build and risk leaking renderer-side strings (URLs, scenario params)
-// that the renderer is not allowed to send. CI bakes the DSN into the
-// build via `scripts/write-sentry-dsn.js`; dev/fork builds without the
-// secret simply skip the import entirely.
+// Recompute the status reason now that updateStore + offline mode are known.
+// The early IIFE only knew about DSN presence; this fills in the consent /
+// offline picture so `getSentryStatus().reason` reflects reality.
 const initializeSentry = () => {
-  const dsn = resolveSentryDsn();
-  if (!dsn) {
+  if (!resolveSentryDsn()) {
     sentryStatusReason = "no_dsn";
-    log.info("[electron] Sentry not initialized (no SENTRY_DSN configured)");
+    log.info("[electron] Sentry inactive (no SENTRY_DSN configured)");
+    return;
+  }
+  if (!sentryInitialized) {
+    log.warn("[electron] Sentry SDK failed to initialize at module load");
     return;
   }
   if (isOfflineMode()) {
     sentryStatusReason = "offline_mode";
-    log.info("[electron] Sentry not initialized (offline mode active)");
+    log.info("[electron] Sentry events will be dropped (offline mode active)");
     return;
   }
   if (!updateStore) {
     sentryStatusReason = "no_store";
-    log.warn("[electron] Sentry not initialized (electron-store unavailable)");
+    log.warn("[electron] Sentry events will be dropped (electron-store unavailable)");
     return;
   }
   const consent = updateStore.get("sentryConsent");
   if (consent !== "opted_in") {
     sentryStatusReason = consent === "opted_out" ? "opted_out" : "no_consent";
-    log.info(`[electron] Sentry not initialized (consent=${consent || "unset"})`);
+    log.info(`[electron] Sentry events gated by consent=${consent || "unset"}`);
     return;
   }
-  try {
-    const Sentry = require("@sentry/electron/main");
-    Sentry.init({
-      dsn,
-      release: app.getVersion(),
-      environment: app.isPackaged ? "production" : "development",
-    });
-    sentryInitialized = true;
-    sentryStatusReason = "active";
-    log.info("[electron] Sentry initialized for crash reporting");
-  } catch (err) {
-    sentryStatusReason = "init_failed";
-    log.error("[electron] Sentry init failed:", err.message);
-  }
+  sentryStatusReason = "active";
+  log.info("[electron] Sentry armed for crash reporting");
 };
 
 const getSentryStatus = () => ({
@@ -1816,12 +1850,12 @@ const getSentryStatus = () => ({
 const setSentryConsent = (optIn) => {
   if (!updateStore) return { error: "update store not initialized" };
   updateStore.set("sentryConsent", optIn ? "opted_in" : "opted_out");
-  // Re-evaluate init: opting in mid-session should arm Sentry; opting out
-  // mid-session leaves the existing client running but stops future inits
-  // on next launch — `@sentry/electron` does not expose a clean shutdown
-  // we can rely on, so the simplest contract is "consent change takes full
-  // effect on next launch", which we also document in docs/privacy.md.
-  if (optIn && !sentryInitialized) initializeSentry();
+  // The Sentry SDK is already initialized (see early IIFE at top of file).
+  // The `beforeSend` runtime gate reads `sentryConsent` directly from the
+  // store, so flipping consent here takes effect on the very next event —
+  // no SDK restart needed. Refresh the status reason so the renderer sees
+  // the new state.
+  initializeSentry();
   return getSentryStatus();
 };
 
@@ -1912,44 +1946,21 @@ const collectDiagnosticsContext = async () => {
 
 // Upload a one-shot diagnostics bundle to Sentry (issue #300).
 //
-// Scoped consent: clicking the "Send to Support" button is consent for
-// THIS bundle. The user's persisted `sentryConsent` is not flipped — if
-// they're already opted in we reuse the existing client; if they're not
-// we initialize a transient client with `defaultIntegrations: false` so
-// no auto-capture handlers (unhandled exceptions, breadcrumbs) get
-// armed. Without those, the client is effectively dormant for the rest
-// of the session: no events flow through it unless code explicitly calls
-// it. On the next launch, the normal `initializeSentry()` consent gate
-// runs again and the transient state is gone.
+// Scoped consent: clicking the "Send to Support" button is consent for THIS
+// bundle. The user's persisted `sentryConsent` is not flipped — instead we
+// raise `sentryAllowOneShot` for the duration of the capture so `beforeSend`
+// lets just these events through, then drop the flag.
 const uploadDiagnosticsToSentry = async ({ message, email } = {}) => {
-  const dsn = resolveSentryDsn();
-  if (!dsn) return { error: "Sentry is not configured for this build (no SENTRY_DSN)." };
+  if (!resolveSentryDsn()) return { error: "Sentry is not configured for this build (no SENTRY_DSN)." };
   if (isOfflineMode()) return { error: "Offline mode is active; cannot upload diagnostics." };
   if (!updateStore) return { error: "Configuration store is unavailable." };
+  if (!sentryInitialized) return { error: "Sentry SDK failed to initialize; cannot upload." };
 
   let Sentry;
   try {
     Sentry = require("@sentry/electron/main");
   } catch (err) {
     return { error: `Sentry SDK unavailable: ${err.message}` };
-  }
-
-  if (!sentryInitialized) {
-    try {
-      Sentry.init({
-        dsn,
-        release: app.getVersion(),
-        environment: app.isPackaged ? "production" : "development",
-        defaultIntegrations: false,
-        integrations: [],
-      });
-      sentryInitialized = true;
-      sentryStatusReason = "transient_send";
-      log.info("[electron] Sentry initialized transiently for diagnostics upload");
-    } catch (err) {
-      log.error("[electron] transient Sentry init failed:", err.message);
-      return { error: `Could not initialize Sentry: ${err.message}` };
-    }
   }
 
   let context;
@@ -1974,6 +1985,7 @@ const uploadDiagnosticsToSentry = async ({ message, email } = {}) => {
     : "User-submitted diagnostics";
 
   let eventId;
+  sentryAllowOneShot = true;
   try {
     Sentry.withScope((scope) => {
       scope.setTag("submission_type", "manual_diagnostics");
@@ -2002,6 +2014,8 @@ const uploadDiagnosticsToSentry = async ({ message, email } = {}) => {
   } catch (err) {
     log.error("[electron] diagnostics upload failed:", err.message);
     return { error: err.message };
+  } finally {
+    sentryAllowOneShot = false;
   }
 
   log.info(`[electron] diagnostics uploaded eventId=${eventId} entries=${bundle.entryCount}`);
