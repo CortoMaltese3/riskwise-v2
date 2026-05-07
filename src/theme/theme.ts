@@ -135,9 +135,15 @@ const lightViz = {
 // `bgStrong` is *lighter* than `bg` in dark mode: dark surfaces follow
 // elevation conventions where higher-emphasis elements move toward white,
 // so cards on a panel pop one step lighter than the panel itself.
+//
+// `bg` and `bgStrong` are shifted toward navy-blue (G ↓, B ↑ at constant
+// luminance) vs the spec'd `#1E3A42` / `#2A4F58`. The original swatches
+// read green-teal against the dark navy page, fighting the slate family
+// used by `background.{default,paper}` and `surface.muted`. The cooler
+// swatches keep the brand teal direction without breaking colour cohesion.
 const darkPrimary = {
-  bg: "#1E3A42",
-  bgStrong: "#2A4F58",
+  bg: "#1D384B",
+  bgStrong: "#2A4D5E",
   light: "#A0CDD8",
   main: "#5FB3C2",
   dark: "#0E5A66",
