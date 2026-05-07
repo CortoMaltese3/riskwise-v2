@@ -24,13 +24,11 @@ const DataInput = () => {
       {/* DataInput title section */}
       <DataInputViewTitle />
 
-      {/* DataInput parameters section */}
-      <Box
-        sx={{
-          backgroundColor: (theme) => theme.palette.primary.bg,
-          padding: 2,
-        }}
-      >
+      {/* DataInput parameters section. The wrapper has no background — cards
+          sit directly on the page surface (matching the Macroeconomic input
+          panel) so the input column reads as a column of floating cards
+          rather than a tinted panel containing them. */}
+      <Box sx={{ padding: 2 }}>
         <Grid container spacing={2}>
           <Grid item xs={12} data-tour="country-selector">
             <Country />

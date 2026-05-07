@@ -59,7 +59,6 @@ const AdaptationMeasuresInput = () => {
         <Box
           sx={{
             mt: 2,
-            backgroundColor: (theme) => theme.palette.primary.bg,
             padding: 2,
             borderRadius: (theme) => theme.spacing(1),
           }}

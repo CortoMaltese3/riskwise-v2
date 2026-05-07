@@ -64,8 +64,15 @@ export const disabledFieldSx = {
   // inherits the notched-outline border-radius. Styling the inner native
   // `<input>` instead leaves a square grey rectangle peeking behind the pill,
   // which shows up clearly on the neutral-state card (#285).
+  //
+  // The notched-outline `<fieldset>` border is hidden because MUI's default
+  // `Mui-disabled` outline is a translucent neutral that, on a dark card,
+  // glows against the surface and reads as a "radiant" pill edge — making
+  // the field look brighter than its actual fill. With the outline removed,
+  // only the solid `action.disabledBackground` fill defines the pill.
   ".MuiOutlinedInput-root.Mui-disabled": {
-    bgcolor: (theme) => theme.palette.action.disabledBackground,
+    bgcolor: "action.disabledBackground",
+    "& .MuiOutlinedInput-notchedOutline": { borderColor: "transparent" },
   },
   ".MuiInputBase-input.Mui-disabled": {
     WebkitTextFillColor: (theme) => theme.palette.text.disabled,

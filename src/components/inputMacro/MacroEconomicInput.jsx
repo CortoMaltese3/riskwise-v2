@@ -21,8 +21,9 @@ const MacroEconomicInput = () => {
       {/* MacroEconomic title section */}
       <MacroEconomicViewTitle />
 
-      {/* DataInput parameters section */}
-      <Box sx={{ backgroundColor: "primary.bg", padding: 2 }}>
+      {/* MacroEconomic parameters section. No wrapper background — cards
+          float directly on the page surface. */}
+      <Box sx={{ padding: 2 }}>
         <Grid container spacing={2}>
           <Grid item xs={12}>
             <Country />
