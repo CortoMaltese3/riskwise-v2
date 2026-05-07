@@ -35,6 +35,8 @@ logs/
 climada_env
 climada_env_min
 climada_env_test
+.env
+.env.local
 
 # python
 *.pyc

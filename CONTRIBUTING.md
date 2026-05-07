@@ -73,6 +73,27 @@ npm install --legacy-peer-deps
 See [README.md](README.md) for running the dev server, tests, and the
 Electron shell.
 
+### Configuring Sentry locally (optional)
+
+The "Send to Support" button and the continuous crash-reporting toggle in
+Settings → Diagnostics are gated on a `SENTRY_DSN` being available at
+launch. Packaged builds get the DSN baked in by CI from a GitHub Actions
+secret (see [`scripts/write-sentry-dsn.js`](scripts/write-sentry-dsn.js));
+for source launches, you can configure your own DSN in a project-local
+`.env` file:
+
+```bash
+cp .env.example .env
+# edit .env and set SENTRY_DSN=https://...
+```
+
+`.env` is git-ignored. Both [`scripts/write-sentry-dsn.js`](scripts/write-sentry-dsn.js)
+and the unpackaged [`public/electron.js`](public/electron.js) load it via
+`dotenv` before reading `process.env.SENTRY_DSN`. With no `.env` present
+and no exported variable, Sentry is simply skipped — both diagnostics
+flows degrade gracefully and "Send to Support" disables itself with a
+"no DSN configured" hint.
+
 ---
 
 ## Branch naming
