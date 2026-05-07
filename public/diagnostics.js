@@ -51,7 +51,7 @@ const collectRecentLogs = (logDir, now = Date.now()) => {
 // central-directory layout is enough. Every entry uses STORE (no
 // compression) for tiny files and DEFLATE for anything ≥1 KiB so the ZIP
 // stays openable by Windows Explorer and 7-Zip without extra fields.
-const writeZip = (entries, outPath) => {
+const buildZipBuffer = (entries) => {
   const localChunks = [];
   const centralChunks = [];
   let offset = 0;
@@ -114,7 +114,11 @@ const writeZip = (entries, outPath) => {
   eocd.writeUInt32LE(localBlock.length, 16);
   eocd.writeUInt16LE(0, 20); // comment length
 
-  fs.writeFileSync(outPath, Buffer.concat([localBlock, central, eocd]));
+  return Buffer.concat([localBlock, central, eocd]);
+};
+
+const writeZip = (entries, outPath) => {
+  fs.writeFileSync(outPath, buildZipBuffer(entries));
 };
 
 // CRC-32 lookup table built once per process. The polynomial 0xEDB88320 is
@@ -136,13 +140,19 @@ const crc32 = (buf) => {
   return (c ^ 0xffffffff) >>> 0;
 };
 
-const buildDiagnosticsZip = ({
-  outPath,
+// Build the canonical list of ZIP entries for a diagnostics bundle. Both
+// disk export and in-app upload (issue #300) consume this same list so the
+// two flows stay byte-identical — anything documented in `docs/privacy.md`
+// applies to both. The README is templated with a free-form `purpose`
+// caption so the upload variant can label itself "user-submitted via Send
+// to Support" without diverging in any other way.
+const buildDiagnosticsEntries = ({
   electronLogDir,
   pythonLogDir,
   systemInfo,
   scenarioRows,
   now = Date.now(),
+  purpose = "local sharing",
 }) => {
   const entries = [];
 
@@ -176,6 +186,7 @@ const buildDiagnosticsZip = ({
         "RISK WISE diagnostics bundle",
         "",
         `Generated: ${new Date(now).toISOString()}`,
+        `Purpose:   ${purpose}`,
         "",
         "Contents:",
         "  electron-logs/   Electron main process logs (last 7 days)",
@@ -183,16 +194,28 @@ const buildDiagnosticsZip = ({
         "  system-info.json OS, hardware, and app/engine version info",
         "  scenarios.json   Last 5 scenario metadata rows (no raw user data)",
         "",
-        "This bundle is for local sharing only — RISK WISE does not auto-upload",
-        "diagnostics. See docs/privacy.md for details on what is collected.",
+        "See docs/privacy.md for details on what is and is not collected.",
         "",
       ].join("\n"),
       "utf8",
     ),
   });
 
+  return entries;
+};
+
+const buildDiagnosticsZip = ({ outPath, ...rest }) => {
+  const entries = buildDiagnosticsEntries(rest);
   writeZip(entries, outPath);
   return { entryCount: entries.length, outPath };
+};
+
+// In-memory variant for the "Send to Support" upload path (issue #300).
+// Returns the same bundle as `buildDiagnosticsZip` but as a Buffer the
+// caller can hand to the Sentry attachments API without ever touching disk.
+const buildDiagnosticsBuffer = (opts) => {
+  const entries = buildDiagnosticsEntries({ purpose: "user-submitted via Send to Support", ...opts });
+  return { buffer: buildZipBuffer(entries), entryCount: entries.length };
 };
 
 const sanitizeScenarioRow = (row) => {
@@ -207,6 +230,8 @@ const sanitizeScenarioRow = (row) => {
 
 module.exports = {
   buildDiagnosticsZip,
+  buildDiagnosticsBuffer,
+  buildDiagnosticsEntries,
   collectRecentLogs,
   sanitizeScenarioRow,
   LOG_RETENTION_DAYS,

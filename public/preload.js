@@ -138,6 +138,11 @@ contextBridge.exposeInMainWorld("electron", {
     exportZip: () => ipcRenderer.invoke("diagnostics:export"),
     getSentryStatus: () => ipcRenderer.invoke("diagnostics:get-sentry-status"),
     setSentryConsent: (optIn) => ipcRenderer.invoke("diagnostics:set-sentry-consent", { optIn }),
+    // Issue #300: scoped, one-shot upload of the same bundle Export produces.
+    // The click is consent for THIS payload — the persisted auto-Sentry
+    // toggle is independent and unchanged.
+    sendToSupport: ({ message, email } = {}) =>
+      ipcRenderer.invoke("diagnostics:upload", { message, email }),
   },
 });
 

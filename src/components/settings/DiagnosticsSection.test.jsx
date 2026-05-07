@@ -38,10 +38,15 @@ const setupBridge = (overrides = {}) => {
   });
   const getSentryStatus = vi.fn().mockResolvedValue({ ...baseSentryStatus, ...overrides });
   const setSentryConsent = vi.fn().mockResolvedValue({ ...baseSentryStatus, consent: "opted_in" });
+  const sendToSupport = vi.fn().mockResolvedValue({ ok: true, eventId: "evt-abc-123" });
   window.electron = {
-    diagnostics: { exportZip, getSentryStatus, setSentryConsent },
+    diagnostics: { exportZip, getSentryStatus, setSentryConsent, sendToSupport },
   };
-  return { exportZip, getSentryStatus, setSentryConsent };
+  return { exportZip, getSentryStatus, setSentryConsent, sendToSupport };
+};
+
+const expandAdvanced = async () => {
+  fireEvent.click(await screen.findByTestId("diagnostics-advanced-toggle"));
 };
 
 afterEach(() => {
@@ -49,7 +54,7 @@ afterEach(() => {
   delete window.electron;
 });
 
-describe("DiagnosticsSection", () => {
+describe("DiagnosticsSection — local export", () => {
   it("calls diagnostics.exportZip and shows the saved path on success", async () => {
     const { exportZip } = setupBridge();
     render(<DiagnosticsSection />);
@@ -69,10 +74,71 @@ describe("DiagnosticsSection", () => {
     await waitFor(() => expect(exportZip).toHaveBeenCalled());
     expect(screen.queryByText(/Diagnostics saved to/i)).not.toBeInTheDocument();
   });
+});
 
+describe("DiagnosticsSection — Send to Support", () => {
+  it("uploads the bundle and shows the Sentry event ID on success", async () => {
+    const { sendToSupport } = setupBridge();
+    render(<DiagnosticsSection />);
+    fireEvent.click(await screen.findByTestId("diagnostics-send"));
+    fireEvent.click(await screen.findByTestId("diagnostics-send-confirm"));
+    await waitFor(() => expect(sendToSupport).toHaveBeenCalled());
+    expect(await screen.findByText(/Reference ID: evt-abc-123/i)).toBeInTheDocument();
+  });
+
+  it("forwards the optional message and email fields to the bridge", async () => {
+    const { sendToSupport } = setupBridge();
+    render(<DiagnosticsSection />);
+    fireEvent.click(await screen.findByTestId("diagnostics-send"));
+    fireEvent.change(await screen.findByTestId("diagnostics-send-message"), {
+      target: { value: "Crashed on tile load" },
+    });
+    fireEvent.change(await screen.findByTestId("diagnostics-send-email"), {
+      target: { value: "user@example.com" },
+    });
+    fireEvent.click(await screen.findByTestId("diagnostics-send-confirm"));
+    await waitFor(() => expect(sendToSupport).toHaveBeenCalled());
+    expect(sendToSupport).toHaveBeenCalledWith({
+      message: "Crashed on tile load",
+      email: "user@example.com",
+    });
+  });
+
+  it("on failure shows an error toast with a 'Save locally instead' fallback", async () => {
+    const { sendToSupport, exportZip } = setupBridge();
+    sendToSupport.mockResolvedValueOnce({ error: "network unreachable" });
+    render(<DiagnosticsSection />);
+    fireEvent.click(await screen.findByTestId("diagnostics-send"));
+    fireEvent.click(await screen.findByTestId("diagnostics-send-confirm"));
+    expect(await screen.findByText(/network unreachable/i)).toBeInTheDocument();
+    fireEvent.click(await screen.findByTestId("diagnostics-send-fallback"));
+    await waitFor(() => expect(exportZip).toHaveBeenCalled());
+  });
+
+  it("disables Send when the build has no SENTRY_DSN", async () => {
+    setupBridge({ dsnConfigured: false });
+    render(<DiagnosticsSection />);
+    const sendButton = await screen.findByTestId("diagnostics-send");
+    await waitFor(() => expect(sendButton).toBeDisabled());
+    expect(await screen.findByText(/Sending is unavailable in this build/i)).toBeInTheDocument();
+  });
+
+  it("disables Send when offline mode is active", async () => {
+    setupBridge({ offline: true, dsnConfigured: true });
+    render(<DiagnosticsSection />);
+    const sendButton = await screen.findByTestId("diagnostics-send");
+    await waitFor(() => expect(sendButton).toBeDisabled());
+    expect(
+      await screen.findByText(/Sending is disabled while offline mode is active/i)
+    ).toBeInTheDocument();
+  });
+});
+
+describe("DiagnosticsSection — Advanced (continuous reporting)", () => {
   it("shows the offline-mode banner when crash reporting is disabled by offline", async () => {
     setupBridge({ offline: true, dsnConfigured: true });
     render(<DiagnosticsSection />);
+    await expandAdvanced();
     expect(
       await screen.findByText(/Crash reporting disabled in offline mode/i)
     ).toBeInTheDocument();
@@ -81,6 +147,7 @@ describe("DiagnosticsSection", () => {
   it("shows 'no DSN' message when the build has no Sentry DSN configured", async () => {
     setupBridge({ dsnConfigured: false, offline: false });
     render(<DiagnosticsSection />);
+    await expandAdvanced();
     expect(
       await screen.findByText(/Crash reporting is not available in this build/i)
     ).toBeInTheDocument();
@@ -102,6 +169,7 @@ describe("DiagnosticsSection", () => {
       shouldPromptConsent: false,
     });
     render(<DiagnosticsSection />);
+    await expandAdvanced();
     const optIn = await screen.findByRole("button", { name: /^Opt in$/i });
     fireEvent.click(optIn);
     await waitFor(() => expect(setSentryConsent).toHaveBeenCalledWith(true));

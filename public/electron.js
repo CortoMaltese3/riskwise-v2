@@ -6,6 +6,20 @@ const fs = require("fs");
 const crypto = require("node:crypto");
 const log = require("electron-log");
 const Store = require("electron-store");
+
+// Dev/source-launch DSN bootstrap (issue #300). Packaged builds read the DSN
+// from `build/sentry-dsn.json` (baked at build time by CI), so dotenv is a
+// no-op there: `app.isPackaged` short-circuits before any filesystem touch
+// and `dotenv` is a devDependency that won't ship in `dependencies`. For
+// unpackaged launches (`npm run start:electron`), this lets engineers keep
+// `SENTRY_DSN=...` in a project-local `.env` instead of exporting it per shell.
+if (!app.isPackaged) {
+  try {
+    require("dotenv").config({ path: path.resolve(__dirname, "..", ".env") });
+  } catch {
+    // dotenv missing → fall back to whatever is already in process.env.
+  }
+}
 const {
   isEngineVersionCompatible,
   resolveReleaseChannel,
@@ -14,7 +28,11 @@ const {
 const { scanAndImportPacks } = require("./dataPacks");
 const { startTileServer } = require("./tileServer");
 const { TILES_FILENAME } = require("./offlineConstants");
-const { buildDiagnosticsZip, sanitizeScenarioRow } = require("./diagnostics");
+const {
+  buildDiagnosticsZip,
+  buildDiagnosticsBuffer,
+  sanitizeScenarioRow,
+} = require("./diagnostics");
 const os = require("node:os");
 const treeKill = require("tree-kill");
 
@@ -1880,6 +1898,116 @@ const fetchRecentScenarioRows = async () => {
   }
 };
 
+// Shared between disk export (`exportDiagnostics`) and Sentry upload
+// (`uploadDiagnosticsToSentry`) so both flows draw from the same logs +
+// system info + scenario rows. Splitting it out keeps the upload path
+// deterministic and trivially testable.
+const collectDiagnosticsContext = async () => {
+  const electronLogDir = userLogDir || path.join(app.getPath("userData"), "logs");
+  const pythonLogDir = path.join(app.getPath("userData"), "logs");
+  const systemInfo = collectSystemInfo();
+  const scenarioRows = await fetchRecentScenarioRows();
+  return { electronLogDir, pythonLogDir, systemInfo, scenarioRows };
+};
+
+// Upload a one-shot diagnostics bundle to Sentry (issue #300).
+//
+// Scoped consent: clicking the "Send to Support" button is consent for
+// THIS bundle. The user's persisted `sentryConsent` is not flipped — if
+// they're already opted in we reuse the existing client; if they're not
+// we initialize a transient client with `defaultIntegrations: false` so
+// no auto-capture handlers (unhandled exceptions, breadcrumbs) get
+// armed. Without those, the client is effectively dormant for the rest
+// of the session: no events flow through it unless code explicitly calls
+// it. On the next launch, the normal `initializeSentry()` consent gate
+// runs again and the transient state is gone.
+const uploadDiagnosticsToSentry = async ({ message, email } = {}) => {
+  const dsn = resolveSentryDsn();
+  if (!dsn) return { error: "Sentry is not configured for this build (no SENTRY_DSN)." };
+  if (isOfflineMode()) return { error: "Offline mode is active; cannot upload diagnostics." };
+  if (!updateStore) return { error: "Configuration store is unavailable." };
+
+  let Sentry;
+  try {
+    Sentry = require("@sentry/electron/main");
+  } catch (err) {
+    return { error: `Sentry SDK unavailable: ${err.message}` };
+  }
+
+  if (!sentryInitialized) {
+    try {
+      Sentry.init({
+        dsn,
+        release: app.getVersion(),
+        environment: app.isPackaged ? "production" : "development",
+        defaultIntegrations: false,
+        integrations: [],
+      });
+      sentryInitialized = true;
+      sentryStatusReason = "transient_send";
+      log.info("[electron] Sentry initialized transiently for diagnostics upload");
+    } catch (err) {
+      log.error("[electron] transient Sentry init failed:", err.message);
+      return { error: `Could not initialize Sentry: ${err.message}` };
+    }
+  }
+
+  let context;
+  try {
+    context = await collectDiagnosticsContext();
+  } catch (err) {
+    return { error: `Could not collect diagnostics: ${err.message}` };
+  }
+
+  let bundle;
+  try {
+    bundle = buildDiagnosticsBuffer(context);
+  } catch (err) {
+    log.error("[electron] diagnostics buffer build failed:", err.message);
+    return { error: err.message };
+  }
+
+  const trimmedMessage = typeof message === "string" ? message.trim() : "";
+  const trimmedEmail = typeof email === "string" ? email.trim() : "";
+  const summary = trimmedMessage
+    ? `User-submitted diagnostics: ${trimmedMessage.slice(0, 200)}`
+    : "User-submitted diagnostics";
+
+  let eventId;
+  try {
+    Sentry.withScope((scope) => {
+      scope.setTag("submission_type", "manual_diagnostics");
+      scope.setExtra("entry_count", bundle.entryCount);
+      scope.setExtra("app_version", app.getVersion());
+      if (trimmedEmail) scope.setUser({ email: trimmedEmail });
+      if (typeof scope.addAttachment === "function") {
+        scope.addAttachment({
+          filename: "riskwise-diagnostics.zip",
+          data: bundle.buffer,
+          contentType: "application/zip",
+        });
+      }
+      eventId = Sentry.captureMessage(summary);
+    });
+
+    if (eventId && (trimmedMessage || trimmedEmail) && typeof Sentry.captureUserFeedback === "function") {
+      Sentry.captureUserFeedback({
+        event_id: eventId,
+        name: trimmedEmail || "anonymous",
+        email: trimmedEmail || "noreply@invalid",
+        comments: trimmedMessage || "(no message provided)",
+      });
+    }
+    await Sentry.flush(5000);
+  } catch (err) {
+    log.error("[electron] diagnostics upload failed:", err.message);
+    return { error: err.message };
+  }
+
+  log.info(`[electron] diagnostics uploaded eventId=${eventId} entries=${bundle.entryCount}`);
+  return { ok: true, eventId: eventId || null, entryCount: bundle.entryCount };
+};
+
 const exportDiagnostics = async () => {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const defaultName = `riskwise-diagnostics-${timestamp}.zip`;
@@ -1894,23 +2022,16 @@ const exportDiagnostics = async () => {
     return { canceled: true };
   }
 
-  const electronLogDir = userLogDir || path.join(app.getPath("userData"), "logs");
   // The Python backend writes to %APPDATA%/RISK WISE/logs/, which on Windows
   // resolves to the same `userData` parent that electron-log uses. Both dirs
   // can coincide; collectRecentLogs dedupes by filename via separate ZIP
   // subdirs, so an overlap surfaces files in both folders deliberately.
-  const pythonLogDir = path.join(app.getPath("userData"), "logs");
-
-  const systemInfo = collectSystemInfo();
-  const scenarioRows = await fetchRecentScenarioRows();
+  const context = await collectDiagnosticsContext();
 
   try {
     const result = buildDiagnosticsZip({
       outPath: dialogResult.filePath,
-      electronLogDir,
-      pythonLogDir,
-      systemInfo,
-      scenarioRows,
+      ...context,
     });
     log.info(`[electron] diagnostics ZIP written: ${result.outPath} entries=${result.entryCount}`);
     return { ok: true, filePath: result.outPath, entryCount: result.entryCount };
@@ -2291,6 +2412,12 @@ ipcMain.handle("diagnostics:get-sentry-status", () => ({
 ipcMain.handle("diagnostics:set-sentry-consent", (_evt, payload) => {
   return setSentryConsent(Boolean(payload?.optIn));
 });
+ipcMain.handle("diagnostics:upload", (_evt, payload) =>
+  uploadDiagnosticsToSentry({
+    message: payload?.message,
+    email: payload?.email,
+  }),
+);
 
 ipcMain.handle("engine:download-update", async () => {
   if (isDevelopmentEnv()) {

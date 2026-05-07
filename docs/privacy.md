@@ -27,10 +27,10 @@ layers. Scenario *parameters* (country, hazard, year ranges) appear in
 log lines so a support engineer can reproduce issues; scenario *results*
 (impact rasters, exposure values) do not.
 
-## Export Diagnostics
+## Diagnostics bundle
 
-The **Settings → Diagnostics → Export Diagnostics** button packages the
-following into a single ZIP and prompts you for a save location:
+The **Settings → Diagnostics** panel exposes two ways to share the same
+sanitized bundle. Both produce a ZIP with exactly these contents:
 
 - Electron main logs from the last 7 days.
 - Python backend logs from the last 7 days.
@@ -43,10 +43,33 @@ following into a single ZIP and prompts you for a save location:
   included.
 - A `README.txt` describing the bundle.
 
-The ZIP is **never auto-uploaded**. It is written to disk and you choose
-whether and where to share it. The default save path is your Desktop.
+### Send to Support (primary)
 
-## Sentry crash reporting (opt-in)
+The **Send to Support** button uploads the same bundle as an attachment
+on a single Sentry event, plus an optional message and reply email you
+provide on click. **Clicking Send is consent for that one upload only.**
+Your persisted auto-Sentry setting (see "Continuous crash reporting"
+below) is independent and is not changed by clicking Send.
+
+Send is disabled, with an inline hint, under any of these conditions:
+
+1. The build has no `SENTRY_DSN` configured (dev builds and forks).
+2. **Offline mode is active.**
+
+When Send is disabled, the Export button still works.
+
+### Export Diagnostics (secondary)
+
+The **Export Diagnostics** button writes the same ZIP to disk and prompts
+you for a save location. Nothing leaves your machine — you choose whether
+and where to share the file. The default save path is your Desktop.
+
+## Continuous crash reporting (opt-in)
+
+Continuous crash reporting is the **Advanced** opt-in shown in the
+Diagnostics panel. It is independent from "Send to Support" — most users
+should reach for the manual Send button first; this toggle is for power
+users and beta testers who want every crash captured automatically.
 
 If you opt in on first launch, the Electron main process initializes
 [`@sentry/electron`][1] and reports unhandled exceptions and crashes to
@@ -88,14 +111,16 @@ your consent choice:
 
 ## Where to read the source
 
-The Sentry init, three-gate decision, and ZIP builder live in:
+The Sentry init, three-gate decision, ZIP builder, and one-shot upload
+live in:
 
 - [`public/electron.js`](../public/electron.js) — `initializeSentry`,
-  `getSentryStatus`, `exportDiagnostics`.
-- [`public/diagnostics.js`](../public/diagnostics.js) — log collection
-  and ZIP writer.
-- [`src/components/Settings/DiagnosticsSection.jsx`](../src/components/Settings/DiagnosticsSection.jsx) —
-  Settings panel UI and consent dialog.
+  `getSentryStatus`, `exportDiagnostics`, `uploadDiagnosticsToSentry`.
+- [`public/diagnostics.js`](../public/diagnostics.js) — log collection,
+  ZIP writer (disk + in-memory variants).
+- [`src/components/settings/DiagnosticsSection.jsx`](../src/components/settings/DiagnosticsSection.jsx) —
+  Settings panel UI, Send/Export controls, and the Advanced collapsible
+  for continuous reporting.
 
 The CI build job sets `SENTRY_DSN` from a GitHub Actions secret of the
 same name; the value is written to `build/sentry-dsn.json` by

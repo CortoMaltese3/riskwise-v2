@@ -1,11 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, utimesSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  utimesSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import zlib from "node:zlib";
 
 import {
   buildDiagnosticsZip,
+  buildDiagnosticsBuffer,
   collectRecentLogs,
   sanitizeScenarioRow,
   LOG_RETENTION_DAYS,
@@ -216,3 +225,67 @@ describe("buildDiagnosticsZip", () => {
     expect(entries).toHaveProperty("README.txt");
   });
 });
+
+describe("buildDiagnosticsBuffer", () => {
+  it("returns a Buffer with the same logical content as the disk variant", () => {
+    const electronLogs = path.join(workDir, "el-logs");
+    mkdirSync(electronLogs);
+    const now = Date.now();
+    writeFileSync(path.join(electronLogs, "app-2026-04-25.log"), "electron log line\n");
+    setMtime(path.join(electronLogs, "app-2026-04-25.log"), now);
+
+    const result = buildDiagnosticsBuffer({
+      electronLogDir: electronLogs,
+      pythonLogDir: null,
+      systemInfo: { app_version: "1.0.8" },
+      scenarioRows: [
+        { scenario_id: "s1", country: "EGY", hazard: "TC", computed_at: "2026-04-25" },
+      ],
+      now,
+    });
+
+    expect(Buffer.isBuffer(result.buffer)).toBe(true);
+    expect(result.entryCount).toBeGreaterThanOrEqual(4);
+
+    const entries = parseZip(result.buffer);
+    expect(Object.keys(entries)).toEqual(
+      expect.arrayContaining([
+        "electron-logs/app-2026-04-25.log",
+        "system-info.json",
+        "scenarios.json",
+        "README.txt",
+      ])
+    );
+    expect(JSON.parse(entries["system-info.json"].toString("utf8"))).toEqual({
+      app_version: "1.0.8",
+    });
+  });
+
+  it("labels the README as user-submitted by default", () => {
+    const result = buildDiagnosticsBuffer({
+      systemInfo: { app_version: "1.0.8" },
+      scenarioRows: [],
+    });
+    const entries = parseZip(result.buffer);
+    expect(entries["README.txt"].toString("utf8")).toMatch(/user-submitted via Send to Support/);
+  });
+
+  it("does not write any files to disk", () => {
+    // The whole point of the in-memory variant is to skip disk I/O.
+    const before = readdirSafe(workDir);
+    buildDiagnosticsBuffer({
+      systemInfo: { app_version: "1.0.8" },
+      scenarioRows: [],
+    });
+    const after = readdirSafe(workDir);
+    expect(after).toEqual(before);
+  });
+});
+
+const readdirSafe = (dir) => {
+  try {
+    return readdirSync(dir).sort();
+  } catch {
+    return [];
+  }
+};
