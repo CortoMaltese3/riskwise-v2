@@ -167,6 +167,22 @@ def assign_centroids(arrays: ExposureArrays, hazard: HazardArrays) -> ExposureAr
     return replace(arrays, centroid_idx=np.asarray(indices, dtype=np.intp))
 
 
+def valid_exposure_mask(exposure: ExposureArrays) -> np.ndarray:
+    """Boolean mask aligning per-point arrays with ``Impact.imp_mat`` columns.
+
+    Mirrors the filter the engine's ``ImpactCalc.impact()`` applies to
+    exposures before computing the matrix:
+    ``(value > 0) & isfinite(value) & (centroid_idx >= 0)``. Excluded
+    points have no corresponding column in the resulting ``imp_mat``, so
+    handlers that line up coordinates with that matrix (e.g. for GeoJSON
+    output) must subset their ``lat`` / ``lon`` arrays through this mask
+    in the same order — ``np.where(mask)[0]`` — that the engine uses.
+    """
+    values = np.asarray(exposure.values, dtype=np.float64)
+    centroid_idx = np.asarray(exposure.centroid_idx, dtype=np.intp)
+    return (values > 0) & np.isfinite(values) & (centroid_idx >= 0)
+
+
 def local_exceedance_imp(
     imp_mat: Any,
     frequency: Any,
