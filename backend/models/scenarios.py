@@ -19,8 +19,8 @@ class ScenarioWorkspaceItem(BaseModel):
     country: str | None = None
     hazard_type: str | None = None
     scenario: str | None = None
-    exposure_economic: str | None = None
-    exposure_non_economic: str | None = None
+    exposure_type: str | None = None
+    asset_type: str | None = None
     ref_year: int | None = None
     future_year: int | None = None
     annual_growth: float | None = None

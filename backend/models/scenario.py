@@ -26,9 +26,9 @@ class ScenarioRunRequest(BaseModel):
 
     annualGrowth: float | int | None = None
     countryName: str | None = None
-    exposureEconomic: str | None = None
+    exposureType: str | None = None
+    assetType: Literal["economic", "non_economic"] | None = None
     exposureFile: str | None = None
-    exposureNonEconomic: str | None = None
     hazardType: str | None = None
     hazardFile: str | None = None
     isEra: bool | None = None

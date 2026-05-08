@@ -1433,6 +1433,21 @@
             ],
             "title": "Annualgrowth"
           },
+          "assetType": {
+            "anyOf": [
+              {
+                "enum": [
+                  "economic",
+                  "non_economic"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assettype"
+          },
           "countryName": {
             "anyOf": [
               {
@@ -1443,17 +1458,6 @@
               }
             ],
             "title": "Countryname"
-          },
-          "exposureEconomic": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Exposureeconomic"
           },
           "exposureFile": {
             "anyOf": [
@@ -1466,7 +1470,7 @@
             ],
             "title": "Exposurefile"
           },
-          "exposureNonEconomic": {
+          "exposureType": {
             "anyOf": [
               {
                 "type": "string"
@@ -1475,7 +1479,7 @@
                 "type": "null"
               }
             ],
-            "title": "Exposurenoneconomic"
+            "title": "Exposuretype"
           },
           "hazardFile": {
             "anyOf": [
@@ -1575,6 +1579,17 @@
             ],
             "title": "App Version"
           },
+          "asset_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Type"
+          },
           "climada_version": {
             "anyOf": [
               {
@@ -1665,7 +1680,7 @@
             ],
             "title": "Entity Data Sha256"
           },
-          "exposure_economic": {
+          "exposure_type": {
             "anyOf": [
               {
                 "type": "string"
@@ -1674,18 +1689,7 @@
                 "type": "null"
               }
             ],
-            "title": "Exposure Economic"
-          },
-          "exposure_non_economic": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Exposure Non Economic"
+            "title": "Exposure Type"
           },
           "future_year": {
             "anyOf": [
