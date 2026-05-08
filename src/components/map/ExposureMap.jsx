@@ -9,6 +9,7 @@ import "leaflet/dist/leaflet.css";
 import { formatNumber } from "../../lib/formatNumber";
 import { getScaleLegacy } from "../../utils/colorScalesLegacy";
 import LegendLegacy from "./LegendLegacy";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 import useStore from "../../store";
 import useTileLayerUrl from "./useTileLayerUrl";
 
@@ -31,15 +32,16 @@ const ExposureMap = () => {
   const [unit, setUnit] = useState("");
 
   const fetchGeoJson = async (layer) => {
+    // Served by the main-process `app://` handler (`/__temp/<file>`) — see
+    // HazardMap for the rationale on the same-origin URL.
+    const res = await RiskWiseClient.fetchGeoJson("app://./__temp/exposures_geodata.json");
+    if (!res.success) {
+      console.error("Error fetching GeoJSON data:", res.error.message);
+      setMapInfo({ geoJson: null, colorScale: null });
+      return;
+    }
     try {
-      // Served by the main-process `app://` handler (`/__temp/<file>`) — see
-      // HazardMap for the rationale on the same-origin URL.
-      const response = await fetch("app://./__temp/exposures_geodata.json");
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
+      const data = res.result;
       setUnit(data._metadata.unit);
       const filteredFeatures = data.features.filter(
         (feature) => feature.properties.layer === layer
@@ -54,7 +56,7 @@ const ExposureMap = () => {
 
       setMapInfo({ geoJson: filteredData, colorScale: scale });
     } catch (error) {
-      console.error("Error fetching GeoJSON data:", error);
+      console.error("Error processing GeoJSON data:", error);
       setMapInfo({ geoJson: null, colorScale: null });
     }
   };

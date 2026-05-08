@@ -11,6 +11,7 @@ import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { getScale } from "../../utils/colorScales";
 import Legend from "./Legend";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 import useStore from "../../store";
 import useTileLayerUrl from "./useTileLayerUrl";
 
@@ -56,15 +57,26 @@ const RiskMap = () => {
 
   const fetchGeoJson = useCallback(
     async (rpLayer) => {
-      try {
-        // Served by the main-process `app://` handler (`/__temp/<file>`) —
-        // see HazardMap for the rationale on the same-origin URL.
-        const response = await fetch("app://./__temp/risks_geodata.json");
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+      // Served by the main-process `app://` handler (`/__temp/<file>`) —
+      // see HazardMap for the rationale on the same-origin URL.
+      const res = await RiskWiseClient.fetchGeoJson("app://./__temp/risks_geodata.json");
+      if (!res.success) {
+        console.error("Error fetching GeoJSON data:", res.error.message);
+        setMapInfo({ geoJson: null, colorScale: null });
+        // No impact centroids — either the temp file is missing
+        // (ERR_FILE_NOT_FOUND) or fetch couldn't reach the handler at all
+        // (TypeError "Failed to fetch"). Both surface the same alert.
+        const msg = res.error.message;
+        if (msg.includes("ERR_FILE_NOT_FOUND") || msg === "Failed to fetch") {
+          setAlertMessage(t("alert_message_risk_map_no_impact"));
+          setAlertSeverity("info");
+          setAlertShowMessage(true);
         }
-        const data = await response.json();
+        return;
+      }
+
+      try {
+        const data = res.result;
 
         // Set return periods and initially set activeRPLayer
         const returnPeriods = data._metadata.return_periods;
@@ -98,21 +110,8 @@ const RiskMap = () => {
           throw new Error("Percentile values are missing or incomplete.");
         }
       } catch (error) {
-        console.error("Error fetching GeoJSON data:", error);
+        console.error("Error processing GeoJSON data:", error);
         setMapInfo({ geoJson: null, colorScale: null });
-
-        // In case of no impact centroids or another error occurs
-        if (error.message.includes("ERR_FILE_NOT_FOUND")) {
-          setAlertMessage(t("alert_message_risk_map_no_impact"));
-          setAlertSeverity("info");
-          setAlertShowMessage(true);
-        }
-
-        if (error instanceof TypeError && error.message === "Failed to fetch") {
-          setAlertMessage(t("alert_message_risk_map_no_impact"));
-          setAlertSeverity("info");
-          setAlertShowMessage(true);
-        }
       }
     },
     [selectedHazard, activeRPLayer, vizRamps]
