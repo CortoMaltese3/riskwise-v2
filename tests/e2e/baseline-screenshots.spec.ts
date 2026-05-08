@@ -13,9 +13,8 @@
  * Matrix:
  *   viewports: 1280 × 720 / 1366 × 768 / 1920 × 1080 / 3840 × 2160
  *   locales:   en (default), ar (RTL), th (long strings)
- *   views:     app-shell (NavigateAlert landing), home, risk, macro,
- *              workspace, settings
- *   total:     4 × 3 × 6 = 72 PNGs
+ *   views:     home, risk, macro, workspace, settings
+ *   total:     4 × 3 × 5 = 60 PNGs
  *
  * The 4K-class viewport is set via ``page.setViewportSize`` against the
  * Electron renderer; the host OS window may stay smaller (the renderer
@@ -32,8 +31,8 @@ const OUTPUT_ROOT = path.join(REPO_ROOT, "docs", "audits", "ui-baseline-v1");
 type Viewport = { name: string; width: number; height: number };
 type Locale = { code: "en" | "ar" | "th"; menuMatch: RegExp | null };
 type View = {
-  id: "app-shell" | "home" | "risk" | "macro" | "workspace" | "settings";
-  sidebarIndex: number | null;
+  id: "home" | "risk" | "macro" | "workspace" | "settings";
+  sidebarIndex: number;
 };
 
 const VIEWPORTS: Viewport[] = [
@@ -55,14 +54,10 @@ const LOCALES: Locale[] = [
 ];
 
 const VIEWS: View[] = [
-  // ``app-shell`` is captured before dismissing the NavigateAlert dialog,
-  // i.e. the first surface a user sees on launch. ``sidebarIndex`` is null
-  // because no shell navigation has happened yet.
-  { id: "app-shell", sidebarIndex: null },
-  // The remaining five sections live behind the NavigateAlert; they are
-  // reached by clicking the "ERA" card and then the matching sidebar item.
   // Sidebar order is fixed in src/components/layout/Sidebar.jsx as
-  // [home, risk, macro, workspace, settings].
+  // [home, risk, macro, workspace, settings]. The app boots into the Risk
+  // section (sidebarIndex 1) with ERA defaults applied — there is no
+  // up-front modal to dismiss anymore (issue #322).
   { id: "home", sidebarIndex: 0 },
   { id: "risk", sidebarIndex: 1 },
   { id: "macro", sidebarIndex: 2 },
@@ -89,10 +84,8 @@ async function waitForMainWindow(app: ElectronApplication, timeoutMs = 60_000): 
 
 async function setLocale(window: Page, locale: Locale): Promise<void> {
   if (locale.menuMatch === null) return;
-  // The language menu lives in the TopBar. NavigateAlert is rendered in a
-  // Dialog above the shell when ``selectedAppOption === ""`` — at that point
-  // the TopBar is NOT mounted, so the language menu is unreachable. Callers
-  // must therefore dismiss NavigateAlert before invoking this helper.
+  // The language menu lives in the TopBar, which is mounted from boot now
+  // that the launch modal is gone (issue #322).
   const langButton = window.getByRole("button", { name: /language/i }).first();
   await langButton.click();
   const menuItem = window.getByRole("menuitem", { name: locale.menuMatch }).first();
@@ -101,23 +94,6 @@ async function setLocale(window: Page, locale: Locale): Promise<void> {
   // next screenshot. 250 ms is enough for the MUI ThemeProvider to re-emit
   // with the new ``direction`` and for ``<html dir>`` to update.
   await window.waitForTimeout(250);
-}
-
-async function dismissNavigateAlert(window: Page): Promise<void> {
-  // NavigateAlert renders a Dialog containing two CardActionArea options
-  // (era / explore) side by side. The first one (era) drops the user
-  // straight into the shell; ``explore`` triggers a verification sub-dialog
-  // we do not want to traverse here. The CardActionArea's role is button.
-  const dialog = window.getByRole("dialog").first();
-  const eraCard = dialog.locator(".MuiCardActionArea-root").first();
-  await eraCard.click();
-  // Wait for the AppShell mount: TopBar's language button is the most
-  // reliable post-shell signal because it appears regardless of which
-  // section is active.
-  await window
-    .getByRole("button", { name: /language/i })
-    .first()
-    .waitFor();
 }
 
 async function selectSection(window: Page, sidebarIndex: number): Promise<void> {
@@ -172,28 +148,11 @@ for (const viewport of VIEWPORTS) {
         await window.waitForLoadState("domcontentloaded");
         await window.setViewportSize({ width: viewport.width, height: viewport.height });
         // Give the layout a moment to reflow at the new size before the
-        // first capture. The NavigateAlert dialog is centred and short, so
-        // this is mostly defensive — but it costs nothing.
+        // first capture.
         await window.waitForTimeout(250);
+        await setLocale(window, locale);
 
         for (const view of VIEWS) {
-          if (view.id === "app-shell") {
-            // Capture NavigateAlert in en first, then switch locale and
-            // re-capture only if the locale isn't en. For ar/th we cannot
-            // switch language while the dialog is up (no TopBar) — so we
-            // accept that the app-shell screenshot reflects the boot
-            // (English) copy regardless of locale, and document this in
-            // the README. The mirrored layout still appears in the other
-            // five views which exercise the language menu.
-            await window.screenshot({
-              path: outputPathFor(locale, viewport, view),
-              fullPage: true,
-            });
-            await dismissNavigateAlert(window);
-            await setLocale(window, locale);
-            continue;
-          }
-          if (view.sidebarIndex === null) continue;
           await selectSection(window, view.sidebarIndex);
           await window.screenshot({ path: outputPathFor(locale, viewport, view), fullPage: true });
         }

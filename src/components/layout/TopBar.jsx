@@ -1,6 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AppBar, Toolbar, Typography, Box, IconButton, Tooltip } from "@mui/material";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Box,
+  IconButton,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+} from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 
 import LanguageSelector from "../nav/LanguageButton";
@@ -8,6 +17,7 @@ import MinimizeButton from "../nav/MinimizeButton";
 import ReloadButton from "../nav/ReloadButton";
 import ShutdownButton from "../nav/ShutdownButton";
 import ThemeModeButton from "../nav/ThemeModeButton";
+import ModeSwitchConfirmDialog from "../alerts/ModeSwitchConfirmDialog";
 
 import giz_logo from "../../assets/giz_logo.png";
 import useStore from "../../store";
@@ -18,7 +28,26 @@ const GIZ_LOGO_HEIGHT = 40;
 
 const TopBar = () => {
   const { t } = useTranslation();
-  const { sidebarCollapsed, setSidebarCollapsed } = useStore();
+  const sidebarCollapsed = useStore((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = useStore((s) => s.setSidebarCollapsed);
+  const selectedAppOption = useStore((s) => s.selectedAppOption);
+  const setSelectedAppOptionWithReset = useStore((s) => s.setSelectedAppOptionWithReset);
+
+  const [pendingMode, setPendingMode] = useState(null);
+
+  const handleModeChange = (_event, nextMode) => {
+    // ToggleButtonGroup yields null when the active button is clicked again.
+    // We always confirm an actual change; ignore the deselect case.
+    if (!nextMode || nextMode === selectedAppOption) return;
+    setPendingMode(nextMode);
+  };
+
+  const handleConfirm = () => {
+    if (pendingMode) setSelectedAppOptionWithReset(pendingMode);
+    setPendingMode(null);
+  };
+
+  const handleCancel = () => setPendingMode(null);
 
   return (
     <AppBar
@@ -67,6 +96,7 @@ const TopBar = () => {
             display: { xs: "none", sm: "flex" },
             alignItems: "center",
             justifyContent: "center",
+            gap: 2,
           }}
         >
           <Typography
@@ -82,6 +112,21 @@ const TopBar = () => {
           >
             {t("application_title")}
           </Typography>
+          <ToggleButtonGroup
+            size="small"
+            color="primary"
+            exclusive
+            value={selectedAppOption}
+            onChange={handleModeChange}
+            aria-label={t("mode_aria_label")}
+          >
+            <ToggleButton value="era" aria-label={t("mode_era")}>
+              {t("mode_era")}
+            </ToggleButton>
+            <ToggleButton value="explore" aria-label={t("mode_explore")}>
+              {t("mode_explore")}
+            </ToggleButton>
+          </ToggleButtonGroup>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
           <ReloadButton />
@@ -91,6 +136,12 @@ const TopBar = () => {
           <ShutdownButton />
         </Box>
       </Toolbar>
+      <ModeSwitchConfirmDialog
+        open={pendingMode !== null}
+        pendingMode={pendingMode}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </AppBar>
   );
 };

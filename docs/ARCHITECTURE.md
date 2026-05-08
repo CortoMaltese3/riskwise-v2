@@ -71,9 +71,11 @@ A cold-start reader needs this to understand what the product actually does befo
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-**App-option modes** (selector in header, persisted in store as `selectedAppOption`):
-- `"era"` — ERA project mode: entity files, hazard files, and validation all use pre-shipped data; validation flags are force-set to `true`.
-- `""` (custom) — user supplies own entity/hazard files or pulls from CLIMADA Client API.
+**App-option modes** (segmented `ERA` / `Custom` toggle in `TopBar.jsx`, store key `selectedAppOption`):
+- `"era"` — default on first launch. Entity files, hazard files, and validation all use pre-shipped ERA data; validation flags are force-set to `true`, the time horizon is pinned to 2050, annual growth is country-pinned, and upload UI is hidden.
+- `"explore"` — Custom mode. User supplies own entity/hazard files or pulls from the CLIMADA Client API; the Macro tab is disabled.
+
+Switching modes goes through `setSelectedAppOptionWithReset` (in `store.js`), which atomically clears mode-bound inputs (`selectedExposureFile`, `selectedHazardFile`, `selectedTimeHorizon`, `selectedAnnualGrowth`), the `isValid*` flags, and cached scenario results (`isScenarioRunCompleted`, `mapTitle`). The action is a no-op when the requested mode equals the current one. The `ModeSwitchConfirmDialog` always confirms before applying — there is no skip-when-empty heuristic — and cancelling leaves mode and inputs untouched.
 
 ---
 

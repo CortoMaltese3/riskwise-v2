@@ -8,7 +8,6 @@ import ErrorBoundary from "./components/errors/ErrorBoundary";
 import AppShell from "./components/layout/AppShell";
 import ProgressOverlay from "./components/layout/ProgressOverlay";
 import ToastProvider from "./components/layout/ToastProvider";
-import NavigateAlert from "./components/alerts/NavigateAlert";
 import ScenarioPrintView from "./components/workspace/ScenarioPrintView";
 import HelpMenu from "./components/help/HelpMenu";
 import GlossaryDrawer from "./components/help/GlossaryDrawer";
@@ -31,7 +30,6 @@ const THEME_MODE_STORAGE_KEY = "riskwise.themeMode";
 const PRINT_THEME_MODE_STORAGE_KEY = "riskwise.themeMode.print";
 
 const App = () => {
-  const { selectedAppOption } = useStore();
   const setHelpMenuOpen = useStore((s) => s.setHelpMenuOpen);
   const toggleHelpMenu = useStore((s) => s.toggleHelpMenu);
   const { i18n } = useTranslation();
@@ -91,17 +89,13 @@ const App = () => {
       <ThemeProvider theme={theme} defaultMode="system" modeStorageKey={THEME_MODE_STORAGE_KEY}>
         <CssBaseline />
         <ToastProvider>
-          {selectedAppOption === "" ? (
-            <NavigateAlert />
-          ) : (
-            <Box display="flex" flexDirection="column" height="100vh" overflow="hidden">
-              <AppShell />
-              <ProgressOverlay />
-              <AlertMessage />
-              <HelpMenu />
-              <GlossaryDrawer />
-            </Box>
-          )}
+          <Box display="flex" flexDirection="column" height="100vh" overflow="hidden">
+            <AppShell />
+            <ProgressOverlay />
+            <AlertMessage />
+            <HelpMenu />
+            <GlossaryDrawer />
+          </Box>
         </ToastProvider>
       </ThemeProvider>
     </ErrorBoundary>
