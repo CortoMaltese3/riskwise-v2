@@ -86,10 +86,10 @@ const initialTourState = readTourState();
 const initialHasSeenWalkthrough = readHasSeenWalkthrough();
 
 const useStore = create((set, get) => ({
-  // The app always lands on Home after the mode-selection dialog (NavigateAlert)
-  // — both for first-run and returning users. The dialog is shown on every
-  // app start because `selectedAppOption` is intentionally not persisted.
-  activeSection: "home",
+  // First launch lands on the Risk view with ERA defaults applied. The mode
+  // toggle in the TopBar lets users switch to Custom mid-session via a
+  // confirm-and-reset flow (see `setSelectedAppOptionWithReset`).
+  activeSection: "risk",
   sidebarCollapsed: readSidebarCollapsed(),
   showChartValues: readShowChartValues(),
   // Offline mode. Source of truth is electron-store on the main side;
@@ -144,7 +144,7 @@ const useStore = create((set, get) => ({
   reports: [],
   scenarioRunCode: "",
   selectedAnnualGrowth: 0,
-  selectedAppOption: "",
+  selectedAppOption: "era",
   selectedCard: "country",
   selectedCountry: "",
   selectedExposure: "",
@@ -293,6 +293,23 @@ const useStore = create((set, get) => ({
   },
   setSelectedAnnualGrowth: (annualGrowth) => set({ selectedAnnualGrowth: annualGrowth }),
   setSelectedAppOption: (option) => set({ selectedAppOption: option }),
+  // Switch app mode and atomically reset the inputs and cached scenario
+  // results that were tied to the previous mode. No-op when the new mode
+  // equals the current one so a redundant click never destroys user state.
+  setSelectedAppOptionWithReset: (option) => {
+    if (option === get().selectedAppOption) return;
+    set({
+      selectedAppOption: option,
+      selectedExposureFile: "",
+      selectedHazardFile: "",
+      selectedTimeHorizon: [2024, 2050],
+      selectedAnnualGrowth: 0,
+      isValidExposure: false,
+      isValidHazard: false,
+      isScenarioRunCompleted: false,
+      mapTitle: "",
+    });
+  },
   setSelectedCard: (card) => set({ selectedCard: card }),
   setSelectedCountry: (country) => {
     set({
