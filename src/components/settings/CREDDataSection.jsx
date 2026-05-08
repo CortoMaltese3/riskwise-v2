@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -35,6 +35,7 @@ import DeleteIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import useStore from "../../store";
 import { enqueueToast } from "../../hooks/useToast";
+import { useListManager } from "../../hooks/useListManager";
 import { layoutTransition } from "../../theme/theme";
 
 const isXlsxPath = (filePath) => typeof filePath === "string" && /\.xlsx$/i.test(filePath);
@@ -62,34 +63,45 @@ const CREDDataSection = () => {
   const activeCredDatasetId = useStore((s) => s.activeCredDatasetId);
   const setActiveCredDatasetId = useStore((s) => s.setActiveCredDatasetId);
 
-  const [busy, setBusy] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [pendingPath, setPendingPath] = useState(null);
   const [pendingName, setPendingName] = useState("");
   const [errors, setErrors] = useState([]);
-  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const fetchCred = useCallback(async () => {
+    const res = await RiskWiseClient.listCREDDatasets();
+    return res?.success && res.result?.data ? res.result.data : null;
+  }, []);
+
+  const handleDeleteDataset = useCallback(
+    async (dataset) => {
+      const res = await RiskWiseClient.deleteCREDDataset(dataset.id);
+      if (res?.success && activeCredDatasetId === dataset.id) {
+        setActiveCredDatasetId(null);
+      }
+      return res;
+    },
+    [activeCredDatasetId, setActiveCredDatasetId]
+  );
+
+  const credStorage = useMemo(
+    () => ({ items: credDatasets, setItems: setCredDatasets }),
+    [credDatasets, setCredDatasets]
+  );
+
+  const { busy, setBusy, confirmDelete, setConfirmDelete, refresh, remove } = useListManager({
+    fetchFn: fetchCred,
+    deleteFn: handleDeleteDataset,
+    storage: credStorage,
+    deleteSuccessMessage: (dataset) => t("settings_cred_data_deleted", { name: dataset.name }),
+    deleteFallbackErrorMessage: t("settings_cred_data_delete_failed"),
+  });
 
   const builtinId = useMemo(
     () => credDatasets.find((d) => d.is_builtin)?.id ?? null,
     [credDatasets]
   );
   const selectedId = activeCredDatasetId ?? builtinId;
-
-  const refreshList = useCallback(async () => {
-    try {
-      const res = await RiskWiseClient.listCREDDatasets();
-      if (res?.success && res.result?.data) {
-        setCredDatasets(res.result.data);
-      }
-    } catch {
-      // Keep the current list on transient failures — wiping it would hide
-      // the built-in row and make the panel look broken on one bad request.
-    }
-  }, [setCredDatasets]);
-
-  useEffect(() => {
-    refreshList();
-  }, [refreshList]);
 
   const handleDismissUpload = useCallback(() => {
     setPendingPath(null);
@@ -152,7 +164,7 @@ const CREDDataSection = () => {
           severity: "success",
           message: t("settings_cred_data_uploaded", { name: pendingName.trim() }),
         });
-        await refreshList();
+        await refresh();
         setActiveCredDatasetId(res.result.data.id);
         handleDismissUpload();
       } else {
@@ -164,33 +176,7 @@ const CREDDataSection = () => {
     } finally {
       setBusy(null);
     }
-  }, [pendingPath, pendingName, refreshList, setActiveCredDatasetId, handleDismissUpload, t]);
-
-  const handleDelete = useCallback(
-    async (dataset) => {
-      setBusy(`deleting-${dataset.id}`);
-      try {
-        const res = await RiskWiseClient.deleteCREDDataset(dataset.id);
-        if (res?.success) {
-          enqueueToast({
-            severity: "success",
-            message: t("settings_cred_data_deleted", { name: dataset.name }),
-          });
-          if (activeCredDatasetId === dataset.id) {
-            setActiveCredDatasetId(null);
-          }
-          await refreshList();
-        } else {
-          const detail = res?.error?.message || t("settings_cred_data_delete_failed");
-          enqueueToast({ severity: "error", message: detail });
-        }
-      } finally {
-        setBusy(null);
-        setConfirmDelete(null);
-      }
-    },
-    [activeCredDatasetId, setActiveCredDatasetId, refreshList, t]
-  );
+  }, [pendingPath, pendingName, refresh, setActiveCredDatasetId, handleDismissUpload, setBusy, t]);
 
   const handleSelect = useCallback(
     (dataset) => {
@@ -416,7 +402,7 @@ const CREDDataSection = () => {
           <Button
             color="error"
             variant="contained"
-            onClick={() => confirmDelete && handleDelete(confirmDelete)}
+            onClick={() => confirmDelete && remove(confirmDelete)}
             disabled={busy !== null}
           >
             {t("settings_cred_data_delete_action")}

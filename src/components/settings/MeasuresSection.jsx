@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -33,6 +33,7 @@ import DeleteIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { enqueueToast } from "../../hooks/useToast";
+import { useListManager } from "../../hooks/useListManager";
 import { layoutTransition } from "../../theme/theme";
 
 const isXlsxPath = (filePath) => typeof filePath === "string" && /\.xlsx$/i.test(filePath);
@@ -53,29 +54,30 @@ const splitErrors = (message) => {
 
 const MeasuresSection = () => {
   const { t } = useTranslation();
-  const [measureSets, setMeasureSets] = useState([]);
-  const [busy, setBusy] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [pendingPath, setPendingPath] = useState(null);
   const [pendingName, setPendingName] = useState("");
   const [errors, setErrors] = useState([]);
-  const [confirmDelete, setConfirmDelete] = useState(null);
 
-  const refreshList = useCallback(async () => {
-    try {
-      const res = await RiskWiseClient.listMeasureDatasets();
-      if (res?.success && res.result?.data) {
-        setMeasureSets(res.result.data);
-      }
-    } catch {
-      // Keep the current list on transient failures — wiping it would hide
-      // the built-in row and make the panel look broken on one bad request.
-    }
+  const fetchMeasureSets = useCallback(async () => {
+    const res = await RiskWiseClient.listMeasureDatasets();
+    return res?.success && res.result?.data ? res.result.data : null;
   }, []);
 
-  useEffect(() => {
-    refreshList();
-  }, [refreshList]);
+  const {
+    items: measureSets,
+    busy,
+    setBusy,
+    confirmDelete,
+    setConfirmDelete,
+    refresh,
+    remove,
+  } = useListManager({
+    fetchFn: fetchMeasureSets,
+    deleteFn: (dataset) => RiskWiseClient.deleteMeasureDataset(dataset.id),
+    deleteSuccessMessage: (dataset) => t("settings_measures_deleted", { name: dataset.name }),
+    deleteFallbackErrorMessage: t("settings_measures_delete_failed"),
+  });
 
   const handleDismissUpload = useCallback(() => {
     setPendingPath(null);
@@ -138,7 +140,7 @@ const MeasuresSection = () => {
           severity: "success",
           message: t("settings_measures_uploaded", { name: pendingName.trim() }),
         });
-        await refreshList();
+        await refresh();
         handleDismissUpload();
       } else {
         const detail = res?.error?.message || t("settings_measures_upload_failed");
@@ -149,30 +151,7 @@ const MeasuresSection = () => {
     } finally {
       setBusy(null);
     }
-  }, [pendingPath, pendingName, refreshList, handleDismissUpload, t]);
-
-  const handleDelete = useCallback(
-    async (dataset) => {
-      setBusy(`deleting-${dataset.id}`);
-      try {
-        const res = await RiskWiseClient.deleteMeasureDataset(dataset.id);
-        if (res?.success) {
-          enqueueToast({
-            severity: "success",
-            message: t("settings_measures_deleted", { name: dataset.name }),
-          });
-          await refreshList();
-        } else {
-          const detail = res?.error?.message || t("settings_measures_delete_failed");
-          enqueueToast({ severity: "error", message: detail });
-        }
-      } finally {
-        setBusy(null);
-        setConfirmDelete(null);
-      }
-    },
-    [refreshList, t]
-  );
+  }, [pendingPath, pendingName, refresh, handleDismissUpload, setBusy, t]);
 
   const dropZoneSx = useMemo(
     () => ({
@@ -374,7 +353,7 @@ const MeasuresSection = () => {
           <Button
             color="error"
             variant="contained"
-            onClick={() => confirmDelete && handleDelete(confirmDelete)}
+            onClick={() => confirmDelete && remove(confirmDelete)}
             disabled={busy !== null}
           >
             {t("settings_measures_delete_action")}
