@@ -418,6 +418,7 @@ def create_snapshot(
         ).fetchone()
     finally:
         conn.close()
+    assert row is not None  # just inserted above
     return SnapshotRow(
         id=row[0],
         scenario_id=row[1],
