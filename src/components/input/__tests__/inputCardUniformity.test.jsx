@@ -22,8 +22,7 @@ import Country from "../Country";
 import Hazard from "../Hazard";
 import Scenario from "../Scenario";
 import TimeHorizon from "../TimeHorizon";
-import ExposureEconomic from "../ExposureEconomic";
-import ExposureNonEconomic from "../ExposureNonEconomic";
+import Exposure from "../Exposure";
 import AnnualGrowth from "../AnnualGrowth";
 import MacroCountry from "../../inputMacro/Country";
 import MacroScenario from "../../inputMacro/Scenario";
@@ -35,8 +34,7 @@ const CARDS = [
   { name: "Hazard", Component: Hazard },
   { name: "Scenario", Component: Scenario },
   { name: "TimeHorizon", Component: TimeHorizon },
-  { name: "ExposureEconomic", Component: ExposureEconomic },
-  { name: "ExposureNonEconomic", Component: ExposureNonEconomic },
+  { name: "Exposure", Component: Exposure },
   { name: "AnnualGrowth", Component: AnnualGrowth },
 ];
 
@@ -63,17 +61,17 @@ const MACRO_SELECTION_STATES = [
 const SELECTION_STATES = [
   { name: "empty", state: {} },
   {
-    name: "fully populated",
+    name: "economic populated",
     state: {
       selectedCountry: "egypt",
       selectedHazard: "flood",
       selectedScenario: "rcp45",
       selectedTimeHorizon: [2024, 2050],
-      selectedExposureEconomic: "buildings",
-      selectedExposureNonEconomic: null,
+      selectedExposure: "crops",
+      selectedExposureCategory: "economic",
       selectedAnnualGrowth: 2,
       isValidHazard: true,
-      isValidExposureEconomic: true,
+      isValidExposure: true,
     },
   },
   {
@@ -83,11 +81,11 @@ const SELECTION_STATES = [
       selectedHazard: "drought",
       selectedScenario: "rcp85",
       selectedTimeHorizon: [2024, 2080],
-      selectedExposureEconomic: null,
-      selectedExposureNonEconomic: "population",
+      selectedExposure: "tree_crops_farmers",
+      selectedExposureCategory: "non_economic",
       selectedAnnualGrowth: 1,
       isValidHazard: true,
-      isValidExposureNonEconomic: true,
+      isValidExposure: true,
     },
   },
 ];
@@ -101,12 +99,11 @@ const resetStore = (overrides = {}) => {
     selectedHazard: "",
     selectedScenario: "",
     selectedTimeHorizon: null,
-    selectedExposureEconomic: null,
-    selectedExposureNonEconomic: null,
+    selectedExposure: "",
+    selectedExposureCategory: null,
     selectedAnnualGrowth: 0,
     isValidHazard: false,
-    isValidExposureEconomic: false,
-    isValidExposureNonEconomic: false,
+    isValidExposure: false,
     selectedMacroCountry: "",
     selectedMacroScenario: "",
     selectedMacroVariable: "",

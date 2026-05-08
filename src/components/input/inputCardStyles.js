@@ -40,6 +40,11 @@ const stateBgcolor = {
   neutral: "surface.subdued",
 };
 
+// Resolve a `palette.category.<key>` token. `null` (Custom upload before the
+// user picks a category) falls through to the grey `custom` swatch.
+const PALETTE_KEY_BY_CATEGORY = { economic: "economic", non_economic: "nonEconomic" };
+export const categoryPaletteKey = (category) => PALETTE_KEY_BY_CATEGORY[category] ?? "custom";
+
 export const getInputCardSx = (state, { clicked = false } = {}) => ({
   cursor: "pointer",
   bgcolor: stateBgcolor[state],

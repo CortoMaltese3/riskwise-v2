@@ -83,6 +83,18 @@ const lightBorder = {
   strong: "#AAAAAA",
 };
 
+// Exposure category accent swatches (#319). Used by the unified Exposure
+// input card to colour the chip + left-border stripe by the selected asset's
+// category (economic / non-economic / custom). Light-mode hexes match the
+// designer's seed palette (teal / amber / grey); dark-mode hexes are the
+// paler dark-elevated variants from the same family. Designer can refine
+// post-merge — these are the starting positions, not the final values.
+const lightCategory = {
+  economic: { main: "#00897B", contrastText: "#FFFFFF" },
+  nonEconomic: { main: "#F9A825", contrastText: "#0F172A" },
+  custom: { main: "#9E9E9E", contrastText: "#0F172A" },
+};
+
 // Light-mode feedback `main` swatches darkened from the #298 spec values so
 // each passes WCAG AA 4.5:1 on `background.paper` (#FFFFFF):
 //   success: #05A660 → #047D49 (3.16:1 → 5.21:1)
@@ -174,6 +186,12 @@ const darkBorder = {
   strong: "#475569",
 };
 
+const darkCategory = {
+  economic: { main: "#4DB6AC", contrastText: "#0F172A" },
+  nonEconomic: { main: "#FFB300", contrastText: "#0F172A" },
+  custom: { main: "#BDBDBD", contrastText: "#0F172A" },
+};
+
 // Dark-mode feedback `bg` swatches are tuned to share luminance with
 // `primary.bgStrong` (~L 0.07) so a grid of cards in mixed states reads as
 // a coherent set of muted dark tints rather than a patchwork of saturated
@@ -210,12 +228,14 @@ declare module "@mui/material/styles" {
     border: typeof lightBorder;
     feedback: typeof lightFeedback;
     viz: typeof lightViz;
+    category: typeof lightCategory;
   }
   interface PaletteOptions {
     surface?: typeof lightSurface;
     border?: typeof lightBorder;
     feedback?: typeof lightFeedback;
     viz?: typeof lightViz;
+    category?: typeof lightCategory;
   }
 }
 
@@ -253,6 +273,7 @@ export const theme = createTheme({
         border: lightBorder,
         feedback: lightFeedback,
         viz: lightViz,
+        category: lightCategory,
       },
     },
     dark: {
@@ -271,6 +292,7 @@ export const theme = createTheme({
         border: darkBorder,
         feedback: darkFeedback,
         viz: darkViz,
+        category: darkCategory,
       },
     },
   },

@@ -14,17 +14,16 @@ import useWorkspaceStore from "../../store/workspaceSlice";
 const RunScenarioButton = () => {
   const { t } = useTranslation();
   const {
-    isValidExposureEconomic,
-    isValidExposureNonEconomic,
+    isValidExposure,
     isValidHazard,
     setMapTitle,
     setIsScenarioRunning,
     selectedCountry,
     selectedAnnualGrowth,
     selectedAppOption,
-    selectedExposureEconomic,
+    selectedExposure,
+    selectedExposureCategory,
     selectedExposureFile,
-    selectedExposureNonEconomic,
     selectedHazard,
     selectedHazardFile,
     selectedScenario,
@@ -50,9 +49,9 @@ const RunScenarioButton = () => {
       selectedCountry &&
       selectedHazard &&
       selectedScenario &&
-      (selectedExposureEconomic || selectedExposureNonEconomic) &&
+      selectedExposure &&
       isValidHazard &&
-      (isValidExposureEconomic || isValidExposureNonEconomic)
+      isValidExposure
     ) {
       setIsRunButtonDisabled(false);
     } else {
@@ -66,9 +65,8 @@ const RunScenarioButton = () => {
     selectedCountry,
     selectedAnnualGrowth,
     selectedAppOption,
-    selectedExposureEconomic,
+    selectedExposure,
     selectedExposureFile,
-    selectedExposureNonEconomic,
     selectedHazard,
     selectedHazardFile,
     selectedScenario,
@@ -79,11 +77,13 @@ const RunScenarioButton = () => {
     const body = {
       annualGrowth: selectedAnnualGrowth,
       countryName: selectedCountry,
-      exposureEconomic: selectedExposureEconomic,
+      // Custom uploads with no category default to "economic" so the engine's
+      // display rounding stays consistent.
+      assetType: selectedExposureCategory ?? "economic",
+      exposureType: selectedExposure,
       exposureFile: selectedExposureFile,
-      exposureNonEconomic: selectedExposureNonEconomic,
       hazardType: selectedHazard,
-      isEra: selectedAppOption === "era" ? true : false,
+      isEra: selectedAppOption === "era",
       hazardFile: selectedHazardFile,
       scenario: selectedScenario,
       timeHorizon: selectedTimeHorizon,

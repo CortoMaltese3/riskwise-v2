@@ -12,8 +12,7 @@ const ResultsTypography = () => {
     selectedAppOption,
     selectedCountry,
     selectedHazard,
-    selectedExposureEconomic,
-    selectedExposureNonEconomic,
+    selectedExposure,
     selectedTab,
     selectedSubTab,
   } = useStore();
@@ -21,35 +20,27 @@ const ResultsTypography = () => {
 
   const getText = () => {
     if (selectedAppOption === "era") {
-      const selectedExposure = selectedExposureEconomic || selectedExposureNonEconomic;
-      if (
-        !selectedAppOption ||
-        !selectedCountry ||
-        !selectedHazard ||
-        (!selectedExposureEconomic && !selectedExposureNonEconomic)
-      ) {
+      if (!selectedAppOption || !selectedCountry || !selectedHazard || !selectedExposure) {
         return "";
-      } else {
-        return t(
-          `results_${selectedAppOption}_` +
-            `${selectedCountry}_` +
-            `${selectedHazard}_` +
-            `${selectedExposure}_` +
-            `${selectedTab}_` +
-            `${selectedSubTab}_` +
-            `${activeViewControl}_` +
-            `${activeMap}`
-        );
       }
-    } else {
       return t(
         `results_${selectedAppOption}_` +
+          `${selectedCountry}_` +
+          `${selectedHazard}_` +
+          `${selectedExposure}_` +
           `${selectedTab}_` +
           `${selectedSubTab}_` +
           `${activeViewControl}_` +
           `${activeMap}`
       );
     }
+    return t(
+      `results_${selectedAppOption}_` +
+        `${selectedTab}_` +
+        `${selectedSubTab}_` +
+        `${activeViewControl}_` +
+        `${activeMap}`
+    );
   };
 
   return (
