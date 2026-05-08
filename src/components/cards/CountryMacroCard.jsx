@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardActionArea, Chip, Stack, Typography, CardContent } from "@mui/material";
+import { Box, Card, CardActionArea, Typography, CardContent } from "@mui/material";
 import useStore from "../../store";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { layoutTransition } from "../../theme/theme";
 
 // Mirror CountryCard — macro screen picks from the same registry-backed
 // list so a custom country (user-data drop-in) appears on both pages
-// with the same Built-in / Custom labeling.
+// with the same translated label.
 const BUILTIN_LABEL_KEYS = {
   EGY: "card_country_egypt",
   THA: "card_country_thailand",
@@ -83,14 +83,7 @@ const CountryMacroCard = () => {
         >
           {t("card_country_title")}
         </Typography>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-            flexWrap: "wrap",
-            justifyContent: "center",
-          }}
-        >
+        <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
           {countries.map((country) => (
             <CardActionArea
               key={country.code}
@@ -98,32 +91,20 @@ const CountryMacroCard = () => {
               sx={{
                 backgroundColor: isButtonSelected(country) ? "secondary.main" : "secondary.light",
                 borderRadius: (theme) => theme.spacing(1),
-                textAlign: "center",
-                py: 1,
-                px: 2,
                 margin: 2,
                 marginLeft: 0,
+                textAlign: "center",
+                py: 1,
+                px: 0,
                 transition: layoutTransition(["transform"]),
                 "&:active": {
                   transform: "scale(0.96)",
                 },
               }}
             >
-              <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
-                <Typography variant="body1" color="text.primary">
-                  {labelFor(country)}
-                </Typography>
-                <Chip
-                  label={
-                    country.source === "custom"
-                      ? t("card_country_source_custom")
-                      : t("card_country_source_builtin")
-                  }
-                  size="small"
-                  color={country.source === "custom" ? "secondary" : "primary"}
-                  variant="outlined"
-                />
-              </Stack>
+              <Typography variant="body1" color="text.primary">
+                {labelFor(country)}
+              </Typography>
             </CardActionArea>
           ))}
         </Box>
