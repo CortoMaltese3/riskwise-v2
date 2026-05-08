@@ -22,6 +22,7 @@ import AppViewport from "./primitives/AppViewport";
 import HorizontalSplit from "./primitives/HorizontalSplit";
 import FixedColumn from "./primitives/FixedColumn";
 import ScrollableRegion from "./primitives/ScrollableRegion";
+import { useMacroTools } from "../../utils/macroTools";
 
 const sectionToTab = { home: 0, risk: 1, macro: 2, workspace: 3, settings: 0 };
 
@@ -106,6 +107,18 @@ export const RiskAssessmentView = () => {
 };
 
 const MacroeconomicView = () => {
+  const credOutputData = useStore((s) => s.credOutputData);
+  const { loadCREDOutputData } = useMacroTools();
+
+  // Sidebar-driven nav doesn't go through MainTabs, so the legacy tab-change
+  // CRED fetch trigger never fires. Fetch on first activation if the cache
+  // is empty.
+  useEffect(() => {
+    if (!credOutputData || credOutputData.length === 0) {
+      loadCREDOutputData();
+    }
+  }, [credOutputData, loadCREDOutputData]);
+
   return (
     <HorizontalSplit>
       <FixedColumn width={MACRO_LEFT_PANEL_WIDTH}>

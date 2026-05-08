@@ -38,6 +38,12 @@ vi.mock("../UpdateDialog", () => ({ default: () => <div data-testid="update-dial
 vi.mock("../EngineStatusBanner", () => ({
   default: () => <div data-testid="engine-status-banner" />,
 }));
+vi.mock("../../utils/macroTools", () => ({
+  useMacroTools: () => ({
+    loadCREDOutputData: vi.fn(),
+    generateChartFromCREDData: vi.fn(),
+  }),
+}));
 
 function renderShell() {
   return render(
