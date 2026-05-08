@@ -56,8 +56,7 @@ export const useMapTools = () => {
     setAlertShowMessage,
     selectedAnnualGrowth,
     selectedCountry,
-    selectedExposureEconomic,
-    selectedExposureNonEconomic,
+    selectedExposure,
     selectedHazard,
     selectedReport,
     selectedScenario,
@@ -145,11 +144,9 @@ export const useMapTools = () => {
     } else if (activeMap === "exposure") {
       title = `${t(`results_report_card_hazard_type_${activeMap}`)} ${t(
         "map_legend_legacy_title_map_suffix"
-      )} ${t("map_legend_legacy_title_of_suffix")} ${
-        selectedExposureEconomic
-          ? t(`results_report_card_exposure_${selectedExposureEconomic}`)
-          : t(`results_report_card_exposure_${selectedExposureNonEconomic}`)
-      } ${t("map_legend_legacy_title_in_suffix")} ${t(
+      )} ${t("map_legend_legacy_title_of_suffix")} ${t(
+        `results_report_card_exposure_${selectedExposure}`
+      )} ${t("map_legend_legacy_title_in_suffix")} ${t(
         `results_report_card_country_${selectedCountry}`
       )}`;
     } else {
@@ -157,11 +154,9 @@ export const useMapTools = () => {
         "map_legend_legacy_title_map_suffix"
       )} ${t("map_legend_legacy_title_of_suffix")} ${t(
         `results_report_card_hazard_${selectedHazard}`
-      )} ${t("map_legend_legacy_title_on_suffix")} ${
-        selectedExposureEconomic
-          ? t(`results_report_card_exposure_${selectedExposureEconomic}`)
-          : t(`results_report_card_exposure_${selectedExposureNonEconomic}`)
-      } ${t("map_legend_legacy_title_in_suffix")} ${t(
+      )} ${t("map_legend_legacy_title_on_suffix")} ${t(
+        `results_report_card_exposure_${selectedExposure}`
+      )} ${t("map_legend_legacy_title_in_suffix")} ${t(
         `results_report_card_country_${selectedCountry}`
       )}`;
     }
@@ -185,9 +180,7 @@ export const useMapTools = () => {
           const outputData = {
             id: id,
             scenarioId: `${scenarioRunCode}`,
-            data: `${selectedCountry} - ${selectedHazard} - ${selectedScenario} - ${
-              selectedExposureEconomic ? selectedExposureEconomic : selectedExposureNonEconomic
-            } - ${selectedTimeHorizon} - ${selectedAnnualGrowth}`,
+            data: `${selectedCountry} - ${selectedHazard} - ${selectedScenario} - ${selectedExposure} - ${selectedTimeHorizon} - ${selectedAnnualGrowth}`,
             image: filepath,
             title: getSaveMapTitle(),
             type: `${activeMap}_map_data`,
@@ -249,17 +242,13 @@ export const useMapTools = () => {
           const outputData = {
             id: id,
             scenarioId: `${scenarioRunCode}`,
-            data: `${selectedCountry} - ${selectedHazard} - ${selectedScenario} - ${
-              selectedExposureEconomic ? selectedExposureEconomic : selectedExposureNonEconomic
-            } - ${selectedTimeHorizon} - ${selectedAnnualGrowth}`,
+            data: `${selectedCountry} - ${selectedHazard} - ${selectedScenario} - ${selectedExposure} - ${selectedTimeHorizon} - ${selectedAnnualGrowth}`,
             image: destinationFile,
             title: `${t("results_report_card_risk_plot_title")} ${t(
               `results_report_card_hazard_${selectedHazard}`
-            )}${t("map_legend_legacy_title_on_suffix")} ${
-              selectedExposureEconomic
-                ? t(`results_report_card_exposure_${selectedExposureEconomic}`)
-                : t(`results_report_card_exposure_${selectedExposureNonEconomic}`)
-            } - ${t(`results_report_card_country_${selectedCountry}`)}`,
+            )}${t("map_legend_legacy_title_on_suffix")} ${t(
+              `results_report_card_exposure_${selectedExposure}`
+            )} - ${t(`results_report_card_country_${selectedCountry}`)}`,
             type: "risk_plot_data",
           };
           addReport(outputData);
@@ -284,9 +273,7 @@ export const useMapTools = () => {
           const outputData = {
             id: id,
             scenarioId: `${scenarioRunCode}`,
-            data: `${selectedCountry} - ${selectedHazard} - ${selectedScenario} - ${
-              selectedExposureEconomic ? selectedExposureEconomic : selectedExposureNonEconomic
-            } - ${selectedTimeHorizon} - ${selectedAnnualGrowth}`,
+            data: `${selectedCountry} - ${selectedHazard} - ${selectedScenario} - ${selectedExposure} - ${selectedTimeHorizon} - ${selectedAnnualGrowth}`,
             image: destinationFile,
             title: `${t("results_report_card_adaptation_plot_title")} ${t(
               `results_report_card_hazard_${selectedHazard}`

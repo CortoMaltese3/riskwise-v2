@@ -24,7 +24,7 @@ const toReport = (row) => {
       row.country,
       row.hazard_type,
       row.scenario,
-      row.exposure_economic || row.exposure_non_economic || "",
+      row.exposure_type || "",
       `${row.ref_year ?? ""},${row.future_year ?? ""}`,
       row.annual_growth ?? "",
     ]
@@ -33,8 +33,8 @@ const toReport = (row) => {
     params: {
       annual_growth: row.annual_growth,
       country_name: row.country,
-      exposure_economic: row.exposure_economic,
-      exposure_non_economic: row.exposure_non_economic,
+      exposure_type: row.exposure_type,
+      asset_type: row.asset_type,
       future_year: row.future_year,
       hazard_type: row.hazard_type,
       is_era: row.is_era,
@@ -62,13 +62,12 @@ export const useReportTools = () => {
     setSelectedCountry,
     setSelectedHazard,
     setSelectedScenario,
-    setSelectedExposureEconomic,
-    setSelectedExposureNonEconomic,
+    setSelectedExposure,
+    setSelectedExposureCategory,
     setSelectedTimeHorizon,
     setSelectedAnnualGrowth,
     setIsValidHazard,
-    setIsValidExposureEconomic,
-    setIsValidExposureNonEconomic,
+    setIsValidExposure,
     setMapTitle,
     setScenarioRunCode,
     setSelectedReport,
@@ -119,12 +118,10 @@ export const useReportTools = () => {
       setSelectedScenario(scenario.scenario);
       setMapTitle(scenario.name || scenario.id);
 
-      if (scenario.exposure_economic) {
-        setSelectedExposureEconomic(scenario.exposure_economic);
-        setIsValidExposureEconomic(true);
-      } else if (scenario.exposure_non_economic) {
-        setSelectedExposureNonEconomic(scenario.exposure_non_economic);
-        setIsValidExposureNonEconomic(true);
+      if (scenario.exposure_type) {
+        setSelectedExposure(scenario.exposure_type);
+        setSelectedExposureCategory(scenario.asset_type ?? null);
+        setIsValidExposure(true);
       }
 
       setSelectedTimeHorizon([scenario.ref_year, scenario.future_year]);

@@ -16,7 +16,8 @@ const adminLayers = [0, 1, 2]; // Administrative layers
 
 const ExposureMap = () => {
   const tileLayerUrl = useTileLayerUrl();
-  const { selectedCountry, selectedExposureEconomic, selectedHazard, setActiveMapRef } = useStore();
+  const { selectedCountry, selectedExposureCategory, selectedHazard, setActiveMapRef } = useStore();
+  const isEconomic = selectedExposureCategory === "economic" || selectedExposureCategory === null;
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const mapRefSet = useRef(false);
@@ -107,7 +108,7 @@ const ExposureMap = () => {
       const name = feature.properties.name;
 
       // Check if the value should be rounded up for non-economic exposure
-      if (!selectedExposureEconomic) {
+      if (!isEconomic) {
         value = Math.ceil(value);
       }
 
@@ -197,7 +198,7 @@ const ExposureMap = () => {
             maxValue={maxValue}
             minValue={minValue}
             unit={unit}
-            type={selectedExposureEconomic ? "economic" : "non-economic"}
+            type={isEconomic ? "economic" : "non-economic"}
           />
         </>
       )}

@@ -46,14 +46,8 @@ export const generateNumericCode = () => {
 };
 
 export const generateRunCode = () => {
-  const {
-    selectedAppOption,
-    selectedCountry,
-    selectedHazard,
-    selectedScenario,
-    selectedExposureEconomic,
-    selectedExposureNonEconomic,
-  } = useStore.getState();
+  const { selectedAppOption, selectedCountry, selectedHazard, selectedScenario, selectedExposure } =
+    useStore.getState();
 
   const numericCode = generateNumericCode();
   const selectedCountryCode = getCode(selectedCountry, countryCodes);
@@ -61,8 +55,5 @@ export const generateRunCode = () => {
   const selectedScenarioCode = getCode(selectedScenario, scenarioCodes);
   const selectedAppOptionCode = getCode(selectedAppOption, appOptionsCodes);
 
-  let code = `${numericCode}_${selectedAppOptionCode}_${selectedCountryCode}_${selectedHazardCode}_${selectedScenarioCode}_${
-    selectedExposureEconomic ? selectedExposureEconomic : selectedExposureNonEconomic
-  }`;
-  return code;
+  return `${numericCode}_${selectedAppOptionCode}_${selectedCountryCode}_${selectedHazardCode}_${selectedScenarioCode}_${selectedExposure}`;
 };

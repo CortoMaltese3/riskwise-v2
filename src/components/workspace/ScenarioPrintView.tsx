@@ -24,8 +24,8 @@ interface ScenarioMeta {
   ref_year: number | null;
   future_year: number | null;
   annual_growth: number | null;
-  exposure_economic: string | null;
-  exposure_non_economic: string | null;
+  exposure_type: string | null;
+  asset_type: string | null;
   created_at: string | null;
   app_version?: string | null;
   engine_version?: string | null;
@@ -229,10 +229,13 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
                 meta.ref_year && meta.future_year ? `${meta.ref_year} – ${meta.future_year}` : null
               }
             />
-            <LabelRow label={t("print_label_exposure_economic")} value={meta.exposure_economic} />
             <LabelRow
-              label={t("print_label_exposure_non_economic")}
-              value={meta.exposure_non_economic}
+              label={
+                meta.asset_type === "non_economic"
+                  ? t("print_label_exposure_non_economic")
+                  : t("print_label_exposure_economic")
+              }
+              value={meta.exposure_type}
             />
             {meta.annual_growth != null && (
               <LabelRow label={t("annual_growth")} value={`${meta.annual_growth}%`} />

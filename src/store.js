@@ -131,8 +131,10 @@ const useStore = create((set, get) => ({
   isPlotMacroChartRunning: false,
   isScenarioRunCompleted: false,
   isScenarioRunning: false,
-  isValidExposureEconomic: false,
-  isValidExposureNonEconomic: false,
+  // `selectedExposure` is the asset key (e.g. "crops", "buddhist_monks");
+  // `selectedExposureCategory` is "economic" | "non_economic" | null. `null`
+  // is reserved for a Custom upload whose category the user hasn't picked.
+  isValidExposure: false,
   isValidHazard: false,
   mapTitle: "",
   macroEconomicChartData: {},
@@ -145,9 +147,9 @@ const useStore = create((set, get) => ({
   selectedAppOption: "",
   selectedCard: "country",
   selectedCountry: "",
-  selectedExposureEconomic: "",
+  selectedExposure: "",
+  selectedExposureCategory: null,
   selectedExposureFile: "",
-  selectedExposureNonEconomic: "",
   selectedHazard: "",
   selectedHazardFile: "",
   selectedMacroCard: "country",
@@ -264,20 +266,12 @@ const useStore = create((set, get) => ({
   setIsPlotMacroChartRunning: (data) => set({ isPlotMacroChartRunning: data }),
   setIsScenarioRunCompleted: (data) => set({ isScenarioRunCompleted: data }),
   setIsScenarioRunning: (data) => set({ isScenarioRunning: data }),
-  setIsValidExposureEconomic: (isValid = null) => {
+  setIsValidExposure: (isValid = null) => {
     const { selectedAppOption } = get();
     if (selectedAppOption === "era") {
-      set({ isValidExposureEconomic: true });
+      set({ isValidExposure: true });
     } else {
-      set({ isValidExposureEconomic: isValid });
-    }
-  },
-  setIsValidExposureNonEconomic: (isValid = null) => {
-    const { selectedAppOption } = get();
-    if (selectedAppOption === "era") {
-      set({ isValidExposureNonEconomic: true });
-    } else {
-      set({ isValidExposureNonEconomic: isValid });
+      set({ isValidExposure: isValid });
     }
   },
   setIsValidHazard: (isValid = null) => {
@@ -304,15 +298,14 @@ const useStore = create((set, get) => ({
     set({
       selectedCountry: country,
       selectedAnnualGrowth: 0,
-      selectedExposureEconomic: "",
+      selectedExposure: "",
+      selectedExposureCategory: null,
       selectedExposureFile: "",
-      selectedExposureNonEconomic: "",
       selectedHazard: "",
       selectedHazardFile: "",
       selectedScenario: "",
       selectedTimeHorizon: [2024, 2050],
-      isValidExposureEconomic: false,
-      isValidExposureNonEconomic: false,
+      isValidExposure: false,
       isValidHazard: false,
       mapTitle: "",
       isScenarioRunCompleted: false,
@@ -327,23 +320,22 @@ const useStore = create((set, get) => ({
       selectedMacroVariable: "",
     });
   },
-  setSelectedExposureEconomic: (exposureEconomic) => {
-    set({ selectedExposureEconomic: exposureEconomic, selectedAnnualGrowth: 0 });
+  setSelectedExposure: (exposure) => {
+    set({ selectedExposure: exposure, selectedAnnualGrowth: 0 });
   },
-  setSelectedExposureNonEconomic: (exposureNonEconomic) => {
-    set({ selectedExposureNonEconomic: exposureNonEconomic, selectedAnnualGrowth: 0 });
+  setSelectedExposureCategory: (category) => {
+    set({ selectedExposureCategory: category });
   },
   setSelectedHazard: (hazard) => {
     set({
       selectedAnnualGrowth: 0,
-      selectedExposureEconomic: "",
+      selectedExposure: "",
+      selectedExposureCategory: null,
       selectedExposureFile: "",
-      selectedExposureNonEconomic: "",
       selectedHazard: hazard,
       selectedScenario: "",
       selectedTimeHorizon: [2024, 2050],
-      isValidExposureEconomic: false,
-      isValidExposureNonEconomic: false,
+      isValidExposure: false,
       mapTitle: "",
       isScenarioRunCompleted: false,
     });
