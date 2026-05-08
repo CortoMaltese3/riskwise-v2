@@ -243,7 +243,7 @@ const HazardCard = () => {
             }}
           >
             <Typography variant="body2" color="text.primary" sx={{ textAlign: "center" }}>
-              {t("card_exposure_economic_upload_file")}: {selectedHazardFile}
+              {t("card_hazard_upload_file")}: {selectedHazardFile}
             </Typography>
             <IconButton
               onClick={clearUploadedFile}
@@ -267,7 +267,7 @@ const HazardCard = () => {
             }}
           >
             <Typography variant="body2" color="text.primary" sx={{ textAlign: "center" }}>
-              {t("card_exposure_economic_fetch_exposure")}: {fetchHazardMessage}
+              {t("card_hazard_fetch_exposure")}: {fetchHazardMessage}
             </Typography>
             <IconButton
               onClick={clearFetchedData}
