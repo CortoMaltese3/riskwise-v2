@@ -154,6 +154,56 @@ def test_duplicate_version_is_rejected(conn: duckdb.DuckDBPyConnection, tmp_path
         run_migrations(conn, migrations_dir=migrations_dir)
 
 
+def test_no_transaction_directive_skips_transaction_wrap(
+    conn: duckdb.DuckDBPyConnection, tmp_path: Path
+) -> None:
+    # A migration with `-- @no-transaction` runs each statement in autocommit,
+    # so a later failing statement leaves earlier ones applied. This is the
+    # opt-out used by 0010_exposure_unify.sql to dodge a DuckDB-on-Windows
+    # crash when DELETE + ALTER TABLE share one transaction.
+    migrations_dir = tmp_path / "migrations"
+    migrations_dir.mkdir()
+    (migrations_dir / "0001_init.sql").write_text("CREATE TABLE t (x INTEGER);", encoding="utf-8")
+    (migrations_dir / "0002_split.sql").write_text(
+        "-- @no-transaction\n"
+        "INSERT INTO t (x) VALUES (1);\n"
+        "INSERT INTO t (x) VALUES ('not-an-int');\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(MigrationError):
+        run_migrations(conn, migrations_dir=migrations_dir)
+
+    # First insert committed in autocommit; second failed and was not wrapped
+    # in a rollback, so it stays visible.
+    rows = [r[0] for r in conn.execute("SELECT x FROM t ORDER BY x").fetchall()]
+    assert rows == [1]
+    versions = [
+        v for (v,) in conn.execute("SELECT version FROM schema_version ORDER BY version").fetchall()
+    ]
+    assert versions == [1]
+
+
+def test_transactional_migration_rolls_back_on_failure(
+    conn: duckdb.DuckDBPyConnection, tmp_path: Path
+) -> None:
+    # The default (no directive) keeps BEGIN/COMMIT semantics: a failing
+    # statement rolls back any earlier writes in the same migration.
+    migrations_dir = tmp_path / "migrations"
+    migrations_dir.mkdir()
+    (migrations_dir / "0001_init.sql").write_text("CREATE TABLE t (x INTEGER);", encoding="utf-8")
+    (migrations_dir / "0002_split.sql").write_text(
+        "INSERT INTO t (x) VALUES (1);\nINSERT INTO t (x) VALUES ('not-an-int');\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(MigrationError):
+        run_migrations(conn, migrations_dir=migrations_dir)
+
+    rows = conn.execute("SELECT COUNT(*) FROM t").fetchone()
+    assert rows is not None and rows[0] == 0
+
+
 def test_0008_backfills_existing_rows_to_saved_true(
     conn: duckdb.DuckDBPyConnection, tmp_path: Path
 ) -> None:

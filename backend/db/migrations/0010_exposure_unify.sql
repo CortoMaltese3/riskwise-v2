@@ -7,6 +7,12 @@
 -- Pre-production: existing rows are intentionally wiped rather than
 -- migrated. The cache key derivation also changed (no longer includes
 -- the asset-type split), so the computation cache is cleared too.
+--
+-- @no-transaction
+-- DuckDB 1.5.2 on Windows crashes the process with STATUS_STACK_BUFFER_OVERRUN
+-- at COMMIT when a single transaction contains both DELETE and ALTER TABLE
+-- DROP/ADD COLUMN against tables with prior rows. Each statement succeeds in
+-- autocommit, so we opt this migration out of the runner's transaction wrap.
 
 DELETE FROM snapshots;
 DELETE FROM scenario_results;
