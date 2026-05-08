@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -32,6 +32,7 @@ import DeleteIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { enqueueToast } from "../../hooks/useToast";
+import { useListManager } from "../../hooks/useListManager";
 import { layoutTransition } from "../../theme/theme";
 
 const isZipPath = (filePath) => typeof filePath === "string" && /\.zip$/i.test(filePath);
@@ -44,29 +45,33 @@ const formatInstalledAt = (value) => {
 
 const CustomDataSection = () => {
   const { t } = useTranslation();
-  const [busy, setBusy] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [validation, setValidation] = useState(null);
   const [pendingPath, setPendingPath] = useState(null);
-  const [installed, setInstalled] = useState([]);
-  const [confirmDelete, setConfirmDelete] = useState(null);
 
-  const refreshList = useCallback(async () => {
-    try {
-      const res = await RiskWiseClient.listCustomDataPacks();
-      if (res?.success && res.result?.data?.countries) {
-        setInstalled(res.result.data.countries);
-      } else {
-        setInstalled([]);
-      }
-    } catch {
-      setInstalled([]);
+  const fetchInstalled = useCallback(async () => {
+    const res = await RiskWiseClient.listCustomDataPacks();
+    if (res?.success) {
+      return res.result?.data?.countries ?? [];
     }
+    return [];
   }, []);
 
-  useEffect(() => {
-    refreshList();
-  }, [refreshList]);
+  const {
+    items: installed,
+    busy,
+    setBusy,
+    confirmDelete,
+    setConfirmDelete,
+    refresh,
+    remove,
+  } = useListManager({
+    fetchFn: fetchInstalled,
+    deleteFn: (entry) => RiskWiseClient.deleteCustomDataPack(entry.iso3),
+    getDeleteKey: (entry) => entry.iso3,
+    deleteSuccessMessage: (entry) => t("settings_custom_data_deleted", { iso3: entry.iso3 }),
+    deleteFallbackErrorMessage: t("settings_custom_data_delete_failed"),
+  });
 
   const handleValidate = useCallback(
     async (filePath) => {
@@ -89,7 +94,7 @@ const CustomDataSection = () => {
         setBusy(null);
       }
     },
-    [t]
+    [setBusy, t]
   );
 
   const handleBrowse = useCallback(async () => {
@@ -132,7 +137,7 @@ const CustomDataSection = () => {
             iso3: res.result.data.iso3,
           }),
         });
-        await refreshList();
+        await refresh();
       } else {
         const detail = res?.error?.message || t("settings_custom_data_import_failed");
         enqueueToast({ severity: "error", message: detail });
@@ -142,30 +147,7 @@ const CustomDataSection = () => {
       setValidation(null);
       setPendingPath(null);
     }
-  }, [pendingPath, validation, refreshList, t]);
-
-  const handleDelete = useCallback(
-    async (iso3) => {
-      setBusy(`deleting-${iso3}`);
-      try {
-        const res = await RiskWiseClient.deleteCustomDataPack(iso3);
-        if (res?.success) {
-          enqueueToast({
-            severity: "success",
-            message: t("settings_custom_data_deleted", { iso3 }),
-          });
-          await refreshList();
-        } else {
-          const detail = res?.error?.message || t("settings_custom_data_delete_failed");
-          enqueueToast({ severity: "error", message: detail });
-        }
-      } finally {
-        setBusy(null);
-        setConfirmDelete(null);
-      }
-    },
-    [refreshList, t]
-  );
+  }, [pendingPath, validation, refresh, setBusy, t]);
 
   const dropZoneSx = useMemo(
     () => ({
@@ -370,7 +352,7 @@ const CustomDataSection = () => {
           <Button
             color="error"
             variant="contained"
-            onClick={() => confirmDelete && handleDelete(confirmDelete.iso3)}
+            onClick={() => confirmDelete && remove(confirmDelete)}
             disabled={busy !== null}
           >
             {t("settings_custom_data_delete_action")}
