@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardActionArea, Chip, Typography, CardContent } from "@mui/material";
+import { Box, Card, CardActionArea, Chip, Stack, Typography, CardContent } from "@mui/material";
 import useStore from "../../store";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { layoutTransition } from "../../theme/theme";
@@ -100,32 +100,33 @@ const CountryCard = () => {
               onClick={() => handleSelect(country)}
               sx={{
                 backgroundColor: isButtonSelected(country) ? "secondary.main" : "secondary.light",
-                flexGrow: 1,
                 borderRadius: (theme) => theme.spacing(1),
                 textAlign: "center",
                 py: 1,
-                px: 0,
-                margin: 1,
+                px: 2,
+                margin: 2,
+                marginLeft: 0,
                 transition: layoutTransition(["transform"]),
                 "&:active": {
                   transform: "scale(0.96)",
                 },
               }}
             >
-              <Typography variant="body1" color="text.primary">
-                {labelFor(country)}
-              </Typography>
-              <Chip
-                label={
-                  country.source === "custom"
-                    ? t("card_country_source_custom")
-                    : t("card_country_source_builtin")
-                }
-                size="small"
-                color={country.source === "custom" ? "secondary" : "primary"}
-                variant="outlined"
-                sx={{ marginTop: 0.5 }}
-              />
+              <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+                <Typography variant="body1" color="text.primary">
+                  {labelFor(country)}
+                </Typography>
+                <Chip
+                  label={
+                    country.source === "custom"
+                      ? t("card_country_source_custom")
+                      : t("card_country_source_builtin")
+                  }
+                  size="small"
+                  color={country.source === "custom" ? "secondary" : "primary"}
+                  variant="outlined"
+                />
+              </Stack>
             </CardActionArea>
           ))}
         </Box>
