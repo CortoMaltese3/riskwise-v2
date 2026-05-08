@@ -37,7 +37,7 @@ const Scenario = () => {
       onClick={handleClick}
       sx={getInputCardSx(cardState, { clicked })}
     >
-      <CardContent sx={{ p: 2 }}>
+      <CardContent sx={{ p: 1 }}>
         <Typography
           id="scenario-dropdown"
           gutterBottom

@@ -37,7 +37,7 @@ const Country = () => {
       onClick={handleClick}
       sx={getInputCardSx(cardState, { clicked })}
     >
-      <CardContent sx={{ p: 2 }}>
+      <CardContent sx={{ p: 1 }}>
         <Typography
           id="country-label"
           gutterBottom

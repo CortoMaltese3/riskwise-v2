@@ -38,7 +38,7 @@ const Country = () => {
       onClick={handleClick}
       sx={getInputCardSx(cardState, { clicked })}
     >
-      <CardContent sx={{ p: 2 }}>
+      <CardContent sx={{ p: 1 }}>
         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
           <Typography id="country-label" variant="h6" component="div" m={0} sx={cardTitleSx}>
             {t("country")}

@@ -37,7 +37,7 @@ const Sector = () => {
       onClick={handleClick}
       sx={getInputCardSx(cardState, { clicked })}
     >
-      <CardContent sx={{ p: 2 }}>
+      <CardContent sx={{ p: 1 }}>
         <Typography
           id="sector-title"
           gutterBottom
