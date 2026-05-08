@@ -37,7 +37,7 @@ const MacroEconomicVariable = () => {
       onClick={handleClick}
       sx={getInputCardSx(cardState, { clicked })}
     >
-      <CardContent sx={{ p: 2 }}>
+      <CardContent sx={{ p: 1 }}>
         <Typography
           id="macro-variable-title"
           gutterBottom

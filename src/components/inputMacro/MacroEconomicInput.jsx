@@ -23,8 +23,8 @@ const MacroEconomicInput = () => {
 
       {/* MacroEconomic parameters section. No wrapper background — cards
           float directly on the page surface. */}
-      <Box sx={{ padding: 2 }}>
-        <Grid container spacing={2}>
+      <Box sx={{ padding: 1.5 }}>
+        <Grid container spacing={1}>
           <Grid item xs={12}>
             <Country />
           </Grid>
