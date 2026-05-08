@@ -74,24 +74,20 @@ class RequestData:
     country_name: str
     country_code: str
     entity_filename: str
-    exposure_economic: str
-    exposure_non_economic: str
+    exposure_type: str
+    asset_type: str
     hazard_filename: str
     hazard_type: str
     hazard_code: str
     is_era: bool
     scenario: str
     time_horizon: tuple[int, int]
-    asset_type: str = field(init=False)
-    exposure_type: str = field(init=False)
     ref_year: int = field(init=False)
     future_year: int = field(init=False)
 
     def __post_init__(self):
-        self.exposure_type = self.exposure_economic or self.exposure_non_economic
         self.ref_year = self.time_horizon[0]
         self.future_year = self.time_horizon[1]
-        self.asset_type = "economic" if self.exposure_economic else "non_economic"
 
     @classmethod
     def from_request(
@@ -109,8 +105,8 @@ class RequestData:
             country_name=country_name,
             country_code=base_handler.get_iso3_country_code(country_name),
             entity_filename=request.get("exposureFile", ""),
-            exposure_economic=request.get("exposureEconomic", ""),
-            exposure_non_economic=request.get("exposureNonEconomic", ""),
+            exposure_type=request.get("exposureType") or "",
+            asset_type=request.get("assetType") or "",
             hazard_filename=request.get("hazardFile", ""),
             hazard_type=request.get("hazardType", ""),
             hazard_code=hazard_handler.get_hazard_code(request.get("hazardType", "")),
@@ -493,8 +489,7 @@ class RunScenario:
             "asset_type": self.request_data.asset_type.lower(),
             "annual_growth": self.request_data.annual_growth,
             "country_name": self.request_data.country_name.lower(),
-            "exposure_economic": self.request_data.exposure_economic.lower(),
-            "exposure_non_economic": self.request_data.exposure_non_economic.lower(),
+            "exposure_type": self.request_data.exposure_type.lower(),
             "hazard_type": self.request_data.hazard_type.lower(),
             "is_era": self.request_data.is_era,
             "scenario": self.request_data.scenario.lower(),
@@ -553,8 +548,7 @@ class RunScenario:
             country=self.request_data.country_name,
             hazard_type=self.request_data.hazard_type,
             scenario=self.request_data.scenario,
-            exposure_economic=self.request_data.exposure_economic,
-            exposure_non_economic=self.request_data.exposure_non_economic,
+            exposure_type=self.request_data.exposure_type,
             ref_year=self.request_data.ref_year,
             future_year=self.request_data.future_year,
             annual_growth=self.request_data.annual_growth,
@@ -651,8 +645,8 @@ class RunScenario:
                 "country": self.request_data.country_name,
                 "hazard_type": self.request_data.hazard_type,
                 "scenario": self.request_data.scenario,
-                "exposure_economic": self.request_data.exposure_economic,
-                "exposure_non_economic": self.request_data.exposure_non_economic,
+                "exposure_type": self.request_data.exposure_type,
+                "asset_type": self.request_data.asset_type,
                 "ref_year": self.request_data.ref_year,
                 "future_year": self.request_data.future_year,
                 "annual_growth": self.request_data.annual_growth,

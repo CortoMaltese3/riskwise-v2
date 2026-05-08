@@ -60,8 +60,8 @@ class ScenarioRow:
     country: str | None
     hazard_type: str | None
     scenario: str | None
-    exposure_economic: str | None
-    exposure_non_economic: str | None
+    exposure_type: str | None
+    asset_type: str | None
     ref_year: int | None
     future_year: int | None
     annual_growth: float | None
@@ -136,7 +136,7 @@ def insert_scenario(
             """
             INSERT INTO scenarios (
                 id, name, tags, notes, country, hazard_type, scenario,
-                exposure_economic, exposure_non_economic, ref_year,
+                exposure_type, asset_type, ref_year,
                 future_year, annual_growth, is_era, app_option, status,
                 app_version, engine, engine_version, climada_version,
                 entity_data_sha256, hazard_data_sha256, country_config_sha256,
@@ -152,8 +152,8 @@ def insert_scenario(
                 params.get("country"),
                 params.get("hazard_type"),
                 params.get("scenario"),
-                params.get("exposure_economic"),
-                params.get("exposure_non_economic"),
+                params.get("exposure_type"),
+                params.get("asset_type"),
                 params.get("ref_year"),
                 params.get("future_year"),
                 params.get("annual_growth"),
@@ -510,7 +510,7 @@ def read_result_blobs(temp_dir: Path) -> dict[str, bytes]:
 
 _SCENARIO_SELECT_COLUMNS = """
     id, name, tags, notes, country, hazard_type, scenario,
-    exposure_economic, exposure_non_economic, ref_year,
+    exposure_type, asset_type, ref_year,
     future_year, annual_growth, is_era, app_option, status,
     created_at,
     app_version, engine, engine_version, climada_version,
@@ -528,8 +528,8 @@ def _row_to_scenario(row: tuple) -> ScenarioRow:
         country=row[4],
         hazard_type=row[5],
         scenario=row[6],
-        exposure_economic=row[7],
-        exposure_non_economic=row[8],
+        exposure_type=row[7],
+        asset_type=row[8],
         ref_year=row[9],
         future_year=row[10],
         annual_growth=row[11],

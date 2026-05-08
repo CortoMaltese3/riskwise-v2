@@ -27,8 +27,7 @@ def derive_cache_key(
     country: str,
     hazard_type: str,
     scenario: str,
-    exposure_economic: str,
-    exposure_non_economic: str,
+    exposure_type: str,
     ref_year: int,
     future_year: int,
     annual_growth: float,
@@ -39,15 +38,15 @@ def derive_cache_key(
 
     The inputs mirror the tuple listed in issue #83: any change (a
     different growth rate, a fresher entity file) produces a different
-    key and therefore a cache miss.
+    key and therefore a cache miss. ``asset_type`` is intentionally
+    excluded — ``exposure_type`` already uniquely identifies the asset.
     """
     payload = "|".join(
         [
             country,
             hazard_type,
             scenario,
-            exposure_economic,
-            exposure_non_economic,
+            exposure_type,
             str(ref_year),
             str(future_year),
             f"{annual_growth:.12g}",

@@ -27,8 +27,8 @@ def _make_request_data(**overrides: Any):
         "country_name": "Thailand",
         "country_code": "THA",
         "entity_filename": "",
-        "exposure_economic": "crops",
-        "exposure_non_economic": "",
+        "exposure_type": "crops",
+        "asset_type": "economic",
         "hazard_filename": "",
         "hazard_type": "flood",
         "hazard_code": "FL",
@@ -48,8 +48,8 @@ class TestRequestDataPlainDataclass:
 
     def test_derived_fields_come_from_primary_inputs(self) -> None:
         data = _make_request_data(
-            exposure_economic="crops",
-            exposure_non_economic="",
+            exposure_type="crops",
+            asset_type="economic",
             time_horizon=(2020, 2060),
         )
         assert data.exposure_type == "crops"
@@ -57,10 +57,10 @@ class TestRequestDataPlainDataclass:
         assert data.ref_year == 2020
         assert data.future_year == 2060
 
-    def test_non_economic_exposure_flips_asset_type(self) -> None:
+    def test_non_economic_asset_type_propagates(self) -> None:
         data = _make_request_data(
-            exposure_economic="",
-            exposure_non_economic="students",
+            exposure_type="students",
+            asset_type="non_economic",
         )
         assert data.exposure_type == "students"
         assert data.asset_type == "non_economic"
@@ -99,7 +99,8 @@ class TestRequestDataPlainDataclass:
         request = {
             "countryName": "Egypt",
             "hazardType": "drought",
-            "exposureEconomic": "crops",
+            "exposureType": "crops",
+            "assetType": "economic",
             "timeHorizon": [2024, 2050],
             "isEra": True,
             "scenario": "historical",
@@ -109,3 +110,5 @@ class TestRequestDataPlainDataclass:
         assert data.country_code == "EGY"
         assert data.hazard_code == "D"
         assert data.is_era is True
+        assert data.exposure_type == "crops"
+        assert data.asset_type == "economic"

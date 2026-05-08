@@ -240,7 +240,7 @@ schema_version (version INTEGER, applied_at TIMESTAMP)
 -- Breaking schema changes bump version; migration scripts live in backend/db/migrations/.
 
 scenarios (id, name TEXT, tags TEXT, notes TEXT,
-           country, hazard_type, scenario, exposure_economic, exposure_non_economic,
+           country, hazard_type, scenario, exposure_type, asset_type,
            ref_year, future_year, annual_growth, is_era, app_option, status, created_at)
 -- name/tags/notes: user-facing annotation (see Area 11 and Scenario Naming section)
 

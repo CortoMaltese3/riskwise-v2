@@ -41,8 +41,8 @@ class ReportParameters:
     annual_gdp_growth: Optional[str] = None
     country_code: Optional[str] = None
     country_name: Optional[str] = None
-    exposure_economic: Optional[str] = None
-    exposure_non_economic: Optional[str] = None
+    exposure_type: Optional[str] = None
+    asset_type: Optional[str] = None
     hazard: Optional[str] = None
     hazard_code: Optional[str] = None
     scenario: Optional[str] = None
@@ -91,19 +91,19 @@ class ReportHandler:
         ws.write("B2", "Input fields", bold_20_format)
         ws.set_row(2, None, None)
 
+        exposure_label = (
+            "Exposure of Economic Assets"
+            if self.report_parameters.asset_type == "economic"
+            else "Exposure of Non-Economic Assets"
+        )
         inputs = [
             ("B4", "Country", self.report_parameters.country_name),
             ("B5", "Hazard", self.report_parameters.hazard),
             ("B6", "Scenario", self.report_parameters.scenario),
             ("B7", "Time Horizon", self.report_parameters.time_horizon),
-            ("B8", "Exposure of Economic Assets", self.report_parameters.exposure_economic or "-"),
+            ("B8", exposure_label, self.report_parameters.exposure_type or "-"),
             (
                 "B9",
-                "Exposure of Non-Economic Assets",
-                self.report_parameters.exposure_non_economic or "-",
-            ),
-            (
-                "B10",
                 "Annual Population Growth",
                 (
                     f"{self.report_parameters.annual_population_growth}%"
@@ -112,7 +112,7 @@ class ReportHandler:
                 ),
             ),
             (
-                "B11",
+                "B10",
                 "Annual GDP Growth",
                 (
                     f"{self.report_parameters.annual_gdp_growth}%"

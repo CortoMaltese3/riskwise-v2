@@ -42,6 +42,10 @@ class _ReportHandlerStub:
         Callable[["_ReportHandlerStub", Any], None],
         ReportHandler._generate_provenance_tab,
     )
+    _generate_general_information_tab = cast(
+        Callable[["_ReportHandlerStub", Any], None],
+        ReportHandler._generate_general_information_tab,
+    )
 
 
 class TestShortSha:
@@ -86,8 +90,8 @@ def seeded_scenario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
             "country": "Egypt",
             "hazard_type": "flood",
             "scenario": "rcp85",
-            "exposure_economic": "crops",
-            "exposure_non_economic": "",
+            "exposure_type": "crops",
+            "asset_type": "economic",
             "ref_year": 2024,
             "future_year": 2050,
             "annual_growth": 2.0,
@@ -145,6 +149,44 @@ class TestProvenanceSheet:
         # Caveat note + BibTeX present.
         assert "Cross-platform" in flat or "BLAS" in flat
         assert "@techreport{riskwise" in flat
+
+    @pytest.mark.parametrize(
+        "asset_type,expected_label",
+        [
+            ("economic", "Exposure of Economic Assets"),
+            ("non_economic", "Exposure of Non-Economic Assets"),
+        ],
+    )
+    def test_general_info_sheet_uses_conditional_asset_label(
+        self, asset_type: str, expected_label: str, tmp_path: Path
+    ) -> None:
+        import xlsxwriter
+
+        params = ReportParameters(
+            country_name="Egypt",
+            hazard="flood",
+            scenario="rcp85",
+            time_horizon="2024 - 2050",
+            exposure_type="crops",
+            asset_type=asset_type,
+        )
+        handler = _ReportHandlerStub(params)
+        out_path = tmp_path / f"general_{asset_type}.xlsx"
+        wb = xlsxwriter.Workbook(filename=str(out_path))
+        handler._generate_general_information_tab(wb)
+        wb.close()
+
+        loaded = load_workbook(out_path)
+        ws = loaded["General Information"]
+        labels = [cell.value for row in ws.iter_rows() for cell in row if cell.value is not None]
+        assert expected_label in labels
+        opposite = (
+            "Exposure of Non-Economic Assets"
+            if asset_type == "economic"
+            else "Exposure of Economic Assets"
+        )
+        assert opposite not in labels
+        assert "crops" in labels
 
     def test_no_sheet_when_scenario_unknown(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

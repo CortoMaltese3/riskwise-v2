@@ -1161,14 +1161,14 @@ export interface components {
         ScenarioRunRequest: {
             /** Annualgrowth */
             annualGrowth?: number | null;
+            /** Assettype */
+            assetType?: ("economic" | "non_economic") | null;
             /** Countryname */
             countryName?: string | null;
-            /** Exposureeconomic */
-            exposureEconomic?: string | null;
             /** Exposurefile */
             exposureFile?: string | null;
-            /** Exposurenoneconomic */
-            exposureNonEconomic?: string | null;
+            /** Exposuretype */
+            exposureType?: string | null;
             /** Hazardfile */
             hazardFile?: string | null;
             /** Hazardtype */
@@ -1193,6 +1193,8 @@ export interface components {
             app_option?: string | null;
             /** App Version */
             app_version?: string | null;
+            /** Asset Type */
+            asset_type?: string | null;
             /** Climada Version */
             climada_version?: string | null;
             /** Computed At */
@@ -1209,10 +1211,8 @@ export interface components {
             engine_version?: string | null;
             /** Entity Data Sha256 */
             entity_data_sha256?: string | null;
-            /** Exposure Economic */
-            exposure_economic?: string | null;
-            /** Exposure Non Economic */
-            exposure_non_economic?: string | null;
+            /** Exposure Type */
+            exposure_type?: string | null;
             /** Future Year */
             future_year?: number | null;
             /** Hazard Data Sha256 */
