@@ -86,8 +86,47 @@ const patch = <T>(path: string, body: unknown): Promise<IpcResult<T>> =>
 const del = <T>(path: string): Promise<IpcResult<T>> =>
   http().request<T>("DELETE", path, null, newRequestId());
 
+// Fetch a GeoJSON document served by the main-process `app://` handler.
+// Returned in the same `IpcResult` envelope as the rest of the client so
+// callers don't need a parallel error-handling path for the map layers
+// (architecture rule #3 — all backend access flows through the adapter).
+const fetchGeoJson = async <T = unknown>(fileUrl: string): Promise<IpcResult<T>> => {
+  const requestId = newRequestId();
+  try {
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+      return {
+        success: false,
+        error: {
+          code: "geojson_http_error",
+          message: `HTTP error! status: ${response.status}`,
+          detail: null,
+          error_id: requestId,
+          request_id: requestId,
+        },
+      };
+    }
+    const data = (await response.json()) as T;
+    return { success: true, result: data };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      success: false,
+      error: {
+        code: "geojson_fetch_error",
+        message,
+        detail: message,
+        error_id: requestId,
+        request_id: requestId,
+      },
+    };
+  }
+};
+
 const RiskWiseClient = {
   health: () => get<HealthResponse>("/api/v1/health"),
+
+  fetchGeoJson,
 
   runScenario: (body: ScenarioRunRequest) => http().runScenario<unknown>(body, newRequestId()),
 

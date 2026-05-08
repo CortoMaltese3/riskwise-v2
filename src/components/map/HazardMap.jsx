@@ -11,6 +11,7 @@ import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { getScale } from "../../utils/colorScales";
 import Legend from "./Legend";
+import RiskWiseClient from "../../lib/RiskWiseClient";
 import useStore from "../../store";
 import useTileLayerUrl from "./useTileLayerUrl";
 
@@ -57,17 +58,18 @@ const HazardMap = () => {
 
   const fetchGeoJson = useCallback(
     async (rpLayer) => {
+      // Served by the main-process `app://` handler (`/__temp/<file>`)
+      // out of `userData/data/temp`. Same origin as the renderer, so we
+      // dodge Chromium's "Not allowed to load local resource" block on
+      // direct `file://` reads from an `app://` page.
+      const res = await RiskWiseClient.fetchGeoJson("app://./__temp/hazards_geodata.json");
+      if (!res.success) {
+        console.error("Error fetching GeoJSON data:", res.error.message);
+        setMapInfo({ geoJson: null, colorScale: null });
+        return;
+      }
       try {
-        // Served by the main-process `app://` handler (`/__temp/<file>`)
-        // out of `userData/data/temp`. Same origin as the renderer, so we
-        // dodge Chromium's "Not allowed to load local resource" block on
-        // direct `file://` reads from an `app://` page.
-        const response = await fetch("app://./__temp/hazards_geodata.json");
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
+        const data = res.result;
 
         // Set return periods and initially set activeRPLayer
         const returnPeriods = data._metadata.return_periods;
@@ -101,7 +103,7 @@ const HazardMap = () => {
           throw new Error("Percentile values are missing or incomplete.");
         }
       } catch (error) {
-        console.error("Error fetching GeoJSON data:", error);
+        console.error("Error processing GeoJSON data:", error);
         setMapInfo({ geoJson: null, colorScale: null });
       }
     },
