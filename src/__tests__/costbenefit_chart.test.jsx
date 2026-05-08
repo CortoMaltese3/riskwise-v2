@@ -57,7 +57,7 @@ let useStore;
 
 beforeAll(async () => {
   ({ default: CostBenefitChart } = await import("../components/charts/CostBenefitChart"));
-  ({ default: useStore } = await import("../store"));
+  ({ default: useStore } = await import("../store/useUIStore"));
 });
 
 beforeEach(() => {

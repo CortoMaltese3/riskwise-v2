@@ -15,7 +15,7 @@ import {
 } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
 import { patternForIndex } from "../../utils/chartPatterns";
@@ -52,8 +52,8 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
   const rtl = isRtl(locale);
   const internalRef = useRef(null);
   const chartRef = ref ?? internalRef;
-  const showChartValues = useStore((state) => state.showChartValues);
-  const toggleShowChartValues = useStore((state) => state.toggleShowChartValues);
+  const showChartValues = useUIStore((state) => state.showChartValues);
+  const toggleShowChartValues = useUIStore((state) => state.toggleShowChartValues);
   const theme = useTheme();
   // Increase / decrease / total map onto the semantic viz tokens (#298). An
   // increase in *risk* is bad (negative), a decrease is good (positive); the

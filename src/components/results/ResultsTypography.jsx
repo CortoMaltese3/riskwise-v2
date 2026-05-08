@@ -3,19 +3,18 @@ import { useTranslation } from "react-i18next";
 
 import { Typography } from "@mui/material";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 const ResultsTypography = () => {
-  const {
-    activeMap,
-    activeViewControl,
-    selectedAppOption,
-    selectedCountry,
-    selectedHazard,
-    selectedExposure,
-    selectedTab,
-    selectedSubTab,
-  } = useStore();
+  const activeMap = useUIStore((s) => s.activeMap);
+  const activeViewControl = useUIStore((s) => s.activeViewControl);
+  const selectedTab = useUIStore((s) => s.selectedTab);
+  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
+  const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const selectedExposure = useWorkspaceStore((s) => s.selectedExposure);
   const { t } = useTranslation();
 
   const getText = () => {

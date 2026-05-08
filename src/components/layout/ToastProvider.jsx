@@ -2,15 +2,15 @@ import React, { useEffect, useRef } from "react";
 import { Alert, Snackbar, Stack, Typography } from "@mui/material";
 
 import { useToast, enqueueToast } from "../../hooks/useToast";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const ANCHOR = { vertical: "bottom", horizontal: "right" };
 
 const ToastProvider = ({ children }) => {
   const { toasts, dismiss } = useToast();
-  const error = useStore((state) => state.error);
-  const setError = useStore((state) => state.setError);
-  const clearError = useStore((state) => state.clearError);
+  const error = useUIStore((state) => state.error);
+  const setError = useUIStore((state) => state.setError);
+  const clearError = useUIStore((state) => state.clearError);
   const lastErrorIdRef = useRef(null);
 
   useEffect(() => {

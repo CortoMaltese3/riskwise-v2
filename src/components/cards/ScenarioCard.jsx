@@ -2,11 +2,13 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardActionArea, Typography, CardContent } from "@mui/material";
-import useStore from "../../store";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { layoutTransition } from "../../theme/theme";
 
 const ScenarioCard = () => {
-  const { selectedHazard, selectedScenario, setSelectedScenario } = useStore();
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const selectedScenario = useWorkspaceStore((s) => s.selectedScenario);
+  const setSelectedScenario = useWorkspaceStore((s) => s.setSelectedScenario);
   const { t } = useTranslation();
 
   const scenarios =

@@ -36,27 +36,33 @@ vi.mock("../components/nav/ThemeModeButton", () => ({
 vi.mock("../assets/giz_logo.png", () => ({ default: "" }));
 
 let TopBar;
-let useStore;
+let useUIStore;
+let useResultsStore;
+let useWorkspaceStore;
 
 beforeAll(async () => {
   ({ default: TopBar } = await import("../components/layout/TopBar"));
-  ({ default: useStore } = await import("../store"));
+  ({ default: useUIStore } = await import("../store/useUIStore"));
+  ({ default: useResultsStore } = await import("../store/useResultsStore"));
+  ({ default: useWorkspaceStore } = await import("../store/useWorkspaceStore"));
 }, 60000);
 
-const SEED = {
-  selectedAppOption: "era",
-  selectedExposureFile: "seed.xlsx",
-  selectedHazardFile: "seed.h5",
-  selectedTimeHorizon: [2030, 2080],
-  selectedAnnualGrowth: 4.2,
-  isValidExposure: true,
-  isValidHazard: true,
-  isScenarioRunCompleted: true,
-  mapTitle: "seeded",
+const seedAll = (opts = {}) => {
+  useWorkspaceStore.setState({
+    selectedAppOption: opts.selectedAppOption ?? "era",
+    selectedExposureFile: "seed.xlsx",
+    selectedHazardFile: "seed.h5",
+    selectedTimeHorizon: [2030, 2080],
+    selectedAnnualGrowth: 4.2,
+    isValidExposure: true,
+    isValidHazard: true,
+  });
+  useResultsStore.setState({ isScenarioRunCompleted: true });
+  useUIStore.setState({ mapTitle: "seeded" });
 };
 
 beforeEach(() => {
-  useStore.setState({ ...SEED });
+  seedAll();
 });
 
 afterEach(() => {
@@ -74,11 +80,9 @@ describe("TopBar mode toggle + confirm dialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "mode_explore" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("mode_switch_confirm_title")).toBeInTheDocument();
-    // era → explore reuses the legacy navigate_verification_subtitle copy.
     expect(screen.getByText("navigate_verification_subtitle")).toBeInTheDocument();
-    // Mode has not changed yet — only the dialog is open.
-    expect(useStore.getState().selectedAppOption).toBe("era");
-    expect(useStore.getState().selectedExposureFile).toBe("seed.xlsx");
+    expect(useWorkspaceStore.getState().selectedAppOption).toBe("era");
+    expect(useWorkspaceStore.getState().selectedExposureFile).toBe("seed.xlsx");
   });
 
   it("confirming the switch atomically resets the mode-bound fields", () => {
@@ -86,16 +90,16 @@ describe("TopBar mode toggle + confirm dialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "mode_explore" }));
     fireEvent.click(screen.getByRole("button", { name: "navigate_verification_button" }));
 
-    const state = useStore.getState();
-    expect(state.selectedAppOption).toBe("explore");
-    expect(state.selectedExposureFile).toBe("");
-    expect(state.selectedHazardFile).toBe("");
-    expect(state.selectedTimeHorizon).toEqual([2024, 2050]);
-    expect(state.selectedAnnualGrowth).toBe(0);
-    expect(state.isValidExposure).toBe(false);
-    expect(state.isValidHazard).toBe(false);
-    expect(state.isScenarioRunCompleted).toBe(false);
-    expect(state.mapTitle).toBe("");
+    const ws = useWorkspaceStore.getState();
+    expect(ws.selectedAppOption).toBe("explore");
+    expect(ws.selectedExposureFile).toBe("");
+    expect(ws.selectedHazardFile).toBe("");
+    expect(ws.selectedTimeHorizon).toEqual([2024, 2050]);
+    expect(ws.selectedAnnualGrowth).toBe(0);
+    expect(ws.isValidExposure).toBe(false);
+    expect(ws.isValidHazard).toBe(false);
+    expect(useResultsStore.getState().isScenarioRunCompleted).toBe(false);
+    expect(useUIStore.getState().mapTitle).toBe("");
   });
 
   it("cancelling leaves mode and inputs untouched", () => {
@@ -103,20 +107,20 @@ describe("TopBar mode toggle + confirm dialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "mode_explore" }));
     fireEvent.click(screen.getByRole("button", { name: "cancel" }));
 
-    const state = useStore.getState();
-    expect(state.selectedAppOption).toBe("era");
-    expect(state.selectedExposureFile).toBe("seed.xlsx");
-    expect(state.selectedHazardFile).toBe("seed.h5");
-    expect(state.selectedTimeHorizon).toEqual([2030, 2080]);
-    expect(state.selectedAnnualGrowth).toBe(4.2);
-    expect(state.isValidExposure).toBe(true);
-    expect(state.isValidHazard).toBe(true);
-    expect(state.isScenarioRunCompleted).toBe(true);
-    expect(state.mapTitle).toBe("seeded");
+    const ws = useWorkspaceStore.getState();
+    expect(ws.selectedAppOption).toBe("era");
+    expect(ws.selectedExposureFile).toBe("seed.xlsx");
+    expect(ws.selectedHazardFile).toBe("seed.h5");
+    expect(ws.selectedTimeHorizon).toEqual([2030, 2080]);
+    expect(ws.selectedAnnualGrowth).toBe(4.2);
+    expect(ws.isValidExposure).toBe(true);
+    expect(ws.isValidHazard).toBe(true);
+    expect(useResultsStore.getState().isScenarioRunCompleted).toBe(true);
+    expect(useUIStore.getState().mapTitle).toBe("seeded");
   });
 
   it("uses the explore→era copy when switching from Custom to ERA", () => {
-    useStore.setState({ selectedAppOption: "explore" });
+    seedAll({ selectedAppOption: "explore" });
     render(<TopBar />);
     fireEvent.click(screen.getByRole("button", { name: "mode_era" }));
     expect(screen.getByText("mode_switch_confirm_to_era")).toBeInTheDocument();

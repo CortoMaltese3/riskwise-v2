@@ -7,10 +7,10 @@ import MacroEconomicViewTitle from "../title/MacroEconomicViewTitle";
 import Sector from "./Sector";
 import MacroEconomicVariable from "./MacroEconomicVariable";
 import Scenario from "./Scenario";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const MacroEconomicInput = () => {
-  const { selectedTab } = useStore();
+  const selectedTab = useUIStore((s) => s.selectedTab);
 
   if (!(selectedTab === 2)) {
     return null;

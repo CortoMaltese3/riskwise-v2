@@ -4,8 +4,9 @@ import L from "leaflet";
 import "leaflet-simple-map-screenshoter";
 
 import RiskWiseClient from "../lib/RiskWiseClient";
-import useStore from "../store";
-import useWorkspaceStore from "../store/workspaceSlice";
+import useResultsStore from "../store/useResultsStore";
+import useUIStore from "../store/useUIStore";
+import useWorkspaceStore from "../store/useWorkspaceStore";
 
 const captureMapBase64 = (map) =>
   new Promise((resolve, reject) => {
@@ -43,28 +44,26 @@ export { captureMapBase64, captureChartBase64, captureToScenario };
 
 export const useMapTools = () => {
   const { t } = useTranslation();
-  const {
-    activeMap,
-    activeMapRef,
-    activeViewControl,
-    addReport,
-    isScenarioRunCompleted,
-    reports,
-    scenarioRunCode,
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-    selectedAnnualGrowth,
-    selectedCountry,
-    selectedExposure,
-    selectedHazard,
-    selectedReport,
-    selectedScenario,
-    selectedSubTab,
-    selectedTimeHorizon,
-    waterfallChartRef,
-    costBenefitChartRef,
-  } = useStore();
+  const activeMap = useUIStore((s) => s.activeMap);
+  const activeMapRef = useUIStore((s) => s.activeMapRef);
+  const activeViewControl = useUIStore((s) => s.activeViewControl);
+  const addReport = useUIStore((s) => s.addReport);
+  const reports = useUIStore((s) => s.reports);
+  const selectedReport = useUIStore((s) => s.selectedReport);
+  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
+  const setAlertMessage = useUIStore((s) => s.setAlertMessage);
+  const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
+  const waterfallChartRef = useUIStore((s) => s.waterfallChartRef);
+  const costBenefitChartRef = useUIStore((s) => s.costBenefitChartRef);
+  const isScenarioRunCompleted = useResultsStore((s) => s.isScenarioRunCompleted);
+  const scenarioRunCode = useWorkspaceStore((s) => s.scenarioRunCode);
+  const selectedAnnualGrowth = useWorkspaceStore((s) => s.selectedAnnualGrowth);
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedExposure = useWorkspaceStore((s) => s.selectedExposure);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const selectedScenario = useWorkspaceStore((s) => s.selectedScenario);
+  const selectedTimeHorizon = useWorkspaceStore((s) => s.selectedTimeHorizon);
 
   const saveBase64Screenshot = (base64data, filePath) => {
     return new Promise((resolve, reject) => {

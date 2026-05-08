@@ -1,4 +1,4 @@
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const REMOTE_TILE_URL = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 
@@ -9,8 +9,8 @@ const REMOTE_TILE_URL = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{
 // remote CDN — the OfflineIndicator chip + Settings warning tell the
 // user tiles are still going out.
 export const useTileLayerUrl = () => {
-  const offlineMode = useStore((s) => s.offlineMode);
-  const tilePort = useStore((s) => s.offlineTilePort);
+  const offlineMode = useUIStore((s) => s.offlineMode);
+  const tilePort = useUIStore((s) => s.offlineTilePort);
   if (offlineMode && tilePort) {
     return `http://127.0.0.1:${tilePort}/{z}/{x}/{y}.png`;
   }

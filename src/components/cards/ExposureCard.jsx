@@ -17,25 +17,24 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { layoutTransition } from "../../theme/theme";
 import { exposureCategoryMap, getExposuresForSelection } from "../../data/exposureCatalog";
 
 const ExposureCard = () => {
-  const {
-    selectedAppOption,
-    selectedCountry,
-    selectedExposure,
-    selectedExposureFile,
-    selectedHazard,
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-    setIsValidExposure,
-    setSelectedExposure,
-    setSelectedExposureCategory,
-    setSelectedExposureFile,
-  } = useStore();
+  const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedExposure = useWorkspaceStore((s) => s.selectedExposure);
+  const selectedExposureFile = useWorkspaceStore((s) => s.selectedExposureFile);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const setIsValidExposure = useWorkspaceStore((s) => s.setIsValidExposure);
+  const setSelectedExposure = useWorkspaceStore((s) => s.setSelectedExposure);
+  const setSelectedExposureCategory = useWorkspaceStore((s) => s.setSelectedExposureCategory);
+  const setSelectedExposureFile = useWorkspaceStore((s) => s.setSelectedExposureFile);
+  const setAlertMessage = useUIStore((s) => s.setAlertMessage);
+  const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
   const { t } = useTranslation();
 
   // Pending custom upload — opens the category-pick dialog before we accept

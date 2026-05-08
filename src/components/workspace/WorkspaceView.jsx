@@ -14,8 +14,8 @@ import {
 } from "@mui/material";
 import InboxIcon from "@mui/icons-material/Inbox";
 
-import useStore from "../../store";
-import useWorkspaceStore from "../../store/workspaceSlice";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { enqueueToast } from "../../hooks/useToast";
 import ScrollableRegion from "../layout/primitives/ScrollableRegion";
 import ScenarioTable from "./ScenarioTable";
@@ -70,7 +70,7 @@ EmptyState.propTypes = { onStart: PropTypes.func.isRequired };
 
 const WorkspaceView = ({ initialScenarios }) => {
   const { t } = useTranslation();
-  const setActiveSection = useStore((state) => state.setActiveSection);
+  const setActiveSection = useUIStore((state) => state.setActiveSection);
 
   const {
     scenarios,

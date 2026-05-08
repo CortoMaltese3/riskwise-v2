@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button, Paper, Stack, Typography } from "@mui/material";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const PAPER_SX = {
   p: 4,
@@ -18,7 +18,7 @@ const PAPER_SX = {
 
 const FirstRunCard = () => {
   const { t } = useTranslation();
-  const setActiveSection = useStore((s) => s.setActiveSection);
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
 
   return (
     <Paper variant="outlined" sx={PAPER_SX} data-testid="home-firstrun-card">

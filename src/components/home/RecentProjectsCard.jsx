@@ -15,7 +15,7 @@ import {
 import EastIcon from "@mui/icons-material/East";
 import WestIcon from "@mui/icons-material/West";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import { formatRelativeTime } from "../../lib/relativeTime";
 import { isRtl } from "../../i18nConfig";
 import HomeCard from "./HomeCard";
@@ -56,7 +56,7 @@ RecentRow.propTypes = {
 
 const RecentProjectsCard = ({ scenarios, loading, error }) => {
   const { t, i18n } = useTranslation();
-  const setActiveSection = useStore((s) => s.setActiveSection);
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
   const rtl = isRtl(i18n.language);
   const ArrowIcon = rtl ? WestIcon : EastIcon;
 

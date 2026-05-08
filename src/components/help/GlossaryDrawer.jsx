@@ -18,7 +18,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import enGlossary from "../../content/glossary/en.md?raw";
 import arGlossary from "../../content/glossary/ar.md?raw";
 import thGlossary from "../../content/glossary/th.md?raw";
@@ -46,8 +46,8 @@ const normalize = (s) => s.toLocaleLowerCase();
 
 const GlossaryDrawer = () => {
   const { t, i18n } = useTranslation();
-  const open = useStore((s) => s.glossaryOpen);
-  const setOpen = useStore((s) => s.setGlossaryOpen);
+  const open = useUIStore((s) => s.glossaryOpen);
+  const setOpen = useUIStore((s) => s.setGlossaryOpen);
 
   const [query, setQuery] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(-1);

@@ -44,8 +44,9 @@ vi.mock("chart.js", () => ({
 vi.mock("chartjs-plugin-datalabels", () => ({ default: {} }));
 
 let MacroEconomicChart;
-let useStore;
-let baseSnapshot;
+let useUIStore;
+let useResultsStore;
+let useWorkspaceStore;
 
 const SAMPLE_ROWS = [
   {
@@ -88,22 +89,24 @@ const SAMPLE_ROWS = [
 
 beforeAll(async () => {
   ({ default: MacroEconomicChart } = await import("../components/charts/MacroEconomicChart"));
-  ({ default: useStore } = await import("../store"));
-  baseSnapshot = useStore.getState();
+  ({ default: useUIStore } = await import("../store/useUIStore"));
+  ({ default: useResultsStore } = await import("../store/useResultsStore"));
+  ({ default: useWorkspaceStore } = await import("../store/useWorkspaceStore"));
 });
 
 beforeEach(() => {
   lineSpy.mockClear();
-  useStore.setState(baseSnapshot, true);
-  useStore.setState({
+  useResultsStore.setState({
     credOutputData: [],
+    macroEconomicChartTitle: "",
+  });
+  useWorkspaceStore.setState({
     selectedMacroCountry: "",
     selectedMacroScenario: "",
     selectedMacroSector: "",
     selectedMacroVariable: "",
-    macroEconomicChartTitle: "",
-    showChartValues: false,
   });
+  useUIStore.setState({ showChartValues: false });
 });
 
 describe("MacroEconomicChart empty + progressive states", () => {
@@ -132,8 +135,8 @@ describe("MacroEconomicChart empty + progressive states", () => {
   });
 
   it("keeps the empty frame when only some parameters are selected (slice unresolved)", () => {
-    useStore.setState({
-      credOutputData: SAMPLE_ROWS,
+    useResultsStore.setState({ credOutputData: SAMPLE_ROWS });
+    useWorkspaceStore.setState({
       selectedMacroCountry: "ESP",
       selectedMacroScenario: "rcp45",
       // sector + variable still unset → no row matches the filter
@@ -147,13 +150,15 @@ describe("MacroEconomicChart empty + progressive states", () => {
   });
 
   it("populates the chart progressively once all four parameters resolve a non-empty slice", () => {
-    useStore.setState({
+    useResultsStore.setState({
       credOutputData: SAMPLE_ROWS,
+      macroEconomicChartTitle: "ESP · agriculture · gdp",
+    });
+    useWorkspaceStore.setState({
       selectedMacroCountry: "ESP",
       selectedMacroScenario: "rcp45",
       selectedMacroSector: "agriculture",
       selectedMacroVariable: "gdp",
-      macroEconomicChartTitle: "ESP · agriculture · gdp",
     });
 
     render(<MacroEconomicChart />);

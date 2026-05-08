@@ -5,13 +5,13 @@ import { Box, Paper, Typography } from "@mui/material";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import CostBenefitChart from "../charts/CostBenefitChart";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const STATUS_OK = 2000;
 
 const AdaptationChartLayout = () => {
   const { t } = useTranslation();
-  const setCostBenefitChartRef = useStore((state) => state.setCostBenefitChartRef);
+  const setCostBenefitChartRef = useUIStore((state) => state.setCostBenefitChartRef);
   const [costBenefitData, setCostBenefitData] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 

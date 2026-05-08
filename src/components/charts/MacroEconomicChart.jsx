@@ -17,7 +17,9 @@ import {
 } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
 import ChartDataTable from "./ChartDataTable";
@@ -53,16 +55,14 @@ const MacroEconomicChart = () => {
     // Unknown adaptation values fall through to the last categorical hue.
     return vizCategorical[idx >= 0 ? idx : vizCategorical.length - 1];
   };
-  const {
-    credOutputData,
-    selectedMacroCountry,
-    selectedMacroScenario,
-    selectedMacroSector,
-    selectedMacroVariable,
-    macroEconomicChartTitle,
-    showChartValues,
-    toggleShowChartValues,
-  } = useStore();
+  const credOutputData = useResultsStore((s) => s.credOutputData);
+  const macroEconomicChartTitle = useResultsStore((s) => s.macroEconomicChartTitle);
+  const selectedMacroCountry = useWorkspaceStore((s) => s.selectedMacroCountry);
+  const selectedMacroScenario = useWorkspaceStore((s) => s.selectedMacroScenario);
+  const selectedMacroSector = useWorkspaceStore((s) => s.selectedMacroSector);
+  const selectedMacroVariable = useWorkspaceStore((s) => s.selectedMacroVariable);
+  const showChartValues = useUIStore((s) => s.showChartValues);
+  const toggleShowChartValues = useUIStore((s) => s.toggleShowChartValues);
 
   // Filter data based on selected filters
   const filteredData = credOutputData.filter(

@@ -8,15 +8,16 @@ import RiskWiseClient from "../../lib/RiskWiseClient";
 import WaterfallChart from "../charts/WaterfallChart";
 import EmptyChartState from "../layout/EmptyChartState";
 import LoadingSkeleton from "../layout/LoadingSkeleton";
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
 
 const STATUS_OK = 2000;
 
 const RiskChartLayout = () => {
   const { t } = useTranslation();
-  const setWaterfallChartRef = useStore((state) => state.setWaterfallChartRef);
-  const isScenarioRunning = useStore((state) => state.isScenarioRunning);
-  const isScenarioRunCompleted = useStore((state) => state.isScenarioRunCompleted);
+  const setWaterfallChartRef = useUIStore((state) => state.setWaterfallChartRef);
+  const isScenarioRunning = useResultsStore((state) => state.isScenarioRunning);
+  const isScenarioRunCompleted = useResultsStore((state) => state.isScenarioRunCompleted);
   const [waterfallData, setWaterfallData] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 

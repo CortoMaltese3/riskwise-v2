@@ -12,19 +12,18 @@ import "leaflet/dist/leaflet.css";
 import { getScale } from "../../utils/colorScales";
 import Legend from "./Legend";
 import RiskWiseClient from "../../lib/RiskWiseClient";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import useTileLayerUrl from "./useTileLayerUrl";
 
 const RiskMap = () => {
   const tileLayerUrl = useTileLayerUrl();
-  const {
-    selectedCountry,
-    selectedHazard,
-    setActiveMapRef,
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-  } = useStore();
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const setActiveMapRef = useUIStore((s) => s.setActiveMapRef);
+  const setAlertMessage = useUIStore((s) => s.setAlertMessage);
+  const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
   const { t } = useTranslation();
   const mapRefSet = useRef(false);
   const theme = useTheme();

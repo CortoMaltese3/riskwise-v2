@@ -6,10 +6,10 @@ import ExposureCard from "./ExposureCard";
 import HazardCard from "./HazardCard";
 import ScenarioCard from "./ScenarioCard";
 import TimeHorizonCard from "./TimeHorizonCard";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const ViewCard = () => {
-  const { selectedCard } = useStore();
+  const selectedCard = useUIStore((s) => s.selectedCard);
 
   return (
     <>

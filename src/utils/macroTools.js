@@ -4,22 +4,18 @@ import { alpha, useTheme } from "@mui/material/styles";
 import RiskWiseClient from "../lib/RiskWiseClient";
 import logger from "../lib/logger.ts";
 
-import useStore from "../store";
+import useResultsStore from "../store/useResultsStore";
+import useUIStore from "../store/useUIStore";
 
 export const useMacroTools = () => {
   const { t } = useTranslation();
   const theme = useTheme();
-  const {
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-    setCredOutputData,
-    setMacroEconomicChartData,
-    setMacroEconomicChartTitle,
-  } = useStore.getState();
+  const { setAlertMessage, setAlertSeverity, setAlertShowMessage } = useUIStore.getState();
+  const { setCredOutputData, setMacroEconomicChartData, setMacroEconomicChartTitle } =
+    useResultsStore.getState();
 
   const loadCREDOutputData = () => {
-    const { activeCredDatasetId } = useStore.getState();
+    const { activeCredDatasetId } = useResultsStore.getState();
     RiskWiseClient.fetchCREDOutput(activeCredDatasetId)
       .then((response) => {
         setAlertMessage(response.result.status.message);

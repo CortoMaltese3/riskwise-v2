@@ -2,7 +2,8 @@ import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
 import Sidebar, { SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from "./Sidebar";
 import TopBar from "./TopBar";
 import AdaptationMeasuresInput from "../input/AdaptationMeasuresInput";
@@ -32,8 +33,8 @@ const MACRO_LEFT_PANEL_WIDTH = 280;
 
 export const RiskAssessmentView = () => {
   const { t } = useTranslation();
-  const selectedTab = useStore((s) => s.selectedTab);
-  const selectedSubTab = useStore((s) => s.selectedSubTab);
+  const selectedTab = useUIStore((s) => s.selectedTab);
+  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const showRunButton = selectedTab === 0 || (selectedTab === 1 && selectedSubTab === 0);
   return (
     <HorizontalSplit>
@@ -107,7 +108,7 @@ export const RiskAssessmentView = () => {
 };
 
 const MacroeconomicView = () => {
-  const credOutputData = useStore((s) => s.credOutputData);
+  const credOutputData = useResultsStore((s) => s.credOutputData);
   const { loadCREDOutputData } = useMacroTools();
 
   // Sidebar-driven nav doesn't go through MainTabs, so the legacy tab-change
@@ -186,7 +187,9 @@ const MAIN_PANE_SX = { display: "flex", flexDirection: "column", height: "100%" 
 
 const AppShell = () => {
   const { t } = useTranslation();
-  const { activeSection, setSelectedTab, sidebarCollapsed } = useStore();
+  const activeSection = useUIStore((s) => s.activeSection);
+  const setSelectedTab = useUIStore((s) => s.setSelectedTab);
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
 
   useEffect(() => {
     const tab = sectionToTab[activeSection];

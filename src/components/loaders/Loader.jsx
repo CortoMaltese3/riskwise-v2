@@ -4,7 +4,7 @@ import PropTypes from "prop-types";
 import Box from "@mui/material/Box";
 import LinearProgress from "@mui/material/LinearProgress";
 import Typography from "@mui/material/Typography";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const LinearProgressWithLabel = (props) => {
   return (
@@ -35,7 +35,8 @@ LinearProgressWithLabel.propTypes = {
 };
 
 const Loader = () => {
-  const { progress, setProgress } = useStore();
+  const progress = useUIStore((s) => s.progress);
+  const setProgress = useUIStore((s) => s.setProgress);
 
   useEffect(() => {
     if (!window.electron?.onProgress) {

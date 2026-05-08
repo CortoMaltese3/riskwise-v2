@@ -23,7 +23,7 @@ let useWorkspaceStore;
 
 beforeAll(async () => {
   ({ default: WorkspaceView } = await import("../components/workspace/WorkspaceView"));
-  ({ default: useWorkspaceStore } = await import("../store/workspaceSlice"));
+  ({ default: useWorkspaceStore } = await import("../store/useWorkspaceStore"));
 }, 60000);
 
 const FIXTURE = [

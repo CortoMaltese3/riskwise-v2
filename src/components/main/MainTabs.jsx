@@ -10,12 +10,17 @@ import TuneIcon from "@mui/icons-material/Tune";
 import { useMacroTools } from "../../utils/macroTools";
 import { useReportTools } from "../../utils/reportTools";
 import MainSubTabs from "./MainSubTabs";
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { TOP_BAR_HEIGHT } from "../layout/Sidebar";
 
 const MainTabs = () => {
-  const { selectedAppOption, credOutputData, selectedTab, setSelectedTab, setSelectedSubTab } =
-    useStore();
+  const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
+  const credOutputData = useResultsStore((s) => s.credOutputData);
+  const selectedTab = useUIStore((s) => s.selectedTab);
+  const setSelectedTab = useUIStore((s) => s.setSelectedTab);
+  const setSelectedSubTab = useUIStore((s) => s.setSelectedSubTab);
   const { fetchReports } = useReportTools();
   const { loadCREDOutputData } = useMacroTools();
   const { t } = useTranslation();

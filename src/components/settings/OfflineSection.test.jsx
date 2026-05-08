@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 import OfflineSection from "./OfflineSection";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -41,7 +41,7 @@ const setupBridge = (overrides = {}) => {
 };
 
 beforeEach(() => {
-  useStore.setState({
+  useUIStore.setState({
     offlineMode: false,
     offlineTilePort: null,
     offlineTilesPath: null,
@@ -59,8 +59,8 @@ describe("OfflineSection", () => {
     const { getStatus } = setupBridge({ enabled: true, tilePort: 51234 });
     render(<OfflineSection />);
     await waitFor(() => expect(getStatus).toHaveBeenCalled());
-    await waitFor(() => expect(useStore.getState().offlineMode).toBe(true));
-    expect(useStore.getState().offlineTilePort).toBe(51234);
+    await waitFor(() => expect(useUIStore.getState().offlineMode).toBe(true));
+    expect(useUIStore.getState().offlineTilePort).toBe(51234);
   });
 
   it("calls setEnabled when the user flips the toggle", async () => {

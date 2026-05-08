@@ -3,18 +3,16 @@ import { useTranslation } from "react-i18next";
 
 import { Box, Button, Tabs, Tab, Paper } from "@mui/material";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import { useMapTools } from "../../utils/mapTools";
 import { layoutTransition } from "../../theme/theme";
 
 const MainSubTabs = () => {
-  const {
-    activeViewControl,
-    selectedSubTab,
-    selectedTab,
-    setSelectedSubTab,
-    setActiveViewControl,
-  } = useStore();
+  const activeViewControl = useUIStore((s) => s.activeViewControl);
+  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
+  const selectedTab = useUIStore((s) => s.selectedTab);
+  const setSelectedSubTab = useUIStore((s) => s.setSelectedSubTab);
+  const setActiveViewControl = useUIStore((s) => s.setActiveViewControl);
   const { handleSaveImage, handleSaveMap, handleAddToOutput } = useMapTools();
   const { t } = useTranslation();
 

@@ -5,7 +5,7 @@ import { Box, IconButton, Typography, Card, CardContent, Divider } from "@mui/ma
 import InputIcon from "@mui/icons-material/Input";
 import StackedLineChartIcon from "@mui/icons-material/StackedLineChart";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const controls = [
   { id: "display_macro_parameters", icon: <InputIcon /> },
@@ -13,7 +13,8 @@ const controls = [
 ];
 
 const MainViewControls = () => {
-  const { activeViewControl, setActiveViewControl } = useStore();
+  const activeViewControl = useUIStore((s) => s.activeViewControl);
+  const setActiveViewControl = useUIStore((s) => s.setActiveViewControl);
   const { t } = useTranslation();
 
   const handleSelect = (control) => {

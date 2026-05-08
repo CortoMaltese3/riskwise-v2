@@ -4,7 +4,9 @@ import CancelIcon from "@mui/icons-material/Cancel";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { enqueueToast } from "../../hooks/useToast";
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 // Full-content-area overlay rendered during scenario execution. Step label is
 // fed from the main store's ``modalMessage`` (populated by the progress
@@ -12,12 +14,12 @@ import useStore from "../../store";
 // down the overlay locally so the user regains control even if the request
 // is still in flight.
 const ProgressOverlay = () => {
-  const isScenarioRunning = useStore((state) => state.isScenarioRunning);
-  const modalMessage = useStore((state) => state.modalMessage);
-  const progress = useStore((state) => state.progress);
-  const scenarioRunCode = useStore((state) => state.scenarioRunCode);
-  const setIsScenarioRunning = useStore((state) => state.setIsScenarioRunning);
-  const setModalMessage = useStore((state) => state.setModalMessage);
+  const isScenarioRunning = useResultsStore((state) => state.isScenarioRunning);
+  const modalMessage = useUIStore((state) => state.modalMessage);
+  const progress = useUIStore((state) => state.progress);
+  const scenarioRunCode = useWorkspaceStore((state) => state.scenarioRunCode);
+  const setIsScenarioRunning = useResultsStore((state) => state.setIsScenarioRunning);
+  const setModalMessage = useUIStore((state) => state.setModalMessage);
 
   useEffect(() => {
     if (!window.electron?.onProgress) return undefined;

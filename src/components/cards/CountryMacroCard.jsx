@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardActionArea, Typography, CardContent } from "@mui/material";
-import useStore from "../../store";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { layoutTransition } from "../../theme/theme";
 
@@ -18,7 +18,8 @@ const countryKey = (country) => country.name.toLowerCase();
 
 const CountryMacroCard = () => {
   const { t } = useTranslation();
-  const { selectedMacroCountry, setSelectedMacroCountry } = useStore();
+  const selectedMacroCountry = useWorkspaceStore((s) => s.selectedMacroCountry);
+  const setSelectedMacroCountry = useWorkspaceStore((s) => s.setSelectedMacroCountry);
   const [countries, setCountries] = useState([]);
 
   useEffect(() => {

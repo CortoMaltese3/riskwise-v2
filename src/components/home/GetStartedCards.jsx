@@ -7,7 +7,7 @@ import FolderIcon from "@mui/icons-material/Folder";
 import EastIcon from "@mui/icons-material/East";
 import WestIcon from "@mui/icons-material/West";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import { isRtl } from "../../i18nConfig";
 
 const ICONS = {
@@ -45,7 +45,7 @@ const ACTION_AREA_SX = { height: "100%", p: 2.5, alignItems: "stretch" };
 
 const GetStartedCards = () => {
   const { t, i18n } = useTranslation();
-  const setActiveSection = useStore((s) => s.setActiveSection);
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
   const rtl = isRtl(i18n.language);
   const ArrowIcon = rtl ? WestIcon : EastIcon;
 

@@ -10,14 +10,18 @@ import { formatNumber } from "../../lib/formatNumber";
 import { getScaleLegacy } from "../../utils/colorScalesLegacy";
 import LegendLegacy from "./LegendLegacy";
 import RiskWiseClient from "../../lib/RiskWiseClient";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import useTileLayerUrl from "./useTileLayerUrl";
 
 const adminLayers = [0, 1, 2]; // Administrative layers
 
 const ExposureMap = () => {
   const tileLayerUrl = useTileLayerUrl();
-  const { selectedCountry, selectedExposureCategory, selectedHazard, setActiveMapRef } = useStore();
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedExposureCategory = useWorkspaceStore((s) => s.selectedExposureCategory);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const setActiveMapRef = useUIStore((s) => s.setActiveMapRef);
   const isEconomic = selectedExposureCategory === "economic" || selectedExposureCategory === null;
   const { t, i18n } = useTranslation();
   const locale = i18n.language;

@@ -4,22 +4,21 @@ import { useTranslation } from "react-i18next";
 import { Box, Button, IconButton, Tooltip } from "@mui/material";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 
-import useStore from "../../store";
-import useWorkspaceStore from "../../store/workspaceSlice";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { useMapTools } from "../../utils/mapTools";
 import { useReportTools } from "../../utils/reportTools";
 import { layoutTransition } from "../../theme/theme";
 import SaveScenarioDialog from "../workspace/SaveScenarioDialog";
 
 const MainViewToolbar = () => {
-  const {
-    activeViewControl,
-    isScenarioRunCompleted,
-    mapTitle,
-    scenarioRunCode,
-    selectedSubTab,
-    selectedTab,
-  } = useStore();
+  const activeViewControl = useUIStore((s) => s.activeViewControl);
+  const isScenarioRunCompleted = useResultsStore((s) => s.isScenarioRunCompleted);
+  const mapTitle = useUIStore((s) => s.mapTitle);
+  const scenarioRunCode = useWorkspaceStore((s) => s.scenarioRunCode);
+  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
+  const selectedTab = useUIStore((s) => s.selectedTab);
   const { handleCaptureSnapshot } = useMapTools();
   const { fetchReports } = useReportTools();
   const reloadWorkspaceScenarios = useWorkspaceStore((s) => s.loadScenarios);
