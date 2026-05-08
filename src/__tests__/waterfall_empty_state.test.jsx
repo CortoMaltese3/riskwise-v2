@@ -21,21 +21,21 @@ vi.mock("../components/charts/WaterfallChart", () => ({
 }));
 
 import RiskChartLayout from "../components/controls/RiskChartLayout";
-import useStore from "../store";
+import useResultsStore from "../store/useResultsStore";
 
 describe("RiskChartLayout empty state", () => {
   let snapshot;
 
   beforeEach(() => {
-    snapshot = useStore.getState();
-    useStore.setState({
+    snapshot = useResultsStore.getState();
+    useResultsStore.setState({
       isScenarioRunning: false,
       isScenarioRunCompleted: false,
     });
   });
 
   afterEach(() => {
-    useStore.setState(snapshot, true);
+    useResultsStore.setState(snapshot, true);
   });
 
   it("renders the friendly empty-state placeholder pre-run", async () => {
@@ -50,7 +50,7 @@ describe("RiskChartLayout empty state", () => {
   });
 
   it("shows a skeleton while a scenario is running", async () => {
-    useStore.setState({ isScenarioRunning: true });
+    useResultsStore.setState({ isScenarioRunning: true });
     render(<RiskChartLayout />);
 
     expect(await screen.findByTestId("waterfall-skeleton")).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe("RiskChartLayout empty state", () => {
         data: { categories: [{ key: "risk_present", label: "Present", value: 1, base: 0 }] },
       },
     });
-    useStore.setState({ isScenarioRunCompleted: true });
+    useResultsStore.setState({ isScenarioRunCompleted: true });
 
     render(<RiskChartLayout />);
 

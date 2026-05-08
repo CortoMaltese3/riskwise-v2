@@ -15,7 +15,7 @@ import {
   Typography,
 } from "@mui/material";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 // Settings panel that drives offline mode and surfaces the per-pack
 // signature-verification results from the startup scan. The toggle is
@@ -25,10 +25,10 @@ import useStore from "../../store";
 
 const OfflineSection = () => {
   const { t } = useTranslation();
-  const offlineMode = useStore((s) => s.offlineMode);
-  const offlineTilesPath = useStore((s) => s.offlineTilesPath);
-  const offlineImportedPacks = useStore((s) => s.offlineImportedPacks);
-  const applyOfflineStatus = useStore((s) => s.applyOfflineStatus);
+  const offlineMode = useUIStore((s) => s.offlineMode);
+  const offlineTilesPath = useUIStore((s) => s.offlineTilesPath);
+  const offlineImportedPacks = useUIStore((s) => s.offlineImportedPacks);
+  const applyOfflineStatus = useUIStore((s) => s.applyOfflineStatus);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 

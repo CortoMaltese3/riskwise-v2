@@ -3,21 +3,20 @@ import { useTranslation } from "react-i18next";
 
 import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import ContextualTooltip from "../help/ContextualTooltip";
 import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const TimeHorizon = () => {
-  const {
-    selectedAppOption,
-    selectedCountry,
-    selectedTimeHorizon,
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-    setSelectedCard,
-    setSelectedTab,
-  } = useStore();
+  const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedTimeHorizon = useWorkspaceStore((s) => s.selectedTimeHorizon);
+  const setAlertMessage = useUIStore((s) => s.setAlertMessage);
+  const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
+  const setSelectedCard = useUIStore((s) => s.setSelectedCard);
+  const setSelectedTab = useUIStore((s) => s.setSelectedTab);
   const { t } = useTranslation();
   const [clicked, setClicked] = useState(false);
   const [cardState, setCardState] = useState("default");

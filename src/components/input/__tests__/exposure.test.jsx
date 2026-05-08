@@ -16,13 +16,13 @@ vi.mock("../../help/ContextualTooltip", () => ({
 }));
 
 import theme from "../../../theme/theme";
-import useStore from "../../../store";
+import useWorkspaceStore from "../../../store/useWorkspaceStore";
 import Exposure from "../Exposure";
 
-const initialStoreState = useStore.getState();
+const initialStoreState = useWorkspaceStore.getState();
 
 const resetStore = (overrides = {}) => {
-  useStore.setState({
+  useWorkspaceStore.setState({
     ...initialStoreState,
     selectedExposure: "",
     selectedExposureCategory: null,

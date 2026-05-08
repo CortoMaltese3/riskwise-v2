@@ -2,11 +2,14 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Card, CardContent, TextField, Typography } from "@mui/material";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { cardTitleSx, disabledFieldSx, getInputCardSx } from "../input/inputCardStyles";
 
 const Country = () => {
-  const { selectedMacroCountry, setActiveViewControl, setSelectedMacroCard } = useStore();
+  const selectedMacroCountry = useWorkspaceStore((s) => s.selectedMacroCountry);
+  const setActiveViewControl = useUIStore((s) => s.setActiveViewControl);
+  const setSelectedMacroCard = useUIStore((s) => s.setSelectedMacroCard);
   const { t } = useTranslation();
   const [clicked, setClicked] = useState(false);
   const [cardState, setCardState] = useState("default");

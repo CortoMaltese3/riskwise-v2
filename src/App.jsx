@@ -13,7 +13,7 @@ import HelpMenu from "./components/help/HelpMenu";
 import GlossaryDrawer from "./components/help/GlossaryDrawer";
 import baseTheme from "./theme/theme";
 import { isRtl } from "./i18nConfig";
-import useStore from "./store";
+import useUIStore from "./store/useUIStore";
 
 const printParams = new URLSearchParams(window.location.search);
 const isPrintView = printParams.get("view") === "print";
@@ -30,8 +30,8 @@ const THEME_MODE_STORAGE_KEY = "riskwise.themeMode";
 const PRINT_THEME_MODE_STORAGE_KEY = "riskwise.themeMode.print";
 
 const App = () => {
-  const setHelpMenuOpen = useStore((s) => s.setHelpMenuOpen);
-  const toggleHelpMenu = useStore((s) => s.toggleHelpMenu);
+  const setHelpMenuOpen = useUIStore((s) => s.setHelpMenuOpen);
+  const toggleHelpMenu = useUIStore((s) => s.toggleHelpMenu);
   const { i18n } = useTranslation();
 
   // Re-create the theme when the active language flips between LTR and RTL so

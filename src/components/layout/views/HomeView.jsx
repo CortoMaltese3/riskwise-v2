@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Box, Stack } from "@mui/material";
 
-import useWorkspaceStore from "../../../store/workspaceSlice";
+import useWorkspaceStore from "../../../store/useWorkspaceStore";
 import { parseChangelog } from "../../../utils/changelog";
 import ScrollableRegion from "../primitives/ScrollableRegion";
 import GetStartedCards from "../../home/GetStartedCards";

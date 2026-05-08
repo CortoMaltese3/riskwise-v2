@@ -66,8 +66,9 @@ import UpdatesPanel from "../../src/components/settings/UpdatesPanel";
 import OfflineSection from "../../src/components/settings/OfflineSection";
 import DiagnosticsSection from "../../src/components/settings/DiagnosticsSection";
 import MacroEconomicInput from "../../src/components/inputMacro/MacroEconomicInput";
-import useStore from "../../src/store";
-import useWorkspaceStore from "../../src/store/workspaceSlice";
+import useResultsStore from "../../src/store/useResultsStore";
+import useStore from "../../src/store/useUIStore";
+import useWorkspaceStore from "../../src/store/useWorkspaceStore";
 
 const withTheme = (ui) => <ThemeProvider theme={theme}>{ui}</ThemeProvider>;
 
@@ -113,8 +114,8 @@ describe("Accessibility — primary screens (issue #121)", () => {
       activeSection: "home",
       sidebarCollapsed: false,
       selectedTab: 0,
-      credOutputData: null,
     });
+    useResultsStore.setState({ credOutputData: null });
     useWorkspaceStore.setState({
       scenarios: [],
       search: "",

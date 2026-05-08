@@ -14,7 +14,9 @@ import CloseIcon from "@mui/icons-material/Close";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import logger from "../../lib/logger.ts";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
+import { selectHazard } from "../../store/orchestrators";
 import { layoutTransition } from "../../theme/theme";
 
 const hazardDict = {
@@ -24,18 +26,15 @@ const hazardDict = {
 
 const HazardCard = () => {
   const { t } = useTranslation();
-  const {
-    selectedAppOption,
-    selectedCountry,
-    selectedHazard,
-    selectedHazardFile,
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-    setIsValidHazard,
-    setSelectedHazard,
-    setSelectedHazardFile,
-  } = useStore();
+  const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const selectedHazardFile = useWorkspaceStore((s) => s.selectedHazardFile);
+  const setIsValidHazard = useWorkspaceStore((s) => s.setIsValidHazard);
+  const setSelectedHazardFile = useWorkspaceStore((s) => s.setSelectedHazardFile);
+  const setAlertMessage = useUIStore((s) => s.setAlertMessage);
+  const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
 
   const [fetchHazardMessage, setFetchHazardMessage] = useState("");
 
@@ -43,9 +42,9 @@ const HazardCard = () => {
 
   const handleCardSelect = async (hazard) => {
     if (selectedHazard === hazard) {
-      setSelectedHazard("");
+      selectHazard("");
     } else {
-      setSelectedHazard(hazard);
+      selectHazard(hazard);
     }
     // Clear the temp directory to reset maps
     await window.electron.clearTempDir();

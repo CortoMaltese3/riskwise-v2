@@ -4,19 +4,19 @@ import { useTranslation } from "react-i18next";
 import { Box, Button } from "@mui/material";
 import InsightsIcon from "@mui/icons-material/Insights";
 
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { useMacroTools } from "../../utils/macroTools";
 
 const RunPlotMacroButton = () => {
   const { t } = useTranslation();
-  const {
-    credOutputData,
-    selectedMacroCountry,
-    selectedMacroScenario,
-    selectedMacroSector,
-    selectedMacroVariable,
-    setActiveViewControl,
-  } = useStore();
+  const credOutputData = useResultsStore((s) => s.credOutputData);
+  const selectedMacroCountry = useWorkspaceStore((s) => s.selectedMacroCountry);
+  const selectedMacroScenario = useWorkspaceStore((s) => s.selectedMacroScenario);
+  const selectedMacroSector = useWorkspaceStore((s) => s.selectedMacroSector);
+  const selectedMacroVariable = useWorkspaceStore((s) => s.selectedMacroVariable);
+  const setActiveViewControl = useUIStore((s) => s.setActiveViewControl);
 
   const { generateChartFromCREDData } = useMacroTools();
 

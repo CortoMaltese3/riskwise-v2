@@ -7,11 +7,12 @@ import EconomicResultsCard from "./EconomicResultsCard";
 import MacroEconomicResultsCard from "./MacroEconomicResultsCard";
 import OutputResultsCard from "./OutputResultsCard";
 import LoadingSkeleton from "../layout/LoadingSkeleton";
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
 
 const ResultsView = () => {
-  const selectedTab = useStore((state) => state.selectedTab);
-  const isScenarioRunning = useStore((state) => state.isScenarioRunning);
+  const selectedTab = useUIStore((state) => state.selectedTab);
+  const isScenarioRunning = useResultsStore((state) => state.isScenarioRunning);
 
   if (selectedTab === 0) {
     return null;

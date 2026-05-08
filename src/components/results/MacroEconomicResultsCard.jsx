@@ -3,11 +3,11 @@ import { useTranslation } from "react-i18next";
 
 import { Box, Typography } from "@mui/material";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const MacroEconomicResultsCard = () => {
   const { t } = useTranslation();
-  const { activeViewControl } = useStore();
+  const activeViewControl = useUIStore((s) => s.activeViewControl);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column" }}>

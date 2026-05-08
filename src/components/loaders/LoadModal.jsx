@@ -9,14 +9,17 @@ import Slide from "@mui/material/Slide";
 
 import Loader from "./Loader";
 import GearLoader from "../../assets/gear-loader.svg";
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
 const LoadModal = () => {
-  const { isScenarioRunning, modalMessage, setModalMessage } = useStore();
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
+  const modalMessage = useUIStore((s) => s.modalMessage);
+  const setModalMessage = useUIStore((s) => s.setModalMessage);
 
   useEffect(() => {
     if (!window.electron?.onProgress) {

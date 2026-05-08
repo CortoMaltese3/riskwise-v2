@@ -14,7 +14,7 @@ import MapLayout from "../map/MapLayout";
 import ViewCard from "../cards/ViewCard";
 import ReportsView from "../reports/ReportsView";
 import ViewMacroCard from "../cards/ViewMacroCard";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const COLUMN_SX = {
   flex: 1,
@@ -39,7 +39,9 @@ const CONTROLS_ROW_SX = {
 };
 
 const MainView = () => {
-  const { activeViewControl, selectedSubTab, selectedTab } = useStore();
+  const activeViewControl = useUIStore((s) => s.activeViewControl);
+  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
+  const selectedTab = useUIStore((s) => s.selectedTab);
 
   return (
     <Box sx={COLUMN_SX}>

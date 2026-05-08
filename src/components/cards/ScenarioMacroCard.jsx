@@ -2,11 +2,12 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardActionArea, Typography, CardContent } from "@mui/material";
-import useStore from "../../store";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { layoutTransition } from "../../theme/theme";
 
 const ScenarioMacroCard = () => {
-  const { selectedMacroScenario, setSelectedMacroScenario } = useStore();
+  const selectedMacroScenario = useWorkspaceStore((s) => s.selectedMacroScenario);
+  const setSelectedMacroScenario = useWorkspaceStore((s) => s.setSelectedMacroScenario);
   const { t } = useTranslation();
 
   const scenarios = ["historical", "rcp26_rcp45", "rcp85"];

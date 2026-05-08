@@ -2,7 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardContent, Slider, Typography } from "@mui/material";
-import useStore from "../../store";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 // Inclusive range covering both monetary (GDP-like) and population-like
 // growth — the unified slider serves both, with the remarks copy clarifying
@@ -15,7 +15,8 @@ const growthMarks = [
 const valueText = (value) => `${value}`;
 
 const AnnualGrowthCard = () => {
-  const { selectedAnnualGrowth, setSelectedAnnualGrowth } = useStore();
+  const selectedAnnualGrowth = useWorkspaceStore((s) => s.selectedAnnualGrowth);
+  const setSelectedAnnualGrowth = useWorkspaceStore((s) => s.setSelectedAnnualGrowth);
   const { t } = useTranslation();
 
   const handleGrowthCardSelect = (event, value) => {

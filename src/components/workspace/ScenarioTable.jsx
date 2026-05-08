@@ -24,7 +24,7 @@ import StarBorderIcon from "@mui/icons-material/StarBorder";
 
 import { formatDateTime } from "../../lib/formatDate";
 import { isRtl } from "../../i18nConfig";
-import useWorkspaceStore from "../../store/workspaceSlice";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import SnapshotDrawer from "./SnapshotDrawer";
 
 const formatCreatedAt = (value, locale) => {

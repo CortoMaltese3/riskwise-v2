@@ -64,7 +64,7 @@ let useStore;
 
 beforeAll(async () => {
   ({ default: WaterfallChart } = await import("../components/charts/WaterfallChart"));
-  ({ default: useStore } = await import("../store"));
+  ({ default: useStore } = await import("../store/useUIStore"));
 });
 
 beforeEach(() => {

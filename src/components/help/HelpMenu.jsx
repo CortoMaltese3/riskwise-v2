@@ -25,7 +25,7 @@ import BugReportIcon from "@mui/icons-material/BugReport";
 import InfoIcon from "@mui/icons-material/Info";
 import KeyboardIcon from "@mui/icons-material/Keyboard";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import packageJson from "../../../package.json";
 
 const SHORTCUTS = [
@@ -39,9 +39,9 @@ const SHORTCUTS = [
 // tour list, walkthrough restart, shortcuts dialog, and version info.
 const HelpMenu = () => {
   const { t } = useTranslation();
-  const helpMenuOpen = useStore((s) => s.helpMenuOpen);
-  const setHelpMenuOpen = useStore((s) => s.setHelpMenuOpen);
-  const setGlossaryOpen = useStore((s) => s.setGlossaryOpen);
+  const helpMenuOpen = useUIStore((s) => s.helpMenuOpen);
+  const setHelpMenuOpen = useUIStore((s) => s.setHelpMenuOpen);
+  const setGlossaryOpen = useUIStore((s) => s.setGlossaryOpen);
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
 

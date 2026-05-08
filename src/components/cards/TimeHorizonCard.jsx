@@ -2,10 +2,10 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardContent, Slider, Typography } from "@mui/material";
-import useStore from "../../store";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 const TimeHorizonCard = () => {
-  const { setSelectedTimeHorizon } = useStore();
+  const setSelectedTimeHorizon = useWorkspaceStore((s) => s.setSelectedTimeHorizon);
   const { t } = useTranslation();
 
   // Initial range state

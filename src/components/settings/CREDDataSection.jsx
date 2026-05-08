@@ -33,7 +33,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
 import { enqueueToast } from "../../hooks/useToast";
 import { useListManager } from "../../hooks/useListManager";
 import { layoutTransition } from "../../theme/theme";
@@ -58,10 +58,10 @@ const splitErrors = (message) => {
 
 const CREDDataSection = () => {
   const { t } = useTranslation();
-  const credDatasets = useStore((s) => s.credDatasets);
-  const setCredDatasets = useStore((s) => s.setCredDatasets);
-  const activeCredDatasetId = useStore((s) => s.activeCredDatasetId);
-  const setActiveCredDatasetId = useStore((s) => s.setActiveCredDatasetId);
+  const credDatasets = useResultsStore((s) => s.credDatasets);
+  const setCredDatasets = useResultsStore((s) => s.setCredDatasets);
+  const activeCredDatasetId = useResultsStore((s) => s.activeCredDatasetId);
+  const setActiveCredDatasetId = useResultsStore((s) => s.setActiveCredDatasetId);
 
   const [isDragging, setIsDragging] = useState(false);
   const [pendingPath, setPendingPath] = useState(null);

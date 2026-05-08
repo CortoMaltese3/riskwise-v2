@@ -20,7 +20,9 @@ import ThemeModeButton from "../nav/ThemeModeButton";
 import ModeSwitchConfirmDialog from "../alerts/ModeSwitchConfirmDialog";
 
 import giz_logo from "../../assets/giz_logo.png";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
+import { switchAppMode } from "../../store/orchestrators";
 import { TOP_BAR_HEIGHT } from "./Sidebar";
 
 const GIZ_LOGO_WIDTH = 140;
@@ -28,10 +30,9 @@ const GIZ_LOGO_HEIGHT = 40;
 
 const TopBar = () => {
   const { t } = useTranslation();
-  const sidebarCollapsed = useStore((s) => s.sidebarCollapsed);
-  const setSidebarCollapsed = useStore((s) => s.setSidebarCollapsed);
-  const selectedAppOption = useStore((s) => s.selectedAppOption);
-  const setSelectedAppOptionWithReset = useStore((s) => s.setSelectedAppOptionWithReset);
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = useUIStore((s) => s.setSidebarCollapsed);
+  const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
 
   const [pendingMode, setPendingMode] = useState(null);
 
@@ -43,7 +44,7 @@ const TopBar = () => {
   };
 
   const handleConfirm = () => {
-    if (pendingMode) setSelectedAppOptionWithReset(pendingMode);
+    if (pendingMode) switchAppMode(pendingMode);
     setPendingMode(null);
   };
 

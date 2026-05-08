@@ -1,15 +1,20 @@
 import { describe, it, expect, beforeEach, beforeAll } from "vitest";
 
-let useStore;
+let useUIStore;
+let useResultsStore;
+let useWorkspaceStore;
+let switchAppMode;
 
 beforeAll(async () => {
-  ({ default: useStore } = await import("../store"));
+  ({ default: useUIStore } = await import("../store/useUIStore"));
+  ({ default: useResultsStore } = await import("../store/useResultsStore"));
+  ({ default: useWorkspaceStore } = await import("../store/useWorkspaceStore"));
+  ({ switchAppMode } = await import("../store/orchestrators"));
 });
 
-describe("setSelectedAppOptionWithReset", () => {
+describe("switchAppMode orchestrator", () => {
   beforeEach(() => {
-    // Seed mode-bound fields with non-default values so the reset is observable.
-    useStore.setState({
+    useWorkspaceStore.setState({
       selectedAppOption: "era",
       selectedExposureFile: "custom.xlsx",
       selectedHazardFile: "custom.h5",
@@ -17,38 +22,41 @@ describe("setSelectedAppOptionWithReset", () => {
       selectedAnnualGrowth: 7.5,
       isValidExposure: true,
       isValidHazard: true,
-      isScenarioRunCompleted: true,
-      mapTitle: "stale title",
     });
+    useResultsStore.setState({ isScenarioRunCompleted: true });
+    useUIStore.setState({ mapTitle: "stale title" });
   });
 
   it("clears the documented mode-bound fields when the mode actually changes", () => {
-    useStore.getState().setSelectedAppOptionWithReset("explore");
-    const state = useStore.getState();
-    expect(state.selectedAppOption).toBe("explore");
-    expect(state.selectedExposureFile).toBe("");
-    expect(state.selectedHazardFile).toBe("");
-    expect(state.selectedTimeHorizon).toEqual([2024, 2050]);
-    expect(state.selectedAnnualGrowth).toBe(0);
-    expect(state.isValidExposure).toBe(false);
-    expect(state.isValidHazard).toBe(false);
-    expect(state.isScenarioRunCompleted).toBe(false);
-    expect(state.mapTitle).toBe("");
+    switchAppMode("explore");
+    const ws = useWorkspaceStore.getState();
+    expect(ws.selectedAppOption).toBe("explore");
+    expect(ws.selectedExposureFile).toBe("");
+    expect(ws.selectedHazardFile).toBe("");
+    expect(ws.selectedTimeHorizon).toEqual([2024, 2050]);
+    expect(ws.selectedAnnualGrowth).toBe(0);
+    expect(ws.isValidExposure).toBe(false);
+    expect(ws.isValidHazard).toBe(false);
+    expect(useResultsStore.getState().isScenarioRunCompleted).toBe(false);
+    expect(useUIStore.getState().mapTitle).toBe("");
   });
 
   it("is a no-op when the new mode equals the current one", () => {
-    const before = useStore.getState();
-    useStore.getState().setSelectedAppOptionWithReset("era");
-    const after = useStore.getState();
-    expect(after.selectedAppOption).toBe("era");
-    // Every seeded field must survive the no-op call untouched.
-    expect(after.selectedExposureFile).toBe(before.selectedExposureFile);
-    expect(after.selectedHazardFile).toBe(before.selectedHazardFile);
-    expect(after.selectedTimeHorizon).toEqual(before.selectedTimeHorizon);
-    expect(after.selectedAnnualGrowth).toBe(before.selectedAnnualGrowth);
-    expect(after.isValidExposure).toBe(before.isValidExposure);
-    expect(after.isValidHazard).toBe(before.isValidHazard);
-    expect(after.isScenarioRunCompleted).toBe(before.isScenarioRunCompleted);
-    expect(after.mapTitle).toBe(before.mapTitle);
+    const wsBefore = useWorkspaceStore.getState();
+    const uiBefore = useUIStore.getState();
+    const resBefore = useResultsStore.getState();
+    switchAppMode("era");
+    const wsAfter = useWorkspaceStore.getState();
+    expect(wsAfter.selectedAppOption).toBe("era");
+    expect(wsAfter.selectedExposureFile).toBe(wsBefore.selectedExposureFile);
+    expect(wsAfter.selectedHazardFile).toBe(wsBefore.selectedHazardFile);
+    expect(wsAfter.selectedTimeHorizon).toEqual(wsBefore.selectedTimeHorizon);
+    expect(wsAfter.selectedAnnualGrowth).toBe(wsBefore.selectedAnnualGrowth);
+    expect(wsAfter.isValidExposure).toBe(wsBefore.isValidExposure);
+    expect(wsAfter.isValidHazard).toBe(wsBefore.isValidHazard);
+    expect(useResultsStore.getState().isScenarioRunCompleted).toBe(
+      resBefore.isScenarioRunCompleted
+    );
+    expect(useUIStore.getState().mapTitle).toBe(uiBefore.mapTitle);
   });
 });

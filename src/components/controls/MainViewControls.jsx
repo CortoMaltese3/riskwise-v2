@@ -5,7 +5,7 @@ import { Box, IconButton, Typography, Card, CardContent, Divider } from "@mui/ma
 import MapIcon from "@mui/icons-material/Map";
 import BarChartIcon from "@mui/icons-material/BarChart";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const allControls = [
   { id: "display_map", icon: <MapIcon /> },
@@ -13,7 +13,9 @@ const allControls = [
 ];
 
 const MainViewControls = () => {
-  const { activeViewControl, setActiveViewControl, selectedSubTab } = useStore();
+  const activeViewControl = useUIStore((s) => s.activeViewControl);
+  const setActiveViewControl = useUIStore((s) => s.setActiveViewControl);
+  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const { t } = useTranslation();
 
   const controls =

@@ -2,7 +2,7 @@ import React, { forwardRef } from "react";
 import PropTypes from "prop-types";
 import { Snackbar, Stack, Button } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import { layoutTransition } from "../../theme/theme";
 
 const Alert = forwardRef(function Alert(props, ref) {
@@ -10,7 +10,10 @@ const Alert = forwardRef(function Alert(props, ref) {
 });
 
 const AlertMessage = () => {
-  const { alertMessage, alertSeverity, alertShowMessage, setAlertShowMessage } = useStore();
+  const alertMessage = useUIStore((s) => s.alertMessage);
+  const alertSeverity = useUIStore((s) => s.alertSeverity);
+  const alertShowMessage = useUIStore((s) => s.alertShowMessage);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
 
   const handleCloseMessage = () => {
     setAlertShowMessage(false);

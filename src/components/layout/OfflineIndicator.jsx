@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Box, Chip } from "@mui/material";
 import CloudOffIcon from "@mui/icons-material/CloudOff";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 // Persistent footer chip + the renderer-side primer for the offline
 // state subscription. Mounting in AppShell makes this the single place
@@ -12,8 +12,8 @@ import useStore from "../../store";
 // directly.
 const OfflineIndicator = () => {
   const { t } = useTranslation();
-  const offlineMode = useStore((s) => s.offlineMode);
-  const applyOfflineStatus = useStore((s) => s.applyOfflineStatus);
+  const offlineMode = useUIStore((s) => s.offlineMode);
+  const applyOfflineStatus = useUIStore((s) => s.applyOfflineStatus);
 
   useEffect(() => {
     const bridge = window.electron?.offline;

@@ -6,10 +6,14 @@ import { Box, Card, CardContent, Chip, Stack, Tooltip, Typography } from "@mui/m
 import AdaptationMeasuresViewTitle from "../title/AdaptationMeasuresViewTitle";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import logger from "../../lib/logger.ts";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 const AdaptationMeasuresInput = () => {
-  const { selectedCountry, selectedHazard, selectedSubTab, selectedTab } = useStore();
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
+  const selectedTab = useUIStore((s) => s.selectedTab);
   const { t } = useTranslation();
 
   const [measures, setMeasures] = useState([]);

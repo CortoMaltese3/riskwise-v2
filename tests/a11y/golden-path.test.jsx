@@ -107,8 +107,8 @@ beforeAll(async () => {
   ({ default: AppShell, RiskAssessmentView } =
     await import("../../src/components/layout/AppShell"));
   ({ default: WorkspaceView } = await import("../../src/components/workspace/WorkspaceView"));
-  ({ default: useStore } = await import("../../src/store"));
-  ({ default: useWorkspaceStore } = await import("../../src/store/workspaceSlice"));
+  ({ default: useStore } = await import("../../src/store/useUIStore"));
+  ({ default: useWorkspaceStore } = await import("../../src/store/useWorkspaceStore"));
 }, 60000);
 
 beforeEach(() => {

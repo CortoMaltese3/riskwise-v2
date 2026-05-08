@@ -3,7 +3,7 @@ import { Joyride, ACTIONS, EVENTS, STATUS } from "react-joyride";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import { isRtl } from "../../i18nConfig";
 import { TOURS } from "./tours";
 import { buildJoyrideLocale, buildJoyrideStyles } from "./joyrideTheme";
@@ -14,10 +14,10 @@ import { buildJoyrideLocale, buildJoyrideStyles } from "./joyrideTheme";
 const GuidedTour = () => {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const activeTour = useStore((s) => s.activeTour);
-  const tourStep = useStore((s) => s.tourStep);
-  const setTourStep = useStore((s) => s.setTourStep);
-  const endTour = useStore((s) => s.endTour);
+  const activeTour = useUIStore((s) => s.activeTour);
+  const tourStep = useUIStore((s) => s.tourStep);
+  const setTourStep = useUIStore((s) => s.setTourStep);
+  const endTour = useUIStore((s) => s.endTour);
 
   const tour = useMemo(() => TOURS.find((x) => x.id === activeTour), [activeTour]);
 

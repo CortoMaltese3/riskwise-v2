@@ -1,7 +1,9 @@
 import { useTranslation } from "react-i18next";
 
 import RiskWiseClient from "../lib/RiskWiseClient";
-import useStore from "../store";
+import useResultsStore from "../store/useResultsStore";
+import useUIStore from "../store/useUIStore";
+import useWorkspaceStore from "../store/useWorkspaceStore";
 
 import outputIconTha from "../assets/folder_grey_network_icon_512.png";
 import outputIconEgy from "../assets/folder_grey_cloud_icon_512.png";
@@ -58,7 +60,12 @@ export const useReportTools = () => {
     setAlertMessage,
     setAlertSeverity,
     setAlertShowMessage,
-    setIsScenarioRunCompleted,
+    setMapTitle,
+    setSelectedReport,
+    setReports,
+  } = useUIStore.getState();
+  const { setIsScenarioRunCompleted } = useResultsStore.getState();
+  const {
     setSelectedCountry,
     setSelectedHazard,
     setSelectedScenario,
@@ -68,11 +75,8 @@ export const useReportTools = () => {
     setSelectedAnnualGrowth,
     setIsValidHazard,
     setIsValidExposure,
-    setMapTitle,
     setScenarioRunCode,
-    setSelectedReport,
-    setReports,
-  } = useStore.getState();
+  } = useWorkspaceStore.getState();
 
   const fetchReports = async () => {
     try {

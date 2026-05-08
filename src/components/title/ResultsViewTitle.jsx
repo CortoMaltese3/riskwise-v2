@@ -2,10 +2,10 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Typography } from "@mui/material";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const ResultsViewTitle = () => {
-  const { selectedTab } = useStore();
+  const selectedTab = useUIStore((s) => s.selectedTab);
   const { t } = useTranslation();
 
   return (

@@ -16,7 +16,7 @@ vi.mock("../../help/ContextualTooltip", () => ({
 }));
 
 import theme from "../../../theme/theme";
-import useStore from "../../../store";
+import useWorkspaceStore from "../../../store/useWorkspaceStore";
 import { getInputCardSx, INPUT_CARD_HEIGHT } from "../inputCardStyles";
 import Country from "../Country";
 import Hazard from "../Hazard";
@@ -90,10 +90,10 @@ const SELECTION_STATES = [
   },
 ];
 
-const initialStoreState = useStore.getState();
+const initialStoreState = useWorkspaceStore.getState();
 
 const resetStore = (overrides = {}) => {
-  useStore.setState({
+  useWorkspaceStore.setState({
     ...initialStoreState,
     selectedCountry: null,
     selectedHazard: "",

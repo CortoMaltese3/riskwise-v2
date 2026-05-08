@@ -3,23 +3,22 @@ import { useTranslation } from "react-i18next";
 
 import { useReportTools } from "../../utils/reportTools";
 import ReportCard from "./ReportCard";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import logger from "../../lib/logger.ts";
 
 const ReportsView = () => {
-  const {
-    reports,
-    removeReport,
-    selectedReport,
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-    setSelectedScenarioRunCode,
-    setSelectedReport,
-    updateReports,
-  } = useStore();
+  const reports = useUIStore((s) => s.reports);
+  const removeReport = useUIStore((s) => s.removeReport);
+  const selectedReport = useUIStore((s) => s.selectedReport);
+  const setAlertMessage = useUIStore((s) => s.setAlertMessage);
+  const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
+  const setSelectedReport = useUIStore((s) => s.setSelectedReport);
+  const updateReports = useUIStore((s) => s.updateReports);
+  const setSelectedScenarioRunCode = useWorkspaceStore((s) => s.setSelectedScenarioRunCode);
   const { restoreScenario, getReport } = useReportTools();
   const { t } = useTranslation();
 

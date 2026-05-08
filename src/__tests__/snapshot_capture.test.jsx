@@ -59,14 +59,24 @@ const setStateBag = {
 
 const stateRef = { current: { ...setStateBag } };
 
-vi.mock("../store", () => ({
-  default: () => stateRef.current,
-}));
+const makeSelectorStore = () => {
+  const fn = (selector) => selector(stateRef.current);
+  fn.getState = () => stateRef.current;
+  fn.setState = (patch) => {
+    stateRef.current = { ...stateRef.current, ...patch };
+  };
+  return fn;
+};
 
-vi.mock("../store/workspaceSlice", () => {
-  const useWorkspaceStore = (selector) => selector({ loadScenarios: loadScenariosMock });
-  useWorkspaceStore.getState = () => ({ loadScenarios: loadScenariosMock });
-  return { default: useWorkspaceStore };
+vi.mock("../store/useUIStore", () => ({ default: makeSelectorStore() }));
+vi.mock("../store/useResultsStore", () => ({ default: makeSelectorStore() }));
+vi.mock("../store/useWorkspaceStore", () => {
+  const fn = (selector) => selector({ ...stateRef.current, loadScenarios: loadScenariosMock });
+  fn.getState = () => ({ ...stateRef.current, loadScenarios: loadScenariosMock });
+  fn.setState = (patch) => {
+    stateRef.current = { ...stateRef.current, ...patch };
+  };
+  return { default: fn };
 });
 
 vi.mock("../utils/reportTools", () => ({

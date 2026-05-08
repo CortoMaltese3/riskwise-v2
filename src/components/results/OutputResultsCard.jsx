@@ -5,19 +5,18 @@ import { Box, Button } from "@mui/material";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import logger from "../../lib/logger.ts";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { layoutTransition } from "../../theme/theme";
 
 const OutputResultsCard = () => {
   const { t } = useTranslation();
-  const {
-    selectedReport,
-    selectedReportType,
-    selectedScenarioRunCode,
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-  } = useStore();
+  const selectedReport = useUIStore((s) => s.selectedReport);
+  const selectedReportType = useUIStore((s) => s.selectedReportType);
+  const selectedScenarioRunCode = useWorkspaceStore((s) => s.selectedScenarioRunCode);
+  const setAlertMessage = useUIStore((s) => s.setAlertMessage);
+  const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
 
   const handleButtonClick = (type) => {
     if (type === "gis") {

@@ -2,13 +2,6 @@ import { describe, it, expect, vi, beforeAll } from "vitest";
 import { render } from "@testing-library/react";
 import axe from "axe-core";
 
-vi.mock("../store", () => ({
-  default: vi.fn(() => ({
-    selectedAppOption: "era",
-    setSelectedAppOptionWithReset: vi.fn(),
-  })),
-}));
-
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key) => key,

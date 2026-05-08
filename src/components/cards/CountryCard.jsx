@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardActionArea, Typography, CardContent } from "@mui/material";
-import useStore from "../../store";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
+import { selectCountry } from "../../store/orchestrators";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { layoutTransition } from "../../theme/theme";
 
@@ -18,7 +19,7 @@ const countryKey = (country) => country.name.toLowerCase();
 
 const CountryCard = () => {
   const { t } = useTranslation();
-  const { selectedCountry, setSelectedCountry } = useStore();
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
   const [countries, setCountries] = useState([]);
 
   useEffect(() => {
@@ -43,9 +44,9 @@ const CountryCard = () => {
   const handleSelect = async (country) => {
     const key = countryKey(country);
     if (selectedCountry === key) {
-      setSelectedCountry(""); // Deselect if already selected
+      selectCountry(""); // Deselect if already selected
     } else {
-      setSelectedCountry(key);
+      selectCountry(key);
     }
     // Clear the temp directory to reset maps
     await window.electron.clearTempDir();

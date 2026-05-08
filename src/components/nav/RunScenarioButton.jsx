@@ -8,35 +8,34 @@ import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import SaveScenarioDialog from "../workspace/SaveScenarioDialog";
 import { useReportTools } from "../../utils/reportTools";
-import useStore from "../../store";
-import useWorkspaceStore from "../../store/workspaceSlice";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 const RunScenarioButton = () => {
   const { t } = useTranslation();
-  const {
-    isValidExposure,
-    isValidHazard,
-    setMapTitle,
-    setIsScenarioRunning,
-    selectedCountry,
-    selectedAnnualGrowth,
-    selectedAppOption,
-    selectedExposure,
-    selectedExposureCategory,
-    selectedExposureFile,
-    selectedHazard,
-    selectedHazardFile,
-    selectedScenario,
-    selectedTimeHorizon,
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-    setError,
-    setIsScenarioRunCompleted,
-    setScenarioRunCode,
-    setSelectedReport,
-    setSelectedTab,
-  } = useStore();
+  const isValidExposure = useWorkspaceStore((s) => s.isValidExposure);
+  const isValidHazard = useWorkspaceStore((s) => s.isValidHazard);
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedAnnualGrowth = useWorkspaceStore((s) => s.selectedAnnualGrowth);
+  const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
+  const selectedExposure = useWorkspaceStore((s) => s.selectedExposure);
+  const selectedExposureCategory = useWorkspaceStore((s) => s.selectedExposureCategory);
+  const selectedExposureFile = useWorkspaceStore((s) => s.selectedExposureFile);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const selectedHazardFile = useWorkspaceStore((s) => s.selectedHazardFile);
+  const selectedScenario = useWorkspaceStore((s) => s.selectedScenario);
+  const selectedTimeHorizon = useWorkspaceStore((s) => s.selectedTimeHorizon);
+  const setScenarioRunCode = useWorkspaceStore((s) => s.setScenarioRunCode);
+  const setMapTitle = useUIStore((s) => s.setMapTitle);
+  const setAlertMessage = useUIStore((s) => s.setAlertMessage);
+  const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
+  const setError = useUIStore((s) => s.setError);
+  const setSelectedReport = useUIStore((s) => s.setSelectedReport);
+  const setSelectedTab = useUIStore((s) => s.setSelectedTab);
+  const setIsScenarioRunning = useResultsStore((s) => s.setIsScenarioRunning);
+  const setIsScenarioRunCompleted = useResultsStore((s) => s.setIsScenarioRunCompleted);
 
   const [isRunButtonLoading, setIsRunButtonLoading] = useState(false);
   const [isRunButtonDisabled, setIsRunButtonDisabled] = useState(true);

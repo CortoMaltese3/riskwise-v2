@@ -1,4 +1,4 @@
-import useStore from "../store";
+import useWorkspaceStore from "../store/useWorkspaceStore";
 
 const countryCodes = {
   egypt: "EGY",
@@ -47,7 +47,7 @@ export const generateNumericCode = () => {
 
 export const generateRunCode = () => {
   const { selectedAppOption, selectedCountry, selectedHazard, selectedScenario, selectedExposure } =
-    useStore.getState();
+    useWorkspaceStore.getState();
 
   const numericCode = generateNumericCode();
   const selectedCountryCode = getCode(selectedCountry, countryCodes);

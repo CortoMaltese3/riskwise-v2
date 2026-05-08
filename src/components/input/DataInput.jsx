@@ -9,10 +9,11 @@ import Exposure from "./Exposure";
 import Hazard from "./Hazard";
 import Scenario from "./Scenario";
 import TimeHorizon from "./TimeHorizon";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const DataInput = () => {
-  const { selectedSubTab, selectedTab } = useStore();
+  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
+  const selectedTab = useUIStore((s) => s.selectedTab);
 
   if (!(selectedTab === 0 || (selectedTab === 1 && selectedSubTab === 0))) {
     return null;

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import RiskWiseClient from "../lib/RiskWiseClient";
+import { generateRunCode } from "../utils/misc";
 
 const PINNED_STORAGE_KEY = "riskwise.pinnedScenarioIds";
 
@@ -26,11 +27,12 @@ const writePinnedIds = (ids) => {
   try {
     globalThis.localStorage?.setItem(PINNED_STORAGE_KEY, JSON.stringify(ids));
   } catch {
-    // storage may be unavailable (private mode, tests without jsdom storage)
+    // storage may be unavailable
   }
 };
 
 const useWorkspaceStore = create((set, get) => ({
+  // --- Scenario list (workspace view) ---
   scenarios: [],
   loading: false,
   error: "",
@@ -40,10 +42,38 @@ const useWorkspaceStore = create((set, get) => ({
   sortKey: "created_at",
   sortDir: "desc",
   selectedIds: [],
-  // Curated pin-set; separate concept from chronological recents. Persisted
-  // so the selection survives reloads.
+  // Curated pin-set; separate from chronological recents. Persisted so the
+  // selection survives reloads.
   pinnedIds: readPinnedIds(),
   lastSyncAt: null,
+
+  // --- Active scenario inputs (single-row domain selection) ---
+  // First launch lands on the Risk view with ERA defaults applied. The mode
+  // toggle in the TopBar lets users switch to Custom mid-session via a
+  // confirm-and-reset flow (see the `switchAppMode` orchestrator).
+  selectedAppOption: "era",
+  selectedCountry: "",
+  selectedExposure: "",
+  // `selectedExposureCategory` is "economic" | "non_economic" | null. `null`
+  // is reserved for a Custom upload whose category the user hasn't picked.
+  selectedExposureCategory: null,
+  selectedExposureFile: "",
+  selectedHazard: "",
+  selectedHazardFile: "",
+  selectedScenario: "",
+  selectedScenarioRunCode: "",
+  scenarioRunCode: "",
+  selectedTimeHorizon: [2024, 2050],
+  selectedAnnualGrowth: 0,
+  isValidExposure: false,
+  isValidHazard: false,
+
+  // --- Macro inputs ---
+  selectedMacroCountry: "",
+  selectedMacroScenario: "",
+  selectedMacroSector: "",
+  selectedMacroVariable: "",
+  available_macro_sectors: [],
 
   setSearch: (search) => set({ search }),
   setCountryFilter: (countryFilter) => set({ countryFilter }),
@@ -150,6 +180,60 @@ const useWorkspaceStore = create((set, get) => ({
     }
     set({ selectedIds: [] });
   },
+
+  setSelectedAppOption: (option) => set({ selectedAppOption: option }),
+  setSelectedCountry: (country) => set({ selectedCountry: country }),
+  setSelectedExposure: (exposure) => {
+    set({ selectedExposure: exposure, selectedAnnualGrowth: 0 });
+  },
+  setSelectedExposureCategory: (category) => set({ selectedExposureCategory: category }),
+  setSelectedExposureFile: (exposureFile) => set({ selectedExposureFile: exposureFile }),
+  setSelectedHazard: (hazard) => set({ selectedHazard: hazard }),
+  setSelectedHazardFile: (hazardFile) => set({ selectedHazardFile: hazardFile }),
+  setSelectedScenario: (scenario) => set({ selectedScenario: scenario }),
+  setSelectedScenarioRunCode: (code) => set({ selectedScenarioRunCode: code }),
+  setScenarioRunCode: (code = null) => {
+    set({ scenarioRunCode: code || generateRunCode() });
+  },
+  setSelectedTimeHorizon: (timeHorizon) => set({ selectedTimeHorizon: timeHorizon }),
+  setSelectedAnnualGrowth: (annualGrowth) => set({ selectedAnnualGrowth: annualGrowth }),
+  setIsValidExposure: (isValid = null) => {
+    const { selectedAppOption } = get();
+    if (selectedAppOption === "era") {
+      set({ isValidExposure: true });
+    } else {
+      set({ isValidExposure: isValid });
+    }
+  },
+  setIsValidHazard: (isValid = null) => {
+    const { selectedAppOption } = get();
+    if (selectedAppOption === "era") {
+      set({ isValidHazard: true });
+    } else {
+      set({ isValidHazard: isValid });
+    }
+  },
+
+  setSelectedMacroCountry: (country) => {
+    set({
+      selectedMacroCountry: country,
+      selectedMacroScenario: "",
+      selectedMacroSector: "",
+      selectedMacroVariable: "",
+    });
+  },
+  setSelectedMacroScenario: (scenario) =>
+    set({
+      selectedMacroScenario: scenario,
+      selectedMacroVariable: "",
+      selectedMacroSector: "",
+    }),
+  setSelectedMacroSector: (sector) => set({ selectedMacroSector: sector }),
+  setSelectedMacroVariable: (variable) =>
+    set({
+      selectedMacroVariable: variable,
+      selectedMacroSector: "",
+    }),
 }));
 
 export default useWorkspaceStore;

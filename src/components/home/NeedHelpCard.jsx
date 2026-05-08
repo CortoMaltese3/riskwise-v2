@@ -2,12 +2,12 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Stack, Typography } from "@mui/material";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import HomeCard from "./HomeCard";
 
 const NeedHelpCard = () => {
   const { t } = useTranslation();
-  const setGlossaryOpen = useStore((s) => s.setGlossaryOpen);
+  const setGlossaryOpen = useUIStore((s) => s.setGlossaryOpen);
 
   return (
     <HomeCard data-testid="home-needhelp-card" title={t("home_needhelp_title")}>

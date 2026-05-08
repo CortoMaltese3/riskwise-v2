@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 
 import { Card, CardContent, Chip, Stack, TextField, Typography } from "@mui/material";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { exposureCategoryMap } from "../../data/exposureCatalog";
 import ContextualTooltip from "../help/ContextualTooltip";
 import {
@@ -23,13 +24,11 @@ const resolveCategory = (selectedExposure, selectedExposureCategory) => {
 };
 
 const Exposure = () => {
-  const {
-    isValidExposure,
-    selectedExposure,
-    selectedExposureCategory,
-    setSelectedCard,
-    setSelectedTab,
-  } = useStore();
+  const isValidExposure = useWorkspaceStore((s) => s.isValidExposure);
+  const selectedExposure = useWorkspaceStore((s) => s.selectedExposure);
+  const selectedExposureCategory = useWorkspaceStore((s) => s.selectedExposureCategory);
+  const setSelectedCard = useUIStore((s) => s.setSelectedCard);
+  const setSelectedTab = useUIStore((s) => s.setSelectedTab);
   const { t } = useTranslation();
   const [clicked, setClicked] = useState(false);
   const [cardState, setCardState] = useState("default");

@@ -15,7 +15,7 @@ import {
 } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
 import { patternForIndex } from "../../utils/chartPatterns";
@@ -49,8 +49,8 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
   const rtl = isRtl(locale);
   const internalRef = useRef(null);
   const chartRef = ref ?? internalRef;
-  const showChartValues = useStore((state) => state.showChartValues);
-  const toggleShowChartValues = useStore((state) => state.toggleShowChartValues);
+  const showChartValues = useUIStore((state) => state.showChartValues);
+  const toggleShowChartValues = useUIStore((state) => state.toggleShowChartValues);
   const theme = useTheme();
   const vizColors = {
     profitable: alpha(theme.palette.viz.positive, 0.85),
