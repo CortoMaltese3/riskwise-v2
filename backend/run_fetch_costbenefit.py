@@ -60,4 +60,4 @@ class RunFetchCostBenefit(Command):
 
 
 if __name__ == "__main__":
-    RunFetchCostBenefit.main()
+    print(json.dumps(RunFetchCostBenefit.main()))

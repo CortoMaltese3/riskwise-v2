@@ -196,7 +196,7 @@ class ExposureHandler:
         .. code-block:: python
 
             final_df = base_handler.generate_exposure_report_dataset(exposure, "EGY")
-            print(final_df.head())
+            # ``final_df`` is a pandas DataFrame keyed by admin layer.
         """
         try:
             # Cast the exposure data to a GeoDataFrame

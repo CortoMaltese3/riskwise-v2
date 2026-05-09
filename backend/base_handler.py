@@ -10,7 +10,6 @@ and updating progress for the frontend.
 import json
 from os import makedirs, path
 from pathlib import Path
-import sys
 from typing import Any, Dict, Optional
 
 import geopandas as gpd
@@ -356,8 +355,12 @@ class BaseHandler:
         if callback is not None:
             callback(progress_data)
         else:
-            print(json.dumps(progress_data))
-            sys.stdout.flush()
+            # No SSE callback bound (e.g. running a ``run_*.py`` script
+            # in-process from a test or an ad-hoc shell). Emit the event
+            # via the structured logger so it lands in the rotating file
+            # log instead of stdout, which used to interleave with the
+            # subprocess JSON envelope and is invisible in production.
+            logger.log("info", json.dumps(progress_data))
         logger.log("info", f"send progress {progress} to frontend.")
 
     def get_admin_data(self, country_code: str, admin_level) -> gpd.GeoDataFrame:
@@ -525,7 +528,7 @@ class BaseHandler:
 
             handler = ReportHandler(Path("/path/to/reports"))
             metadata = handler.get_metadata_by_scenario_id("202408291038")
-            print(metadata)
+            # ``metadata`` is a ``Dict[str, Any]`` of scenario fields.
         """
         try:
             # Find the directory matching the scenario_id
@@ -565,10 +568,7 @@ class BaseHandler:
         .. code-block:: python
 
             file_type = file_handler.check_file_type(Path("data.hdf5"))
-            if file_type:
-                print(f"File is of type: {file_type}")
-            else:
-                print("File type is not recognized")
+            # ``file_type`` is "hdf5" when recognized, otherwise None.
         """
         try:
             # Ensure the file exists before checking the type
@@ -622,8 +622,7 @@ class BaseHandler:
         .. code-block:: python
 
             df = file_handler.read_parquet_file("data.parquet")
-            if df is not None:
-                print(df.head())
+            # ``df`` is a pandas DataFrame on success, otherwise None.
         """
         try:
             # Ensure the file exists
@@ -718,9 +717,8 @@ class BaseHandler:
         .. code-block:: python
 
             df = pd.DataFrame({"col1": [1, 2, 3], "col2": ["a", "b", "c"]})
-            file_path = file_handler.save_parquet_file(df, "data.parquet")
-            if file_path:
-                print(f"DataFrame saved successfully at {file_path}")
+            saved_path = file_handler.save_parquet_file(df, "data.parquet")
+            # ``saved_path`` is the saved Path on success, otherwise None.
         """
         try:
             # Ensure the file has a .parquet extension

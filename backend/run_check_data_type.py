@@ -75,4 +75,6 @@ class RunCheckDataType(Command):
 
 
 if __name__ == "__main__":
-    RunCheckDataType.main()
+    import json
+
+    print(json.dumps(RunCheckDataType.main()))

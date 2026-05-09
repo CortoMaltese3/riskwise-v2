@@ -46,4 +46,4 @@ if __name__ == "__main__":
     # the value, and fall through to the zero-arg constructor.
     if len(sys.argv) > 1:
         json.loads(sys.argv[1])
-    RunClearTempDir.main([sys.argv[0]])
+    print(json.dumps(RunClearTempDir.main([sys.argv[0]])))
