@@ -157,13 +157,13 @@ class TestHandlerEmittedLogsCarryRequestId:
         stream when ``configure_logging`` runs, so we configure first, then
         ask the production module for a fresh ``get_logger`` handle. The
         production code itself binds at import (e.g.
-        ``base_handler.py``); this test mirrors that bind path through the
-        same ``get_logger`` factory so the assertion exercises the
-        contract every handler relies on.
+        ``backend/utils/country.py``); this test mirrors that bind path
+        through the same ``get_logger`` factory so the assertion exercises
+        the contract every handler relies on.
         """
         stream = io.StringIO()
         configure_logging(stream=stream)
-        handler_log = get_logger("backend.base_handler")
+        handler_log = get_logger("backend.utils.country")
         token = bind_request_id("handler-trace")
         try:
             handler_log.error("simulated handler failure")
@@ -173,4 +173,4 @@ class TestHandlerEmittedLogsCarryRequestId:
         record = json.loads(stream.getvalue().strip().splitlines()[-1])
         assert record["request_id"] == "handler-trace"
         assert record["event"] == "simulated handler failure"
-        assert record["logger"] == "backend.base_handler"
+        assert record["logger"] == "backend.utils.country"

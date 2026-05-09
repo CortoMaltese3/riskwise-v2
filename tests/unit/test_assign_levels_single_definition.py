@@ -1,9 +1,10 @@
 """Guardrail: ``assign_levels`` must have exactly one definition in ``backend/``.
 
 The implementation used to be copy-pasted across ``HazardHandler`` and
-``ImpactHandler``. Consolidation to ``BaseHandler`` should not quietly
-regress — if a future change reintroduces a second copy (or accidentally
-removes the canonical one), this test fails loudly.
+``ImpactHandler``. Consolidation should not quietly regress — if a future
+change reintroduces a second copy (or accidentally removes the canonical
+one), this test fails loudly. Issue #246 moved the canonical home from
+``base_handler.py`` to ``backend/utils/levels.py``.
 """
 
 from __future__ import annotations
@@ -25,7 +26,8 @@ def test_assign_levels_has_single_definition_in_backend() -> None:
         f"Expected exactly one `def assign_levels` in backend/, found {len(matches)}: "
         f"{[str(p.relative_to(_BACKEND_DIR)) for p in matches]}"
     )
-    # And it must live on BaseHandler, not a handler subtree.
-    assert matches[0].name == "base_handler.py", (
-        f"`assign_levels` should live in backend/base_handler.py, found in: {matches[0]}"
+    # And it must live in the dedicated utility module, not on a handler.
+    expected = _BACKEND_DIR / "utils" / "levels.py"
+    assert matches[0] == expected, (
+        f"`assign_levels` should live in backend/utils/levels.py, found in: {matches[0]}"
     )

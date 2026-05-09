@@ -74,22 +74,21 @@ class TestRequestDataPlainDataclass:
             f"RequestData must not carry handler fields; found: {field_names & forbidden}"
         )
 
-    def test_from_request_uses_injected_handlers_and_never_instantiates_them(self) -> None:
-        """``from_request`` takes handlers as arguments — no hidden ``BaseHandler()``.
+    def test_from_request_uses_injected_hazard_handler(self, monkeypatch: Any) -> None:
+        """``from_request`` takes a hazard handler as an argument and routes
+        country sanitization through the ``utils.country`` module functions.
 
-        The test provides stubs that would blow up if the classmethod secretly
-        instantiated its own defaults; passing means the request sanitization
-        is routed through the injected handlers.
+        The test patches the country helpers and provides a stub hazard
+        handler; passing means the request sanitization happens via the
+        module-level functions and the injected hazard handler.
         """
+        from backend import run_scenario
         from backend.run_scenario import RequestData
 
-        class _BaseStub:
-            def sanitize_country_name(self, name: str) -> str:
-                return f"sanitized::{name}"
-
-            def get_iso3_country_code(self, name: str) -> str:
-                assert name == "sanitized::Egypt"
-                return "EGY"
+        monkeypatch.setattr(
+            run_scenario, "sanitize_country_name", lambda name: f"sanitized::{name}"
+        )
+        monkeypatch.setattr(run_scenario, "get_iso3_country_code", lambda _name: "EGY")
 
         class _HazardStub:
             def get_hazard_code(self, hazard_type: str) -> str:
@@ -105,7 +104,7 @@ class TestRequestDataPlainDataclass:
             "isEra": True,
             "scenario": "historical",
         }
-        data = RequestData.from_request(request, _BaseStub(), _HazardStub())
+        data = RequestData.from_request(request, _HazardStub())
         assert data.country_name == "sanitized::Egypt"
         assert data.country_code == "EGY"
         assert data.hazard_code == "D"

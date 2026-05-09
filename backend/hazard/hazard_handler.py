@@ -43,13 +43,15 @@ from typing import Any
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from backend.base_handler import BaseHandler
 from backend.constants import (
     DATA_HAZARDS_DIR,
     DATA_TEMP_DIR,
 )
 from backend.engine.adapter import intensity_to_dense
 from backend.logging_config import get_logger
+from backend.utils.admin import get_admin_data
+from backend.utils.country import get_iso3_country_code
+from backend.utils.levels import assign_levels
 
 logger = get_logger("backend.hazard.hazard_handler")
 
@@ -63,7 +65,7 @@ class HazardHandler:
     """
 
     def __init__(self):
-        self.base_handler = BaseHandler()
+        pass
 
     def get_hazard(
         self,
@@ -224,8 +226,8 @@ class HazardHandler:
         :type return_periods: tuple, optional
         """
         try:
-            country_iso3 = self.base_handler.get_iso3_country_code(country_name)
-            admin_gdf = self.base_handler.get_admin_data(country_iso3, 2)
+            country_iso3 = get_iso3_country_code(country_name)
+            admin_gdf = get_admin_data(country_iso3, 2)
 
             intensity_dense = intensity_to_dense(hazard.intensity)
             lat = np.asarray(hazard.centroid_lat, dtype=np.float64)
@@ -269,7 +271,7 @@ class HazardHandler:
                     percentile_values[f"rp{rp}"].insert(0, 0)
 
             # Assign levels based on the percentile values
-            hazard_gdf = self.base_handler.assign_levels(hazard_gdf, percentile_values)
+            hazard_gdf = assign_levels(hazard_gdf, percentile_values)
 
             # Spatial join with administrative area
             joined_gdf = gpd.sjoin(hazard_gdf, admin_gdf, how="left", predicate="within")
@@ -411,7 +413,7 @@ class HazardHandler:
 
         .. code-block:: python
 
-            final_df = base_handler.generate_hazard_report_dataset(hazard, "EGY", (10, 15, 20, 25))
+            final_df = hazard_handler.generate_hazard_report_dataset(hazard, "EGY", (10, 15, 20, 25))
             # ``final_df`` is a pandas DataFrame keyed by admin layer.
         """
         try:
@@ -440,7 +442,7 @@ class HazardHandler:
             ]
 
             # Retrieve the admin_gdf and perform spatial join
-            country_iso3 = self.base_handler.get_iso3_country_code(country_name)
+            country_iso3 = get_iso3_country_code(country_name)
             layers = [1, 2]
             final_gdf = hazard_gdf.copy()
 
@@ -448,7 +450,7 @@ class HazardHandler:
             for layer in layers:
                 try:
                     # Retrieve the admin_gdf for the current layer
-                    admin_gdf = self.base_handler.get_admin_data(country_iso3, layer)
+                    admin_gdf = get_admin_data(country_iso3, layer)
 
                     # Perform spatial join with the current layer
                     joined_gdf = gpd.sjoin(final_gdf, admin_gdf, how="left", predicate="within")
