@@ -4,9 +4,9 @@ import json
 import sys
 from time import time
 
-from backend.base_handler import BaseHandler
 from backend.cli import Command, StatusCode
 from backend.macroeconomic.macroeconomic_handler import MacroeconomicHandler
+from backend.progress import update_progress
 
 
 class RunFetchCredOutput(Command):
@@ -14,7 +14,6 @@ class RunFetchCredOutput(Command):
 
     def __init__(self, dataset_id: str | None = None):
         super().__init__()
-        self.base_handler = BaseHandler()
         self.macro_handler = MacroeconomicHandler()
         self.dataset_id = dataset_id if dataset_id else None
 
@@ -22,7 +21,7 @@ class RunFetchCredOutput(Command):
         initial_time = time()
         try:
             cred_data = self.macro_handler.get_cred_data_from_db(dataset_id=self.dataset_id)
-            self.base_handler.update_progress(100, "CRED data fetched successfully.")
+            update_progress(100, "CRED data fetched successfully.")
             self.logger.info(f"Finished fetching CRED data in {time() - initial_time:.2f} sec.",
             )
             return {

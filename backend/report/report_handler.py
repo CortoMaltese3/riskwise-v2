@@ -10,12 +10,6 @@ from backend.constants import DATA_TEMP_DIR, REPORTS_DIR
 from backend.logging_config import get_logger
 from backend.provenance import REPORT_REPRODUCIBILITY_NOTE, short_sha
 
-# ``BaseHandler`` is imported lazily inside ``__init__`` because importing it
-# at module top pulls in CLIMADA (and CLIMADA's optional deps like fiona),
-# which the lightweight unit tests for the Provenance tab + BibTeX helpers
-# do not need and may not have installed.
-
-
 def build_bibtex_snippet(app_version: Optional[str], climada_version: Optional[str]) -> str:
     """Return the BibTeX snippet stamped on every PDF and Excel export.
 
@@ -52,12 +46,9 @@ class ReportParameters:
 
 class ReportHandler:
     def __init__(self, report_parameters: ReportParameters) -> None:
-        from backend.base_handler import BaseHandler
-
         self.report_parameters = report_parameters
         self.target_dir = REPORTS_DIR / self.report_parameters.scenario_id or DATA_TEMP_DIR
         self.logger = get_logger("backend.report.report_handler")
-        self.base_handler = BaseHandler()
 
     def get_report_file_path(self, export_type: str, report_type: str = None) -> str:
         scenario_id = self.report_parameters.scenario_id

@@ -1,4 +1,4 @@
-"""Unit tests for the pure string-munging methods on ``BaseHandler``.
+"""Unit tests for the pure string-munging helpers carved out of ``BaseHandler``.
 
 Covers #14 acceptance criteria: ``beautify_hazard_type`` and
 ``sanitize_country_name`` run without touching CLIMADA or the filesystem.
@@ -13,12 +13,9 @@ import json
 
 import pytest
 
-from backend.base_handler import BaseHandler
-
-
-@pytest.fixture(scope="module")
-def handler() -> BaseHandler:
-    return BaseHandler()
+from backend.progress import update_progress
+from backend.utils.country import sanitize_country_name
+from backend.utils.strings import beautify_hazard_type
 
 
 class TestBeautifyHazardType:
@@ -33,27 +30,25 @@ class TestBeautifyHazardType:
             ("heatwaves", "Heatwaves"),
         ],
     )
-    def test_known_keys_return_display_names(
-        self, handler: BaseHandler, key: str, expected: str
-    ) -> None:
-        assert handler.beautify_hazard_type(key) == expected
+    def test_known_keys_return_display_names(self, key: str, expected: str) -> None:
+        assert beautify_hazard_type(key) == expected
 
     @pytest.mark.parametrize("key", ["earthquake", "", "unknown_hazard"])
-    def test_unknown_keys_fall_back_to_generic_label(self, handler: BaseHandler, key: str) -> None:
-        assert handler.beautify_hazard_type(key) == "Hazard"
+    def test_unknown_keys_fall_back_to_generic_label(self, key: str) -> None:
+        assert beautify_hazard_type(key) == "Hazard"
 
 
 class TestSanitizeCountryName:
-    def test_exact_name_returns_canonical_form(self, handler: BaseHandler) -> None:
-        assert handler.sanitize_country_name("Egypt") == "Egypt"
-        assert handler.sanitize_country_name("Thailand") == "Thailand"
+    def test_exact_name_returns_canonical_form(self) -> None:
+        assert sanitize_country_name("Egypt") == "Egypt"
+        assert sanitize_country_name("Thailand") == "Thailand"
 
-    def test_fuzzy_match_returns_full_canonical_name(self, handler: BaseHandler) -> None:
-        assert "United States" in handler.sanitize_country_name("United States of America")
+    def test_fuzzy_match_returns_full_canonical_name(self) -> None:
+        assert "United States" in sanitize_country_name("United States of America")
 
-    def test_unresolvable_name_raises_value_error(self, handler: BaseHandler) -> None:
+    def test_unresolvable_name_raises_value_error(self) -> None:
         with pytest.raises(ValueError, match="Failed to sanitize country"):
-            handler.sanitize_country_name("Not-A-Real-Place-xyz")
+            sanitize_country_name("Not-A-Real-Place-xyz")
 
 
 class TestUpdateProgress:
@@ -64,14 +59,14 @@ class TestUpdateProgress:
     """
 
     def test_callback_path_invokes_callback_and_writes_no_stdout(
-        self, handler: BaseHandler, capsys: pytest.CaptureFixture[str]
+        self, capsys: pytest.CaptureFixture[str]
     ) -> None:
         from backend.progress import progress_callback_var
 
         events: list[dict] = []
         token = progress_callback_var.set(events.append)
         try:
-            handler.update_progress(42, "halfway")
+            update_progress(42, "halfway")
         finally:
             progress_callback_var.reset(token)
 
@@ -81,20 +76,19 @@ class TestUpdateProgress:
 
     def test_fallback_path_logs_event_and_writes_no_stdout(
         self,
-        handler: BaseHandler,
         capsys: pytest.CaptureFixture[str],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        from backend import base_handler as base_handler_mod
+        from backend import progress as progress_mod
 
         logged: list[tuple[str, str]] = []
         monkeypatch.setattr(
-            base_handler_mod.logger,
+            progress_mod.logger,
             "log",
             lambda level, message: logged.append((level, message)),
         )
 
-        handler.update_progress(75, "almost done")
+        update_progress(75, "almost done")
 
         captured = capsys.readouterr()
         assert captured.out == ""

@@ -2,8 +2,10 @@
 
 from time import time
 
-from backend.base_handler import BaseHandler
 from backend.cli import Command, StatusCode
+from backend.progress import update_progress
+from backend.utils.country import sanitize_country_name
+from backend.utils.data_check import check_data_type
 
 
 class RunCheckDataType(Command):
@@ -11,7 +13,6 @@ class RunCheckDataType(Command):
 
     def __init__(self, request):
         super().__init__()
-        self.base_handler = BaseHandler()
         self.request = request
 
     def execute(self) -> dict:
@@ -29,11 +30,11 @@ class RunCheckDataType(Command):
             }
 
         country_name = self.request.get("country", "")
-        country_name = self.base_handler.sanitize_country_name(country_name)
+        country_name = sanitize_country_name(country_name)
         data_type = self.request.get("dataType", "")
 
-        self.base_handler.update_progress(10, "Checking CLIMADA API")
-        is_valid_data_type = self.base_handler.check_data_type(country_name, data_type)
+        update_progress(10, "Checking CLIMADA API")
+        is_valid_data_type = check_data_type(country_name, data_type)
 
         if not is_valid_data_type:
             run_status_message = (
@@ -44,7 +45,7 @@ class RunCheckDataType(Command):
             run_status_message = f"Fetched {data_type} data successfully."
             status_code = StatusCode.SUCCESS
 
-        self.base_handler.update_progress(100, run_status_message)
+        update_progress(100, run_status_message)
 
         self.logger.info(f"Finished fetching {data_type} data in {time() - initial_time}sec."
         )

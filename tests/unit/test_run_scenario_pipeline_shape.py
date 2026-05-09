@@ -34,15 +34,21 @@ def _make_runner(handlers=None):
 
     runner = RunScenario.__new__(RunScenario)
     handlers = handlers or {}
-    runner.base_handler = handlers.get("base_handler") or MagicMock()
-    runner.base_handler.check_file_type.return_value = "hdf5"
     runner.costben_handler = handlers.get("costben_handler") or MagicMock()
     runner.entity_handler = handlers.get("entity_handler") or MagicMock()
     runner.exposure_handler = handlers.get("exposure_handler") or MagicMock()
     runner.hazard_handler = handlers.get("hazard_handler") or MagicMock()
     runner.impact_handler = handlers.get("impact_handler") or MagicMock()
     runner.status = SimpleNamespace(set_error=lambda *a, **k: None)
-    runner.logger = SimpleNamespace(log=lambda *a, **k: None)
+    runner.logger = SimpleNamespace(
+        log=lambda *a, **k: None,
+        info=lambda *a, **k: None,
+        warning=lambda *a, **k: None,
+        error=lambda *a, **k: None,
+    )
+    # The geojson generators write to disk and exercise the partial-result
+    # callback path; the call-graph test does not need either.
+    runner._generate_geojsons_parallel = lambda *a, **kw: None
     return runner
 
 
@@ -113,6 +119,23 @@ def _build_fixed_strategy():
     return _FixedLoadStrategy(entity, hazard_present, hazard_future)
 
 
+def _patch_module_helpers(monkeypatch):
+    """Replace ``run_scenario`` module-level helpers with mocks.
+
+    The pipeline calls ``update_progress`` and ``save_parquet_file`` as
+    module-level imports (they used to live on ``self.base_handler``).
+    The tests need to introspect their call args, so swap them with
+    ``MagicMock`` instances bound on the runner module.
+    """
+    from backend import run_scenario
+
+    progress_mock = MagicMock(name="update_progress")
+    parquet_mock = MagicMock(name="save_parquet_file")
+    monkeypatch.setattr(run_scenario, "update_progress", progress_mock)
+    monkeypatch.setattr(run_scenario, "save_parquet_file", parquet_mock)
+    return progress_mock, parquet_mock
+
+
 def _recorded_calls(mock_obj):
     """Freeze mock call data as a list of (name, args, kwargs) tuples."""
     return [
@@ -123,16 +146,18 @@ def _recorded_calls(mock_obj):
 
 class TestEraAndCustomShareDownstreamPipeline:
     @pytest.mark.parametrize("scenario", ["historical", "rcp85"])
-    def test_call_graphs_match_when_loading_outputs_match(self, scenario) -> None:
+    def test_call_graphs_match_when_loading_outputs_match(
+        self, scenario, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         # Use a single shared set of handler mocks so that mock-created return
         # objects (e.g. ``calculate_cost_benefit``'s result) are identical for
         # both runs. Without sharing, the auto-generated mock IDs differ and
         # ``repr()`` comparisons drift despite the call graphs being logically
         # identical.
+        _patch_module_helpers(monkeypatch)
         shared_handlers = {
             name: MagicMock()
             for name in (
-                "base_handler",
                 "costben_handler",
                 "entity_handler",
                 "exposure_handler",
@@ -168,8 +193,11 @@ class TestEraAndCustomShareDownstreamPipeline:
 
 
 class TestExecuteProgressStops:
-    def test_historical_run_does_not_emit_waterfall_progress(self) -> None:
+    def test_historical_run_does_not_emit_waterfall_progress(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Historical runs skip the waterfall plot step (progress 55)."""
+        progress_mock, _ = _patch_module_helpers(monkeypatch)
         runner = _make_runner()
         runner.request_data = _make_request_data(scenario="historical")
         runner._resolve_return_periods = lambda: (10, 20)
@@ -177,13 +205,12 @@ class TestExecuteProgressStops:
         runner._get_average_annual_growth = lambda: 0.0
         runner._execute(_build_fixed_strategy())
 
-        progress_values = [
-            call.args[0] for call in runner.base_handler.update_progress.call_args_list
-        ]
+        progress_values = [call.args[0] for call in progress_mock.call_args_list]
         assert 55 not in progress_values
         assert progress_values[-1] == 100
 
-    def test_future_run_emits_waterfall_progress(self) -> None:
+    def test_future_run_emits_waterfall_progress(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        progress_mock, _ = _patch_module_helpers(monkeypatch)
         runner = _make_runner()
         runner.request_data = _make_request_data(scenario="rcp85")
         runner._resolve_return_periods = lambda: (10, 20)
@@ -191,8 +218,6 @@ class TestExecuteProgressStops:
         runner._get_average_annual_growth = lambda: 0.0
         runner._execute(_build_fixed_strategy())
 
-        progress_values = [
-            call.args[0] for call in runner.base_handler.update_progress.call_args_list
-        ]
+        progress_values = [call.args[0] for call in progress_mock.call_args_list]
         assert 55 in progress_values
         assert progress_values[-1] == 100

@@ -32,10 +32,12 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 
-from backend.base_handler import BaseHandler
 from backend.constants import DATA_TEMP_DIR
 from backend.impact.registry import ImpactFunctionRegistry, load_country_registry, load_registry_from_paths
 from backend.logging_config import get_logger
+from backend.utils.admin import get_admin_data
+from backend.utils.country import get_iso3_country_code
+from backend.utils.levels import assign_levels
 
 logger = get_logger("backend.impact.impact_handler")
 
@@ -156,7 +158,7 @@ class ImpactHandler:
     """
 
     def __init__(self) -> None:
-        self.base_handler = BaseHandler()
+        pass
 
     def get_impact_function_set(self, exposure_type: str, hazard_type: str) -> Any:
         """
@@ -295,8 +297,8 @@ class ImpactHandler:
                 valid_exposure_mask,
             )
 
-            country_iso3 = self.base_handler.get_iso3_country_code(country_name)
-            admin_gdf = self.base_handler.get_admin_data(country_iso3, 2)
+            country_iso3 = get_iso3_country_code(country_name)
+            admin_gdf = get_admin_data(country_iso3, 2)
             # ``Impact.imp_mat`` only carries columns for the valid (non-excluded)
             # exposure subset — see climate_lama_engine.ImpactCalc.impact() — so
             # ``lat`` / ``lon`` have to be subset through the same mask before
@@ -337,7 +339,7 @@ class ImpactHandler:
             percentile_values = _compute_rp_percentile_levels(impact_gdf, return_periods)
 
             # Assign levels based on the percentile values
-            impact_gdf = self.base_handler.assign_levels(impact_gdf, percentile_values)
+            impact_gdf = assign_levels(impact_gdf, percentile_values)
 
             # Spatial join with administrative areas
             joined_gdf = gpd.sjoin(impact_gdf, admin_gdf, how="left", predicate="within")
@@ -419,7 +421,7 @@ class ImpactHandler:
             ]
 
             # Retrieve the admin_gdf and perform spatial join
-            country_iso3 = self.base_handler.get_iso3_country_code(country_name)
+            country_iso3 = get_iso3_country_code(country_name)
             layers = [1, 2]
             final_gdf = impact_gdf.copy()
 
@@ -427,7 +429,7 @@ class ImpactHandler:
             for layer in layers:
                 try:
                     # Retrieve the admin_gdf for the current layer
-                    admin_gdf = self.base_handler.get_admin_data(country_iso3, layer)
+                    admin_gdf = get_admin_data(country_iso3, layer)
 
                     # Perform spatial join with the current layer
                     joined_gdf = gpd.sjoin(final_gdf, admin_gdf, how="left", predicate="within")
