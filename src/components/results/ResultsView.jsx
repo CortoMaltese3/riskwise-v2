@@ -9,12 +9,13 @@ import OutputResultsCard from "./OutputResultsCard";
 import LoadingSkeleton from "../layout/LoadingSkeleton";
 import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
+import { TABS } from "../main/tabs";
 
 const ResultsView = () => {
   const selectedTab = useUIStore((state) => state.selectedTab);
   const isScenarioRunning = useResultsStore((state) => state.isScenarioRunning);
 
-  if (selectedTab === 0) {
+  if (selectedTab === TABS.PARAMETERS) {
     return null;
   }
 
@@ -26,9 +27,9 @@ const ResultsView = () => {
           <LoadingSkeleton data-testid="results-skeleton" />
         ) : (
           <>
-            {selectedTab === 1 && <EconomicResultsCard />}
-            {selectedTab === 2 && <MacroEconomicResultsCard />}
-            {selectedTab === 3 && <OutputResultsCard />}
+            {selectedTab === TABS.RISK && <EconomicResultsCard />}
+            {selectedTab === TABS.MACRO && <MacroEconomicResultsCard />}
+            {selectedTab === TABS.REPORTS && <OutputResultsCard />}
           </>
         )}
       </Box>

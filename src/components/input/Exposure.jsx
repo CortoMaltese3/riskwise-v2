@@ -6,6 +6,7 @@ import { Card, CardContent, Chip, Stack, TextField, Typography } from "@mui/mate
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { exposureCategoryMap } from "../../data/exposureCatalog";
+import { TABS } from "../main/tabs";
 import ContextualTooltip from "../help/ContextualTooltip";
 import {
   categoryPaletteKey,
@@ -42,7 +43,7 @@ const Exposure = () => {
 
   const handleClick = () => {
     setSelectedCard("exposure");
-    setSelectedTab(0);
+    setSelectedTab(TABS.PARAMETERS);
   };
 
   useEffect(() => {

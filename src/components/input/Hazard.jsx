@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
+import { TABS } from "../main/tabs";
 import ContextualTooltip from "../help/ContextualTooltip";
 import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
@@ -26,7 +27,7 @@ const Hazard = () => {
 
   const handleClick = () => {
     setSelectedCard("hazard");
-    setSelectedTab(0);
+    setSelectedTab(TABS.PARAMETERS);
   };
 
   useEffect(() => {

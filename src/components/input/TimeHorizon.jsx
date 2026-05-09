@@ -6,6 +6,7 @@ import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import ContextualTooltip from "../help/ContextualTooltip";
+import { TABS } from "../main/tabs";
 import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const TimeHorizon = () => {
@@ -42,7 +43,7 @@ const TimeHorizon = () => {
       return;
     }
     setSelectedCard("timeHorizon");
-    setSelectedTab(0);
+    setSelectedTab(TABS.PARAMETERS);
   };
 
   useEffect(() => {

@@ -11,6 +11,7 @@ import { useMapTools } from "../../utils/mapTools";
 import { useReportTools } from "../../utils/reportTools";
 import { layoutTransition } from "../../theme/theme";
 import SaveScenarioDialog from "../workspace/SaveScenarioDialog";
+import { TABS, RISK_SUB_TABS } from "./tabs";
 
 const MainViewToolbar = () => {
   const activeViewControl = useUIStore((s) => s.activeViewControl);
@@ -27,11 +28,12 @@ const MainViewToolbar = () => {
   const [snapshotBusy, setSnapshotBusy] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
-  if (selectedTab !== 1) return null;
+  if (selectedTab !== TABS.RISK) return null;
 
   const captureSupported =
     activeViewControl === "display_map" ||
-    (activeViewControl === "display_chart" && (selectedSubTab === 0 || selectedSubTab === 1));
+    (activeViewControl === "display_chart" &&
+      (selectedSubTab === RISK_SUB_TABS.RISK || selectedSubTab === RISK_SUB_TABS.ADAPTATION));
   const captureDisabled =
     snapshotBusy || !scenarioRunCode || !isScenarioRunCompleted || !captureSupported;
   const saveScenarioDisabled = !isScenarioRunCompleted || !scenarioRunCode;

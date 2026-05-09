@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 import { Box } from "@mui/material";
 
@@ -14,7 +14,10 @@ import MapLayout from "../map/MapLayout";
 import ViewCard from "../cards/ViewCard";
 import ReportsView from "../reports/ReportsView";
 import ViewMacroCard from "../cards/ViewMacroCard";
+import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
+import { useMacroTools } from "../../utils/macroTools";
+import { TABS, RISK_SUB_TABS } from "./tabs";
 
 const COLUMN_SX = {
   flex: 1,
@@ -42,16 +45,34 @@ const MainView = () => {
   const activeViewControl = useUIStore((s) => s.activeViewControl);
   const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const selectedTab = useUIStore((s) => s.selectedTab);
+  const credOutputData = useResultsStore((s) => s.credOutputData);
+  const { loadCREDOutputData } = useMacroTools();
+
+  // Lazy-load CRED output data when the Macro tab becomes active inside
+  // MainView (Risk section path). The sidebar-driven Macro section already
+  // does this in AppShell.MacroeconomicView; both surfaces need to fetch
+  // because they mount under different parents. The ref guards against
+  // duplicate in-flight fetches on rapid tab toggling. See #248.
+  const credFetchInFlight = useRef(false);
+  useEffect(() => {
+    if (selectedTab !== TABS.MACRO) return;
+    if (credOutputData && credOutputData.length > 0) return;
+    if (credFetchInFlight.current) return;
+    credFetchInFlight.current = true;
+    Promise.resolve(loadCREDOutputData()).finally(() => {
+      credFetchInFlight.current = false;
+    });
+  }, [selectedTab, credOutputData, loadCREDOutputData]);
 
   return (
     <Box sx={COLUMN_SX}>
       <MainViewTitle />
-      {selectedTab === 0 && (
+      {selectedTab === TABS.PARAMETERS && (
         <Box sx={TOP_SX}>
           <ViewCard />
         </Box>
       )}
-      {selectedTab === 1 && selectedSubTab === 0 && (
+      {selectedTab === TABS.RISK && selectedSubTab === RISK_SUB_TABS.RISK && (
         <>
           <Box sx={STRETCH_SX}>
             {activeViewControl === "display_map" && <MapLayout />}
@@ -63,7 +84,7 @@ const MainView = () => {
           </Box>
         </>
       )}
-      {selectedTab === 1 && selectedSubTab === 1 && (
+      {selectedTab === TABS.RISK && selectedSubTab === RISK_SUB_TABS.ADAPTATION && (
         <>
           <Box sx={STRETCH_SX}>
             {activeViewControl === "display_map" && <AdaptationMap />}
@@ -75,7 +96,7 @@ const MainView = () => {
           </Box>
         </>
       )}
-      {selectedTab === 2 && (
+      {selectedTab === TABS.MACRO && (
         <>
           {activeViewControl === "display_macro_parameters" && (
             <Box sx={TOP_SX}>
@@ -90,7 +111,7 @@ const MainView = () => {
           <MacroViewControls />
         </>
       )}
-      {selectedTab === 3 && (
+      {selectedTab === TABS.REPORTS && (
         <Box sx={STRETCH_SX}>
           <ReportsView />
         </Box>

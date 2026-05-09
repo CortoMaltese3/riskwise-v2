@@ -8,6 +8,7 @@ import RiskWiseClient from "../../lib/RiskWiseClient";
 import logger from "../../lib/logger.ts";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
+import { TABS, RISK_SUB_TABS } from "../main/tabs";
 
 const AdaptationMeasuresInput = () => {
   const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
@@ -52,7 +53,7 @@ const AdaptationMeasuresInput = () => {
     }
   }, [selectedHazard, selectedCountry]);
 
-  if (!(selectedTab === 1 && selectedSubTab === 1)) {
+  if (!(selectedTab === TABS.RISK && selectedSubTab === RISK_SUB_TABS.ADAPTATION)) {
     return null;
   }
 

@@ -37,7 +37,7 @@ const setStateBag = {
   mapTitle: "Egypt — flood rcp85",
   scenarioRunCode: "scen-1",
   selectedSubTab: 0,
-  selectedTab: 1,
+  selectedTab: "risk",
   activeMap: "risk",
   activeMapRef: { _fake: "map" },
   setAlertMessage: vi.fn(),
@@ -94,7 +94,7 @@ beforeEach(() => {
 
 describe("Save scenario button (analysis tab toolbar)", () => {
   it("does not render outside the analysis tab", () => {
-    stateRef.current = { ...setStateBag, selectedTab: 0 };
+    stateRef.current = { ...setStateBag, selectedTab: "parameters" };
     const { container } = render(<MainViewToolbar />);
     expect(container).toBeEmptyDOMElement();
   });

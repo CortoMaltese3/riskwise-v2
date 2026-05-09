@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { SECTION_IDS } from "../constants/sections";
+import { TABS, TAB_CONFIG, isValidTab } from "../components/main/tabs";
 
 const SIDEBAR_STORAGE_KEY = "riskwise.sidebarCollapsed";
 const SHOW_CHART_VALUES_STORAGE_KEY = "riskwise.showChartValues";
@@ -101,7 +102,7 @@ const useUIStore = create((set, get) => ({
   // Card / tab selection (UI navigation, not domain selection)
   selectedCard: "country",
   selectedMacroCard: "country",
-  selectedTab: 0,
+  selectedTab: TABS.PARAMETERS,
   selectedSubTab: 0,
 
   // Reports
@@ -175,15 +176,12 @@ const useUIStore = create((set, get) => ({
   setSelectedMacroCard: (card) => set({ selectedMacroCard: card }),
   setSelectedSubTab: (subTab) => set({ selectedSubTab: subTab }),
   setSelectedTab: (tab) => {
-    let viewControl = "";
-    if (tab === 1) {
-      viewControl = "display_map";
-    } else if (tab === 2) {
-      // Macro tab opens on the chart frame so the analyst always sees a
-      // chart container; parameter editors open on demand when a
-      // side-column card is clicked.
-      viewControl = "display_macro_chart";
-    }
+    if (!isValidTab(tab)) return;
+    // ``defaultView`` per TAB_CONFIG is the source of truth for the
+    // ``activeViewControl`` to apply on tab entry. Macro opens on the
+    // chart frame so the analyst always sees a chart container; parameter
+    // editors open on demand when a side-column card is clicked.
+    const viewControl = TAB_CONFIG[tab].defaultView;
     set({ selectedTab: tab, selectedSubTab: 0, activeViewControl: viewControl });
   },
 

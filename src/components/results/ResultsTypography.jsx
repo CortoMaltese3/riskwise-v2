@@ -5,6 +5,7 @@ import { Typography } from "@mui/material";
 
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
+import { tabIndex } from "../main/tabs";
 
 const ResultsTypography = () => {
   const activeMap = useUIStore((s) => s.activeMap);
@@ -17,6 +18,12 @@ const ResultsTypography = () => {
   const selectedExposure = useWorkspaceStore((s) => s.selectedExposure);
   const { t } = useTranslation();
 
+  // The ERA/Explore explanatory copy bundle is keyed by the legacy numeric
+  // tab index (e.g. ``..._1_0_display_map_hazard``). Renaming all ~350
+  // keys per locale is out of scope for #247, so we translate the enum
+  // back to its historical position before composing the lookup key.
+  const tabIdx = tabIndex(selectedTab);
+
   const getText = () => {
     if (selectedAppOption === "era") {
       if (!selectedAppOption || !selectedCountry || !selectedHazard || !selectedExposure) {
@@ -27,7 +34,7 @@ const ResultsTypography = () => {
           `${selectedCountry}_` +
           `${selectedHazard}_` +
           `${selectedExposure}_` +
-          `${selectedTab}_` +
+          `${tabIdx}_` +
           `${selectedSubTab}_` +
           `${activeViewControl}_` +
           `${activeMap}`
@@ -35,7 +42,7 @@ const ResultsTypography = () => {
     }
     return t(
       `results_${selectedAppOption}_` +
-        `${selectedTab}_` +
+        `${tabIdx}_` +
         `${selectedSubTab}_` +
         `${activeViewControl}_` +
         `${activeMap}`
