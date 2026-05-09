@@ -20,14 +20,14 @@ class RunClearTempDir(Command):
         try:
             for file in DATA_TEMP_DIR.glob("*"):
                 file.unlink(missing_ok=True)
-            self.logger.log("info", "Successfully cleared all files in the temporary directory.")
+            self.logger.info("Successfully cleared all files in the temporary directory.")
             return {
                 "success": True,
                 "message": "Successfully cleared all files in the temporary directory.",
             }
         except OSError as exc:
             error_message = f"Error while trying to clear temp directory. More info: {exc}"
-            self.logger.log("error", error_message)
+            self.logger.error(error_message)
             return {"success": False, "error": error_message}
 
     def error_envelope(self, exc):

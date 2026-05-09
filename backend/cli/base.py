@@ -27,7 +27,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from backend.cli.status_codes import StatusCode
-from backend.logger_config import LoggerConfig
+from backend.logging_config import get_logger
 
 
 class Command(ABC):
@@ -54,7 +54,7 @@ class Command(ABC):
     requires_request: bool = True
 
     def __init__(self) -> None:
-        self.logger = LoggerConfig(logger_types=["file"])
+        self.logger = get_logger("backend.cli.base")
 
     # ------------------------------------------------------------------
     # Subclass contract
@@ -94,7 +94,7 @@ class Command(ABC):
         try:
             return self.execute()
         except Exception as exc:  # noqa: BLE001 - boundary translation
-            self.logger.log("error", f"Unhandled error in {type(self).__name__}: {exc}")
+            self.logger.error(f"Unhandled error in {type(self).__name__}: {exc}")
             return self.error_envelope(exc)
 
     # ------------------------------------------------------------------

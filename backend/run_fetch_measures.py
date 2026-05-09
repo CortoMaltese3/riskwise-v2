@@ -30,7 +30,7 @@ class RunFetchScenario(Command):
 
     def valid_request(self) -> bool:
         if "hazardType" not in self.request:
-            self.logger.log("error", "Missing required field: hazardType")
+            self.logger.error("Missing required field: hazardType")
             return False
         return True
 
@@ -64,9 +64,7 @@ class RunFetchScenario(Command):
             message = f"Fetched adaptation measures for {hazard_beautified} successfully."
 
         self.base_handler.update_progress(100, message)
-        self.logger.log(
-            "info",
-            f"Finished fetching adaptation measures data in {time() - initial_time:.2f}sec.",
+        self.logger.info(f"Finished fetching adaptation measures data in {time() - initial_time:.2f}sec.",
         )
         return {
             "data": {"adaptationMeasures": adaptation_measures, "measures": measures},

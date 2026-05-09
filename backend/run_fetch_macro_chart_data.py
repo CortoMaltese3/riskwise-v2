@@ -26,7 +26,7 @@ class RunFetchMacroChartData(Command):
     def valid_request(self) -> bool:
         for field in ("countryName", "scenario", "sector", "variable"):
             if not self.request.get(field):
-                self.logger.log("error", f"Missing required field: {field}")
+                self.logger.error(f"Missing required field: {field}")
                 return False
         return True
 
@@ -46,9 +46,7 @@ class RunFetchMacroChartData(Command):
                 self.country_name, self.macro_variable
             )
             self.base_handler.update_progress(100, "Data fetched successfully.")
-            self.logger.log(
-                "info",
-                f"Finished fetching macro chart data in {time() - initial_time:.2f} sec.",
+            self.logger.info(f"Finished fetching macro chart data in {time() - initial_time:.2f} sec.",
             )
             return {
                 "data": {"years": chart["years"], "datasets": chart["datasets"], "title": title},
@@ -58,7 +56,7 @@ class RunFetchMacroChartData(Command):
                 },
             }
         except (OSError, ValueError, KeyError, RuntimeError) as e:
-            self.logger.log("error", f"An error occurred: {str(e)}")
+            self.logger.error(f"An error occurred: {str(e)}")
             return self.error_envelope(
                 f"An error occurred fetching macro chart data. More info: {e}"
             )

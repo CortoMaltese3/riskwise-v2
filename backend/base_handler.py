@@ -27,9 +27,9 @@ from backend.constants import (
     REQUIREMENTS_DIR,
     REPORTS_DIR,
 )
-from backend.logger_config import LoggerConfig
+from backend.logging_config import get_logger
 
-logger = LoggerConfig(logger_types=["file"])
+logger = get_logger("backend.base_handler")
 
 
 class BaseHandler:
@@ -58,10 +58,10 @@ class BaseHandler:
             country_code = self.get_iso3_country_code(country_name) or country_name
             return is_dataset_available(country_code, data_type)
         except CatalogError as exception:
-            logger.log("error", f"Catalog lookup failed. More info: {exception}")
+            logger.error(f"Catalog lookup failed. More info: {exception}")
             return False
         except (LookupError, AttributeError, TypeError, ValueError) as exception:
-            logger.log("error", f"An error has occurred. More info: {exception}")
+            logger.error(f"An error has occurred. More info: {exception}")
             return False
 
     def sanitize_country_name(self, country_name: str) -> str:
@@ -82,9 +82,7 @@ class BaseHandler:
             country = pycountry.countries.search_fuzzy(country_name)[0]
             return country.name
         except LookupError as exception:
-            logger.log(
-                "error",
-                f"Error while trying to sanitize country name. More info: {exception}",
+            logger.error(f"Error while trying to sanitize country name. More info: {exception}",
             )
             raise ValueError(
                 f"Failed to sanitize country: {country_name}. More info: {exception}"
@@ -108,14 +106,11 @@ class BaseHandler:
             country_code = country.alpha_3
             return country_code
         except LookupError:
-            logger.log(
-                "error", f"No ISO3 code found for '{country_name}'. Please check the country name."
+            logger.error(f"No ISO3 code found for '{country_name}'. Please check the country name."
             )
             return None
         except (AttributeError, TypeError, ValueError) as exc:
-            logger.log(
-                "error",
-                f"An error occurred while trying to convert country name to iso3. More info: {exc}",
+            logger.error(f"An error occurred while trying to convert country name to iso3. More info: {exc}",
             )
             return None
 
@@ -297,7 +292,7 @@ class BaseHandler:
             for file in DATA_TEMP_DIR.glob("*"):
                 file.unlink(missing_ok=True)
         except OSError as exc:
-            logger.log("error", f"Error while trying to clear temp directory. More info: {exc}")
+            logger.error(f"Error while trying to clear temp directory. More info: {exc}")
 
     def initalize_data_directories(self) -> None:
         """
@@ -360,8 +355,8 @@ class BaseHandler:
             # via the structured logger so it lands in the rotating file
             # log instead of stdout, which used to interleave with the
             # subprocess JSON envelope and is invisible in production.
-            logger.log("info", json.dumps(progress_data))
-        logger.log("info", f"send progress {progress} to frontend.")
+            logger.info(json.dumps(progress_data))
+        logger.info(f"send progress {progress} to frontend.")
 
     def get_admin_data(self, country_code: str, admin_level) -> gpd.GeoDataFrame:
         """
@@ -391,12 +386,10 @@ class BaseHandler:
             )
             return admin_gdf
         except FileNotFoundError:
-            logger.log("error", f"File not found: {file_path}")
+            logger.error(f"File not found: {file_path}")
             return None
         except (OSError, ValueError, KeyError, AttributeError) as exception:
-            logger.log(
-                "error",
-                f"An error occured while trying to get country admin level information. "
+            logger.error(f"An error occured while trying to get country admin level information. "
                 f" More info: {exception}",
             )
             return None
@@ -439,9 +432,9 @@ class BaseHandler:
                 # Write the values
                 file.write("\t".join(map(str, metadata.values())) + "\n")
         except OSError as e:
-            logger.log("error", (f"An I/O error occurred: {e.strerror}"))
+            logger.error((f"An I/O error occurred: {e.strerror}"))
         except (TypeError, ValueError) as e:
-            logger.log("error", (f"An unexpected error occurred: {str(e)}"))
+            logger.error((f"An unexpected error occurred: {str(e)}"))
 
     def read_results_metadata_file(
         self, metadata_filepath: Optional[Path] = None
@@ -501,11 +494,11 @@ class BaseHandler:
                 metadata["future_year"] = int(metadata["future_year"])
 
         except FileNotFoundError as e:
-            logger.log("error", f"Metadata file not found: {str(e)}")
+            logger.error(f"Metadata file not found: {str(e)}")
         except OSError as e:
-            logger.log("error", f"An I/O error occurred: {e.strerror}")
+            logger.error(f"An I/O error occurred: {e.strerror}")
         except (KeyError, ValueError, TypeError) as e:
-            logger.log("error", f"An unexpected error occurred: {str(e)}")
+            logger.error(f"An unexpected error occurred: {str(e)}")
 
         return metadata
 
@@ -547,7 +540,7 @@ class BaseHandler:
         except StopIteration:
             raise ValueError(f"No directory found for scenario ID: {scenario_id}")
         except (OSError, KeyError, ValueError, TypeError) as e:
-            logger.log("error", f"An unexpected error occurred while retrieving metadata: {str(e)}")
+            logger.error(f"An unexpected error occurred while retrieving metadata: {str(e)}")
             return {}
 
     def check_file_type(self, file_path: Path) -> Optional[str]:
@@ -573,7 +566,7 @@ class BaseHandler:
         try:
             # Ensure the file exists before checking the type
             if not file_path.is_file():
-                logger.log("error", f"File does not exist: {file_path}")
+                logger.error(f"File does not exist: {file_path}")
                 return None
 
             # Extract the file extension
@@ -593,11 +586,11 @@ class BaseHandler:
             if file_extension in recognized_types:
                 return recognized_types[file_extension]
             else:
-                logger.log("info", f"Unrecognized file type: {file_extension}")
+                logger.info(f"Unrecognized file type: {file_extension}")
                 return None
 
         except (OSError, AttributeError, TypeError) as e:
-            logger.log("error", f"An unexpected error occurred: {str(e)}")
+            logger.error(f"An unexpected error occurred: {str(e)}")
             return None
 
     def read_parquet_file(self, file_path: str) -> Optional[pd.DataFrame]:
@@ -638,11 +631,11 @@ class BaseHandler:
             return df
 
         except FileNotFoundError as fnf_error:
-            logger.log("error", str(fnf_error))
+            logger.error(str(fnf_error))
         except ValueError as ve:
-            logger.log("error", str(ve))
+            logger.error(str(ve))
         except OSError as e:
-            logger.log("error", f"An unexpected error occurred while reading the file: {str(e)}")
+            logger.error(f"An unexpected error occurred while reading the file: {str(e)}")
 
         return None
 
@@ -730,8 +723,8 @@ class BaseHandler:
             return file_path
 
         except ValueError as ve:
-            logger.log("error", str(ve))
+            logger.error(str(ve))
         except OSError as e:
-            logger.log("error", f"An unexpected error occurred while saving the file: {str(e)}")
+            logger.error(f"An unexpected error occurred while saving the file: {str(e)}")
 
         return None

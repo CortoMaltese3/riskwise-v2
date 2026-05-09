@@ -19,7 +19,7 @@ class RunCheckDataType(Command):
 
         if not self.valid_request():
             run_status_message = "Invalid request: Missing required fields"
-            self.logger.log("error", run_status_message)
+            self.logger.error(run_status_message)
             return {
                 "data": {"data": {}},
                 "status": {
@@ -46,8 +46,7 @@ class RunCheckDataType(Command):
 
         self.base_handler.update_progress(100, run_status_message)
 
-        self.logger.log(
-            "info", f"Finished fetching {data_type} data in {time() - initial_time}sec."
+        self.logger.info(f"Finished fetching {data_type} data in {time() - initial_time}sec."
         )
         return {
             "data": {"data": {}},
@@ -66,7 +65,7 @@ class RunCheckDataType(Command):
     def valid_request(self) -> bool:
         for field in ("country", "dataType"):
             if field not in self.request:
-                self.logger.log("error", f"Missing required field: {field}")
+                self.logger.error(f"Missing required field: {field}")
                 return False
         return True
 

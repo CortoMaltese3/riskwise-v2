@@ -49,9 +49,9 @@ from backend.constants import (
     DATA_TEMP_DIR,
 )
 from backend.engine.adapter import intensity_to_dense
-from backend.logger_config import LoggerConfig
+from backend.logging_config import get_logger
 
-logger = LoggerConfig(logger_types=["file"])
+logger = get_logger("backend.hazard.hazard_handler")
 
 
 class HazardHandler:
@@ -88,7 +88,7 @@ class HazardHandler:
                 "Error while trying to create hazard object. "
                 "Source must be chosen from ['hdf5', 'raster']"
             )
-            logger.log("error", status_message)
+            logger.error(status_message)
             raise ValueError(status_message)
         if not source:
             if hazard_type == "drought":
@@ -296,7 +296,7 @@ class HazardHandler:
             with open(map_data_filepath, "w", encoding="utf-8") as f:
                 json.dump(hazard_geojson, f)
         except (AttributeError, KeyError, TypeError, ValueError, OSError) as exception:
-            logger.log("error", f"An unexpected error occurred. More info: {exception}")
+            logger.error(f"An unexpected error occurred. More info: {exception}")
 
     def get_hazard_code(self, hazard_type: str) -> str:
         """
@@ -330,9 +330,7 @@ class HazardHandler:
         # Raise an exception if the hazard type is not found
         if code is None:
             # raise ValueError(f"Hazard type '{hazard_type}' is not recognized.")
-            logger.log(
-                "error",
-                f"Hazard type '{hazard_type}' is not recognized.",
+            logger.error(f"Hazard type '{hazard_type}' is not recognized.",
             )
 
         return code
@@ -367,9 +365,7 @@ class HazardHandler:
 
         # Raise an exception if the hazard code is not found
         if hazard_type is None:
-            logger.log(
-                "error",
-                f"Hazard code '{hazard_code}' is not recognized.",
+            logger.error(f"Hazard code '{hazard_code}' is not recognized.",
             )
 
         return hazard_type
@@ -460,7 +456,7 @@ class HazardHandler:
                     # Add the admin column for this layer to final_gdf
                     final_gdf[f"admin{layer}"] = joined_gdf["name"]
                 except (KeyError, ValueError, TypeError, OSError) as e:
-                    logger.log("error", f"Error processing layer {layer}: {str(e)}")
+                    logger.error(f"Error processing layer {layer}: {str(e)}")
                     # Continue with the next layer if an error occurs
                     continue
 
@@ -489,8 +485,8 @@ class HazardHandler:
             return final_df
 
         except AttributeError as e:
-            logger.log("error", f"Invalid Hazard object: {str(e)}")
+            logger.error(f"Invalid Hazard object: {str(e)}")
         except (KeyError, ValueError, TypeError) as e:
-            logger.log("error", f"An unexpected error occurred: {str(e)}")
+            logger.error(f"An unexpected error occurred: {str(e)}")
 
         return pd.DataFrame()  # Return an empty DataFrame in case of failure

@@ -30,14 +30,14 @@ import duckdb
 from backend.constants import DATA_TEMP_DIR
 from backend.engine.types import CostBenefitResult
 from backend.hazard.hazard_handler import HazardHandler
-from backend.logger_config import LoggerConfig
+from backend.logging_config import get_logger
 from backend.models.errors import EngineError
 
 WATERFALL_DATA_FILENAME = "risks_waterfall_data.json"
 COSTBEN_DATA_FILENAME = "cost_benefit_data.json"
 
 hazard_handler = HazardHandler()
-logger = LoggerConfig(logger_types=["file"])
+logger = get_logger("backend.costben.costben_handler")
 
 
 def _calculate_via_engine(
@@ -223,7 +223,7 @@ class CostBenefitHandler:
             ]
             return [dict(zip(cols, r, strict=True)) for r in rows]
         except duckdb.Error as exc:
-            logger.log("error", f"Failed to fetch measures from DB. More info: {exc}")
+            logger.error(f"Failed to fetch measures from DB. More info: {exc}")
             return []
 
     def calculate_cost_benefit(
@@ -320,7 +320,7 @@ class CostBenefitHandler:
                 json.dump(payload, fh)
             return payload
         except (AttributeError, KeyError, TypeError, ValueError, OSError, RuntimeError) as e:
-            logger.log("error", f"Failed to compute waterfall data. More info: {e}")
+            logger.error(f"Failed to compute waterfall data. More info: {e}")
             raise EngineError(f"Failed to compute waterfall data: {e}") from e
 
     def compute_cost_benefit_data(
@@ -362,5 +362,5 @@ class CostBenefitHandler:
                 json.dump(payload, fh)
             return payload
         except (AttributeError, KeyError, TypeError, ValueError, OSError) as e:
-            logger.log("error", f"Failed to compute cost-benefit data. More info: {e}")
+            logger.error(f"Failed to compute cost-benefit data. More info: {e}")
             raise EngineError(f"Failed to compute cost-benefit data: {e}") from e

@@ -33,7 +33,7 @@ class RunFetchCostBenefit(Command):
         path = DATA_TEMP_DIR / COSTBEN_DATA_FILENAME
         if not path.exists():
             message = "Cost-benefit data not available. Run a future scenario first."
-            self.logger.log("info", message)
+            self.logger.info(message)
             return {
                 "data": dict(self._EMPTY_DATA),
                 "status": {"code": StatusCode.ERROR, "message": message},
@@ -41,9 +41,7 @@ class RunFetchCostBenefit(Command):
 
         with open(path, encoding="utf-8") as fh:
             payload = json.load(fh)
-        self.logger.log(
-            "info",
-            f"Fetched cost-benefit data in {time() - initial_time:.2f} sec.",
+        self.logger.info(f"Fetched cost-benefit data in {time() - initial_time:.2f} sec.",
         )
         return {
             "data": payload,

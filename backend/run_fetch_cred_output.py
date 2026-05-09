@@ -23,9 +23,7 @@ class RunFetchCredOutput(Command):
         try:
             cred_data = self.macro_handler.get_cred_data_from_db(dataset_id=self.dataset_id)
             self.base_handler.update_progress(100, "CRED data fetched successfully.")
-            self.logger.log(
-                "info",
-                f"Finished fetching CRED data in {time() - initial_time:.2f} sec.",
+            self.logger.info(f"Finished fetching CRED data in {time() - initial_time:.2f} sec.",
             )
             return {
                 "data": cred_data,
@@ -35,7 +33,7 @@ class RunFetchCredOutput(Command):
                 },
             }
         except (OSError, ValueError, KeyError, RuntimeError) as e:
-            self.logger.log("error", f"An error occurred: {str(e)}")
+            self.logger.error(f"An error occurred: {str(e)}")
             return {
                 "data": [],
                 "status": {

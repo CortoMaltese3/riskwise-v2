@@ -7,7 +7,7 @@ import pandas as pd
 import xlsxwriter
 
 from backend.constants import DATA_TEMP_DIR, REPORTS_DIR
-from backend.logger_config import LoggerConfig
+from backend.logging_config import get_logger
 from backend.provenance import REPORT_REPRODUCIBILITY_NOTE, short_sha
 
 # ``BaseHandler`` is imported lazily inside ``__init__`` because importing it
@@ -56,7 +56,7 @@ class ReportHandler:
 
         self.report_parameters = report_parameters
         self.target_dir = REPORTS_DIR / self.report_parameters.scenario_id or DATA_TEMP_DIR
-        self.logger = LoggerConfig(logger_types=["file"])
+        self.logger = get_logger("backend.report.report_handler")
         self.base_handler = BaseHandler()
 
     def get_report_file_path(self, export_type: str, report_type: str = None) -> str:

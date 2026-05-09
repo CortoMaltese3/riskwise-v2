@@ -67,7 +67,6 @@ target-version = "py311"
 # masking regressions in the code we actually care about.
 extend-exclude = [
     "backend/base_handler.py",
-    "backend/logger_config.py",
     "backend/dev.ipynb",
     "backend/costben",
     "backend/entity",
@@ -127,7 +126,6 @@ warn_redundant_casts = true
 module = [
     "backend.app",
     "backend.base_handler",
-    "backend.logger_config",
     "backend.test_app",
     "backend.test_logging_config",
     "backend.costben.*",

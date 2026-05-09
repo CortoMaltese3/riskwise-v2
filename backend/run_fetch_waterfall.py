@@ -34,7 +34,7 @@ class RunFetchWaterfall(Command):
         path = DATA_TEMP_DIR / WATERFALL_DATA_FILENAME
         if not path.exists():
             message = "Waterfall data not available. Run a future scenario first."
-            self.logger.log("info", message)
+            self.logger.info(message)
             return {
                 "data": None,
                 "status": {"code": StatusCode.ERROR, "message": message},
@@ -42,9 +42,7 @@ class RunFetchWaterfall(Command):
 
         with open(path, encoding="utf-8") as fh:
             payload = json.load(fh)
-        self.logger.log(
-            "info",
-            f"Fetched waterfall data in {time() - initial_time:.2f} sec.",
+        self.logger.info(f"Fetched waterfall data in {time() - initial_time:.2f} sec.",
         )
         return {
             "data": payload,

@@ -28,9 +28,9 @@ import numpy as np
 import pandas as pd
 from backend.base_handler import BaseHandler
 from backend.constants import DATA_TEMP_DIR
-from backend.logger_config import LoggerConfig
+from backend.logging_config import get_logger
 
-logger = LoggerConfig(logger_types=["file"])
+logger = get_logger("backend.exposure.exposure_handler")
 
 
 def _infer_source(filepath) -> str:
@@ -109,8 +109,7 @@ class ExposureHandler:
             multiplier = (1 + annual_growth) ** (future_year - ref_year)
             return replace_exposures_value(exposure, exposure.value * multiplier)
         except (AttributeError, TypeError, ValueError, ImportError) as exc:
-            logger.log(
-                "error", f"An error occurred while trying to calculate exposure growth rate: {exc}"
+            logger.error(f"An error occurred while trying to calculate exposure growth rate: {exc}"
             )
             return None
 
@@ -163,7 +162,7 @@ class ExposureHandler:
                         "title": f"Exposure ({exposure.value_unit})",
                     }
                 except (KeyError, ValueError, TypeError, OSError) as e:
-                    logger.log("error", f"An error occurred while processing layer {layer}: {e}")
+                    logger.error(f"An error occurred while processing layer {layer}: {e}")
 
             # Save the combined GeoJSON file
             map_data_filepath = DATA_TEMP_DIR / "exposures_geodata.json"
@@ -171,9 +170,9 @@ class ExposureHandler:
                 json.dump(all_layers_geojson, f)
 
         except AttributeError as e:
-            logger.log("error", f"Invalid Exposure object: {e}")
+            logger.error(f"Invalid Exposure object: {e}")
         except (KeyError, ValueError, TypeError, OSError) as e:
-            logger.log("error", f"An unexpected error occurred: {e}")
+            logger.error(f"An unexpected error occurred: {e}")
 
     def generate_exposure_report_dataset(
         self, exposure: Any, country_name: str
@@ -232,7 +231,7 @@ class ExposureHandler:
                     final_gdf[f"admin{layer}"] = joined_gdf["name"]
 
                 except (KeyError, ValueError, TypeError, OSError) as e:
-                    logger.log("error", f"Error processing layer {layer}: {str(e)}")
+                    logger.error(f"Error processing layer {layer}: {str(e)}")
                     # Continue with the next layer if an error occurs
                     continue
 
@@ -256,8 +255,8 @@ class ExposureHandler:
             return final_df
 
         except AttributeError as e:
-            logger.log("error", f"Invalid Exposure object: {str(e)}")
+            logger.error(f"Invalid Exposure object: {str(e)}")
         except (KeyError, ValueError, TypeError) as e:
-            logger.log("error", f"An unexpected error occurred: {str(e)}")
+            logger.error(f"An unexpected error occurred: {str(e)}")
 
         return pd.DataFrame()  # Return an empty DataFrame in case of failure

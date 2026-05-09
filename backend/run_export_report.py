@@ -40,7 +40,7 @@ class RunExportReport(Command):
     def valid_request(self) -> bool:
         for field in ("exportType", "scenarioRunCode"):
             if field not in self.request:
-                self.logger.log("error", f"Missing required field: {field}")
+                self.logger.error(f"Missing required field: {field}")
                 return False
         return True
 
@@ -69,7 +69,7 @@ class RunExportReport(Command):
         try:
             if not self.valid_request():
                 run_status_message = "Invalid request: Missing required fields"
-                self.logger.log("error", run_status_message)
+                self.logger.error(run_status_message)
                 return self._envelope("", StatusCode.VALIDATION_ERROR, run_status_message)
 
             scenario_code = self.request.get("scenarioRunCode", "")
@@ -90,10 +90,10 @@ class RunExportReport(Command):
             return self._envelope(str(path), StatusCode.SUCCESS, run_status_message)
         except (OSError, ValueError, KeyError, RuntimeError, AttributeError, TypeError) as e:
             run_status_message = f"An error occurred: {str(e)}"
-            self.logger.log("error", run_status_message)
+            self.logger.error(run_status_message)
             return self._envelope("", StatusCode.ERROR, run_status_message)
         finally:
-            self.logger.log("info", f"Finished generating report in {time() - initial_time}sec.")
+            self.logger.info(f"Finished generating report in {time() - initial_time}sec.")
             self.base_handler.update_progress(100, run_status_message)
 
     @staticmethod

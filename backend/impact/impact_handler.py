@@ -35,9 +35,9 @@ import pandas as pd
 from backend.base_handler import BaseHandler
 from backend.constants import DATA_TEMP_DIR
 from backend.impact.registry import ImpactFunctionRegistry, load_country_registry, load_registry_from_paths
-from backend.logger_config import LoggerConfig
+from backend.logging_config import get_logger
 
-logger = LoggerConfig(logger_types=["file"])
+logger = get_logger("backend.impact.impact_handler")
 
 # Map the user-facing hazard names accepted by ``get_impact_function_set``
 # (matching ``request_data.hazard_type`` strings such as "flood" / "drought")
@@ -110,9 +110,7 @@ def _calculate_via_engine(
         cc_impfset = build_impfset(impfset_specs)
         return run_impact(cc_hazard, cc_exposure, cc_impfset, save_mat=True)
     except (AttributeError, TypeError, ValueError, RuntimeError, ImportError) as exception:
-        logger.log(
-            "error",
-            f"An error occurred during engine impact calculation: More info: {exception}",
+        logger.error(f"An error occurred during engine impact calculation: More info: {exception}",
         )
         return None
 
@@ -361,7 +359,7 @@ class ImpactHandler:
             with open(map_data_filepath, "w", encoding="utf-8") as f:
                 json.dump(impact_geojson, f)
         except (AttributeError, KeyError, TypeError, ValueError, OSError) as exception:
-            logger.log("error", f"An unexpected error occurred. More info: {exception}")
+            logger.error(f"An unexpected error occurred. More info: {exception}")
 
     def generate_impact_report_dataset(
         self,
@@ -437,7 +435,7 @@ class ImpactHandler:
                     # Add the admin column for this layer to final_gdf
                     final_gdf[f"admin{layer}"] = joined_gdf["name"]
                 except (KeyError, ValueError, TypeError, OSError) as e:
-                    logger.log("error", f"Error processing layer {layer}: {str(e)}")
+                    logger.error(f"Error processing layer {layer}: {str(e)}")
                     # Continue with the next layer if an error occurs
                     continue
 
@@ -466,8 +464,8 @@ class ImpactHandler:
             return final_df
 
         except AttributeError as e:
-            logger.log("error", f"Invalid Impact object: {str(e)}")
+            logger.error(f"Invalid Impact object: {str(e)}")
         except (KeyError, ValueError, TypeError) as e:
-            logger.log("error", f"An unexpected error occurred: {str(e)}")
+            logger.error(f"An unexpected error occurred: {str(e)}")
 
         return pd.DataFrame()  # Return an empty DataFrame in case of failure
