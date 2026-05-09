@@ -64,7 +64,9 @@ def load_entity_xlsx(path: Path) -> EntityBundle:
 
     try:
         wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    except Exception as exc:
+    except (OSError, ValueError, KeyError) as exc:
+        # openpyxl wraps the zip/xml parse errors in InvalidFileException
+        # (a ValueError) and surfaces missing-file as OSError.
         raise EntityLoadError(f"Cannot open entity file {path}: {exc}") from exc
 
     try:

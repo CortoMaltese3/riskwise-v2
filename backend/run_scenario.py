@@ -25,6 +25,7 @@ from pathlib import Path
 from time import time
 from typing import Any
 
+import duckdb
 import numpy as np
 
 from backend.base_handler import BaseHandler
@@ -177,7 +178,7 @@ class RunScenario:
         try:
             config = load_country_config(self.request_data.country_code)
             return float(config.discount_rate)
-        except Exception as exception:
+        except (CountryConfigError, AttributeError, TypeError, ValueError) as exception:
             status_code = StatusCode.VALIDATION_ERROR
             status_message = (
                 f"An error occurred while getting ERA discount rate. More info: {exception}"
@@ -434,7 +435,10 @@ class RunScenario:
             for future in as_completed(futures):
                 try:
                     step = future.result()
-                except Exception as exc:
+                except (OSError, ValueError, KeyError, AttributeError, TypeError, RuntimeError) as exc:
+                    # GeoJSON generation runs CLIMADA-adjacent code in a
+                    # worker thread; failures here are isolated so the
+                    # other partials can still render.
                     self.logger.log("error", f"GeoJSON generation task failed: {exc}")
                     continue
                 if callback is None:
@@ -472,7 +476,11 @@ class RunScenario:
         try:
             if not cache_hit:
                 self._execute(strategy)
-        except Exception as exception:
+        except Exception as exception:  # noqa: BLE001 - scenario boundary translation
+            # ``_execute`` ultimately calls into CLIMADA / climate-lama-engine,
+            # which raises arbitrary subclasses; we translate every failure
+            # into an envelope on ``self.status`` rather than crashing the
+            # in-process runner.
             mode = "ERA" if self.request_data.is_era else "custom"
             status_code = StatusCode.VALIDATION_ERROR
             status_message = (
@@ -563,14 +571,14 @@ class RunScenario:
         """Hydrate the temp dir from a cached bundle. Returns ``True`` on hit."""
         try:
             raw = cache_store.get(cache_key)
-        except Exception as exc:
+        except (duckdb.Error, OSError, ValueError) as exc:
             self.logger.log("warning", f"Computation-cache lookup failed: {exc}")
             return False
         if not raw:
             return False
         try:
             bundle = cache_store.decode_bundle(raw)
-        except Exception as exc:
+        except (ValueError, TypeError, KeyError, OSError) as exc:
             self.logger.log("warning", f"Computation-cache decode failed: {exc}")
             return False
         DATA_TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -598,7 +606,7 @@ class RunScenario:
             return
         try:
             cache_store.put(cache_key, "scenario_bundle", cache_store.encode_bundle(bundle))
-        except Exception as exc:
+        except (duckdb.Error, OSError, ValueError) as exc:
             self.logger.log("warning", f"Computation-cache write failed: {exc}")
 
     def _collect_provenance(self):
@@ -678,7 +686,7 @@ class RunScenario:
                 name=map_title,
             )
             return scenario_id
-        except Exception as exc:
+        except (duckdb.Error, OSError, ValueError, KeyError, TypeError) as exc:
             self.logger.log(
                 "error",
                 f"Failed to persist scenario to DuckDB. More info: {exc}",

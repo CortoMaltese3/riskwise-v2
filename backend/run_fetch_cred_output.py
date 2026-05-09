@@ -34,7 +34,7 @@ class RunFetchCredOutput(Command):
                     "message": "CRED output data fetched successfully.",
                 },
             }
-        except Exception as e:
+        except (OSError, ValueError, KeyError, RuntimeError) as e:
             self.logger.log("error", f"An error occurred: {str(e)}")
             return {
                 "data": [],

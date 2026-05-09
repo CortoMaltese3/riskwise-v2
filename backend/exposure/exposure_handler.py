@@ -108,7 +108,7 @@ class ExposureHandler:
                 ref_year = getattr(exposure, "ref_year", 2020)
             multiplier = (1 + annual_growth) ** (future_year - ref_year)
             return replace_exposures_value(exposure, exposure.value * multiplier)
-        except Exception as exc:
+        except (AttributeError, TypeError, ValueError, ImportError) as exc:
             logger.log(
                 "error", f"An error occurred while trying to calculate exposure growth rate: {exc}"
             )
@@ -162,7 +162,7 @@ class ExposureHandler:
                         "unit": exposure.value_unit,
                         "title": f"Exposure ({exposure.value_unit})",
                     }
-                except Exception as e:
+                except (KeyError, ValueError, TypeError, OSError) as e:
                     logger.log("error", f"An error occurred while processing layer {layer}: {e}")
 
             # Save the combined GeoJSON file
@@ -172,7 +172,7 @@ class ExposureHandler:
 
         except AttributeError as e:
             logger.log("error", f"Invalid Exposure object: {e}")
-        except Exception as e:
+        except (KeyError, ValueError, TypeError, OSError) as e:
             logger.log("error", f"An unexpected error occurred: {e}")
 
     def generate_exposure_report_dataset(
@@ -231,7 +231,7 @@ class ExposureHandler:
                     # Add the admin column for this layer to final_gdf
                     final_gdf[f"admin{layer}"] = joined_gdf["name"]
 
-                except Exception as e:
+                except (KeyError, ValueError, TypeError, OSError) as e:
                     logger.log("error", f"Error processing layer {layer}: {str(e)}")
                     # Continue with the next layer if an error occurs
                     continue
@@ -257,7 +257,7 @@ class ExposureHandler:
 
         except AttributeError as e:
             logger.log("error", f"Invalid Exposure object: {str(e)}")
-        except Exception as e:
+        except (KeyError, ValueError, TypeError) as e:
             logger.log("error", f"An unexpected error occurred: {str(e)}")
 
         return pd.DataFrame()  # Return an empty DataFrame in case of failure

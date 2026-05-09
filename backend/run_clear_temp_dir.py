@@ -25,7 +25,7 @@ class RunClearTempDir(Command):
                 "success": True,
                 "message": "Successfully cleared all files in the temporary directory.",
             }
-        except Exception as exc:
+        except OSError as exc:
             error_message = f"Error while trying to clear temp directory. More info: {exc}"
             self.logger.log("error", error_message)
             return {"success": False, "error": error_message}

@@ -104,7 +104,7 @@ def validate_xlsx_schema(xlsx_path: Path) -> ValidationResult:
         sheets = pd.read_excel(xlsx_path, sheet_name=None)
     except FileNotFoundError:
         return ValidationResult(False, [f"File not found: {xlsx_path}"])
-    except Exception as exc:
+    except (OSError, ValueError, ImportError) as exc:
         return ValidationResult(False, [f"Cannot open '{xlsx_path.name}': {exc}"])
 
     if MEASURES_SHEET_NAME not in sheets:
@@ -258,7 +258,7 @@ def import_dataset(
                 ],
             )
             conn.execute("COMMIT")
-        except Exception:
+        except (duckdb.Error, OSError, ValueError):
             conn.execute("ROLLBACK")
             # Remove the stored copy so a failed insert never leaves an
             # orphan file behind; the table is the source of truth.
@@ -312,7 +312,7 @@ def delete_dataset(
             )
             conn.execute("DELETE FROM measure_sets WHERE id = ?", [measure_set_id])
             conn.execute("COMMIT")
-        except Exception:
+        except duckdb.Error:
             conn.execute("ROLLBACK")
             raise
 

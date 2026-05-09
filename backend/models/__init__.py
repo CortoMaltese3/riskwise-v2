@@ -21,6 +21,11 @@ from backend.models.custom_data import (
     CustomDataValidateResponse,
 )
 from backend.models.data import DataValidateData, DataValidateRequest, DataValidateResponse
+
+# Domain exception taxonomy lives in ``backend.models.errors`` and is
+# imported directly there by callers — re-exporting names like
+# ``ValidationError`` / ``CatalogError`` from this package would shadow
+# Pydantic's and the engine's own classes of the same name.
 from backend.models.errors import ErrorResponse
 from backend.models.health import HealthResponse
 from backend.models.macro import (

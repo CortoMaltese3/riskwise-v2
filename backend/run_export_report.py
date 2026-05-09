@@ -88,7 +88,7 @@ class RunExportReport(Command):
             if path is None:
                 return self._envelope("", StatusCode.VALIDATION_ERROR, run_status_message)
             return self._envelope(str(path), StatusCode.SUCCESS, run_status_message)
-        except Exception as e:
+        except (OSError, ValueError, KeyError, RuntimeError, AttributeError, TypeError) as e:
             run_status_message = f"An error occurred: {str(e)}"
             self.logger.log("error", run_status_message)
             return self._envelope("", StatusCode.ERROR, run_status_message)

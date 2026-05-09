@@ -61,7 +61,7 @@ class BaseHandler:
         except CatalogError as exception:
             logger.log("error", f"Catalog lookup failed. More info: {exception}")
             return False
-        except Exception as exception:
+        except (LookupError, AttributeError, TypeError, ValueError) as exception:
             logger.log("error", f"An error has occurred. More info: {exception}")
             return False
 
@@ -113,7 +113,7 @@ class BaseHandler:
                 "error", f"No ISO3 code found for '{country_name}'. Please check the country name."
             )
             return None
-        except Exception as exc:
+        except (AttributeError, TypeError, ValueError) as exc:
             logger.log(
                 "error",
                 f"An error occurred while trying to convert country name to iso3. More info: {exc}",
@@ -297,7 +297,7 @@ class BaseHandler:
         try:
             for file in DATA_TEMP_DIR.glob("*"):
                 file.unlink(missing_ok=True)
-        except Exception as exc:
+        except OSError as exc:
             logger.log("error", f"Error while trying to clear temp directory. More info: {exc}")
 
     def initalize_data_directories(self) -> None:
@@ -390,7 +390,7 @@ class BaseHandler:
         except FileNotFoundError:
             logger.log("error", f"File not found: {file_path}")
             return None
-        except Exception as exception:
+        except (OSError, ValueError, KeyError, AttributeError) as exception:
             logger.log(
                 "error",
                 f"An error occured while trying to get country admin level information. "
@@ -435,9 +435,9 @@ class BaseHandler:
                 file.write("\t".join(metadata.keys()) + "\n")
                 # Write the values
                 file.write("\t".join(map(str, metadata.values())) + "\n")
-        except IOError as e:
+        except OSError as e:
             logger.log("error", (f"An I/O error occurred: {e.strerror}"))
-        except Exception as e:
+        except (TypeError, ValueError) as e:
             logger.log("error", (f"An unexpected error occurred: {str(e)}"))
 
     def read_results_metadata_file(
@@ -499,9 +499,9 @@ class BaseHandler:
 
         except FileNotFoundError as e:
             logger.log("error", f"Metadata file not found: {str(e)}")
-        except IOError as e:
+        except OSError as e:
             logger.log("error", f"An I/O error occurred: {e.strerror}")
-        except Exception as e:
+        except (KeyError, ValueError, TypeError) as e:
             logger.log("error", f"An unexpected error occurred: {str(e)}")
 
         return metadata
@@ -543,7 +543,7 @@ class BaseHandler:
 
         except StopIteration:
             raise ValueError(f"No directory found for scenario ID: {scenario_id}")
-        except Exception as e:
+        except (OSError, KeyError, ValueError, TypeError) as e:
             logger.log("error", f"An unexpected error occurred while retrieving metadata: {str(e)}")
             return {}
 
@@ -596,7 +596,7 @@ class BaseHandler:
                 logger.log("info", f"Unrecognized file type: {file_extension}")
                 return None
 
-        except Exception as e:
+        except (OSError, AttributeError, TypeError) as e:
             logger.log("error", f"An unexpected error occurred: {str(e)}")
             return None
 
@@ -642,7 +642,7 @@ class BaseHandler:
             logger.log("error", str(fnf_error))
         except ValueError as ve:
             logger.log("error", str(ve))
-        except Exception as e:
+        except OSError as e:
             logger.log("error", f"An unexpected error occurred while reading the file: {str(e)}")
 
         return None
@@ -733,7 +733,7 @@ class BaseHandler:
 
         except ValueError as ve:
             logger.log("error", str(ve))
-        except Exception as e:
+        except OSError as e:
             logger.log("error", f"An unexpected error occurred while saving the file: {str(e)}")
 
         return None

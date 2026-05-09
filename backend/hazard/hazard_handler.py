@@ -295,7 +295,7 @@ class HazardHandler:
             map_data_filepath = DATA_TEMP_DIR / "hazards_geodata.json"
             with open(map_data_filepath, "w", encoding="utf-8") as f:
                 json.dump(hazard_geojson, f)
-        except Exception as exception:
+        except (AttributeError, KeyError, TypeError, ValueError, OSError) as exception:
             logger.log("error", f"An unexpected error occurred. More info: {exception}")
 
     def get_hazard_code(self, hazard_type: str) -> str:
@@ -459,7 +459,7 @@ class HazardHandler:
 
                     # Add the admin column for this layer to final_gdf
                     final_gdf[f"admin{layer}"] = joined_gdf["name"]
-                except Exception as e:
+                except (KeyError, ValueError, TypeError, OSError) as e:
                     logger.log("error", f"Error processing layer {layer}: {str(e)}")
                     # Continue with the next layer if an error occurs
                     continue
@@ -490,7 +490,7 @@ class HazardHandler:
 
         except AttributeError as e:
             logger.log("error", f"Invalid Hazard object: {str(e)}")
-        except Exception as e:
+        except (KeyError, ValueError, TypeError) as e:
             logger.log("error", f"An unexpected error occurred: {str(e)}")
 
         return pd.DataFrame()  # Return an empty DataFrame in case of failure

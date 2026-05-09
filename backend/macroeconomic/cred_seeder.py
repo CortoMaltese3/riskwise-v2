@@ -86,7 +86,7 @@ def seed_builtin_cred(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> None:
 
     try:
         df = pd.read_excel(xlsx_path, sheet_name="cred_output")
-    except Exception as exc:
+    except (OSError, ValueError, ImportError) as exc:
         raise CredSeedError(f"Cannot open '{xlsx_path}': {exc}") from exc
 
     missing = REQUIRED_COLUMNS - set(df.columns)
@@ -134,7 +134,7 @@ def seed_builtin_cred(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> None:
             ],
         )
         conn.execute("COMMIT")
-    except Exception as exc:
+    except (duckdb.Error, OSError, ValueError) as exc:
         conn.execute("ROLLBACK")
         raise CredSeedError(f"DB insert failed: {exc}") from exc
 

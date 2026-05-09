@@ -62,7 +62,10 @@ def load_exposures_gpkg(path: Path) -> ExposureArrays:
 
     try:
         gdf = gpd.read_file(path)
-    except Exception as exc:
+    except (OSError, ValueError, RuntimeError) as exc:
+        # geopandas/fiona surface I/O failures as OSError (Windows file lock,
+        # missing driver), schema mismatches as ValueError, and pyogrio's own
+        # errors derive from RuntimeError.
         raise EntityLoadError(f"Cannot open GeoPackage {path}: {exc}") from exc
 
     if "value" not in gdf.columns:
@@ -83,7 +86,7 @@ def load_exposures_gpkg(path: Path) -> ExposureArrays:
         try:
             lat = np.asarray(gdf.geometry.y.to_numpy(), dtype=np.float64)
             lon = np.asarray(gdf.geometry.x.to_numpy(), dtype=np.float64)
-        except Exception as exc:
+        except (AttributeError, ValueError, TypeError) as exc:
             raise EntityLoadError(
                 f"Cannot derive lat/lon from geometry in {path.name}: {exc}"
             ) from exc
