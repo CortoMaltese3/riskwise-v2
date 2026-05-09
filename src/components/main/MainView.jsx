@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 import { Box } from "@mui/material";
 
@@ -14,7 +14,9 @@ import MapLayout from "../map/MapLayout";
 import ViewCard from "../cards/ViewCard";
 import ReportsView from "../reports/ReportsView";
 import ViewMacroCard from "../cards/ViewMacroCard";
+import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
+import { useMacroTools } from "../../utils/macroTools";
 import { TABS, RISK_SUB_TABS } from "./tabs";
 
 const COLUMN_SX = {
@@ -43,6 +45,24 @@ const MainView = () => {
   const activeViewControl = useUIStore((s) => s.activeViewControl);
   const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const selectedTab = useUIStore((s) => s.selectedTab);
+  const credOutputData = useResultsStore((s) => s.credOutputData);
+  const { loadCREDOutputData } = useMacroTools();
+
+  // Lazy-load CRED output data when the Macro tab becomes active inside
+  // MainView (Risk section path). The sidebar-driven Macro section already
+  // does this in AppShell.MacroeconomicView; both surfaces need to fetch
+  // because they mount under different parents. The ref guards against
+  // duplicate in-flight fetches on rapid tab toggling. See #248.
+  const credFetchInFlight = useRef(false);
+  useEffect(() => {
+    if (selectedTab !== TABS.MACRO) return;
+    if (credOutputData && credOutputData.length > 0) return;
+    if (credFetchInFlight.current) return;
+    credFetchInFlight.current = true;
+    Promise.resolve(loadCREDOutputData()).finally(() => {
+      credFetchInFlight.current = false;
+    });
+  }, [selectedTab, credOutputData, loadCREDOutputData]);
 
   return (
     <Box sx={COLUMN_SX}>
