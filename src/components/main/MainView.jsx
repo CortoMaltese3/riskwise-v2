@@ -15,6 +15,7 @@ import ViewCard from "../cards/ViewCard";
 import ReportsView from "../reports/ReportsView";
 import ViewMacroCard from "../cards/ViewMacroCard";
 import useUIStore from "../../store/useUIStore";
+import { TABS, RISK_SUB_TABS } from "./tabs";
 
 const COLUMN_SX = {
   flex: 1,
@@ -46,12 +47,12 @@ const MainView = () => {
   return (
     <Box sx={COLUMN_SX}>
       <MainViewTitle />
-      {selectedTab === 0 && (
+      {selectedTab === TABS.PARAMETERS && (
         <Box sx={TOP_SX}>
           <ViewCard />
         </Box>
       )}
-      {selectedTab === 1 && selectedSubTab === 0 && (
+      {selectedTab === TABS.RISK && selectedSubTab === RISK_SUB_TABS.RISK && (
         <>
           <Box sx={STRETCH_SX}>
             {activeViewControl === "display_map" && <MapLayout />}
@@ -63,7 +64,7 @@ const MainView = () => {
           </Box>
         </>
       )}
-      {selectedTab === 1 && selectedSubTab === 1 && (
+      {selectedTab === TABS.RISK && selectedSubTab === RISK_SUB_TABS.ADAPTATION && (
         <>
           <Box sx={STRETCH_SX}>
             {activeViewControl === "display_map" && <AdaptationMap />}
@@ -75,7 +76,7 @@ const MainView = () => {
           </Box>
         </>
       )}
-      {selectedTab === 2 && (
+      {selectedTab === TABS.MACRO && (
         <>
           {activeViewControl === "display_macro_parameters" && (
             <Box sx={TOP_SX}>
@@ -90,7 +91,7 @@ const MainView = () => {
           <MacroViewControls />
         </>
       )}
-      {selectedTab === 3 && (
+      {selectedTab === TABS.REPORTS && (
         <Box sx={STRETCH_SX}>
           <ReportsView />
         </Box>

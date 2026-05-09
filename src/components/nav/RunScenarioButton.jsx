@@ -11,6 +11,7 @@ import { useReportTools } from "../../utils/reportTools";
 import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
+import { TABS } from "../main/tabs";
 
 const RunScenarioButton = () => {
   const { t } = useTranslation();
@@ -110,9 +111,9 @@ const RunScenarioButton = () => {
         setIsScenarioRunCompleted(true);
         // Land the user on the analysis tab so the map/chart toggle and the
         // newly-generated geodata are visible the moment the save dialog
-        // closes. Without this they stay on selectedTab=0 (Input Selection)
-        // and only see the toggle after navigating away and back.
-        setSelectedTab(1);
+        // closes. Without this they stay on the Parameters tab (Input
+        // Selection) and only see the toggle after navigating away and back.
+        setSelectedTab(TABS.RISK);
         if (response.result.data.scenarioId) {
           setSaveDialog({
             open: true,

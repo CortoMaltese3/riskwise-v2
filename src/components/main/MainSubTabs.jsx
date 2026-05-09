@@ -6,6 +6,7 @@ import { Box, Button, Tabs, Tab, Paper } from "@mui/material";
 import useUIStore from "../../store/useUIStore";
 import { useMapTools } from "../../utils/mapTools";
 import { layoutTransition } from "../../theme/theme";
+import { TABS, TAB_CONFIG, RISK_SUB_TABS } from "./tabs";
 
 const MainSubTabs = () => {
   const activeViewControl = useUIStore((s) => s.activeViewControl);
@@ -16,42 +17,44 @@ const MainSubTabs = () => {
   const { handleSaveImage, handleSaveMap, handleAddToOutput } = useMapTools();
   const { t } = useTranslation();
 
-  const subTabsMap = {
-    0: [], // Subtabs for "Parameters section"
-    1: [
-      t("main_subsection_title_risk"),
-      t("main_subsection_title_adaptation"),
-      t("main_subsection_title_save_scenario"),
-      activeViewControl === "display_map"
-        ? t("main_subsection_title_save_map")
-        : t("main_subsection_title_save_chart"), // Dynamically change label
-    ],
-    2: [], // Subtabs for "Macroeconomic section"
-    3: [], // Subtabs for "Outputs (reporting) section"
-  };
-
   const handleSubTabChange = (event, newValue) => {
     setSelectedSubTab(newValue);
-    // Set the active vew to display_chart if Economic & Non-Economic tab is selected.
-    // The display_map is not currently available for this tab.
-    if (newValue === 1) {
+    // Set the active view to display_chart if the Adaptation sub-tab is
+    // selected on the Risk tab. The display_map is not currently
+    // available for that sub-tab.
+    if (newValue === RISK_SUB_TABS.ADAPTATION) {
       setActiveViewControl("display_chart");
     }
   };
 
   const handleButtonClick = (index) => {
     if (activeViewControl === "display_map") {
-      return index === 2 ? handleAddToOutput() : handleSaveMap();
+      return index === RISK_SUB_TABS.SAVE_SCENARIO ? handleAddToOutput() : handleSaveMap();
     } else if (activeViewControl === "display_chart") {
       return handleSaveImage();
     }
     // Do nothing if activeViewControl is not "display_map" or "display_chart"
   };
 
-  const subTabs = subTabsMap[selectedTab];
-  if (!subTabs) {
+  // Sub-tabs come from the per-tab config, with the Risk tab additionally
+  // exposing two action buttons (Save Scenario / Save Map|Chart) rendered
+  // inline at fixed indices defined in RISK_SUB_TABS.
+  const configSubTabs = TAB_CONFIG[selectedTab]?.subTabs ?? [];
+  if (configSubTabs.length === 0) {
     return null; // This main tab does not have subtabs
   }
+
+  const tabLabels = configSubTabs.map((s) => t(s.labelKey));
+  const buttonLabels =
+    selectedTab === TABS.RISK
+      ? [
+          t("main_subsection_title_save_scenario"),
+          activeViewControl === "display_map"
+            ? t("main_subsection_title_save_map")
+            : t("main_subsection_title_save_chart"),
+        ]
+      : [];
+  const subTabs = [...tabLabels, ...buttonLabels];
 
   return (
     <Paper
@@ -93,10 +96,19 @@ const MainSubTabs = () => {
       >
         {subTabs.map((label, index) =>
           // Conditionally render a button instead of a tab for "+ Save Scenario" and "Save to Map"
-          index === 2 || index === 3 ? (
+          index === RISK_SUB_TABS.SAVE_SCENARIO || index === RISK_SUB_TABS.SAVE_MAP_OR_CHART ? (
             <Box
               key={index}
-              sx={{ position: "absolute", top: 0, right: index === 2 ? 100 : index === 3 ? 0 : 8 }}
+              sx={{
+                position: "absolute",
+                top: 0,
+                right:
+                  index === RISK_SUB_TABS.SAVE_SCENARIO
+                    ? 100
+                    : index === RISK_SUB_TABS.SAVE_MAP_OR_CHART
+                      ? 0
+                      : 8,
+              }}
             >
               <Button
                 variant="contained"

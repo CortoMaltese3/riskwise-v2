@@ -37,7 +37,7 @@ const setStateBag = {
   isScenarioRunCompleted: false,
   scenarioRunCode: "",
   selectedSubTab: 0,
-  selectedTab: 1,
+  selectedTab: "risk",
   setSelectedSubTab: vi.fn(),
   setActiveViewControl: vi.fn(),
   setAlertMessage: vi.fn(),

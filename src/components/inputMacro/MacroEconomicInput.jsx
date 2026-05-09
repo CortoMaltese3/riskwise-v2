@@ -8,11 +8,12 @@ import Sector from "./Sector";
 import MacroEconomicVariable from "./MacroEconomicVariable";
 import Scenario from "./Scenario";
 import useUIStore from "../../store/useUIStore";
+import { TABS } from "../main/tabs";
 
 const MacroEconomicInput = () => {
   const selectedTab = useUIStore((s) => s.selectedTab);
 
-  if (!(selectedTab === 2)) {
+  if (!(selectedTab === TABS.MACRO)) {
     return null;
   }
 

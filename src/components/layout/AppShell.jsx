@@ -24,8 +24,15 @@ import HorizontalSplit from "./primitives/HorizontalSplit";
 import FixedColumn from "./primitives/FixedColumn";
 import ScrollableRegion from "./primitives/ScrollableRegion";
 import { useMacroTools } from "../../utils/macroTools";
+import { TABS, RISK_SUB_TABS, isValidTab } from "../main/tabs";
 
-const sectionToTab = { home: 0, risk: 1, macro: 2, workspace: 3, settings: 0 };
+const sectionToTab = {
+  home: TABS.PARAMETERS,
+  risk: TABS.RISK,
+  macro: TABS.MACRO,
+  workspace: TABS.REPORTS,
+  settings: TABS.PARAMETERS,
+};
 
 const RISK_LEFT_PANEL_WIDTH = 280;
 const RISK_RESULTS_PANEL_WIDTH = 260;
@@ -35,7 +42,9 @@ export const RiskAssessmentView = () => {
   const { t } = useTranslation();
   const selectedTab = useUIStore((s) => s.selectedTab);
   const selectedSubTab = useUIStore((s) => s.selectedSubTab);
-  const showRunButton = selectedTab === 0 || (selectedTab === 1 && selectedSubTab === 0);
+  const showRunButton =
+    selectedTab === TABS.PARAMETERS ||
+    (selectedTab === TABS.RISK && selectedSubTab === RISK_SUB_TABS.RISK);
   return (
     <HorizontalSplit>
       <FixedColumn width={RISK_LEFT_PANEL_WIDTH}>
@@ -193,7 +202,7 @@ const AppShell = () => {
 
   useEffect(() => {
     const tab = sectionToTab[activeSection];
-    if (typeof tab === "number") setSelectedTab(tab);
+    if (isValidTab(tab)) setSelectedTab(tab);
   }, [activeSection, setSelectedTab]);
 
   const Section = sectionComponents[activeSection] || HomeView;
