@@ -10,9 +10,9 @@ import useUIStore from "../../store/useUIStore";
 import { RISK_SUB_TABS } from "../main/tabs";
 
 const allControls = [
+  { id: "display_parameters", icon: <InputIcon /> },
   { id: "display_map", icon: <MapIcon /> },
   { id: "display_chart", icon: <BarChartIcon /> },
-  { id: "display_parameters", icon: <InputIcon /> },
 ];
 
 const MainViewControls = () => {
