@@ -66,6 +66,7 @@ export const useReportTools = () => {
   } = useUIStore.getState();
   const { setIsScenarioRunCompleted } = useResultsStore.getState();
   const {
+    setSelectedAppOption,
     setSelectedCountry,
     setSelectedHazard,
     setSelectedScenario,
@@ -76,6 +77,7 @@ export const useReportTools = () => {
     setIsValidHazard,
     setIsValidExposure,
     setScenarioRunCode,
+    setSelectedScenarioRunCode,
   } = useWorkspaceStore.getState();
 
   const fetchReports = async () => {
@@ -114,7 +116,9 @@ export const useReportTools = () => {
       const scenario = data.scenario;
       setSelectedReport(toReport(scenario));
 
+      setSelectedAppOption(scenario.is_era ? "era" : "custom");
       setScenarioRunCode(id);
+      setSelectedScenarioRunCode(id);
       setIsScenarioRunCompleted(true);
       setSelectedCountry(scenario.country);
       setSelectedHazard(scenario.hazard_type);
@@ -130,12 +134,13 @@ export const useReportTools = () => {
 
       setSelectedTimeHorizon([scenario.ref_year, scenario.future_year]);
       setSelectedAnnualGrowth(scenario.annual_growth ?? 0);
+      return true;
     } catch (error) {
       console.error("Error restoring scenario:", error);
       setAlertMessage(t("alert_message_report_tools_error_restore_report"));
       setAlertSeverity("error");
-    } finally {
       setAlertShowMessage(true);
+      return false;
     }
   };
 

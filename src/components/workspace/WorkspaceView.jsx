@@ -16,6 +16,7 @@ import InboxIcon from "@mui/icons-material/Inbox";
 
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
+import { useReportTools } from "../../utils/reportTools";
 import { enqueueToast } from "../../hooks/useToast";
 import ScrollableRegion from "../layout/primitives/ScrollableRegion";
 import ScenarioTable from "./ScenarioTable";
@@ -71,6 +72,7 @@ EmptyState.propTypes = { onStart: PropTypes.func.isRequired };
 const WorkspaceView = ({ initialScenarios }) => {
   const { t } = useTranslation();
   const setActiveSection = useUIStore((state) => state.setActiveSection);
+  const { restoreScenario } = useReportTools();
 
   const {
     scenarios,
@@ -125,8 +127,16 @@ const WorkspaceView = ({ initialScenarios }) => {
       } else if (result.reason !== "cancelled") {
         enqueueToast({ severity: "error", message: `PDF export failed: ${result.reason}` });
       }
+    } else if (action === "restore") {
+      const ok = await restoreScenario(row.id);
+      if (ok) {
+        setActiveSection("risk");
+        enqueueToast({
+          severity: "success",
+          message: t("alert_message_report_card_successful_restore"),
+        });
+      }
     }
-    // Restore action wired via Issue #79; no-op here.
   };
 
   const toggleAll = (checked) => {
