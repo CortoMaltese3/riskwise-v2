@@ -84,4 +84,6 @@ class RunFetchScenario(Command):
 
 
 if __name__ == "__main__":
-    RunFetchScenario.main()
+    import json
+
+    print(json.dumps(RunFetchScenario.main()))

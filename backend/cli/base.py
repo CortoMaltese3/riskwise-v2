@@ -102,12 +102,19 @@ class Command(ABC):
     # ------------------------------------------------------------------
     @classmethod
     def main(cls, argv: list[str] | None = None) -> dict[str, Any]:
-        """Decode ``argv[1]`` (if expected), run the command, print JSON.
+        """Decode ``argv[1]`` (if expected), run the command, return JSON.
 
         Returns the response envelope so callers (and tests) can assert
         on it. Subclasses with non-standard constructor signatures
         override this; the stock implementation handles the two
         common shapes: zero-arg constructors and single-dict constructors.
+
+        The legacy Electron subprocess contract — ``print(json.dumps(...))``
+        on stdout — lives in each script's ``if __name__ == "__main__":``
+        block. Keeping the print at the actual entry point (and out of the
+        shared base) lets tests call :py:meth:`main` without capturing
+        stdout, and keeps the ``backend/`` tree free of progress/debug
+        ``print`` calls outside CLI entry-points (issue #244).
         """
         argv = list(sys.argv if argv is None else argv)
         if cls.requires_request:
@@ -115,6 +122,4 @@ class Command(ABC):
             instance = cls(request)  # type: ignore[call-arg]
         else:
             instance = cls()
-        response = instance.run()
-        print(json.dumps(response))
-        return response
+        return instance.run()

@@ -416,7 +416,7 @@ class HazardHandler:
         .. code-block:: python
 
             final_df = base_handler.generate_hazard_report_dataset(hazard, "EGY", (10, 15, 20, 25))
-            print(final_df.head())
+            # ``final_df`` is a pandas DataFrame keyed by admin layer.
         """
         try:
             # Cast hazard data to a DataFrame

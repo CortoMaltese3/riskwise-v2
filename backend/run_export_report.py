@@ -108,4 +108,6 @@ class RunExportReport(Command):
 
 
 if __name__ == "__main__":
-    RunExportReport.main()
+    import json
+
+    print(json.dumps(RunExportReport.main()))

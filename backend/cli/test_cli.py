@@ -81,10 +81,15 @@ class TestCommand:
         assert result["data"] == []
         assert result["status"]["message"] == "oops: nope"
 
-    def test_main_prints_json_envelope_on_stdout(self, capsys):
+    def test_main_returns_envelope_without_writing_stdout(self, capsys):
+        # The stdout JSON contract is owned by each ``run_*.py``'s
+        # ``__main__`` block (issue #244); the base classmethod stays
+        # silent so in-process callers don't have to capture stdout.
         result = _OkCommand.main([])
         captured = capsys.readouterr()
-        assert json.loads(captured.out) == result
+        assert result["status"]["code"] == StatusCode.SUCCESS
+        assert result["data"] == {"value": 42}
+        assert captured.out == ""
 
 
 # Regression tests: every concrete ``run_*.py`` command exposes its

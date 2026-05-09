@@ -59,4 +59,4 @@ class RunFetchWaterfall(Command):
 
 
 if __name__ == "__main__":
-    RunFetchWaterfall.main()
+    print(json.dumps(RunFetchWaterfall.main()))

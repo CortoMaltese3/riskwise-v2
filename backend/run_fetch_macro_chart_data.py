@@ -74,4 +74,6 @@ class RunFetchMacroChartData(Command):
 
 
 if __name__ == "__main__":
-    RunFetchMacroChartData.main()
+    import json
+
+    print(json.dumps(RunFetchMacroChartData.main()))
