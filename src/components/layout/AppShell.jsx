@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 
@@ -120,13 +120,18 @@ const MacroeconomicView = () => {
   const credOutputData = useResultsStore((s) => s.credOutputData);
   const { loadCREDOutputData } = useMacroTools();
 
-  // Sidebar-driven nav doesn't go through MainTabs, so the legacy tab-change
-  // CRED fetch trigger never fires. Fetch on first activation if the cache
-  // is empty.
+  // Sidebar-driven nav lazy-fetches CRED data on first activation if the
+  // cache is empty. The ref guards against duplicate in-flight requests when
+  // the user toggles sections quickly (the effect can re-run before the
+  // first fetch resolves and updates the cache). See #248.
+  const credFetchInFlight = useRef(false);
   useEffect(() => {
-    if (!credOutputData || credOutputData.length === 0) {
-      loadCREDOutputData();
-    }
+    if (credOutputData && credOutputData.length > 0) return;
+    if (credFetchInFlight.current) return;
+    credFetchInFlight.current = true;
+    Promise.resolve(loadCREDOutputData()).finally(() => {
+      credFetchInFlight.current = false;
+    });
   }, [credOutputData, loadCREDOutputData]);
 
   return (

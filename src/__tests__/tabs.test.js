@@ -89,12 +89,13 @@ describe("TABS / TAB_CONFIG", () => {
   });
 
   describe("RISK_SUB_TABS", () => {
-    it("documents the four risk sub-tab indices", () => {
+    it("documents the risk sub-tab indices (real tabs only)", () => {
+      // The Save Scenario / Save Map|Chart actions used to live at indices
+      // 2 and 3 inside `<Tabs>`; #249 moved them to the SubTabActions
+      // sibling toolbar, so only the real tabs remain here.
       expect(RISK_SUB_TABS).toEqual({
         RISK: 0,
         ADAPTATION: 1,
-        SAVE_SCENARIO: 2,
-        SAVE_MAP_OR_CHART: 3,
       });
       expect(Object.isFrozen(RISK_SUB_TABS)).toBe(true);
     });

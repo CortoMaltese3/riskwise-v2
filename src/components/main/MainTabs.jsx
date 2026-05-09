@@ -7,11 +7,8 @@ import MacroIcon from "@mui/icons-material/Assessment";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import TuneIcon from "@mui/icons-material/Tune";
 
-import { useMacroTools } from "../../utils/macroTools";
-import { useReportTools } from "../../utils/reportTools";
 import MainSubTabs from "./MainSubTabs";
 import { TABS, ORDERED_TABS, TAB_CONFIG } from "./tabs";
-import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { TOP_BAR_HEIGHT } from "../layout/Sidebar";
@@ -28,26 +25,18 @@ const TAB_ICONS = {
 
 const MainTabs = () => {
   const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
-  const credOutputData = useResultsStore((s) => s.credOutputData);
   const selectedTab = useUIStore((s) => s.selectedTab);
   const setSelectedTab = useUIStore((s) => s.setSelectedTab);
   const setSelectedSubTab = useUIStore((s) => s.setSelectedSubTab);
-  const { fetchReports } = useReportTools();
-  const { loadCREDOutputData } = useMacroTools();
   const { t } = useTranslation();
 
-  const onFetchReportsHandler = async () => {
-    await fetchReports();
-  };
-
+  // Click handler is intentionally fetch-free: it only updates tab state.
+  // Tab-entry data fetches (CRED data for Macro, scenario list for Reports)
+  // live in the views that consume them, keyed off mount/activation. This
+  // keeps caching policy in one place per dataset rather than splitting it
+  // between this handler and the store's setSelectedTab. See #248.
   const handleTabChange = (event, newValue) => {
     setSelectedTab(newValue);
-    if (newValue === TABS.REPORTS) {
-      onFetchReportsHandler();
-    }
-    if (newValue === TABS.MACRO && (!credOutputData || credOutputData.length === 0)) {
-      loadCREDOutputData();
-    }
     setSelectedSubTab(0);
   };
 
