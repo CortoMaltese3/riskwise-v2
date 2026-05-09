@@ -46,7 +46,7 @@ class LoggerConfig:
     def __init__(self, logger_types):
         try:
             self.load_config()
-        except Exception as e:
+        except (OSError, ValueError, json.JSONDecodeError) as e:
             raise RuntimeError(f"Error loading logging configuration: {e}") from e
 
         self.loggers = []
@@ -106,7 +106,7 @@ class LoggerConfig:
             file_handler.setFormatter(logging.Formatter(self.format))
             root_logger.addHandler(file_handler)
             self.loggers.append(file_handler)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             raise RuntimeError(f"Error setting up file logging: {e}") from e
 
     def setup_console_logging(self):
@@ -125,7 +125,7 @@ class LoggerConfig:
             console_handler.setLevel(self.level)
             console_handler.setFormatter(logging.Formatter(self.format))
             self.loggers.append(console_handler)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             raise RuntimeError(f"Error setting up console logging: {e}") from e
 
     def log(self, level, message):
@@ -154,5 +154,5 @@ class LoggerConfig:
                 log_function = getattr(logging, level.lower(), logging.info)
                 log_function(message)
                 logger.removeHandler(handler)  # Prevent duplicate logging
-            except Exception as e:
+            except (OSError, ValueError, AttributeError) as e:
                 raise RuntimeError(f"Error during logging: {e}") from e

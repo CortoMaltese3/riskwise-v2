@@ -21,6 +21,8 @@ import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 
+import duckdb
+
 from backend.db.connection import DB_FILE_NAME, get_connection, resolve_db_path
 from backend.logging_config import get_logger
 from backend.provenance import app_version
@@ -186,7 +188,7 @@ def _merge_scenarios(imported_db: Path) -> dict[str, int]:
                         to_insert,
                     )
                     conn.execute("COMMIT")
-                except Exception:
+                except duckdb.Error:
                     conn.execute("ROLLBACK")
                     raise
         finally:
@@ -209,7 +211,9 @@ def build_export_to_temp() -> tuple[Path, dict[str, object]]:
     output = tmp_dir / f"riskwise-workspace-{stamp}{WORKSPACE_ARCHIVE_SUFFIX}"
     try:
         manifest = export_workspace(output)
-    except Exception:
+    except BaseException:
+        # Tempdir cleanup runs for every failure including worker
+        # cancellation; the original exception is re-raised unchanged.
         shutil.rmtree(tmp_dir, ignore_errors=True)
         raise
     return output, manifest

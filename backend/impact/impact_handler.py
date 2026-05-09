@@ -109,7 +109,7 @@ def _calculate_via_engine(
         cc_exposure = build_exposures(exposure)
         cc_impfset = build_impfset(impfset_specs)
         return run_impact(cc_hazard, cc_exposure, cc_impfset, save_mat=True)
-    except Exception as exception:
+    except (AttributeError, TypeError, ValueError, RuntimeError, ImportError) as exception:
         logger.log(
             "error",
             f"An error occurred during engine impact calculation: More info: {exception}",
@@ -360,7 +360,7 @@ class ImpactHandler:
             map_data_filepath = DATA_TEMP_DIR / "risks_geodata.json"
             with open(map_data_filepath, "w", encoding="utf-8") as f:
                 json.dump(impact_geojson, f)
-        except Exception as exception:
+        except (AttributeError, KeyError, TypeError, ValueError, OSError) as exception:
             logger.log("error", f"An unexpected error occurred. More info: {exception}")
 
     def generate_impact_report_dataset(
@@ -436,7 +436,7 @@ class ImpactHandler:
 
                     # Add the admin column for this layer to final_gdf
                     final_gdf[f"admin{layer}"] = joined_gdf["name"]
-                except Exception as e:
+                except (KeyError, ValueError, TypeError, OSError) as e:
                     logger.log("error", f"Error processing layer {layer}: {str(e)}")
                     # Continue with the next layer if an error occurs
                     continue
@@ -467,7 +467,7 @@ class ImpactHandler:
 
         except AttributeError as e:
             logger.log("error", f"Invalid Impact object: {str(e)}")
-        except Exception as e:
+        except (KeyError, ValueError, TypeError) as e:
             logger.log("error", f"An unexpected error occurred: {str(e)}")
 
         return pd.DataFrame()  # Return an empty DataFrame in case of failure

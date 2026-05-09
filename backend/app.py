@@ -110,6 +110,7 @@ from backend.models import (
     WorkspaceImportRequest,
     WorkspaceImportResponse,
 )
+from backend.models.errors import RiskWiseError
 from backend.progress import ProgressEvent, progress_callback_var
 from backend.provenance import ManifestError, verify_manifest
 
@@ -389,6 +390,18 @@ async def _validation_exception_handler(
     )
 
 
+@app.exception_handler(RiskWiseError)
+async def _domain_exception_handler(_request: Request, exc: RiskWiseError) -> JSONResponse:
+    # Boundary translation for the project's domain exception taxonomy
+    # (architecture rule #7): every ``RiskWiseError`` subclass advertises
+    # a ``code`` and ``http_status`` so the frontend switches on a stable
+    # snake_case identifier instead of parsing free-form Python messages.
+    return JSONResponse(
+        status_code=exc.http_status,
+        content=_make_error(exc.code, exc.message, str(exc) if str(exc) != exc.message else None),
+    )
+
+
 @app.exception_handler(Exception)
 async def _unhandled_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
     # Scenario 5 (job isolation): any unhandled exception from a handler
@@ -495,7 +508,7 @@ async def _execute_scenario(
                     **_make_error("cancelled", "Scenario run was cancelled"),
                 }
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - SSE stream isolation boundary
             # Scenario 5: CLIMADA blew up but FastAPI must stay alive. The
             # structured error goes out on the SSE stream; no other job is
             # affected because we never share state across jobs.

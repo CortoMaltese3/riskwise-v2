@@ -216,7 +216,11 @@ def build_export_to_temp(scenario_id: str) -> tuple[Path, str]:
     try:
         snapshots = get_scenario_snapshots_with_image(scenario_id)
         _write_archive(output, detail, snapshots)
-    except Exception:
+    except BaseException:
+        # Tempdir cleanup must run for every failure mode, including
+        # KeyboardInterrupt and worker cancellation, before the error
+        # propagates. The original exception is re-raised unchanged so
+        # the caller still sees the precise type.
         shutil.rmtree(tmp_dir, ignore_errors=True)
         raise
     return output, suggested_filename

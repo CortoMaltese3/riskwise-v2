@@ -57,7 +57,7 @@ class RunFetchMacroChartData(Command):
                     "message": "Macroeconomic chart data fetched successfully.",
                 },
             }
-        except Exception as e:
+        except (OSError, ValueError, KeyError, RuntimeError) as e:
             self.logger.log("error", f"An error occurred: {str(e)}")
             return self.error_envelope(
                 f"An error occurred fetching macro chart data. More info: {e}"
@@ -74,4 +74,6 @@ class RunFetchMacroChartData(Command):
 
 
 if __name__ == "__main__":
-    RunFetchMacroChartData.main()
+    import json
+
+    print(json.dumps(RunFetchMacroChartData.main()))

@@ -64,7 +64,7 @@ def configure_logging(
     for handle in _owned_files:
         try:
             handle.close()
-        except Exception:
+        except OSError:
             pass
     _owned_files.clear()
 
@@ -131,14 +131,15 @@ class _MultiStream:
         for stream in self._streams:
             try:
                 stream.write(message)
-            except Exception:
-                # A broken stream (closed file, detached stderr during
-                # shutdown) must not break the remaining sinks.
+            except (OSError, ValueError):
+                # A broken stream (closed file -> ValueError, detached
+                # stderr during shutdown -> OSError/BrokenPipeError) must
+                # not break the remaining sinks.
                 pass
 
     def flush(self) -> None:
         for stream in self._streams:
             try:
                 stream.flush()
-            except Exception:
+            except (OSError, ValueError):
                 pass
