@@ -502,6 +502,28 @@ const downloadAndInstallEngine = async (loaderWindow) => {
       );
     }
 
+    // Defense-in-depth: the manifest signature was already verified above by
+    // `fetchVerifiedEngineManifest`, so `manifest.sha256` is trusted. Hashing
+    // the on-disk archive here closes the gap between "signed manifest" and
+    // "trusted bytes on disk" — a compromised CDN or TLS-inspecting proxy
+    // corrupting the download is caught before we shell out to `tar -xf`.
+    // Mirrors the resumable downloader's pattern (see `downloadEngineWithResume`).
+    updateLoaderMessage("Verifying engine archive integrity...");
+    const expectedSha256 = String(manifest.sha256 || "").toLowerCase();
+    const actualSha256 = (await sha256File(archivePath)).toLowerCase();
+    if (!expectedSha256 || actualSha256 !== expectedSha256) {
+      log.error(
+        `[electron] engine archive SHA-256 mismatch expected=${expectedSha256} actual=${actualSha256}`
+      );
+      try {
+        fs.unlinkSync(archivePath);
+      } catch (unlinkErr) {
+        log.warn(`[electron] failed to delete tampered archive: ${unlinkErr.message}`);
+      }
+      throw new Error("engine download integrity check failed");
+    }
+    log.info("[electron] engine archive SHA-256 matches manifest");
+
     updateLoaderMessage("Extracting engine files...");
     log.info("[electron] Starting extraction...");
 
