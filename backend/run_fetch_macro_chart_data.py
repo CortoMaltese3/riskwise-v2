@@ -1,17 +1,19 @@
-import json
-import sys
+"""Fetch macroeconomic chart data for the FastAPI endpoint."""
+
 from time import time
 
 from backend.base_handler import BaseHandler
-from backend.logger_config import LoggerConfig
+from backend.cli import Command, StatusCode
 from backend.macroeconomic.macroeconomic_handler import MacroeconomicHandler
 
+_EMPTY_CHART = {"years": [], "datasets": [], "title": ""}
 
-class RunFetchMacroChartData:
+
+class RunFetchMacroChartData(Command):
     def __init__(self, request):
+        super().__init__()
         self.base_handler = BaseHandler()
         self.macro_handler = MacroeconomicHandler()
-        self.logger = LoggerConfig(logger_types=["file"])
         self.request = request
 
         self.country_name = str(request.get("countryName", "")).strip()
@@ -22,19 +24,16 @@ class RunFetchMacroChartData:
         self.dataset_id = str(dataset_id).strip() if dataset_id else None
 
     def valid_request(self) -> bool:
-        for field in ["countryName", "scenario", "sector", "variable"]:
+        for field in ("countryName", "scenario", "sector", "variable"):
             if not self.request.get(field):
                 self.logger.log("error", f"Missing required field: {field}")
                 return False
         return True
 
-    def run_fetch_macro_chart_data(self) -> dict:
+    def execute(self) -> dict:
         initial_time = time()
         if not self.valid_request():
-            return {
-                "data": {"years": [], "datasets": [], "title": ""},
-                "status": {"code": 4000, "message": "Invalid request: missing required fields"},
-            }
+            return self.error_envelope("Invalid request: missing required fields")
         try:
             chart = self.macro_handler.get_chart_data(
                 country=self.country_name,
@@ -53,21 +52,26 @@ class RunFetchMacroChartData:
             )
             return {
                 "data": {"years": chart["years"], "datasets": chart["datasets"], "title": title},
-                "status": {"code": 2000, "message": "Macroeconomic chart data fetched successfully."},
+                "status": {
+                    "code": StatusCode.SUCCESS,
+                    "message": "Macroeconomic chart data fetched successfully.",
+                },
             }
         except Exception as e:
             self.logger.log("error", f"An error occurred: {str(e)}")
-            return {
-                "data": {"years": [], "datasets": [], "title": ""},
-                "status": {
-                    "code": 4000,
-                    "message": f"An error occurred fetching macro chart data. More info: {str(e)}",
-                },
-            }
+            return self.error_envelope(
+                f"An error occurred fetching macro chart data. More info: {e}"
+            )
+
+    def error_envelope(self, exc):
+        return {
+            "data": dict(_EMPTY_CHART),
+            "status": {"code": StatusCode.ERROR, "message": str(exc)},
+        }
+
+    def run_fetch_macro_chart_data(self) -> dict:
+        return self.run()
 
 
 if __name__ == "__main__":
-    req = json.loads(sys.argv[1])
-    runner = RunFetchMacroChartData(req)
-    resp = runner.run_fetch_macro_chart_data()
-    print(json.dumps(resp))
+    RunFetchMacroChartData.main()

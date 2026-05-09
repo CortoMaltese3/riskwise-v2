@@ -26,7 +26,9 @@ from time import time
 from typing import Any
 
 import numpy as np
+
 from backend.base_handler import BaseHandler
+from backend.cli import StatusCode
 from backend.constants import COUNTRIES_DIR, DATA_ENTITIES_DIR, DATA_HAZARDS_DIR, DATA_TEMP_DIR
 from backend.costben.costben_handler import CostBenefitHandler
 from backend.countries.loader import CountryConfigError, load_country_config
@@ -39,6 +41,7 @@ from backend.logger_config import LoggerConfig
 from backend.provenance import REPRODUCIBILITY_NOTE, new_random_seed
 from backend.provenance import collect as collect_provenance
 from backend.scenario_strategy import ScenarioDataStrategy, make_strategy
+
 
 def _resolve_country_config_path(country_code: str) -> Path:
     """Return the ``config.json`` path for ``country_code`` (built-in or custom).
@@ -120,7 +123,7 @@ class Status:
     """Helper class to handle status codes and messages."""
 
     def __init__(self):
-        self.code = 2000
+        self.code = StatusCode.SUCCESS
         self.message = "Scenario run successfully."
 
     def set_error(self, code: int, message: str):
@@ -175,7 +178,7 @@ class RunScenario:
             config = load_country_config(self.request_data.country_code)
             return float(config.discount_rate)
         except Exception as exception:
-            status_code = 3000
+            status_code = StatusCode.VALIDATION_ERROR
             status_message = (
                 f"An error occurred while getting ERA discount rate. More info: {exception}"
             )
@@ -471,7 +474,7 @@ class RunScenario:
                 self._execute(strategy)
         except Exception as exception:
             mode = "ERA" if self.request_data.is_era else "custom"
-            status_code = 3000
+            status_code = StatusCode.VALIDATION_ERROR
             status_message = (
                 f"An error occurred while running {mode} scenario. More info: {exception}"
             )
@@ -500,7 +503,7 @@ class RunScenario:
         self.base_handler.create_results_metadata_file(metadata)
 
         scenario_id: str | None = None
-        if self.status.code == 2000:
+        if self.status.code == StatusCode.SUCCESS:
             scenario_id = self._persist_to_db(map_title, metadata)
             if cache_key is not None and not cache_hit:
                 self._store_in_computation_cache(cache_key)
