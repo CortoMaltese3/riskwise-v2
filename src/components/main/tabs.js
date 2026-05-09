@@ -18,15 +18,14 @@ export const TABS = Object.freeze({
 });
 
 // Sub-tab identifiers for tabs that have them. Sub-tabs remain index-keyed
-// in the runtime (selectedSubTab is an integer) because the Risk sub-tab
-// row mixes real tabs with action buttons (#247 keeps that behaviour).
-// These constants document the indices so callers don't repeat magic
-// numbers.
+// in the runtime (selectedSubTab is an integer); these constants document
+// the indices so callers don't repeat magic numbers. The Save Scenario /
+// Save Map|Chart actions used to live at indices 2 and 3 inside `<Tabs>`,
+// but #249 moved them out into a sibling toolbar (`SubTabActions`), so
+// only the real tabs remain here.
 export const RISK_SUB_TABS = Object.freeze({
   RISK: 0,
   ADAPTATION: 1,
-  SAVE_SCENARIO: 2,
-  SAVE_MAP_OR_CHART: 3,
 });
 
 // Per-tab configuration consumed by MainTabs (rendering order), the UI

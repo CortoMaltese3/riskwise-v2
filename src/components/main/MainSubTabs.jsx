@@ -1,20 +1,23 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Button, Tabs, Tab, Paper } from "@mui/material";
+import { Box, Tabs, Tab, Paper } from "@mui/material";
 
 import useUIStore from "../../store/useUIStore";
-import { useMapTools } from "../../utils/mapTools";
-import { layoutTransition } from "../../theme/theme";
-import { TABS, TAB_CONFIG, RISK_SUB_TABS } from "./tabs";
+import SubTabActions from "./SubTabActions";
+import { TAB_CONFIG, RISK_SUB_TABS } from "./tabs";
 
+// Renders the sub-tab strip beneath the main tabs. Sub-tabs come from the
+// per-tab config; the Risk tab additionally exposes a sibling toolbar
+// (`<SubTabActions>`) with Save Scenario / Save Map | Save Chart buttons.
+// Those buttons used to live inside `<Tabs>` with absolute positioning
+// (#249); keeping `<Tabs>` tab-only fixes the a11y issue (toolbar buttons
+// were being announced as tabs) and drops the layout hack.
 const MainSubTabs = () => {
-  const activeViewControl = useUIStore((s) => s.activeViewControl);
   const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const selectedTab = useUIStore((s) => s.selectedTab);
   const setSelectedSubTab = useUIStore((s) => s.setSelectedSubTab);
   const setActiveViewControl = useUIStore((s) => s.setActiveViewControl);
-  const { handleSaveImage, handleSaveMap, handleAddToOutput } = useMapTools();
   const { t } = useTranslation();
 
   const handleSubTabChange = (event, newValue) => {
@@ -27,34 +30,10 @@ const MainSubTabs = () => {
     }
   };
 
-  const handleButtonClick = (index) => {
-    if (activeViewControl === "display_map") {
-      return index === RISK_SUB_TABS.SAVE_SCENARIO ? handleAddToOutput() : handleSaveMap();
-    } else if (activeViewControl === "display_chart") {
-      return handleSaveImage();
-    }
-    // Do nothing if activeViewControl is not "display_map" or "display_chart"
-  };
-
-  // Sub-tabs come from the per-tab config, with the Risk tab additionally
-  // exposing two action buttons (Save Scenario / Save Map|Chart) rendered
-  // inline at fixed indices defined in RISK_SUB_TABS.
   const configSubTabs = TAB_CONFIG[selectedTab]?.subTabs ?? [];
   if (configSubTabs.length === 0) {
     return null; // This main tab does not have subtabs
   }
-
-  const tabLabels = configSubTabs.map((s) => t(s.labelKey));
-  const buttonLabels =
-    selectedTab === TABS.RISK
-      ? [
-          t("main_subsection_title_save_scenario"),
-          activeViewControl === "display_map"
-            ? t("main_subsection_title_save_map")
-            : t("main_subsection_title_save_chart"),
-        ]
-      : [];
-  const subTabs = [...tabLabels, ...buttonLabels];
 
   return (
     <Paper
@@ -67,71 +46,42 @@ const MainSubTabs = () => {
         bgcolor: "primary.light",
       }}
     >
-      <Tabs
-        value={selectedSubTab}
-        onChange={handleSubTabChange}
-        aria-label={`sub navigation tabs for main tab ${selectedTab}`}
-        textColor="inherit"
-        indicatorColor="secondary"
-        variant="fullWidth"
-        centered
-        sx={{
-          minHeight: 24,
-          // Selected tab keeps white-on-primary.main; primary.main was darkened
-          // in #121 (now 4.94:1 with white). Unselected tab switched from white
-          // to text.primary because white-on-primary.light was 1.87:1.
-          ".Mui-selected": { bgcolor: "primary.main", color: "common.white" },
-          ".MuiTab-root": {
-            color: "text.primary",
-            fontSize: "0.875rem",
-            minHeight: 24,
-            py: 0.75,
-            px: 1.5,
-          },
-          ".MuiTabs-indicator": {
-            height: 2,
-          },
-          ".MuiTab-root:not(.Mui-selected)": { bgcolor: "primary.light" },
-        }}
-      >
-        {subTabs.map((label, index) =>
-          // Conditionally render a button instead of a tab for "+ Save Scenario" and "Save to Map"
-          index === RISK_SUB_TABS.SAVE_SCENARIO || index === RISK_SUB_TABS.SAVE_MAP_OR_CHART ? (
-            <Box
-              key={index}
-              sx={{
-                position: "absolute",
-                top: 0,
-                right:
-                  index === RISK_SUB_TABS.SAVE_SCENARIO
-                    ? 100
-                    : index === RISK_SUB_TABS.SAVE_MAP_OR_CHART
-                      ? 0
-                      : 8,
-              }}
-            >
-              <Button
-                variant="contained"
-                size="small"
-                sx={{
-                  bgcolor: "secondary.light",
-                  transition: layoutTransition(["transform"]),
-                  "&:active": {
-                    transform: "scale(0.96)",
-                  },
-                  "&:hover": { bgcolor: "secondary.main" },
-                  textTransform: "none",
-                }}
-                onClick={() => handleButtonClick(index)}
-              >
-                {label}
-              </Button>
-            </Box>
-          ) : (
-            <Tab key={index} label={label} sx={{ minHeight: 24 }} /> // Apply the reduced height
-          )
-        )}
-      </Tabs>
+      <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Tabs
+            value={selectedSubTab}
+            onChange={handleSubTabChange}
+            aria-label={`sub navigation tabs for main tab ${selectedTab}`}
+            textColor="inherit"
+            indicatorColor="secondary"
+            variant="fullWidth"
+            centered
+            sx={{
+              minHeight: 24,
+              // Selected tab keeps white-on-primary.main; primary.main was darkened
+              // in #121 (now 4.94:1 with white). Unselected tab switched from white
+              // to text.primary because white-on-primary.light was 1.87:1.
+              ".Mui-selected": { bgcolor: "primary.main", color: "common.white" },
+              ".MuiTab-root": {
+                color: "text.primary",
+                fontSize: "0.875rem",
+                minHeight: 24,
+                py: 0.75,
+                px: 1.5,
+              },
+              ".MuiTabs-indicator": {
+                height: 2,
+              },
+              ".MuiTab-root:not(.Mui-selected)": { bgcolor: "primary.light" },
+            }}
+          >
+            {configSubTabs.map((subTab, index) => (
+              <Tab key={subTab.key ?? index} label={t(subTab.labelKey)} sx={{ minHeight: 24 }} />
+            ))}
+          </Tabs>
+        </Box>
+        <SubTabActions />
+      </Box>
     </Paper>
   );
 };
