@@ -4,12 +4,15 @@ import { useTranslation } from "react-i18next";
 import { Box, IconButton, Typography, Card, CardContent, Divider } from "@mui/material";
 import MapIcon from "@mui/icons-material/Map";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import InputIcon from "@mui/icons-material/Input";
 
 import useUIStore from "../../store/useUIStore";
+import { RISK_SUB_TABS } from "../main/tabs";
 
 const allControls = [
   { id: "display_map", icon: <MapIcon /> },
   { id: "display_chart", icon: <BarChartIcon /> },
+  { id: "display_parameters", icon: <InputIcon /> },
 ];
 
 const MainViewControls = () => {
@@ -18,8 +21,12 @@ const MainViewControls = () => {
   const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const { t } = useTranslation();
 
+  // Adaptation hides both the map (#198) and the input-parameter editor
+  // (no sidebar on that sub-tab); only the chart toggle remains.
   const controls =
-    selectedSubTab === 1 ? allControls.filter((c) => c.id !== "display_map") : allControls;
+    selectedSubTab === RISK_SUB_TABS.ADAPTATION
+      ? allControls.filter((c) => c.id === "display_chart")
+      : allControls;
 
   const handleSelect = (control) => {
     setActiveViewControl(control);

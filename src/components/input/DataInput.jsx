@@ -34,8 +34,8 @@ const DataInput = () => {
           sit directly on the page surface (matching the Macroeconomic input
           panel) so the input column reads as a column of floating cards
           rather than a tinted panel containing them. */}
-      <Box sx={{ padding: 1.5 }}>
-        <Grid container spacing={1}>
+      <Box sx={{ padding: 1 }}>
+        <Grid container spacing={0.5}>
           <Grid item xs={12} data-tour="country-selector">
             <Country />
           </Grid>

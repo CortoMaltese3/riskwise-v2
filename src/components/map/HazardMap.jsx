@@ -173,15 +173,17 @@ const HazardMap = () => {
   };
 
   const RPButtonStyle = (rp) => ({
-    flexGrow: 0,
-    margin: 1,
-    minWidth: 7.5,
-    maxWidth: 7.5,
+    flex: "0 0 auto",
+    minWidth: 0,
+    px: 1,
     fontSize: "0.75rem",
+    whiteSpace: "nowrap",
     bgcolor: rp === activeRPLayer ? "primary.dark" : "primary.main",
     "&:hover": { bgcolor: "secondary.main" },
   });
 
+  // Right-anchored, gap-spaced row that wraps on narrow map widths so the
+  // group never overflows the map viewport or clips a long ``RP100`` label.
   const buttonContainerSx = {
     position: "absolute",
     top: 1.25,
@@ -189,6 +191,13 @@ const HazardMap = () => {
     zIndex: 1000,
     display: "flex",
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 0.5,
+    justifyContent: "flex-end",
+    // Bound width so flexWrap engages on narrow map widths instead of
+    // overflowing left of the relative-positioned MapContainer. The 2.5
+    // step matches `right: 1.25` doubled (a symmetric inset).
+    maxWidth: (theme) => `calc(100% - ${theme.spacing(2.5)})`,
   };
 
   const countryCoordinates = {

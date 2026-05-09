@@ -5,13 +5,12 @@ import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import ContextualTooltip from "../help/ContextualTooltip";
-import { TABS } from "../main/tabs";
 import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const Scenario = () => {
   const selectedScenario = useWorkspaceStore((s) => s.selectedScenario);
+  const openInputEditor = useUIStore((s) => s.openInputEditor);
   const setSelectedCard = useUIStore((s) => s.setSelectedCard);
-  const setSelectedTab = useUIStore((s) => s.setSelectedTab);
   const { t } = useTranslation();
   const [clicked, setClicked] = useState(false);
   const [cardState, setCardState] = useState("default");
@@ -26,7 +25,7 @@ const Scenario = () => {
 
   const handleClick = () => {
     setSelectedCard("scenario");
-    setSelectedTab(TABS.PARAMETERS);
+    openInputEditor();
   };
 
   useEffect(() => {

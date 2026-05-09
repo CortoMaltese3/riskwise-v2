@@ -123,7 +123,7 @@ const ExposureCard = () => {
       }}
     >
       <Typography variant="body1" color="text.primary" sx={{ textAlign: "center" }}>
-        {t(`card_exposure_${exposureCategoryMap[asset]}_${asset}`)}
+        {t(`input_exposure_${exposureCategoryMap[asset]}_${asset}`)}
       </Typography>
     </CardActionArea>
   );
