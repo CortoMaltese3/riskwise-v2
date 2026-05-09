@@ -178,7 +178,7 @@ const SnapshotCaptionField = ({ snapshot, onCommit, placeholder }) => {
       value={value}
       placeholder={placeholder}
       onChange={(e) => setValue(e.target.value)}
-      onBlur={() => onCommit(value)}
+      onBlur={(e) => onCommit(e.target.value)}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           e.preventDefault();

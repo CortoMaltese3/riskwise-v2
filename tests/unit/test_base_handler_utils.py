@@ -82,10 +82,13 @@ class TestUpdateProgress:
         from backend import progress as progress_mod
 
         logged: list[tuple[str, str]] = []
+        # structlog's BoundLogger exposes ``info`` directly — it does not
+        # delegate to a generic ``log(level, message)`` method, so patching
+        # the per-level entrypoint is the only way to intercept the calls.
         monkeypatch.setattr(
             progress_mod.logger,
-            "log",
-            lambda level, message: logged.append((level, message)),
+            "info",
+            lambda message: logged.append(("info", message)),
         )
 
         update_progress(75, "almost done")
