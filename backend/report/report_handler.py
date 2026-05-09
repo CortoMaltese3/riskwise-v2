@@ -1,4 +1,4 @@
-import os
+import getpass
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
@@ -120,7 +120,7 @@ class ReportHandler:
 
         ws.write("B14", "Report created by", bold_11_format)
         ws.write("B16", "User name", bold_11_format)
-        ws.write("C16", os.getlogin(), normal_11_format)
+        ws.write("C16", getpass.getuser(), normal_11_format)
         ws.write("B17", "Date", bold_11_format)
         ws.write("C17", datetime.now().strftime("%Y-%m-%d"), normal_11_format)
         ws.write("B18", "Time", bold_11_format)
