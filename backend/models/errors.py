@@ -136,3 +136,19 @@ class EngineError(RiskWiseError):
     code = "engine_error"
     http_status = 500
     message = "Engine computation failed."
+
+
+class UploadTooLargeError(RiskWiseError):
+    """A user-supplied upload (xlsx, ZIP) exceeds the configured size cap.
+
+    Raised by :func:`backend.uploads.enforce_upload_size_limit` before any
+    parsing or extraction runs, so that an oversized archive cannot drive
+    a zip-bomb-style decompression (ARCHITECTURE.md Area 18). Surfaces as
+    ``413 upload_too_large`` so the renderer can present a precise toast
+    rather than the generic ``data_load`` / ``http_error`` envelope it
+    would otherwise see for a 400.
+    """
+
+    code = "upload_too_large"
+    http_status = 413
+    message = "Uploaded file exceeds the maximum allowed size."

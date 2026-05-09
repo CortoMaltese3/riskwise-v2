@@ -12,6 +12,7 @@ Covers the acceptance criteria attached to the endpoint pytest list:
 from __future__ import annotations
 
 import json
+import os
 import zipfile
 from collections.abc import Generator
 from pathlib import Path
@@ -276,3 +277,53 @@ class TestValidateEndpoint:
         body = response.json()
         assert body["data"]["valid"] is False
         assert body["data"]["iso3"] == "KEN"
+
+
+class TestImportEndpointSizeCap:
+    """Issue #251 — Area-18 50 MiB upload guard on the import endpoint.
+
+    The handler-level happy-path coverage already lives in
+    :class:`TestImportAndList`; this class exercises the FastAPI
+    boundary so the structured ``413 upload_too_large`` envelope is
+    pinned end-to-end.
+    """
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from backend.app import app
+
+        return TestClient(app, raise_server_exceptions=False)
+
+    def test_import_above_50_mib_is_rejected_with_structured_error(
+        self, tmp_path: Path, client: TestClient
+    ) -> None:
+        # The size guard reads ``stat().st_size`` so a sparse file is
+        # cheaper than a real 51 MiB ZIP. ``os.truncate`` extends the
+        # logical length without writing the intermediate bytes.
+        zip_path = tmp_path / "huge.zip"
+        zip_path.write_bytes(b"PK\x05\x06" + b"\x00" * 18)  # empty ZIP record
+        os.truncate(zip_path, 51 * 1024 * 1024)
+
+        response = client.post(
+            "/api/v1/custom-data/import",
+            json={"zip_path": str(zip_path)},
+        )
+        assert response.status_code == 413
+        body = response.json()
+        assert body["code"] == "upload_too_large"
+        assert "custom-data pack" in body["message"]
+
+    def test_import_below_50_mib_passes_size_gate(
+        self, tmp_path: Path, isolated_user_data: Path, client: TestClient
+    ) -> None:
+        # A real <50 MiB pack proves the gate did not regress the
+        # golden path. ``isolated_user_data`` (autouse on the module)
+        # sandboxes the extraction destination.
+        zip_path = _build_zip(tmp_path, impact=_valid_impact_functions())
+
+        response = client.post(
+            "/api/v1/custom-data/import",
+            json={"zip_path": str(zip_path)},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["data"]["iso3"] == "KEN"

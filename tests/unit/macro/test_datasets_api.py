@@ -171,3 +171,45 @@ def test_cred_output_uses_dataset_id_query_param(
     ]
     assert len(custom_rows) > 0
     assert all(r["country"] == "thailand" for r in custom_rows)
+
+
+# ---------------------------------------------------------------------------
+# Upload size cap (issue #251) — Area-18 zip-bomb defence.
+# ---------------------------------------------------------------------------
+
+
+def _write_sparse(path: Path, size_bytes: int) -> None:
+    with path.open("wb") as fh:
+        fh.seek(size_bytes - 1)
+        fh.write(b"\x00")
+
+
+def test_upload_above_50_mib_is_rejected_with_structured_error(
+    api_client, tmp_path: Path, isolated_user_data: Path
+) -> None:
+    xlsx = tmp_path / "huge.xlsx"
+    _write_sparse(xlsx, 51 * 1024 * 1024)
+
+    resp = api_client.post(
+        "/api/v1/macro/datasets",
+        json={"name": "Too Big", "xlsx_path": str(xlsx)},
+    )
+    assert resp.status_code == 413
+    body = resp.json()
+    assert body["code"] == "upload_too_large"
+    assert "CRED dataset" in body["message"]
+
+
+def test_upload_below_50_mib_passes_size_gate(
+    api_client, tmp_path: Path, isolated_user_data: Path
+) -> None:
+    # Use a real (small) xlsx — proves the gate does not regress the
+    # golden path on the same surface as the rejection check above.
+    xlsx = tmp_path / "ok.xlsx"
+    _custom_xlsx(xlsx)
+
+    resp = api_client.post(
+        "/api/v1/macro/datasets",
+        json={"name": "Under cap", "xlsx_path": str(xlsx)},
+    )
+    assert resp.status_code == 200, resp.text

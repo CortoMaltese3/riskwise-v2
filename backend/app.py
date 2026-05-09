@@ -113,6 +113,7 @@ from backend.models import (
 from backend.models.errors import RiskWiseError
 from backend.progress import ProgressEvent, progress_callback_var
 from backend.provenance import ManifestError, verify_manifest
+from backend.uploads import enforce_upload_size_limit
 
 API_PREFIX = "/api/v1"
 
@@ -550,6 +551,11 @@ async def measure_datasets() -> dict:
 async def measure_datasets_upload(payload: MeasureSetUploadRequest) -> dict:
     from backend.measures.measure_dataset_handler import MeasureDatasetError, import_dataset
 
+    # Area-18 zip-bomb defence: cap upload size before the xlsx parser
+    # touches the file. ``enforce_upload_size_limit`` raises
+    # ``UploadTooLargeError`` (413 ``upload_too_large``) which the global
+    # ``RiskWiseError`` handler translates to a structured envelope.
+    enforce_upload_size_limit(Path(payload.xlsx_path), label="measures workbook")
     try:
         metadata = await asyncio.to_thread(import_dataset, payload.name, Path(payload.xlsx_path))
     except MeasureDatasetError as exc:
@@ -829,6 +835,9 @@ async def macro_datasets() -> dict:
 async def macro_datasets_upload(payload: CredDatasetUploadRequest) -> dict:
     from backend.macroeconomic.cred_dataset_handler import CredDatasetError, import_dataset
 
+    # See ``measure_datasets_upload`` for the rationale; same Area-18 cap
+    # applied before the openpyxl reader is given the file.
+    enforce_upload_size_limit(Path(payload.xlsx_path), label="CRED dataset")
     try:
         metadata = await asyncio.to_thread(import_dataset, payload.name, Path(payload.xlsx_path))
     except CredDatasetError as exc:
@@ -912,6 +921,10 @@ async def custom_data_validate(payload: CustomDataValidateRequest) -> dict:
 async def custom_data_import(payload: CustomDataImportRequest) -> dict:
     from backend.custom_data_handler import CustomDataError, import_pack
 
+    # Same Area-18 cap as the dataset uploads — applied here because the
+    # ZIP gets unpacked into ``user-data/countries/<ISO3>/`` and a 200 MiB
+    # archive of zeros would explode regardless of the layout checks.
+    enforce_upload_size_limit(Path(payload.zip_path), label="custom-data pack")
     try:
         data = await asyncio.to_thread(import_pack, Path(payload.zip_path))
     except CustomDataError as exc:
