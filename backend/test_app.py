@@ -483,6 +483,105 @@ class TestStructuredErrorEnvelope:
         assert healthy.status_code == 200
 
 
+class TestDomainExceptionTaxonomy:
+    """Cover one failure path per :class:`RiskWiseError` subclass.
+
+    The FastAPI boundary handler in ``app.py`` translates each subclass to
+    its declared ``http_status`` and snake_case ``code`` on the structured
+    error envelope. Frontends switch on ``code``, so a regression here
+    silently breaks the renderer's typed error handling.
+    """
+
+    def test_riskwise_error_default_maps_to_500_internal(self, client: TestClient) -> None:
+        from backend.models.errors import RiskWiseError
+
+        with patch.object(
+            app_module,
+            "_dispatch_sync",
+            side_effect=RiskWiseError("base failure"),
+        ):
+            response = client.get("/api/v1/macro/cred-output")
+        assert response.status_code == 500
+        body = response.json()
+        assert body["status"] == "error"
+        assert body["code"] == "internal_error"
+        assert body["message"] == "base failure"
+        assert body["error_id"]
+
+    def test_catalog_error_maps_to_404_catalog_not_found(self, client: TestClient) -> None:
+        from backend.models.errors import CatalogError
+
+        with patch.object(
+            app_module,
+            "_dispatch_sync",
+            side_effect=CatalogError("EGY/FL not in catalog"),
+        ):
+            response = client.get("/api/v1/macro/cred-output")
+        assert response.status_code == 404
+        body = response.json()
+        assert body["code"] == "catalog_not_found"
+        assert body["message"] == "EGY/FL not in catalog"
+
+    def test_data_load_error_maps_to_400_data_load(self, client: TestClient) -> None:
+        from backend.models.errors import DataLoadError
+
+        with patch.object(
+            app_module,
+            "_dispatch_sync",
+            side_effect=DataLoadError("xlsx is corrupt"),
+        ):
+            response = client.get("/api/v1/macro/cred-output")
+        assert response.status_code == 400
+        body = response.json()
+        assert body["code"] == "data_load"
+        assert body["message"] == "xlsx is corrupt"
+
+    def test_validation_error_maps_to_422_validation_error(self, client: TestClient) -> None:
+        from backend.models.errors import ValidationError as DomainValidationError
+
+        with patch.object(
+            app_module,
+            "_dispatch_sync",
+            side_effect=DomainValidationError("country code unknown"),
+        ):
+            response = client.get("/api/v1/macro/cred-output")
+        assert response.status_code == 422
+        body = response.json()
+        assert body["code"] == "validation_error"
+        assert body["message"] == "country code unknown"
+
+    def test_engine_error_maps_to_500_engine_error(self, client: TestClient) -> None:
+        from backend.models.errors import EngineError
+
+        with patch.object(
+            app_module,
+            "_dispatch_sync",
+            side_effect=EngineError("engine.run_impact crashed"),
+        ):
+            response = client.get("/api/v1/macro/cred-output")
+        assert response.status_code == 500
+        body = response.json()
+        assert body["code"] == "engine_error"
+        assert body["message"] == "engine.run_impact crashed"
+
+    def test_typed_code_is_not_a_python_exception_string(self, client: TestClient) -> None:
+        """The frontend must receive a typed ``code``, not a Python repr."""
+        from backend.models.errors import DataLoadError
+
+        with patch.object(
+            app_module,
+            "_dispatch_sync",
+            side_effect=DataLoadError("hazard.h5 missing"),
+        ):
+            response = client.get("/api/v1/macro/cred-output")
+        body = response.json()
+        # The code must be the stable snake_case identifier, not the
+        # exception class name and not the stringified message.
+        assert body["code"] == "data_load"
+        assert "DataLoadError" not in body["code"]
+        assert "Exception" not in body["code"]
+
+
 class TestSingleJobInvariant:
     def test_second_run_while_active_returns_409(self, client: TestClient) -> None:
         # ``TestClient.post`` blocks until the event loop is idle, which hides

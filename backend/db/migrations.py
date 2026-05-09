@@ -159,7 +159,7 @@ def _apply_migration(conn: duckdb.DuckDBPyConnection, migration: _Migration) -> 
         )
         if transactional:
             conn.execute("COMMIT")
-    except Exception as exc:
+    except (duckdb.Error, OSError) as exc:
         if transactional:
             conn.execute("ROLLBACK")
         _log.error(

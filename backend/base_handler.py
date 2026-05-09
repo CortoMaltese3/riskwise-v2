@@ -10,7 +10,6 @@ and updating progress for the frontend.
 import json
 from os import makedirs, path
 from pathlib import Path
-import sys
 from typing import Any, Dict, Optional
 
 import geopandas as gpd
@@ -61,7 +60,7 @@ class BaseHandler:
         except CatalogError as exception:
             logger.log("error", f"Catalog lookup failed. More info: {exception}")
             return False
-        except Exception as exception:
+        except (LookupError, AttributeError, TypeError, ValueError) as exception:
             logger.log("error", f"An error has occurred. More info: {exception}")
             return False
 
@@ -113,7 +112,7 @@ class BaseHandler:
                 "error", f"No ISO3 code found for '{country_name}'. Please check the country name."
             )
             return None
-        except Exception as exc:
+        except (AttributeError, TypeError, ValueError) as exc:
             logger.log(
                 "error",
                 f"An error occurred while trying to convert country name to iso3. More info: {exc}",
@@ -297,7 +296,7 @@ class BaseHandler:
         try:
             for file in DATA_TEMP_DIR.glob("*"):
                 file.unlink(missing_ok=True)
-        except Exception as exc:
+        except OSError as exc:
             logger.log("error", f"Error while trying to clear temp directory. More info: {exc}")
 
     def initalize_data_directories(self) -> None:
@@ -356,8 +355,12 @@ class BaseHandler:
         if callback is not None:
             callback(progress_data)
         else:
-            print(json.dumps(progress_data))
-            sys.stdout.flush()
+            # No SSE callback bound (e.g. running a ``run_*.py`` script
+            # in-process from a test or an ad-hoc shell). Emit the event
+            # via the structured logger so it lands in the rotating file
+            # log instead of stdout, which used to interleave with the
+            # subprocess JSON envelope and is invisible in production.
+            logger.log("info", json.dumps(progress_data))
         logger.log("info", f"send progress {progress} to frontend.")
 
     def get_admin_data(self, country_code: str, admin_level) -> gpd.GeoDataFrame:
@@ -390,7 +393,7 @@ class BaseHandler:
         except FileNotFoundError:
             logger.log("error", f"File not found: {file_path}")
             return None
-        except Exception as exception:
+        except (OSError, ValueError, KeyError, AttributeError) as exception:
             logger.log(
                 "error",
                 f"An error occured while trying to get country admin level information. "
@@ -435,9 +438,9 @@ class BaseHandler:
                 file.write("\t".join(metadata.keys()) + "\n")
                 # Write the values
                 file.write("\t".join(map(str, metadata.values())) + "\n")
-        except IOError as e:
+        except OSError as e:
             logger.log("error", (f"An I/O error occurred: {e.strerror}"))
-        except Exception as e:
+        except (TypeError, ValueError) as e:
             logger.log("error", (f"An unexpected error occurred: {str(e)}"))
 
     def read_results_metadata_file(
@@ -499,9 +502,9 @@ class BaseHandler:
 
         except FileNotFoundError as e:
             logger.log("error", f"Metadata file not found: {str(e)}")
-        except IOError as e:
+        except OSError as e:
             logger.log("error", f"An I/O error occurred: {e.strerror}")
-        except Exception as e:
+        except (KeyError, ValueError, TypeError) as e:
             logger.log("error", f"An unexpected error occurred: {str(e)}")
 
         return metadata
@@ -525,7 +528,7 @@ class BaseHandler:
 
             handler = ReportHandler(Path("/path/to/reports"))
             metadata = handler.get_metadata_by_scenario_id("202408291038")
-            print(metadata)
+            # ``metadata`` is a ``Dict[str, Any]`` of scenario fields.
         """
         try:
             # Find the directory matching the scenario_id
@@ -543,7 +546,7 @@ class BaseHandler:
 
         except StopIteration:
             raise ValueError(f"No directory found for scenario ID: {scenario_id}")
-        except Exception as e:
+        except (OSError, KeyError, ValueError, TypeError) as e:
             logger.log("error", f"An unexpected error occurred while retrieving metadata: {str(e)}")
             return {}
 
@@ -565,10 +568,7 @@ class BaseHandler:
         .. code-block:: python
 
             file_type = file_handler.check_file_type(Path("data.hdf5"))
-            if file_type:
-                print(f"File is of type: {file_type}")
-            else:
-                print("File type is not recognized")
+            # ``file_type`` is "hdf5" when recognized, otherwise None.
         """
         try:
             # Ensure the file exists before checking the type
@@ -596,7 +596,7 @@ class BaseHandler:
                 logger.log("info", f"Unrecognized file type: {file_extension}")
                 return None
 
-        except Exception as e:
+        except (OSError, AttributeError, TypeError) as e:
             logger.log("error", f"An unexpected error occurred: {str(e)}")
             return None
 
@@ -622,8 +622,7 @@ class BaseHandler:
         .. code-block:: python
 
             df = file_handler.read_parquet_file("data.parquet")
-            if df is not None:
-                print(df.head())
+            # ``df`` is a pandas DataFrame on success, otherwise None.
         """
         try:
             # Ensure the file exists
@@ -642,7 +641,7 @@ class BaseHandler:
             logger.log("error", str(fnf_error))
         except ValueError as ve:
             logger.log("error", str(ve))
-        except Exception as e:
+        except OSError as e:
             logger.log("error", f"An unexpected error occurred while reading the file: {str(e)}")
 
         return None
@@ -718,9 +717,8 @@ class BaseHandler:
         .. code-block:: python
 
             df = pd.DataFrame({"col1": [1, 2, 3], "col2": ["a", "b", "c"]})
-            file_path = file_handler.save_parquet_file(df, "data.parquet")
-            if file_path:
-                print(f"DataFrame saved successfully at {file_path}")
+            saved_path = file_handler.save_parquet_file(df, "data.parquet")
+            # ``saved_path`` is the saved Path on success, otherwise None.
         """
         try:
             # Ensure the file has a .parquet extension
@@ -733,7 +731,7 @@ class BaseHandler:
 
         except ValueError as ve:
             logger.log("error", str(ve))
-        except Exception as e:
+        except OSError as e:
             logger.log("error", f"An unexpected error occurred while saving the file: {str(e)}")
 
         return None

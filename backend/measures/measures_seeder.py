@@ -98,7 +98,7 @@ def seed_builtin_measures(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> N
 
     try:
         df = pd.read_excel(xlsx_path, sheet_name="measures")
-    except Exception as exc:
+    except (OSError, ValueError, ImportError) as exc:
         raise MeasureSeedError(f"Cannot read 'measures' sheet from '{xlsx_path}': {exc}") from exc
 
     missing = REQUIRED_COLUMNS - set(df.columns)
@@ -164,7 +164,7 @@ def seed_builtin_measures(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> N
             ],
         )
         conn.execute("COMMIT")
-    except Exception as exc:
+    except (duckdb.Error, OSError, ValueError) as exc:
         conn.execute("ROLLBACK")
         raise MeasureSeedError(f"DB insert failed: {exc}") from exc
 
