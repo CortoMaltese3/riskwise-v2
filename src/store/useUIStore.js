@@ -184,6 +184,17 @@ const useUIStore = create((set, get) => ({
     const viewControl = TAB_CONFIG[tab].defaultView;
     set({ selectedTab: tab, selectedSubTab: 0, activeViewControl: viewControl });
   },
+  // Open the input-parameter editor for whichever card was just selected.
+  // From the Risk tab the editor lives in a sibling view-control alongside
+  // the map and chart so the controls strip stays mounted; from any other
+  // tab it lives on the dedicated Parameters tab.
+  openInputEditor: () => {
+    if (get().selectedTab === TABS.RISK) {
+      set({ activeViewControl: "display_parameters" });
+    } else {
+      get().setSelectedTab(TABS.PARAMETERS);
+    }
+  },
 
   setReports: (reports) => set({ reports }),
   setSelectedReport: (report) => set({ selectedReport: report }),

@@ -5,13 +5,12 @@ import { Card, CardContent, Stack, Typography, TextField } from "@mui/material";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import ContextualTooltip from "../help/ContextualTooltip";
-import { TABS } from "../main/tabs";
 import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const Country = () => {
   const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const openInputEditor = useUIStore((s) => s.openInputEditor);
   const setSelectedCard = useUIStore((s) => s.setSelectedCard);
-  const setSelectedTab = useUIStore((s) => s.setSelectedTab);
   const { t } = useTranslation();
   const [clicked, setClicked] = useState(false);
   const [cardState, setCardState] = useState("default");
@@ -26,7 +25,7 @@ const Country = () => {
 
   const handleClick = () => {
     setSelectedCard("country");
-    setSelectedTab(TABS.PARAMETERS);
+    openInputEditor();
   };
 
   useEffect(() => {

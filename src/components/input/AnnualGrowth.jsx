@@ -5,7 +5,6 @@ import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import ContextualTooltip from "../help/ContextualTooltip";
-import { TABS } from "../main/tabs";
 import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const AnnualGrowth = () => {
@@ -17,8 +16,8 @@ const AnnualGrowth = () => {
   const setAlertMessage = useUIStore((s) => s.setAlertMessage);
   const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
   const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
+  const openInputEditor = useUIStore((s) => s.openInputEditor);
   const setSelectedCard = useUIStore((s) => s.setSelectedCard);
-  const setSelectedTab = useUIStore((s) => s.setSelectedTab);
   const { t } = useTranslation();
   const [clicked, setClicked] = useState(false);
   const [cardState, setCardState] = useState("default");
@@ -49,7 +48,7 @@ const AnnualGrowth = () => {
       return;
     }
     setSelectedCard("annualGrowth");
-    setSelectedTab(TABS.PARAMETERS);
+    openInputEditor();
   };
 
   useEffect(() => {

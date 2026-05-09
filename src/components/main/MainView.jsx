@@ -74,10 +74,16 @@ const MainView = () => {
       )}
       {selectedTab === TABS.RISK && selectedSubTab === RISK_SUB_TABS.RISK && (
         <>
-          <Box sx={STRETCH_SX}>
-            {activeViewControl === "display_map" && <MapLayout />}
-            {activeViewControl === "display_chart" && <RiskChartLayout />}
-          </Box>
+          {activeViewControl === "display_parameters" ? (
+            <Box sx={TOP_SX}>
+              <ViewCard />
+            </Box>
+          ) : (
+            <Box sx={STRETCH_SX}>
+              {activeViewControl === "display_map" && <MapLayout />}
+              {activeViewControl === "display_chart" && <RiskChartLayout />}
+            </Box>
+          )}
           <Box sx={CONTROLS_ROW_SX}>
             <MainViewControls />
             <MainViewToolbar />
