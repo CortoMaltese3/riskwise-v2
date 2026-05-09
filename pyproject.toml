@@ -66,8 +66,6 @@ target-version = "py311"
 # Excluding it here keeps ruff a pass on the maintained v2 surface without
 # masking regressions in the code we actually care about.
 extend-exclude = [
-    "backend/base_handler.py",
-    "backend/logger_config.py",
     "backend/dev.ipynb",
     "backend/costben",
     "backend/entity",
@@ -126,8 +124,6 @@ warn_redundant_casts = true
 [[tool.mypy.overrides]]
 module = [
     "backend.app",
-    "backend.base_handler",
-    "backend.logger_config",
     "backend.test_app",
     "backend.test_logging_config",
     "backend.costben.*",

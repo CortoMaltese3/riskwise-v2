@@ -2,19 +2,21 @@
 
 from time import time
 
-from backend.base_handler import BaseHandler
 from backend.cli import Command, StatusCode
 from backend.hazard.hazard_handler import HazardHandler
+from backend.progress import update_progress
 from backend.report.report_handler import ReportHandler, ReportParameters
+from backend.utils.country import get_iso3_country_code
+from backend.utils.metadata import get_scenario_metadata
 
 
 def _build_report_parameters(
-    base_handler: BaseHandler, hazard_handler: HazardHandler, scenario_code: str
+    hazard_handler: HazardHandler, scenario_code: str
 ) -> ReportParameters:
-    meta = base_handler.get_scenario_metadata(scenario_code)
+    meta = get_scenario_metadata(scenario_code)
     asset_type = meta.get("asset_type")
     return ReportParameters(
-        country_code=base_handler.get_iso3_country_code(meta.get("country_name")),
+        country_code=get_iso3_country_code(meta.get("country_name")),
         country_name=meta.get("country_name"),
         hazard=meta.get("hazard_type"),
         hazard_code=hazard_handler.get_hazard_code(meta.get("hazard_type")),
@@ -33,26 +35,25 @@ class RunExportReport(Command):
 
     def __init__(self, request):
         super().__init__()
-        self.base_handler = BaseHandler()
         self.hazard_handler = HazardHandler()
         self.request = request
 
     def valid_request(self) -> bool:
         for field in ("exportType", "scenarioRunCode"):
             if field not in self.request:
-                self.logger.log("error", f"Missing required field: {field}")
+                self.logger.error(f"Missing required field: {field}")
                 return False
         return True
 
     def _generate(self, handler, export_type, report_type, scenario_code, report_id):
         """Dispatch on ``export_type`` and return ``(file_path, status_message)``."""
         if export_type == "excel":
-            self.base_handler.update_progress(30, "Generating excel report...")
+            update_progress(30, "Generating excel report...")
             path = handler.get_report_file_path(export_type)
             handler.generate_excel_report()
             return path, "Generated excel report successfully."
         if export_type in ("word", "pdf"):
-            self.base_handler.update_progress(30, f"Generating {export_type} report...")
+            update_progress(30, f"Generating {export_type} report...")
             path = handler.get_report_file_path(export_type, report_type)
             generator = (
                 handler.generate_word_report
@@ -69,14 +70,14 @@ class RunExportReport(Command):
         try:
             if not self.valid_request():
                 run_status_message = "Invalid request: Missing required fields"
-                self.logger.log("error", run_status_message)
+                self.logger.error(run_status_message)
                 return self._envelope("", StatusCode.VALIDATION_ERROR, run_status_message)
 
             scenario_code = self.request.get("scenarioRunCode", "")
             report = self.request.get("report") or {}
-            self.base_handler.update_progress(20, "Setting up report parameters...")
+            update_progress(20, "Setting up report parameters...")
             handler = ReportHandler(
-                _build_report_parameters(self.base_handler, self.hazard_handler, scenario_code)
+                _build_report_parameters(self.hazard_handler, scenario_code)
             )
             path, run_status_message = self._generate(
                 handler,
@@ -90,11 +91,11 @@ class RunExportReport(Command):
             return self._envelope(str(path), StatusCode.SUCCESS, run_status_message)
         except (OSError, ValueError, KeyError, RuntimeError, AttributeError, TypeError) as e:
             run_status_message = f"An error occurred: {str(e)}"
-            self.logger.log("error", run_status_message)
+            self.logger.error(run_status_message)
             return self._envelope("", StatusCode.ERROR, run_status_message)
         finally:
-            self.logger.log("info", f"Finished generating report in {time() - initial_time}sec.")
-            self.base_handler.update_progress(100, run_status_message)
+            self.logger.info(f"Finished generating report in {time() - initial_time}sec.")
+            update_progress(100, run_status_message)
 
     @staticmethod
     def _envelope(path: str, code: StatusCode, message: str) -> dict:

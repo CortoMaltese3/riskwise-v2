@@ -2,8 +2,9 @@
 
 After #166 the CLIMADA package is gone — handler modules no longer import
 ``climada.*``. The stubs below now only cover ``geopandas`` / ``shapely`` /
-``pycountry`` so unit tests that touch ``base_handler`` can run without the
-full geospatial stack on disk.
+``pycountry`` so unit tests that touch ``backend.utils.*`` (the helpers
+carved out of the legacy ``BaseHandler``) can run without the full
+geospatial stack on disk.
 """
 
 from __future__ import annotations

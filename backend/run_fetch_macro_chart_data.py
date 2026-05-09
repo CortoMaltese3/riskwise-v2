@@ -2,9 +2,10 @@
 
 from time import time
 
-from backend.base_handler import BaseHandler
 from backend.cli import Command, StatusCode
 from backend.macroeconomic.macroeconomic_handler import MacroeconomicHandler
+from backend.progress import update_progress
+from backend.utils.strings import set_macroeconomic_chart_title
 
 _EMPTY_CHART = {"years": [], "datasets": [], "title": ""}
 
@@ -12,7 +13,6 @@ _EMPTY_CHART = {"years": [], "datasets": [], "title": ""}
 class RunFetchMacroChartData(Command):
     def __init__(self, request):
         super().__init__()
-        self.base_handler = BaseHandler()
         self.macro_handler = MacroeconomicHandler()
         self.request = request
 
@@ -26,7 +26,7 @@ class RunFetchMacroChartData(Command):
     def valid_request(self) -> bool:
         for field in ("countryName", "scenario", "sector", "variable"):
             if not self.request.get(field):
-                self.logger.log("error", f"Missing required field: {field}")
+                self.logger.error(f"Missing required field: {field}")
                 return False
         return True
 
@@ -42,13 +42,9 @@ class RunFetchMacroChartData(Command):
                 variable=self.macro_variable,
                 dataset_id=self.dataset_id,
             )
-            title = self.base_handler.set_macroeconomic_chart_title(
-                self.country_name, self.macro_variable
-            )
-            self.base_handler.update_progress(100, "Data fetched successfully.")
-            self.logger.log(
-                "info",
-                f"Finished fetching macro chart data in {time() - initial_time:.2f} sec.",
+            title = set_macroeconomic_chart_title(self.country_name, self.macro_variable)
+            update_progress(100, "Data fetched successfully.")
+            self.logger.info(f"Finished fetching macro chart data in {time() - initial_time:.2f} sec.",
             )
             return {
                 "data": {"years": chart["years"], "datasets": chart["datasets"], "title": title},
@@ -58,7 +54,7 @@ class RunFetchMacroChartData(Command):
                 },
             }
         except (OSError, ValueError, KeyError, RuntimeError) as e:
-            self.logger.log("error", f"An error occurred: {str(e)}")
+            self.logger.error(f"An error occurred: {str(e)}")
             return self.error_envelope(
                 f"An error occurred fetching macro chart data. More info: {e}"
             )

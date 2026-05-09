@@ -11,11 +11,12 @@ from __future__ import annotations
 
 from time import time
 
-from backend.base_handler import BaseHandler
 from backend.cli import Command, StatusCode
 from backend.costben.costben_handler import CostBenefitHandler
 from backend.db.connection import get_connection, resolve_db_path
 from backend.hazard.hazard_handler import HazardHandler
+from backend.progress import update_progress
+from backend.utils.strings import beautify_hazard_type
 
 _EMPTY_DATA = {"adaptationMeasures": [], "measures": []}
 
@@ -23,14 +24,13 @@ _EMPTY_DATA = {"adaptationMeasures": [], "measures": []}
 class RunFetchScenario(Command):
     def __init__(self, request: dict):
         super().__init__()
-        self.base_handler = BaseHandler()
         self.costben_handler = CostBenefitHandler()
         self.hazard_handler = HazardHandler()
         self.request = request
 
     def valid_request(self) -> bool:
         if "hazardType" not in self.request:
-            self.logger.log("error", "Missing required field: hazardType")
+            self.logger.error("Missing required field: hazardType")
             return False
         return True
 
@@ -41,9 +41,9 @@ class RunFetchScenario(Command):
 
         hazard_type = self.request.get("hazardType", "")
         hazard_code = self.hazard_handler.get_hazard_code(hazard_type)
-        hazard_beautified = self.base_handler.beautify_hazard_type(hazard_type)
+        hazard_beautified = beautify_hazard_type(hazard_type)
 
-        self.base_handler.update_progress(10, "Fetching adaptation measures...")
+        update_progress(10, "Fetching adaptation measures...")
         conn = get_connection(resolve_db_path())
         try:
             measures = self.costben_handler.get_measures_from_db(
@@ -63,10 +63,8 @@ class RunFetchScenario(Command):
             status_code = StatusCode.SUCCESS
             message = f"Fetched adaptation measures for {hazard_beautified} successfully."
 
-        self.base_handler.update_progress(100, message)
-        self.logger.log(
-            "info",
-            f"Finished fetching adaptation measures data in {time() - initial_time:.2f}sec.",
+        update_progress(100, message)
+        self.logger.info(f"Finished fetching adaptation measures data in {time() - initial_time:.2f}sec.",
         )
         return {
             "data": {"adaptationMeasures": adaptation_measures, "measures": measures},

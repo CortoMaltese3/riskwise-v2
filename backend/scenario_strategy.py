@@ -21,6 +21,8 @@ from abc import ABC, abstractmethod
 from dataclasses import replace
 from typing import Any
 
+from backend.utils.data_check import check_file_type
+
 
 class ScenarioDataStrategy(ABC):
     """Protocol for loading the entity, exposure, and hazard objects a run needs.
@@ -52,7 +54,6 @@ class ScenarioDataStrategy(ABC):
         self,
         request_data: Any,
         hazard_handler: Any,
-        base_handler: Any,
         hazard_intensity_unit: str,
     ) -> Any:
         """Load the present-day hazard object."""
@@ -62,7 +63,6 @@ class ScenarioDataStrategy(ABC):
         self,
         request_data: Any,
         hazard_handler: Any,
-        base_handler: Any,
         hazard_intensity_unit: str,
     ) -> Any:
         """Load the future-scenario hazard object."""
@@ -97,7 +97,6 @@ class EraDataStrategy(ScenarioDataStrategy):
         self,
         request_data: Any,
         hazard_handler: Any,
-        base_handler: Any,
         hazard_intensity_unit: str,
     ) -> Any:
         filename = hazard_handler.get_hazard_filename(
@@ -115,7 +114,6 @@ class EraDataStrategy(ScenarioDataStrategy):
         self,
         request_data: Any,
         hazard_handler: Any,
-        base_handler: Any,
         hazard_intensity_unit: str,
     ) -> Any:
         filename = hazard_handler.get_hazard_filename(
@@ -165,12 +163,11 @@ class CustomDataStrategy(ScenarioDataStrategy):
         self,
         request_data: Any,
         hazard_handler: Any,
-        base_handler: Any,
         hazard_intensity_unit: str,
     ) -> Any:
         if not request_data.hazard_filename:
             raise ValueError(_MISSING_UPLOAD_MSG)
-        file_type = base_handler.check_file_type(request_data.hazard_filename)
+        file_type = check_file_type(request_data.hazard_filename)
         if request_data.scenario == "historical":
             hazard = hazard_handler.get_hazard(
                 hazard_type=request_data.hazard_type,
@@ -193,12 +190,11 @@ class CustomDataStrategy(ScenarioDataStrategy):
         self,
         request_data: Any,
         hazard_handler: Any,
-        base_handler: Any,
         hazard_intensity_unit: str,
     ) -> Any:
         if not request_data.hazard_filename:
             raise ValueError(_MISSING_UPLOAD_MSG)
-        file_type = base_handler.check_file_type(request_data.hazard_filename)
+        file_type = check_file_type(request_data.hazard_filename)
         hazard = hazard_handler.get_hazard(
             hazard_type=request_data.hazard_type,
             filepath=request_data.hazard_filename,

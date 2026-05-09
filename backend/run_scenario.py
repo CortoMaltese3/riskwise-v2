@@ -28,7 +28,6 @@ from typing import Any
 import duckdb
 import numpy as np
 
-from backend.base_handler import BaseHandler
 from backend.cli import StatusCode
 from backend.constants import COUNTRIES_DIR, DATA_ENTITIES_DIR, DATA_HAZARDS_DIR, DATA_TEMP_DIR
 from backend.costben.costben_handler import CostBenefitHandler
@@ -38,10 +37,16 @@ from backend.entity.entity_handler import EntityHandler
 from backend.exposure.exposure_handler import ExposureHandler
 from backend.hazard.hazard_handler import HazardHandler
 from backend.impact.impact_handler import ImpactHandler
-from backend.logger_config import LoggerConfig
+from backend.logging_config import get_logger
+from backend.progress import update_progress
 from backend.provenance import REPRODUCIBILITY_NOTE, new_random_seed
 from backend.provenance import collect as collect_provenance
 from backend.scenario_strategy import ScenarioDataStrategy, make_strategy
+from backend.utils.country import get_iso3_country_code, sanitize_country_name
+from backend.utils.fs import clear_temp_dir, initalize_data_directories
+from backend.utils.io import save_parquet_file
+from backend.utils.metadata import create_results_metadata_file
+from backend.utils.strings import set_map_title
 
 
 def _resolve_country_config_path(country_code: str) -> Path:
@@ -97,17 +102,16 @@ class RequestData:
     def from_request(
         cls,
         request: dict,
-        base_handler: BaseHandler,
         hazard_handler: HazardHandler,
     ) -> "RequestData":
-        """Build a ``RequestData`` from the raw UI payload plus the handlers
-        needed to sanitize country/hazard fields."""
-        country_name = base_handler.sanitize_country_name(request.get("countryName", ""))
+        """Build a ``RequestData`` from the raw UI payload plus the hazard
+        handler needed to derive the engine hazard code."""
+        country_name = sanitize_country_name(request.get("countryName", ""))
         return cls(
             adaptation_measures=request.get("adaptationMeasures", []),
             annual_growth=request.get("annualGrowth", 0),
             country_name=country_name,
-            country_code=base_handler.get_iso3_country_code(country_name),
+            country_code=get_iso3_country_code(country_name),
             entity_filename=request.get("exposureFile", ""),
             exposure_type=request.get("exposureType") or "",
             asset_type=request.get("assetType") or "",
@@ -140,12 +144,10 @@ class RunScenario:
 
     def __init__(self, request):
         self._initialize_handlers()
-        self.base_handler.initalize_data_directories()
+        initalize_data_directories()
         self._clear()
-        self.logger = LoggerConfig(logger_types=["file"])
-        self.request_data = RequestData.from_request(
-            request, self.base_handler, self.hazard_handler
-        )
+        self.logger = get_logger("backend.run_scenario")
+        self.request_data = RequestData.from_request(request, self.hazard_handler)
         self.status = Status()
         # Seed once per run and hand the derived RNG to any stochastic step.
         # Storing the seed on ``self`` lets ``_persist_to_db`` stamp it onto
@@ -155,7 +157,6 @@ class RunScenario:
         self._clear()
 
     def _initialize_handlers(self):
-        self.base_handler = BaseHandler()
         self.costben_handler = CostBenefitHandler()
         self.entity_handler = EntityHandler()
         self.exposure_handler = ExposureHandler()
@@ -163,7 +164,7 @@ class RunScenario:
         self.impact_handler = ImpactHandler()
 
     def _clear(self):
-        self.base_handler.clear_temp_dir()
+        clear_temp_dir()
 
     def _get_era_discount_rate(self) -> float | None:
         """Read the ERA discount rate from the country config.
@@ -184,7 +185,7 @@ class RunScenario:
                 f"An error occurred while getting ERA discount rate. More info: {exception}"
             )
             self.status.set_error(status_code, status_message)
-            self.logger.log("error", status_message)
+            self.logger.error(status_message)
             return None
 
     def _get_average_annual_growth(self) -> float:
@@ -200,9 +201,7 @@ class RunScenario:
         try:
             config = load_country_config(self.request_data.country_code)
         except CountryConfigError as exc:
-            self.logger.log(
-                "error",
-                f"Country config unavailable for {self.request_data.country_code}; "
+            self.logger.error(f"Country config unavailable for {self.request_data.country_code}; "
                 f"defaulting growth rate to 0. More info: {exc}",
             )
             return 0.0
@@ -242,7 +241,7 @@ class RunScenario:
         is_future = self.request_data.scenario != "historical"
 
         # --- Entity (present + future) ---
-        self.base_handler.update_progress(10, strategy.entity_progress_message)
+        update_progress(10, strategy.entity_progress_message)
         entity_present, exposure_present = strategy.load_entity_and_exposure(
             self.request_data, self.entity_handler, self.exposure_handler
         )
@@ -259,16 +258,15 @@ class RunScenario:
             )
 
         # --- Exposure ---
-        self.base_handler.update_progress(20, strategy.exposure_progress_message)
+        update_progress(20, strategy.exposure_progress_message)
         exposure_present = entity_present.exposures
         exposure_future = entity_future.exposures if is_future else None
 
         # --- Hazard ---
-        self.base_handler.update_progress(30, strategy.hazard_progress_message)
+        update_progress(30, strategy.hazard_progress_message)
         hazard_present = strategy.load_hazard_present(
             self.request_data,
             self.hazard_handler,
-            self.base_handler,
             hazard_intensity_unit,
         )
         hazard_future = None
@@ -276,12 +274,11 @@ class RunScenario:
             hazard_future = strategy.load_hazard_future(
                 self.request_data,
                 self.hazard_handler,
-                self.base_handler,
                 hazard_intensity_unit,
             )
 
         # --- Cost-benefit ---
-        self.base_handler.update_progress(40, strategy.cost_benefit_progress_message)
+        update_progress(40, strategy.cost_benefit_progress_message)
         cost_benefit = self.costben_handler.calculate_cost_benefit(
             hazard_present,
             entity_present,
@@ -291,17 +288,17 @@ class RunScenario:
         )
 
         if is_future:
-            self.base_handler.update_progress(50, "Computing cost-benefit chart data...")
+            update_progress(50, "Computing cost-benefit chart data...")
             self.costben_handler.compute_cost_benefit_data(
                 cost_benefit, entity_present, entity_future
             )
-            self.base_handler.update_progress(55, "Computing waterfall chart data...")
+            update_progress(55, "Computing waterfall chart data...")
             self.costben_handler.compute_waterfall_data(
                 cost_benefit, hazard_present, entity_present, hazard_future, entity_future
             )
 
         # --- Impact ---
-        self.base_handler.update_progress(60, strategy.impact_progress_message)
+        update_progress(60, strategy.impact_progress_message)
         impact_present = self.impact_handler.calculate_impact(
             exposure_present, hazard_present, entity_present.impfset_specs
         )
@@ -320,7 +317,7 @@ class RunScenario:
         # --- GeoJSONs (generated concurrently; each emits an SSE partial
         # result event so the frontend can render layers as they finish
         # instead of waiting for all three). ---
-        self.base_handler.update_progress(70, "Generating map data files...")
+        update_progress(70, "Generating map data files...")
         self._generate_geojsons_parallel(
             exposure_active,
             hazard_active,
@@ -329,26 +326,26 @@ class RunScenario:
         )
 
         # --- Parquet report data ---
-        self.base_handler.update_progress(85, "Generating Exposure report data files...")
+        update_progress(85, "Generating Exposure report data files...")
         exp_rep_df = self.exposure_handler.generate_exposure_report_dataset(
             exposure_active,
             self.request_data.country_name,
         )
-        self.base_handler.save_parquet_file(
+        save_parquet_file(
             exp_rep_df, DATA_TEMP_DIR / "exposure_report_data.parquet"
         )
 
-        self.base_handler.update_progress(90, "Generating Hazard report data files...")
+        update_progress(90, "Generating Hazard report data files...")
         haz_rep_df = self.hazard_handler.generate_hazard_report_dataset(
             hazard_active,
             self.request_data.country_name,
             return_periods,
         )
-        self.base_handler.save_parquet_file(
+        save_parquet_file(
             haz_rep_df, DATA_TEMP_DIR / "hazard_report_data.parquet"
         )
 
-        self.base_handler.update_progress(95, "Generating Impact report data files...")
+        update_progress(95, "Generating Impact report data files...")
         imp_rep_df = self.impact_handler.generate_impact_report_dataset(
             impact_active,
             exposure_active,
@@ -356,11 +353,11 @@ class RunScenario:
             return_periods,
             self.request_data.asset_type,
         )
-        self.base_handler.save_parquet_file(
+        save_parquet_file(
             imp_rep_df, DATA_TEMP_DIR / "impact_report_data.parquet"
         )
 
-        self.base_handler.update_progress(100, "Scenario run successfully.")
+        update_progress(100, "Scenario run successfully.")
 
     # Map the SSE ``step`` name to the GeoJSON file each generator writes
     # into ``DATA_TEMP_DIR``. Ordering matches the acceptance criterion but
@@ -395,25 +392,19 @@ class RunScenario:
         exposure_type = self.request_data.exposure_type
 
         def _run_exposure() -> str:
-            self.logger.log(
-                "info",
-                f"Generating exposure geojson on thread {threading.current_thread().name}",
+            self.logger.info(f"Generating exposure geojson on thread {threading.current_thread().name}",
             )
             self.exposure_handler.generate_exposure_geojson(exposure_active, country_name)
             return "exposure_ready"
 
         def _run_hazard() -> str:
-            self.logger.log(
-                "info",
-                f"Generating hazard geojson on thread {threading.current_thread().name}",
+            self.logger.info(f"Generating hazard geojson on thread {threading.current_thread().name}",
             )
             self.hazard_handler.generate_hazard_geojson(hazard_active, country_name, return_periods)
             return "hazard_ready"
 
         def _run_impact() -> str:
-            self.logger.log(
-                "info",
-                f"Generating impact geojson on thread {threading.current_thread().name}",
+            self.logger.info(f"Generating impact geojson on thread {threading.current_thread().name}",
             )
             self.impact_handler.generate_impact_geojson(
                 impact_active,
@@ -439,7 +430,7 @@ class RunScenario:
                     # GeoJSON generation runs CLIMADA-adjacent code in a
                     # worker thread; failures here are isolated so the
                     # other partials can still render.
-                    self.logger.log("error", f"GeoJSON generation task failed: {exc}")
+                    self.logger.error(f"GeoJSON generation task failed: {exc}")
                     continue
                 if callback is None:
                     continue
@@ -448,7 +439,7 @@ class RunScenario:
                     with open(path, encoding="utf-8") as fh:
                         data = json.load(fh)
                 except (OSError, ValueError) as exc:
-                    self.logger.log("warning", f"Failed to read {step} partial from {path}: {exc}")
+                    self.logger.warning(f"Failed to read {step} partial from {path}: {exc}")
                     continue
                 callback({"type": "progress", "step": step, "data": data})
 
@@ -460,9 +451,7 @@ class RunScenario:
         is shared.
         """
         initial_time = time()
-        self.logger.log(
-            "info",
-            f"Running new {'ERA' if self.request_data.is_era else 'custom'} scenario for "
+        self.logger.info(f"Running new {'ERA' if self.request_data.is_era else 'custom'} scenario for "
             f"{self.request_data.hazard_type} hazard affecting "
             f"{self.request_data.exposure_type} in "
             f"{self.request_data.country_name} for a {self.request_data.scenario}.",
@@ -487,9 +476,9 @@ class RunScenario:
                 f"An error occurred while running {mode} scenario. More info: {exception}"
             )
             self.status.set_error(status_code, status_message)
-            self.logger.log("error", status_message)
+            self.logger.error(status_message)
 
-        map_title = self.base_handler.set_map_title(
+        map_title = set_map_title(
             self.request_data.hazard_type,
             self.request_data.country_name,
             self.request_data.future_year,
@@ -508,7 +497,7 @@ class RunScenario:
             "future_year": self.request_data.future_year,
             "app_option": "era" if self.request_data.is_era else "explore",
         }
-        self.base_handler.create_results_metadata_file(metadata)
+        create_results_metadata_file(metadata)
 
         scenario_id: str | None = None
         if self.status.code == StatusCode.SUCCESS:
@@ -523,7 +512,7 @@ class RunScenario:
             },
             "status": self.status.get_status(),
         }
-        self.logger.log("info", f"Finished running scenario in {time() - initial_time}sec.")
+        self.logger.info(f"Finished running scenario in {time() - initial_time}sec.")
         return response
 
     # Source file names mirror ``db.scenario_store.read_result_blobs`` so a
@@ -572,14 +561,14 @@ class RunScenario:
         try:
             raw = cache_store.get(cache_key)
         except (duckdb.Error, OSError, ValueError) as exc:
-            self.logger.log("warning", f"Computation-cache lookup failed: {exc}")
+            self.logger.warning(f"Computation-cache lookup failed: {exc}")
             return False
         if not raw:
             return False
         try:
             bundle = cache_store.decode_bundle(raw)
         except (ValueError, TypeError, KeyError, OSError) as exc:
-            self.logger.log("warning", f"Computation-cache decode failed: {exc}")
+            self.logger.warning(f"Computation-cache decode failed: {exc}")
             return False
         DATA_TEMP_DIR.mkdir(parents=True, exist_ok=True)
         wrote_any = False
@@ -591,8 +580,8 @@ class RunScenario:
             wrote_any = True
         if not wrote_any:
             return False
-        self.base_handler.update_progress(100, "Scenario run successfully (cache hit).")
-        self.logger.log("info", f"Computation-cache hit for key {cache_key[:12]}...")
+        update_progress(100, "Scenario run successfully (cache hit).")
+        self.logger.info(f"Computation-cache hit for key {cache_key[:12]}...")
         return True
 
     def _store_in_computation_cache(self, cache_key: str) -> None:
@@ -607,7 +596,7 @@ class RunScenario:
         try:
             cache_store.put(cache_key, "scenario_bundle", cache_store.encode_bundle(bundle))
         except (duckdb.Error, OSError, ValueError) as exc:
-            self.logger.log("warning", f"Computation-cache write failed: {exc}")
+            self.logger.warning(f"Computation-cache write failed: {exc}")
 
     def _collect_provenance(self):
         """Return a :class:`provenance.ProvenanceRecord` for the current run.
@@ -687,9 +676,7 @@ class RunScenario:
             )
             return scenario_id
         except (duckdb.Error, OSError, ValueError, KeyError, TypeError) as exc:
-            self.logger.log(
-                "error",
-                f"Failed to persist scenario to DuckDB. More info: {exc}",
+            self.logger.error(f"Failed to persist scenario to DuckDB. More info: {exc}",
             )
             return None
 

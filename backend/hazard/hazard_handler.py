@@ -43,15 +43,17 @@ from typing import Any
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from backend.base_handler import BaseHandler
 from backend.constants import (
     DATA_HAZARDS_DIR,
     DATA_TEMP_DIR,
 )
 from backend.engine.adapter import intensity_to_dense
-from backend.logger_config import LoggerConfig
+from backend.logging_config import get_logger
+from backend.utils.admin import get_admin_data
+from backend.utils.country import get_iso3_country_code
+from backend.utils.levels import assign_levels
 
-logger = LoggerConfig(logger_types=["file"])
+logger = get_logger("backend.hazard.hazard_handler")
 
 
 class HazardHandler:
@@ -63,7 +65,7 @@ class HazardHandler:
     """
 
     def __init__(self):
-        self.base_handler = BaseHandler()
+        pass
 
     def get_hazard(
         self,
@@ -88,7 +90,7 @@ class HazardHandler:
                 "Error while trying to create hazard object. "
                 "Source must be chosen from ['hdf5', 'raster']"
             )
-            logger.log("error", status_message)
+            logger.error(status_message)
             raise ValueError(status_message)
         if not source:
             if hazard_type == "drought":
@@ -224,8 +226,8 @@ class HazardHandler:
         :type return_periods: tuple, optional
         """
         try:
-            country_iso3 = self.base_handler.get_iso3_country_code(country_name)
-            admin_gdf = self.base_handler.get_admin_data(country_iso3, 2)
+            country_iso3 = get_iso3_country_code(country_name)
+            admin_gdf = get_admin_data(country_iso3, 2)
 
             intensity_dense = intensity_to_dense(hazard.intensity)
             lat = np.asarray(hazard.centroid_lat, dtype=np.float64)
@@ -269,7 +271,7 @@ class HazardHandler:
                     percentile_values[f"rp{rp}"].insert(0, 0)
 
             # Assign levels based on the percentile values
-            hazard_gdf = self.base_handler.assign_levels(hazard_gdf, percentile_values)
+            hazard_gdf = assign_levels(hazard_gdf, percentile_values)
 
             # Spatial join with administrative area
             joined_gdf = gpd.sjoin(hazard_gdf, admin_gdf, how="left", predicate="within")
@@ -296,7 +298,7 @@ class HazardHandler:
             with open(map_data_filepath, "w", encoding="utf-8") as f:
                 json.dump(hazard_geojson, f)
         except (AttributeError, KeyError, TypeError, ValueError, OSError) as exception:
-            logger.log("error", f"An unexpected error occurred. More info: {exception}")
+            logger.error(f"An unexpected error occurred. More info: {exception}")
 
     def get_hazard_code(self, hazard_type: str) -> str:
         """
@@ -330,9 +332,7 @@ class HazardHandler:
         # Raise an exception if the hazard type is not found
         if code is None:
             # raise ValueError(f"Hazard type '{hazard_type}' is not recognized.")
-            logger.log(
-                "error",
-                f"Hazard type '{hazard_type}' is not recognized.",
+            logger.error(f"Hazard type '{hazard_type}' is not recognized.",
             )
 
         return code
@@ -367,9 +367,7 @@ class HazardHandler:
 
         # Raise an exception if the hazard code is not found
         if hazard_type is None:
-            logger.log(
-                "error",
-                f"Hazard code '{hazard_code}' is not recognized.",
+            logger.error(f"Hazard code '{hazard_code}' is not recognized.",
             )
 
         return hazard_type
@@ -415,7 +413,7 @@ class HazardHandler:
 
         .. code-block:: python
 
-            final_df = base_handler.generate_hazard_report_dataset(hazard, "EGY", (10, 15, 20, 25))
+            final_df = hazard_handler.generate_hazard_report_dataset(hazard, "EGY", (10, 15, 20, 25))
             # ``final_df`` is a pandas DataFrame keyed by admin layer.
         """
         try:
@@ -444,7 +442,7 @@ class HazardHandler:
             ]
 
             # Retrieve the admin_gdf and perform spatial join
-            country_iso3 = self.base_handler.get_iso3_country_code(country_name)
+            country_iso3 = get_iso3_country_code(country_name)
             layers = [1, 2]
             final_gdf = hazard_gdf.copy()
 
@@ -452,7 +450,7 @@ class HazardHandler:
             for layer in layers:
                 try:
                     # Retrieve the admin_gdf for the current layer
-                    admin_gdf = self.base_handler.get_admin_data(country_iso3, layer)
+                    admin_gdf = get_admin_data(country_iso3, layer)
 
                     # Perform spatial join with the current layer
                     joined_gdf = gpd.sjoin(final_gdf, admin_gdf, how="left", predicate="within")
@@ -460,7 +458,7 @@ class HazardHandler:
                     # Add the admin column for this layer to final_gdf
                     final_gdf[f"admin{layer}"] = joined_gdf["name"]
                 except (KeyError, ValueError, TypeError, OSError) as e:
-                    logger.log("error", f"Error processing layer {layer}: {str(e)}")
+                    logger.error(f"Error processing layer {layer}: {str(e)}")
                     # Continue with the next layer if an error occurs
                     continue
 
@@ -489,8 +487,8 @@ class HazardHandler:
             return final_df
 
         except AttributeError as e:
-            logger.log("error", f"Invalid Hazard object: {str(e)}")
+            logger.error(f"Invalid Hazard object: {str(e)}")
         except (KeyError, ValueError, TypeError) as e:
-            logger.log("error", f"An unexpected error occurred: {str(e)}")
+            logger.error(f"An unexpected error occurred: {str(e)}")
 
         return pd.DataFrame()  # Return an empty DataFrame in case of failure

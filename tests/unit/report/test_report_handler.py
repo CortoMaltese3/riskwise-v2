@@ -28,8 +28,7 @@ from backend.report.report_handler import (
 class _ReportHandlerStub:
     """Light-weight stand-in: ``_generate_provenance_tab`` only reads
     ``self.report_parameters`` so we can exercise it without booting the
-    real ReportHandler (which pulls in BaseHandler and the full report
-    construction stack).
+    real ReportHandler (which pulls in the full report construction stack).
     """
 
     def __init__(self, report_parameters: ReportParameters) -> None:

@@ -7,10 +7,10 @@ from a :class:`~contextvars.ContextVar` set by the request-ID middleware in
 request with the same UUID in the Electron main log and the user-facing
 error toast.
 
-Keeping this module structlog-only (no stdlib ``logging`` interop) avoids
-competing handler configuration with the legacy
-:class:`~logger_config.LoggerConfig`, which the CLIMADA-era handlers still
-use. The two coexist until the legacy loggers are migrated in a follow-up.
+Keeping this module structlog-only (no stdlib ``logging`` interop) keeps
+the JSON pipeline as the single source of truth for backend log lines:
+the legacy stdlib-based logger module was retired in #245 and every
+handler now binds a ``get_logger(__name__)`` at import time.
 """
 
 from __future__ import annotations

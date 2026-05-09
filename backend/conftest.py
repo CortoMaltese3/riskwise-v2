@@ -14,6 +14,15 @@ from collections.abc import Iterator
 
 import pytest
 
+from backend.logging_config import configure_logging
+
+# Install the structlog JSON pipeline once at collection time so any
+# ``get_logger(__name__)`` bound at module import (handlers, run_*.py
+# scripts) writes through the configured stream instead of structlog's
+# default. Tests that need a captured stream override this via the
+# fixture in ``backend/test_logging_config.py``.
+configure_logging()
+
 
 @pytest.fixture(autouse=True)
 def _isolate_user_data_registry(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:

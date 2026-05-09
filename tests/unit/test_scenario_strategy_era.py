@@ -86,7 +86,7 @@ class TestEraLoadHazardPresent:
         hazard_handler.get_hazard_filename.return_value = "tha_fl_hist.h5"
         hazard_handler.get_hazard.return_value = _hazard_arrays()
 
-        result = strategy.load_hazard_present(request_data, hazard_handler, MagicMock(), "m")
+        result = strategy.load_hazard_present(request_data, hazard_handler, "m")
 
         hazard_handler.get_hazard_filename.assert_called_once_with("FL", "THA", "historical")
         hazard_handler.get_hazard.assert_called_once_with(
@@ -105,7 +105,7 @@ class TestEraLoadHazardFuture:
         hazard_handler.get_hazard_filename.return_value = "tha_fl_rcp45.h5"
         hazard_handler.get_hazard.return_value = _hazard_arrays()
 
-        result = strategy.load_hazard_future(request_data, hazard_handler, MagicMock(), "m")
+        result = strategy.load_hazard_future(request_data, hazard_handler, "m")
 
         hazard_handler.get_hazard_filename.assert_called_once_with("FL", "THA", "rcp45")
         hazard_handler.get_hazard.assert_called_once_with(
