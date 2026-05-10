@@ -6,11 +6,59 @@ on:
 
 permissions:
   contents: write
+  actions: read
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
+  # Issue #252 — gate every release artifact on a green `tests.yml` run for
+  # the exact commit the tag points at. Without this, `git push --tags` on a
+  # known-failing main commit would still publish a signed installer.
+  # Branch protection on `main` ensures the tagged SHA already has a
+  # successful `tests.yml` run (from the merge commit's push), so this job
+  # just verifies the run exists and concluded green via the GitHub API.
+  # See CONTRIBUTING.md § Release gating.
+  verify-tests:
+    name: Verify tests.yml passed on tag SHA
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check tests.yml conclusion for ${{ github.sha }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          echo "Looking up tests.yml runs for SHA $SHA"
+          # Query the latest run of tests.yml for this exact SHA. The API
+          # returns the runs newest-first; we take the first entry. If no
+          # run exists, fail loudly — a release must never ship from a
+          # commit that was never tested.
+          payload=$(gh api \
+            "repos/${REPO}/actions/workflows/tests.yml/runs?head_sha=${SHA}&per_page=1" \
+            --jq '{count: (.workflow_runs | length), status: (.workflow_runs[0].status // "missing"), conclusion: (.workflow_runs[0].conclusion // "missing"), url: (.workflow_runs[0].html_url // "")}')
+          echo "tests.yml lookup: $payload"
+          count=$(echo "$payload" | jq -r '.count')
+          status=$(echo "$payload" | jq -r '.status')
+          conclusion=$(echo "$payload" | jq -r '.conclusion')
+          url=$(echo "$payload" | jq -r '.url')
+          if [ "$count" = "0" ]; then
+            echo "::error::No tests.yml run found for commit $SHA. Refusing to release an untested commit."
+            exit 1
+          fi
+          if [ "$status" != "completed" ]; then
+            echo "::error::tests.yml run for $SHA is still '$status' (not completed). Wait for it to finish before tagging. Run: $url"
+            exit 1
+          fi
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::tests.yml run for $SHA concluded '$conclusion' (expected 'success'). Refusing to release. Run: $url"
+            exit 1
+          fi
+          echo "tests.yml passed for $SHA — release may proceed."
+
   build:
+    needs: verify-tests
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
@@ -80,6 +128,7 @@ jobs:
   # engine is already cut from an earlier tag (see ADR adr-bundling.md).
   build-engine:
     name: Build Python engine (Nuitka)
+    needs: verify-tests
     runs-on: windows-latest
     outputs:
       engine_sha256: ${{ steps.engine_hash.outputs.sha256 }}
@@ -208,6 +257,7 @@ jobs:
   # generators without dragging the Windows installer toolchain in.
   sbom:
     name: Generate SBOM and verify NOTICES.txt
+    needs: verify-tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
