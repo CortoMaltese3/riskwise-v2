@@ -62,7 +62,6 @@ scripts/*
 # Phase 4 Area 4 — Python engine bundling + measurement scripts (issue #113,
 # ADR docs/spikes/adr-bundling.md).
 !scripts/build_engine.ps1
-!scripts/build_engine_pyinstaller.ps1
 !scripts/measure_engine.ps1
 # Local dev workflow — stage built engine into %LOCALAPPDATA% (ADR §3.5.1).
 !scripts/stage_engine.ps1
