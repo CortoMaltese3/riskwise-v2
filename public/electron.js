@@ -694,6 +694,7 @@ app.whenReady().then(async () => {
   // didn't reject the call as too late; here we just refresh the status
   // reason now that updateStore + offline mode are known. Runtime gates
   // (DSN present, opted in, not offline) are enforced inside `beforeSend`.
+  // TODO(D24): gate on isOfflineMode() when un-deferred
   initializeSentry();
 
   // Configure auto-updater BEFORE any other startup logic
@@ -826,6 +827,7 @@ app.whenReady().then(async () => {
   // Check for updates AFTER main window is created, then poll every 4 h.
   // The renderer-side dialog (src/components/UpdateDialog.jsx) decides what
   // to show — the check itself just fires off an electron-updater probe.
+  // TODO(D24): gate on isOfflineMode() when un-deferred
   if (!isDevelopmentEnv()) {
     checkForAppUpdates("startup").catch(() => {});
     startUpdateCheckTimer();

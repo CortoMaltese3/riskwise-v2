@@ -61,6 +61,52 @@ Rotation of any row above must be coordinated with the break-glass contact so
 the public counterpart (Sentry project key, signing certificate thumbprint,
 `resources/engine-manifest.pub`) is updated in lockstep.
 
+## Known accepted risks
+
+The following are documented trade-offs that we have chosen to accept
+rather than mitigate. Each one was reviewed and recorded here so future
+contributors do not "fix" them without understanding the constraint.
+
+### CSP `style-src 'unsafe-inline'`
+
+The renderer's Content-Security-Policy (defined in `public/electron.js`
+and mirrored by the meta tag in `public/index.html`) sets:
+
+```
+style-src 'self' 'unsafe-inline'
+```
+
+**Why**: MUI's styling layer (Emotion) injects per-component styles into
+the DOM at runtime as inline `<style>` tags. Stripping `'unsafe-inline'`
+from `style-src` would break every themed component (buttons, dialogs,
+the entire surface). MUI/Emotion does not currently support a nonce-
+or hash-based CSP for its runtime style injection without bespoke
+SSR-style integration that does not apply to a packaged Electron app.
+
+**Mitigations already in place**:
+
+- `script-src 'self'` (no `'unsafe-inline'` / `'unsafe-eval'`) is the
+  real XSS-to-RCE gate. An attacker cannot execute injected JavaScript,
+  so an inline style cannot be weaponised into code execution.
+- `contextIsolation: true` and `nodeIntegration: false` on every
+  `BrowserWindow` (`public/electron.js`) prevent a renderer-side
+  exploit from reaching Node APIs even if a style-based exfiltration
+  were attempted.
+- `connect-src` is locked to loopback (`http://127.0.0.1:*` /
+  `ws://127.0.0.1:*` / `file:`), so a hypothetical CSS-based exfiltration
+  channel has no external endpoint to send data to.
+- `object-src 'none'`, `frame-ancestors 'none'`, `form-action 'none'`
+  close the other classical injection vectors.
+
+**Residual risk**: CSS-side-channel attacks — using malicious inline
+styles to infer DOM contents via attribute selectors and background-image
+requests — remain theoretically possible. The `connect-src` and
+`img-src` restrictions reduce the bandwidth of any such channel to
+loopback and an allow-listed basemap CDN; combined with the absence of
+sensitive per-DOM secrets in the renderer (the app is a desktop tool
+operating on local files), the practical exploitability is very low.
+Revisit if the renderer starts handling credentials or session tokens.
+
 ## Out of scope
 
 The following are not considered vulnerabilities under this policy:
