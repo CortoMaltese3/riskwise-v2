@@ -46,6 +46,8 @@ contextBridge.exposeInMainWorld("electron", {
 
   openReport: (reportPath) => ipcRenderer.invoke("open-report", reportPath),
 
+  getCurrentUser: () => ipcRenderer.invoke("get-current-user"),
+
   exportPdf: (scenarioId, options) =>
     ipcRenderer.invoke("export-pdf", {
       scenarioId,

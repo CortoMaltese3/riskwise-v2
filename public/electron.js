@@ -36,6 +36,17 @@ const {
 const os = require("node:os");
 const treeKill = require("tree-kill");
 
+// PDF footer: only "page N / total" on the right, no header. Chromium
+// requires both header and footer templates when displayHeaderFooter is
+// true — an empty div suppresses the header. Bottom margin widened so the
+// footer does not collide with content.
+const PDF_FOOTER_TEMPLATE =
+  '<div style="width:100%; font-size:9px; padding:0 12mm; text-align:right; color:#666;">' +
+  '<span class="pageNumber"></span> / <span class="totalPages"></span>' +
+  "</div>";
+const PDF_HEADER_TEMPLATE = "<div></div>";
+const PDF_MARGINS = { top: 0.4, bottom: 0.6, left: 0.4, right: 0.4 };
+
 global.pythonProcess = null;
 
 // `connect-src` is locked to loopback (any port — supervisor picks an
@@ -1463,6 +1474,17 @@ const waitForPrintReady = (webContents) =>
     check();
   });
 
+// Returns null on failure so the renderer can fall back to a placeholder
+// without throwing.
+ipcMain.handle("get-current-user", () => {
+  try {
+    return os.userInfo().username;
+  } catch (error) {
+    log.warn("[electron] get-current-user failed:", error);
+    return null;
+  }
+});
+
 ipcMain.handle("export-pdf", async (_event, { scenarioId, snapshotIds }) => {
   let printWin = null;
   try {
@@ -1496,6 +1518,10 @@ ipcMain.handle("export-pdf", async (_event, { scenarioId, snapshotIds }) => {
     const pdfBuffer = await printWin.webContents.printToPDF({
       printBackground: true,
       pageSize: "A4",
+      displayHeaderFooter: true,
+      headerTemplate: PDF_HEADER_TEMPLATE,
+      footerTemplate: PDF_FOOTER_TEMPLATE,
+      margins: PDF_MARGINS,
     });
 
     printWin.destroy();

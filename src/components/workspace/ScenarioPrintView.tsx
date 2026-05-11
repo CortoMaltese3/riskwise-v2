@@ -103,20 +103,6 @@ const shortSha = (value?: string | null): string | undefined => {
   return value.slice(0, SHA_PREFIX_LEN);
 };
 
-const buildBibtex = (appVersion?: string | null, climadaVersion?: string | null): string => {
-  const year = new Date().getFullYear();
-  const app = appVersion ?? "?";
-  const climada = climadaVersion ?? "?";
-  return [
-    `@techreport{riskwise${year},`,
-    `  title={RISK WISE v2 Scenario Report},`,
-    `  institution={UNU-EHS / GIZ},`,
-    `  year={${year}},`,
-    `  note={App v${app}, CLIMADA v${climada}}`,
-    `}`,
-  ].join("\n");
-};
-
 const formatDate = (iso: string | null, locale: string) => {
   if (!iso) return "—";
   try {
@@ -182,14 +168,17 @@ const computeExecutiveSummary = (data: WaterfallData): ExecutiveSummary | null =
   };
 };
 
+const SectionHeading = ({ children }: { children: React.ReactNode }) => (
+  <Typography variant="h5" gutterBottom>
+    {children}
+  </Typography>
+);
+
 const ScenarioPrintView = ({
   scenarioId,
   snapshotIds,
 }: {
   scenarioId: string;
-  // Comes from the `snapshots` URL param (issue #352) — the user's ordered
-  // selection from ExportPdfDialog. Rendered as figures in the Visuals
-  // section in URL/selection order.
   snapshotIds?: string[];
 }) => {
   const { i18n, t } = useTranslation();
@@ -203,6 +192,11 @@ const ScenarioPrintView = ({
   const [figures, setFigures] = useState<SnapshotFigure[]>([]);
   const [snapshotsResolved, setSnapshotsResolved] = useState(false);
   const [imagesSettled, setImagesSettled] = useState(0);
+  // `undefined` = IPC pending; `null` = resolved with no/failed username
+  // (renderer shows the fallback row); a string = OS username.
+  const [currentUser, setCurrentUser] = useState<string | null | undefined>(undefined);
+
+  const [generatedAt] = useState(() => new Date());
 
   // Stabilise the snapshot effect's dependency: snapshotIds is a fresh array
   // on every render from the parent, so memoise on its joined contents.
@@ -236,6 +230,27 @@ const ScenarioPrintView = ({
     };
     fetchData();
   }, [scenarioId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchUser = async () => {
+      try {
+        const name = await window.electron?.getCurrentUser?.();
+        if (cancelled) return;
+        setCurrentUser(typeof name === "string" && name.length > 0 ? name : null);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        logger.warn("ScenarioPrintView: getCurrentUser failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        setCurrentUser(null);
+      }
+    };
+    fetchUser();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const ids = snapshotIdsKey ? snapshotIdsKey.split(",") : [];
@@ -320,12 +335,17 @@ const ScenarioPrintView = ({
     };
   }, [scenarioId, snapshotIdsKey]);
 
-  // Readiness gate also waits for every snapshot <img> to fire onLoad or
-  // onError, so printToPDF doesn't capture half-loaded blob URLs.
+  // Readiness gate also waits for the username fetch and every snapshot
+  // <img> to fire onLoad or onError, so printToPDF doesn't capture
+  // half-loaded blob URLs.
   const allImagesSettled = figures.length === 0 || imagesSettled >= figures.length;
-  const printReady = loaded && snapshotsResolved && allImagesSettled;
+  const printReady = loaded && currentUser !== undefined && snapshotsResolved && allImagesSettled;
   useEffect(() => {
-    if (printReady) document.body.dataset.printReady = "true";
+    if (!printReady) return;
+    document.body.dataset.printReady = "true";
+    return () => {
+      delete document.body.dataset.printReady;
+    };
   }, [printReady]);
 
   const onImageSettled = useCallback(() => {
@@ -339,7 +359,6 @@ const ScenarioPrintView = ({
       [
         ["App Version", meta.app_version],
         ["Engine Version", meta.engine_version],
-        ["CLIMADA Version", meta.climada_version],
         ["Computed At", computedAt ? formatDate(computedAt, locale) : undefined],
         ["Entity Data SHA-256 (8-char prefix)", shortSha(meta.entity_data_sha256)],
         ["Hazard Data SHA-256 (8-char prefix)", shortSha(meta.hazard_data_sha256)],
@@ -349,14 +368,50 @@ const ScenarioPrintView = ({
     ).filter((row): row is [string, string] => Boolean(row[1]));
   }, [meta, locale]);
 
-  const bibtex = useMemo(
-    () => buildBibtex(meta?.app_version, meta?.climada_version),
-    [meta?.app_version, meta?.climada_version]
-  );
-
   const executiveSummary = useMemo(
     () => (waterfallData ? computeExecutiveSummary(waterfallData) : null),
     [waterfallData]
+  );
+
+  const hasCostbenMeasures = !!(costbenData && costbenData.measures.length > 0);
+  const tocEntries = useMemo(() => {
+    const entries = [
+      t("print_section_input_parameters"),
+      t("print_section_executive_summary"),
+      t("print_section_hazard"),
+      t("print_section_exposure"),
+    ];
+    if (waterfallData) entries.push(t("print_section_impact"));
+    if (hasCostbenMeasures) entries.push(t("print_section_cost_benefit_adaptation"));
+    entries.push(t("print_section_methodology"), t("print_section_disclaimer"));
+    return entries;
+  }, [t, waterfallData, hasCostbenMeasures]);
+
+  const dateString = useMemo(
+    () =>
+      formatDateI18n(generatedAt, locale, {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }),
+    [generatedAt, locale]
+  );
+  const timeString = useMemo(
+    () =>
+      formatDateTime(generatedAt, locale, {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }),
+    [generatedAt, locale]
+  );
+  const disclaimerParagraphs = useMemo(
+    () =>
+      t("print_disclaimer_body")
+        .split("\n")
+        .filter((p) => p.trim().length > 0),
+    [t]
   );
 
   if (error) {
@@ -380,6 +435,32 @@ const ScenarioPrintView = ({
 
   const horizon =
     meta.ref_year && meta.future_year ? `${meta.ref_year} – ${meta.future_year}` : "—";
+
+  // Counters mutate during the single render pass and never escape it; the
+  // global Figure counter is continued by the snapshot block at the bottom
+  // so the follow-up issue can route snapshots into per-domain slots
+  // without re-numbering.
+  let tableCount = 0;
+  let figureCount = 0;
+  const nextTableNumber = () => ++tableCount;
+  const nextFigureNumber = () => ++figureCount;
+
+  const renderCaption = (kind: "table" | "figure", number: number, descriptionKey: string) => {
+    const labelKey = kind === "table" ? "table_label" : "figure_label";
+    return (
+      <Typography
+        variant="caption"
+        data-testid={`caption-${kind}`}
+        sx={{ display: "block", fontStyle: "italic", mt: 0.5, mb: 1.5 }}
+      >
+        {`${t(labelKey, { number })} — ${t(descriptionKey)}`}
+      </Typography>
+    );
+  };
+  const renderTableCaption = (number: number, descriptionKey: string) =>
+    renderCaption("table", number, descriptionKey);
+  const renderFigureCaption = (number: number, descriptionKey: string) =>
+    renderCaption("figure", number, descriptionKey);
 
   return (
     <>
@@ -427,24 +508,7 @@ const ScenarioPrintView = ({
                 <strong>{t("hazard_title")}:</strong> {meta.hazard_type ?? "—"}
               </Typography>
               <Typography variant="body1">
-                <strong>{t("print_label_climate_scenario")}:</strong> {meta.scenario ?? "—"}
-              </Typography>
-              <Typography variant="body1">
                 <strong>{t("time_horizon_title")}:</strong> {horizon}
-              </Typography>
-            </Stack>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 4 }}>
-              {t("print_generated_at", { date: formatDateTime(new Date(), locale) })}
-            </Typography>
-            <Stack spacing={0.25} sx={{ mt: 2 }}>
-              <Typography variant="caption" color="text.secondary">
-                {t("print_cover_app_version")}: {meta.app_version ?? "—"}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t("print_cover_engine_version")}: {meta.engine_version ?? "—"}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t("print_cover_climada_version")}: {meta.climada_version ?? "—"}
               </Typography>
             </Stack>
           </Box>
@@ -476,69 +540,23 @@ const ScenarioPrintView = ({
           </Box>
         </Box>
 
-        {/* Section 2 — Executive Summary */}
-        <Box
-          data-testid="print-executive-summary"
-          sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}
-        >
-          <Typography variant="h5" gutterBottom>
-            {t("print_section_executive_summary")}
+        {/* Section 2 — Mini Table of Contents */}
+        <Box data-testid="print-toc" sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}>
+          <Typography variant="subtitle1" gutterBottom>
+            {t("print_toc_title")}:
           </Typography>
-          {executiveSummary ? (
-            <Table size="small">
-              <TableBody>
-                <LabelRow
-                  label={t("print_kpi_present_aal", { year: executiveSummary.presentYear })}
-                  value={formatWithUnit(executiveSummary.presentValue, executiveSummary.unit)}
-                />
-                <LabelRow
-                  label={t("print_kpi_future_aal", { year: executiveSummary.futureYear })}
-                  value={formatWithUnit(executiveSummary.futureValue, executiveSummary.unit)}
-                />
-                <LabelRow
-                  label={t("print_kpi_change_absolute")}
-                  value={formatWithUnit(executiveSummary.absoluteChange, executiveSummary.unit)}
-                />
-                <LabelRow
-                  label={t("print_kpi_change_percent")}
-                  value={
-                    executiveSummary.percentChange != null
-                      ? `${formatNumberLocale(executiveSummary.percentChange)}%`
-                      : "—"
-                  }
-                />
-                {executiveSummary.topDriverLabel != null &&
-                  executiveSummary.topDriverValue != null && (
-                    <LabelRow
-                      label={t("print_kpi_top_driver")}
-                      value={`${executiveSummary.topDriverLabel} (${formatWithUnit(
-                        executiveSummary.topDriverValue,
-                        executiveSummary.unit
-                      )})`}
-                    />
-                  )}
-              </TableBody>
-            </Table>
-          ) : (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              data-testid="print-summary-unavailable"
-            >
-              {t("print_summary_unavailable")}
-            </Typography>
-          )}
+          <Typography variant="body2" data-testid="print-toc-entries">
+            {tocEntries.join(" · ")}
+          </Typography>
         </Box>
 
-        {/* Section 3 — Scenario Inputs */}
+        {/* Section 3 — Input Parameters + creation metadata */}
         <Box
-          data-testid="print-scenario-inputs"
+          data-testid="print-input-parameters"
           sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}
         >
-          <Typography variant="h5" gutterBottom>
-            {t("print_section_scenario_inputs")}
-          </Typography>
-          <Table size="small">
+          <SectionHeading>{t("print_section_input_parameters")}</SectionHeading>
+          <Table size="small" data-testid="print-input-parameters-table">
             <TableBody>
               <LabelRow label={t("country")} value={meta.country} />
               <LabelRow label={t("hazard_title")} value={meta.hazard_type} />
@@ -567,218 +585,288 @@ const ScenarioPrintView = ({
               )}
             </TableBody>
           </Table>
+          {renderTableCaption(nextTableNumber(), "print_caption_table_parameters")}
+
+          <Box data-testid="print-creation-metadata" sx={{ mt: 2 }}>
+            <Stack spacing={0.25}>
+              <Typography variant="body2" data-testid="print-creation-user">
+                <strong>{t("print_creation_user")}:</strong>{" "}
+                {currentUser || t("print_creation_user_fallback")}
+              </Typography>
+              <Typography variant="body2" data-testid="print-creation-date">
+                <strong>{t("print_creation_date")}:</strong> {dateString}
+              </Typography>
+              <Typography variant="body2" data-testid="print-creation-time">
+                <strong>{t("print_creation_time")}:</strong> {timeString}
+              </Typography>
+            </Stack>
+          </Box>
         </Box>
 
-        {/* Section 4 — Key Results Tables */}
+        {/* Section 4 — Executive Summary */}
         <Box
-          data-testid="print-key-results"
+          data-testid="print-executive-summary"
           sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}
         >
-          <Typography variant="h5" gutterBottom>
-            {t("print_section_key_results")}
-          </Typography>
+          <SectionHeading>{t("print_section_executive_summary")}</SectionHeading>
+          {executiveSummary ? (
+            <>
+              <Table size="small" data-testid="print-executive-summary-table">
+                <TableBody>
+                  <LabelRow
+                    label={t("print_kpi_present_aal", { year: executiveSummary.presentYear })}
+                    value={formatWithUnit(executiveSummary.presentValue, executiveSummary.unit)}
+                  />
+                  <LabelRow
+                    label={t("print_kpi_future_aal", { year: executiveSummary.futureYear })}
+                    value={formatWithUnit(executiveSummary.futureValue, executiveSummary.unit)}
+                  />
+                  <LabelRow
+                    label={t("print_kpi_change_absolute")}
+                    value={formatWithUnit(executiveSummary.absoluteChange, executiveSummary.unit)}
+                  />
+                  <LabelRow
+                    label={t("print_kpi_change_percent")}
+                    value={
+                      executiveSummary.percentChange != null
+                        ? `${formatNumberLocale(executiveSummary.percentChange)}%`
+                        : "—"
+                    }
+                  />
+                  {executiveSummary.topDriverLabel != null &&
+                    executiveSummary.topDriverValue != null && (
+                      <LabelRow
+                        label={t("print_kpi_top_driver")}
+                        value={`${executiveSummary.topDriverLabel} (${formatWithUnit(
+                          executiveSummary.topDriverValue,
+                          executiveSummary.unit
+                        )})`}
+                      />
+                    )}
+                </TableBody>
+              </Table>
+              {renderTableCaption(nextTableNumber(), "print_caption_table_executive_summary")}
+            </>
+          ) : (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              data-testid="print-summary-unavailable"
+            >
+              {t("print_summary_unavailable")}
+            </Typography>
+          )}
+        </Box>
 
-          <Typography variant="subtitle1" gutterBottom>
-            {t("print_table_risk_decomposition")}
+        {/* Section 5 — Hazard */}
+        <Box
+          data-testid="print-section-hazard"
+          sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}
+        >
+          <SectionHeading>{t("print_section_hazard")}</SectionHeading>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {t("print_section_hazard_description")}
+          </Typography>
+          <div data-testid="snapshots-slot-hazard" />
+        </Box>
+
+        {/* Section 6 — Exposure */}
+        <Box
+          data-testid="print-section-exposure"
+          sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}
+        >
+          <SectionHeading>{t("print_section_exposure")}</SectionHeading>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {t("print_section_exposure_description")}
+          </Typography>
+          <div data-testid="snapshots-slot-exposure" />
+        </Box>
+
+        {/* Section 7 — Impact */}
+        <Box
+          data-testid="print-section-impact"
+          sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}
+        >
+          <SectionHeading>{t("print_section_impact")}</SectionHeading>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {t("print_section_impact_description")}
           </Typography>
           {waterfallData ? (
-            <Table size="small" data-testid="print-risk-table" sx={{ mb: 3 }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
-                    {t("print_table_col_category")}
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
-                    {t("print_table_col_value")}
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
-                    {t("print_table_col_unit")}
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {waterfallData.categories.map((cat) => {
-                  const totalYear =
-                    cat.key === "risk_present"
-                      ? waterfallData.present_year
-                      : cat.key === "risk_future"
-                        ? waterfallData.future_year
-                        : null;
-                  const label =
-                    totalYear != null ? t("print_table_total", { year: totalYear }) : cat.label;
-                  return (
-                    <TableRow key={cat.key}>
-                      <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>{label}</TableCell>
-                      <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>
-                        {formatNumberLocale(cat.value)}
-                      </TableCell>
-                      <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>
-                        {waterfallData.measurement_unit}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          ) : (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              data-testid="print-risk-table-missing"
-              sx={{ mb: 3 }}
-            >
-              {t("print_table_not_available")}
-            </Typography>
-          )}
-
-          <Typography variant="subtitle1" gutterBottom>
-            {t("print_table_costben_summary")}
-          </Typography>
-          {costbenData && costbenData.measures.length > 0 ? (
-            <Table size="small" data-testid="print-costben-table">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
-                    {t("print_table_col_measure")}
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
-                    {`${t("print_table_col_cost")} (${costbenData.currency_unit})`}
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
-                    {`${t("print_table_col_benefit")} (${costbenData.currency_unit})`}
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
-                    {t("print_table_col_bcr")}
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {[...costbenData.measures]
-                  .sort((a, b) => b.benefit_cost_ratio - a.benefit_cost_ratio)
-                  .map((m) => (
-                    <TableRow key={m.name}>
-                      <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>{m.name}</TableCell>
-                      <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>
-                        {formatNumberLocale(m.cost)}
-                      </TableCell>
-                      <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>
-                        {formatNumberLocale(m.benefit)}
-                      </TableCell>
-                      <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>
-                        {formatNumberLocale(m.benefit_cost_ratio)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              data-testid="print-costben-table-missing"
-            >
-              {t("print_table_not_available")}
-            </Typography>
-          )}
-        </Box>
-
-        {/* Section 5 — Visuals */}
-        <Box
-          data-testid="print-visuals"
-          sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}
-        >
-          <Typography variant="h5" gutterBottom>
-            {t("print_section_visuals")}
-          </Typography>
-
-          {waterfallData && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                {t("print_section_risk_analysis")}
-              </Typography>
-              <Box sx={{ height: 380 }}>
+            <>
+              <Box sx={{ height: 380, mb: 1 }}>
                 <WaterfallChartView data={waterfallData} />
               </Box>
-            </Box>
-          )}
+              {renderFigureCaption(nextFigureNumber(), "print_caption_figure_waterfall")}
 
-          {costbenData && costbenData.measures.length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                {t("print_section_cost_benefit")}
-              </Typography>
-              <Box sx={{ height: 380 }}>
-                <CostBenefitChartView data={costbenData} />
-              </Box>
-            </Box>
-          )}
-
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              {t("print_section_impact_map")}
+              <Table size="small" data-testid="print-risk-table" sx={{ mt: 2 }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
+                      {t("print_table_col_category")}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
+                      {t("print_table_col_value")}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
+                      {t("print_table_col_unit")}
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {waterfallData.categories.map((cat) => {
+                    const totalYearByKey: Record<string, number> = {
+                      risk_present: waterfallData.present_year,
+                      risk_future: waterfallData.future_year,
+                    };
+                    const totalYear = totalYearByKey[cat.key] ?? null;
+                    const label =
+                      totalYear != null ? t("print_table_total", { year: totalYear }) : cat.label;
+                    return (
+                      <TableRow key={cat.key}>
+                        <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>{label}</TableCell>
+                        <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>
+                          {formatNumberLocale(cat.value)}
+                        </TableCell>
+                        <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>
+                          {waterfallData.measurement_unit}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              {renderTableCaption(nextTableNumber(), "print_caption_table_risk_decomposition")}
+            </>
+          ) : (
+            <Typography variant="body2" color="text.secondary" data-testid="print-impact-missing">
+              {t("print_section_no_results")}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {t("print_section_impact_map_note")}
-            </Typography>
-          </Box>
-
-          <Box data-testid="snapshots-slot">
-            {figures.map((fig, idx) => {
-              const figureLabel = t("figure_label", { number: idx + 1 });
-              const typeKey = SNAPSHOT_TYPE_LABEL_KEYS[fig.snapshotType];
-              const typeLabel = typeKey ? t(typeKey) : fig.snapshotType.replace(/_/g, " ");
-              const headingText = fig.title
-                ? `${figureLabel} — ${fig.title}`
-                : `${figureLabel} — ${typeLabel}`;
-              return (
-                <Box
-                  key={fig.id}
-                  data-testid={`snapshot-figure-${fig.id}`}
-                  sx={{ mb: 3, "@media print": { pageBreakInside: "avoid" } }}
-                >
-                  <Typography variant="subtitle1" gutterBottom>
-                    {headingText}
-                  </Typography>
-                  <Box
-                    component="img"
-                    src={fig.imageUrl}
-                    alt={fig.title ?? typeLabel}
-                    onLoad={onImageSettled}
-                    onError={onImageSettled}
-                    sx={{
-                      display: "block",
-                      maxWidth: "100%",
-                      maxHeight: "80vh",
-                      "@media print": { pageBreakInside: "avoid" },
-                    }}
-                  />
-                  {fig.caption && (
-                    <Typography
-                      variant="caption"
-                      sx={{ display: "block", fontStyle: "italic", mt: 0.5 }}
-                    >
-                      {fig.caption}
-                    </Typography>
-                  )}
-                </Box>
-              );
-            })}
-          </Box>
+          )}
+          <div data-testid="snapshots-slot-impact" />
         </Box>
 
-        {/* Section 6 — Methodology & Provenance */}
+        {/* Section 8 — Cost-Benefit / Adaptation */}
+        <Box
+          data-testid="print-section-cost-benefit"
+          sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}
+        >
+          <SectionHeading>{t("print_section_cost_benefit_adaptation")}</SectionHeading>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {t("print_section_cost_benefit_description")}
+          </Typography>
+          {costbenData && costbenData.measures.length > 0 ? (
+            <>
+              <Box sx={{ height: 380, mb: 1 }}>
+                <CostBenefitChartView data={costbenData} />
+              </Box>
+              {renderFigureCaption(nextFigureNumber(), "print_caption_figure_cost_benefit")}
+
+              <Table size="small" data-testid="print-costben-table" sx={{ mt: 2 }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
+                      {t("print_table_col_measure")}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
+                      {`${t("print_table_col_cost")} (${costbenData.currency_unit})`}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
+                      {`${t("print_table_col_benefit")} (${costbenData.currency_unit})`}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold", border: "1px solid #ddd" }}>
+                      {t("print_table_col_bcr")}
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {[...costbenData.measures]
+                    .sort((a, b) => b.benefit_cost_ratio - a.benefit_cost_ratio)
+                    .map((m) => (
+                      <TableRow key={m.name}>
+                        <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>{m.name}</TableCell>
+                        <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>
+                          {formatNumberLocale(m.cost)}
+                        </TableCell>
+                        <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>
+                          {formatNumberLocale(m.benefit)}
+                        </TableCell>
+                        <TableCell sx={{ border: "1px solid #ddd", py: 0.5 }}>
+                          {formatNumberLocale(m.benefit_cost_ratio)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              {renderTableCaption(nextTableNumber(), "print_caption_table_cost_benefit_summary")}
+            </>
+          ) : (
+            <Typography variant="body2" color="text.secondary" data-testid="print-costben-missing">
+              {t("print_section_no_results")}
+            </Typography>
+          )}
+          <div data-testid="snapshots-slot-cost-benefit" />
+        </Box>
+
+        {/* Snapshot figures render here transitionally; the follow-up
+            issue routes them into the per-domain slots above while
+            continuing this global Figure counter. */}
+        <Box
+          data-testid="snapshots-slot"
+          sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}
+        >
+          {figures.map((fig) => {
+            const figureLabel = t("figure_label", { number: nextFigureNumber() });
+            const typeKey = SNAPSHOT_TYPE_LABEL_KEYS[fig.snapshotType];
+            const typeLabel = typeKey ? t(typeKey) : fig.snapshotType.replace(/_/g, " ");
+            const headingText = fig.title
+              ? `${figureLabel} — ${fig.title}`
+              : `${figureLabel} — ${typeLabel}`;
+            return (
+              <Box
+                key={fig.id}
+                data-testid={`snapshot-figure-${fig.id}`}
+                sx={{ mb: 3, "@media print": { pageBreakInside: "avoid" } }}
+              >
+                <Typography variant="subtitle1" gutterBottom>
+                  {headingText}
+                </Typography>
+                <Box
+                  component="img"
+                  src={fig.imageUrl}
+                  alt={fig.title ?? typeLabel}
+                  onLoad={onImageSettled}
+                  onError={onImageSettled}
+                  sx={{
+                    display: "block",
+                    maxWidth: "100%",
+                    maxHeight: "80vh",
+                    "@media print": { pageBreakInside: "avoid" },
+                  }}
+                />
+                {fig.caption && (
+                  <Typography
+                    variant="caption"
+                    sx={{ display: "block", fontStyle: "italic", mt: 0.5 }}
+                  >
+                    {fig.caption}
+                  </Typography>
+                )}
+              </Box>
+            );
+          })}
+        </Box>
+
+        {/* Section 9 — Methodology & Provenance */}
         <Box
           data-testid="print-methodology"
           sx={{ "@media print": { pageBreakInside: "avoid", pageBreakBefore: "always" } }}
         >
-          <Typography variant="h5" gutterBottom>
-            {t("print_section_methodology")}
-          </Typography>
+          <SectionHeading>{t("print_section_methodology")}</SectionHeading>
           <Typography variant="body2" sx={{ mb: 2 }} data-testid="print-methodology-body">
             {t("print_methodology_body")}
           </Typography>
 
-          <Table size="small" sx={{ mb: 2 }}>
+          <Table size="small" sx={{ mb: 1 }} data-testid="print-provenance-table">
             <TableBody>
               {provenanceRows.map(([label, value]) => (
                 <TableRow key={label}>
@@ -802,6 +890,7 @@ const ScenarioPrintView = ({
               ))}
             </TableBody>
           </Table>
+          {renderTableCaption(nextTableNumber(), "print_caption_table_provenance")}
           <Typography
             variant="body2"
             sx={{ fontStyle: "italic", mb: 2 }}
@@ -809,24 +898,21 @@ const ScenarioPrintView = ({
           >
             {t("print_reproducibility_note")}
           </Typography>
-          <Typography variant="subtitle2" gutterBottom>
-            {t("print_citation_title")}
-          </Typography>
-          <Box
-            component="pre"
-            data-testid="bibtex-snippet"
-            sx={{
-              fontFamily: "Consolas, monospace",
-              fontSize: "0.75rem",
-              backgroundColor: "#f5f5f5",
-              border: "1px solid #ddd",
-              p: 1.5,
-              m: 0,
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            {bibtex}
-          </Box>
+        </Box>
+
+        {/* Section 10 — Disclaimer (own page) */}
+        <Box
+          data-testid="print-disclaimer"
+          sx={{ "@media print": { pageBreakInside: "avoid", pageBreakBefore: "always" }, mt: 4 }}
+        >
+          <SectionHeading>{t("print_section_disclaimer")}</SectionHeading>
+          <Stack spacing={1.5} data-testid="print-disclaimer-body">
+            {disclaimerParagraphs.map((paragraph, idx) => (
+              <Typography key={idx} variant="body2">
+                {paragraph}
+              </Typography>
+            ))}
+          </Stack>
         </Box>
       </Box>
     </>

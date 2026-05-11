@@ -17,6 +17,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "copy-file",
   "copy-folder",
   "open-report",
+  "get-current-user",
   "export-pdf",
   "export-workspace",
   "import-workspace",
@@ -125,6 +126,7 @@ describe("preload bridge surface", () => {
     exposed.electron.copyFile("a", "b");
     exposed.electron.copyFolder("a", "b");
     exposed.electron.openReport("/tmp/r.docx");
+    exposed.electron.getCurrentUser();
     exposed.electron.exportPdf("scenario-id", { snapshotIds: ["snap-1", "snap-2"] });
     exposed.electron.exportWorkspace();
     exposed.electron.importWorkspace();
