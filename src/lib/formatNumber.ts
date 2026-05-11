@@ -56,6 +56,16 @@ export function formatNumberDivisor(
   return formatNumber(value / divisor, locale, options);
 }
 
+export function formatNumberWithUnit(
+  value: number,
+  unit: string,
+  locale: string | undefined = "en-US",
+  options: FormatNumberOptions = {}
+): string {
+  const formatted = formatNumber(value, locale, options);
+  return unit ? `${formatted} ${unit}` : formatted;
+}
+
 export function formatCurrency(
   value: number,
   locale: string | undefined = "en-US",

@@ -7,19 +7,9 @@ import useResultsStore from "../../store/useResultsStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { exposureCategoryMap } from "../../data/exposureCatalog";
 import { formatNumber } from "../../lib/formatNumber";
+import { SummaryRow as Row } from "./SummaryRow";
 
 const EM_DASH = "—";
-
-const Row = ({ label, value }) => (
-  <Stack direction="row" justifyContent="space-between" alignItems="baseline" spacing={1}>
-    <Typography variant="body2" sx={{ color: "text.secondary" }}>
-      {label}
-    </Typography>
-    <Typography variant="body2" sx={{ color: "text.primary", fontWeight: 500 }}>
-      {value}
-    </Typography>
-  </Stack>
-);
 
 const resolveExposureLabel = (selectedExposure, selectedExposureCategory, t) => {
   if (!selectedExposure) return EM_DASH;

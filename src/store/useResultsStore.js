@@ -15,6 +15,10 @@ const useResultsStore = create((set, get) => ({
   macroEconomicChartData: {},
   macroEconomicChartTitle: "",
 
+  costBenefitData: null,
+  isCostBenefitLoading: false,
+  costBenefitError: "",
+
   setIsScenarioRunning: (value) => set({ isScenarioRunning: value }),
   setIsScenarioRunCompleted: (value) => set({ isScenarioRunCompleted: value }),
   setIsPlotMacroChartRunning: (value) => set({ isPlotMacroChartRunning: value }),
@@ -38,6 +42,14 @@ const useResultsStore = create((set, get) => ({
 
   setMacroEconomicChartData: (data) => set({ macroEconomicChartData: data }),
   setMacroEconomicChartTitle: (title) => set({ macroEconomicChartTitle: title }),
+
+  beginCostBenefitFetch: () => set({ isCostBenefitLoading: true }),
+  endCostBenefitFetch: ({ data = null, error = "" }) =>
+    set({
+      costBenefitData: data,
+      costBenefitError: error,
+      isCostBenefitLoading: false,
+    }),
 }));
 
 export default useResultsStore;
