@@ -36,7 +36,7 @@ const AlertMessage = () => {
         open={alertShowMessage}
         autoHideDuration={10000}
         onClose={handleCloseMessage}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert onClose={handleCloseMessage} severity={alertSeverity} sx={{ width: "100%" }}>
           <span>{messageText}</span>
