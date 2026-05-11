@@ -117,8 +117,10 @@ describe("WorkspaceView", () => {
     expect(screen.queryByText("Egypt heatwave")).not.toBeInTheDocument();
     expect(screen.getByText("Thailand drought")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText("actions-s-2"));
-    fireEvent.click(screen.getByText("Delete"));
+    fireEvent.click(screen.getByLabelText("delete-s-2"));
+    // The Delete icon now opens a confirm dialog; firing the confirm button
+    // is what actually invokes `deleteScenario`.
+    fireEvent.click(screen.getByLabelText("delete-confirm-s-2"));
 
     await waitFor(() => expect(deleteScenarioMock).toHaveBeenCalledWith("s-2"));
     await waitFor(() => expect(screen.queryByText("Thailand drought")).not.toBeInTheDocument());
@@ -138,8 +140,7 @@ describe("WorkspaceView", () => {
 
     renderView();
 
-    fireEvent.click(screen.getByLabelText("actions-s-1"));
-    fireEvent.click(screen.getByText("Export PDF"));
+    fireEvent.click(screen.getByLabelText("export-pdf-s-1"));
 
     await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
     expect(exportPdfMock).not.toHaveBeenCalled();
@@ -155,7 +156,7 @@ describe("WorkspaceView", () => {
     renderView();
 
     fireEvent.doubleClick(screen.getByTestId("name-cell-s-1"));
-    const input = screen.getByLabelText("rename-s-1");
+    const input = screen.getByLabelText("rename-input-s-1");
     fireEvent.change(input, { target: { value: "Renamed" } });
     fireEvent.keyDown(input, { key: "Enter" });
 
