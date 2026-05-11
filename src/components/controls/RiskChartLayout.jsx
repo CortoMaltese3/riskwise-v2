@@ -10,6 +10,7 @@ import EmptyChartState from "../layout/EmptyChartState";
 import LoadingSkeleton from "../layout/LoadingSkeleton";
 import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 const STATUS_OK = 2000;
 
@@ -18,6 +19,10 @@ const RiskChartLayout = () => {
   const setWaterfallChartRef = useUIStore((state) => state.setWaterfallChartRef);
   const isScenarioRunning = useResultsStore((state) => state.isScenarioRunning);
   const isScenarioRunCompleted = useResultsStore((state) => state.isScenarioRunCompleted);
+  // Re-keying on `scenarioRunCode` re-mounts the chart on each new run (#370),
+  // triggering a fresh first-mount animation. Without the key, the existing
+  // instance would just swap datasets and skip the intro.
+  const scenarioRunCode = useWorkspaceStore((state) => state.scenarioRunCode);
   const [waterfallData, setWaterfallData] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -60,7 +65,12 @@ const RiskChartLayout = () => {
       );
     }
     return (
-      <WaterfallChart ref={setWaterfallChartRef} data={waterfallData} errorMessage={errorMessage} />
+      <WaterfallChart
+        key={scenarioRunCode}
+        ref={setWaterfallChartRef}
+        data={waterfallData}
+        errorMessage={errorMessage}
+      />
     );
   };
 
@@ -82,8 +92,6 @@ const RiskChartLayout = () => {
           marginBottom: 2,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
           overflow: "hidden",
         }}
       >

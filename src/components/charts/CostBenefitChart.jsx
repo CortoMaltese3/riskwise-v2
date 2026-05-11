@@ -19,6 +19,7 @@ import useUIStore from "../../store/useUIStore";
 import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
 import { patternForIndex } from "../../utils/chartPatterns";
+import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
 import ChartInfoPopover from "../help/ChartInfoPopover";
 
@@ -57,6 +58,9 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
     marginal: alpha(theme.palette.viz.neutral, 0.85),
     unprofitable: alpha(theme.palette.viz.negative, 0.85),
   };
+  // Theme-aware pattern stroke keeps the profitable / marginal / unprofitable
+  // textures visible in both light and dark mode (issue #367).
+  const patternStroke = theme.palette.viz.patternStroke;
 
   useEffect(() => {
     return () => {
@@ -64,6 +68,16 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
         chartRef.current = null;
       }
     };
+  }, [chartRef]);
+
+  // First-mount animation only (#370): once the chart has painted, drop
+  // further animation so subsequent dataset updates don't replay the intro.
+  // The parent layout re-mounts via `key={scenarioRunCode}` to replay it on
+  // each new scenario run.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    chart.options.animation = false;
   }, [chartRef]);
 
   if (!data || !Array.isArray(data.measures) || data.measures.length === 0) {
@@ -81,7 +95,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
   const ratios = data.measures.map((m) => m.benefit_cost_ratio);
   const styles = ratios.map((r) => styleForRatio(r, vizColors));
   const colors = styles.map((s) => s.color);
-  const patterns = styles.map((s) => patternForIndex(s.color, s.patternIndex));
+  const patterns = styles.map((s) => patternForIndex(s.color, s.patternIndex, patternStroke));
 
   const chartData = {
     labels,
@@ -101,7 +115,13 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 0 },
+    // Mount-only intro animation (#370); see `prefersReducedMotion` for the
+    // OS-level opt-out path and `WaterfallChart` for the matching pattern.
+    animation: prefersReducedMotion() ? false : { duration: 600, easing: "easeOutQuart" },
+    // `mode: "index"` + `intersect: false` resolves tooltips to the nearest
+    // x-axis category, so hovering anywhere in the plot area fires the tooltip
+    // for the closest bar.
+    interaction: { mode: "index", intersect: false },
     rtl,
     scales: {
       y: {

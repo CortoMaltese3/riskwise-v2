@@ -82,6 +82,17 @@ describe("theme — design tokens", () => {
     expect(theme.palette.viz.ramps.heatwave).toBeDefined();
     expect(theme.palette.viz.ramps.drought).toBeDefined();
     expect(theme.palette.viz.ramps.risk).toBeDefined();
+    expect(theme.palette.viz.patternStroke).toBeDefined();
+  });
+
+  it("exposes a per-scheme pattern stroke for chart canvas-pattern overlays (#367)", () => {
+    // Light mode keeps the historic dark stroke; dark mode flips to a white
+    // stroke so the diagonal / cross / dots / horizontal textures painted by
+    // `chartPatterns.js` stay visible on the darker bar fills.
+    const lightStroke = theme.colorSchemes.light.palette.viz.patternStroke;
+    const darkStroke = theme.colorSchemes.dark.palette.viz.patternStroke;
+    expect(lightStroke).toMatch(/rgba\(0,\s*0,\s*0/);
+    expect(darkStroke).toMatch(/rgba\(255,\s*255,\s*255/);
   });
 
   it("aliases palette.error.main to feedback.error.main", () => {
@@ -289,5 +300,28 @@ describe("theme — WCAG AA contrast", () => {
   it.each(pairs)("$name meets 4.5:1", ({ fg, bg }) => {
     const ratio = contrastRatio(fg(), bg());
     expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // VIZ_CATEGORICAL hues are rendered as chart bar / line fills sitting on
+  // `background.paper` in both schemes (#367). Non-text contrast floor is
+  // WCAG 2.1 § 1.4.11 (3:1) — each positional hue must clear it against
+  // both papers so the categorical encoding stays distinguishable from the
+  // surface in either mode.
+  const NON_TEXT_RATIO = 3.0;
+  const categoricalPairs = lightPalette.viz.categorical.flatMap((hex, idx) => [
+    {
+      name: `[viz] categorical[${idx}] (${hex}) on light background.paper`,
+      fg: hex,
+      bg: lightPalette.background.paper,
+    },
+    {
+      name: `[viz] categorical[${idx}] (${hex}) on dark background.paper`,
+      fg: hex,
+      bg: darkPalette.background.paper,
+    },
+  ]);
+
+  it.each(categoricalPairs)("$name meets 3:1 non-text", ({ fg, bg }) => {
+    expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(NON_TEXT_RATIO);
   });
 });
