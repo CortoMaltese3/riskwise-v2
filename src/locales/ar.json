@@ -953,6 +953,8 @@
     "workspace_snapshot_capture_tooltip": "Capture snapshot",
     "workspace_snapshot_capture_aria": "Capture snapshot",
     "workspace_snapshot_caption_placeholder": "Add a caption…",
+    "snapshot_title_label": "Title",
+    "snapshot_title_helper": "Short heading shown above the figure in the PDF report",
     "alert_message_snapshot_saved": "Snapshot saved",
     "alert_message_snapshot_failed": "Snapshot save failed",
     "workspace_action_restore": "Restore",

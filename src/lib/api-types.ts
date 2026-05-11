@@ -691,6 +691,8 @@ export interface components {
             image_base64: string;
             /** Snapshot Type */
             snapshot_type: string;
+            /** Title */
+            title?: string | null;
         };
         /** CreateSnapshotResponse */
         CreateSnapshotResponse: {
@@ -1260,6 +1262,8 @@ export interface components {
             scenario_id: string;
             /** Snapshot Type */
             snapshot_type: string;
+            /** Title */
+            title?: string | null;
         };
         /** SnapshotListResponse */
         SnapshotListResponse: {
@@ -1290,6 +1294,8 @@ export interface components {
         UpdateSnapshotRequest: {
             /** Caption */
             caption?: string | null;
+            /** Title */
+            title?: string | null;
         };
         /** UpdateSnapshotResponse */
         UpdateSnapshotResponse: {

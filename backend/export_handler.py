@@ -166,6 +166,7 @@ def _write_archive(
                 {
                     "id": snap["id"],
                     "snapshot_type": snap.get("snapshot_type"),
+                    "title": snap.get("title"),
                     "caption": snap.get("caption"),
                 }
             )
@@ -285,6 +286,7 @@ def _read_snapshots_from_zip(zf: zipfile.ZipFile) -> list[dict[str, Any]]:
                 "snapshot_type": meta.get("snapshot_type") or "chart",
                 "image": zf.read(entry.filename),
                 "created_at": now,
+                "title": meta.get("title"),
                 "caption": meta.get("caption"),
             }
         )

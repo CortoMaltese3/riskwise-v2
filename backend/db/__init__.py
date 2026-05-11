@@ -31,7 +31,7 @@ from backend.db.scenario_store import (
     patch_scenario_metadata,
     read_result_blobs,
     update_scenario_metadata,
-    update_snapshot_caption,
+    update_snapshot,
 )
 
 __all__ = [
@@ -60,5 +60,5 @@ __all__ = [
     "run_migrations",
     "run_startup_migrations",
     "update_scenario_metadata",
-    "update_snapshot_caption",
+    "update_snapshot",
 ]

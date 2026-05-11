@@ -44,6 +44,7 @@ const SNAP_FIXTURE = {
   id: "snap-1",
   scenario_id: "scen-1",
   snapshot_type: "map",
+  title: "initial title",
   caption: "initial",
   created_at: "2026-04-20T10:00:00Z",
 };
@@ -60,8 +61,47 @@ describe("SnapshotDrawer", () => {
     await waitFor(() => expect(screen.getByTestId("snapshot-drawer")).toBeInTheDocument());
     const img = await screen.findByRole("img");
     expect(img.getAttribute("src")).toBe("http://127.0.0.1:8000/api/v1/snapshots/snap-1/image");
+    const title = screen.getByLabelText("title-snap-1");
+    expect(title).toHaveValue("initial title");
     const caption = screen.getByLabelText("caption-snap-1");
     expect(caption).toHaveValue("initial");
+  });
+
+  it("renders the title input with its label and 120-char cap (#350)", async () => {
+    listSnapshotsMock.mockResolvedValue({
+      success: true,
+      result: { status: { code: 2000 }, data: [SNAP_FIXTURE] },
+    });
+
+    render(<SnapshotDrawer scenarioId="scen-1" />);
+    const title = await screen.findByLabelText("title-snap-1");
+    expect(title).toBeInTheDocument();
+    expect(title.getAttribute("maxlength")).toBe("120");
+  });
+
+  it("commits title changes via PATCH on blur with title-only body (#350)", async () => {
+    listSnapshotsMock.mockResolvedValue({
+      success: true,
+      result: { status: { code: 2000 }, data: [SNAP_FIXTURE] },
+    });
+    updateSnapshotMock.mockResolvedValue({
+      success: true,
+      result: {
+        status: { code: 2000 },
+        data: { ...SNAP_FIXTURE, title: "Figure 1: Annual loss" },
+      },
+    });
+
+    render(<SnapshotDrawer scenarioId="scen-1" />);
+    const title = await screen.findByLabelText("title-snap-1");
+    fireEvent.change(title, { target: { value: "Figure 1: Annual loss" } });
+    fireEvent.blur(title);
+
+    await waitFor(() => expect(updateSnapshotMock).toHaveBeenCalledTimes(1));
+    // Only the changed field is sent so the caption column is not touched.
+    expect(updateSnapshotMock).toHaveBeenCalledWith("snap-1", {
+      title: "Figure 1: Annual loss",
+    });
   });
 
   it("commits caption changes via PATCH on blur", async () => {

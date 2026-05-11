@@ -684,6 +684,7 @@ async def create_snapshot_endpoint(scenario_id: str, payload: CreateSnapshotRequ
             scenario_id=scenario_id,
             snapshot_type=payload.snapshot_type,
             image=image_bytes,
+            title=payload.title,
             caption=payload.caption,
         )
     except ScenarioNotFound as exc:
@@ -711,9 +712,18 @@ async def get_snapshot_image_endpoint(snapshot_id: str):
 async def update_snapshot_endpoint(snapshot_id: str, payload: UpdateSnapshotRequest) -> dict:
     from dataclasses import asdict
 
-    from backend.db import update_snapshot_caption
+    from backend.db import update_snapshot
 
-    row = await asyncio.to_thread(update_snapshot_caption, snapshot_id, payload.caption)
+    # ``model_fields_set`` lets us distinguish "the client omitted this key"
+    # from "the client explicitly sent null". Forwarding only the explicit
+    # fields means a PATCH that touches only the title leaves the caption
+    # untouched (and vice versa) — required by #350 for independent editing.
+    kwargs: dict = {}
+    if "title" in payload.model_fields_set:
+        kwargs["title"] = payload.title
+    if "caption" in payload.model_fields_set:
+        kwargs["caption"] = payload.caption
+    row = await asyncio.to_thread(update_snapshot, snapshot_id, **kwargs)
     if row is None:
         raise HTTPException(status_code=404, detail="Snapshot not found")
     return {"data": asdict(row), "status": _status_ok()}

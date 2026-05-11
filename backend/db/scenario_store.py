@@ -189,8 +189,8 @@ def insert_scenario(
                 conn.execute(
                     """
                     INSERT INTO snapshots
-                        (id, scenario_id, snapshot_type, image, created_at, caption)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                        (id, scenario_id, snapshot_type, image, created_at, title, caption)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
                     [
                         snap["id"],
@@ -198,6 +198,7 @@ def insert_scenario(
                         snap["snapshot_type"],
                         snap.get("image"),
                         snap.get("created_at"),
+                        snap.get("title"),
                         snap.get("caption"),
                     ],
                 )
@@ -216,7 +217,7 @@ def get_scenario_snapshots_with_image(scenario_id: str) -> list[dict[str, Any]]:
     try:
         rows = conn.execute(
             """
-            SELECT id, scenario_id, snapshot_type, image, created_at, caption
+            SELECT id, scenario_id, snapshot_type, image, created_at, title, caption
             FROM snapshots WHERE scenario_id = ?
             ORDER BY created_at ASC
             """,
@@ -231,7 +232,8 @@ def get_scenario_snapshots_with_image(scenario_id: str) -> list[dict[str, Any]]:
             "snapshot_type": r[2],
             "image": bytes(r[3]) if r[3] is not None else None,
             "created_at": r[4],
-            "caption": r[5],
+            "title": r[5],
+            "caption": r[6],
         }
         for r in rows
     ]
@@ -355,15 +357,37 @@ class SnapshotRow:
     scenario_id: str
     snapshot_type: str
     created_at: datetime | None
+    # Optional short heading rendered above the image in PDF reports (#350).
+    title: str | None = None
     caption: str | None = None
+
+
+# Sentinel used by :func:`update_snapshot` to distinguish "field omitted from
+# the PATCH" (leave column untouched) from "field set to None" (write NULL).
+# A bare ``None`` cannot carry that distinction once the request is parsed.
+_UNSET: Any = object()
+
+
+def _row_to_snapshot(row: tuple) -> SnapshotRow:
+    return SnapshotRow(
+        id=row[0],
+        scenario_id=row[1],
+        snapshot_type=row[2],
+        created_at=row[3],
+        title=row[4],
+        caption=row[5],
+    )
+
+
+_SNAPSHOT_SELECT_COLUMNS = "id, scenario_id, snapshot_type, created_at, title, caption"
 
 
 def list_snapshots(scenario_id: str) -> list[SnapshotRow]:
     conn = get_connection()
     try:
         rows = conn.execute(
-            """
-            SELECT id, scenario_id, snapshot_type, created_at, caption
+            f"""
+            SELECT {_SNAPSHOT_SELECT_COLUMNS}
             FROM snapshots WHERE scenario_id = ?
             ORDER BY created_at DESC
             """,
@@ -371,10 +395,7 @@ def list_snapshots(scenario_id: str) -> list[SnapshotRow]:
         ).fetchall()
     finally:
         conn.close()
-    return [
-        SnapshotRow(id=r[0], scenario_id=r[1], snapshot_type=r[2], created_at=r[3], caption=r[4])
-        for r in rows
-    ]
+    return [_row_to_snapshot(r) for r in rows]
 
 
 def create_snapshot(
@@ -382,6 +403,7 @@ def create_snapshot(
     scenario_id: str,
     snapshot_type: str,
     image: bytes,
+    title: str | None = None,
     caption: str | None = None,
 ) -> SnapshotRow:
     """Insert one snapshot row and promote the parent scenario to ``saved=TRUE``.
@@ -397,10 +419,10 @@ def create_snapshot(
             raise ScenarioNotFound(scenario_id)
         conn.execute(
             """
-            INSERT INTO snapshots (id, scenario_id, snapshot_type, image, caption)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO snapshots (id, scenario_id, snapshot_type, image, title, caption)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            [snapshot_id, scenario_id, snapshot_type, image, caption],
+            [snapshot_id, scenario_id, snapshot_type, image, title, caption],
         )
         # Save promotion (#302): the user has invested effort in this scenario,
         # so it must remain visible in the workspace. Capturing without this
@@ -410,8 +432,8 @@ def create_snapshot(
             [scenario_id],
         )
         row = conn.execute(
-            """
-            SELECT id, scenario_id, snapshot_type, created_at, caption
+            f"""
+            SELECT {_SNAPSHOT_SELECT_COLUMNS}
             FROM snapshots WHERE id = ?
             """,
             [snapshot_id],
@@ -419,13 +441,7 @@ def create_snapshot(
     finally:
         conn.close()
     assert row is not None  # just inserted above
-    return SnapshotRow(
-        id=row[0],
-        scenario_id=row[1],
-        snapshot_type=row[2],
-        created_at=row[3],
-        caption=row[4],
-    )
+    return _row_to_snapshot(row)
 
 
 def get_snapshot_image(snapshot_id: str) -> tuple[bytes, str] | None:
@@ -440,27 +456,53 @@ def get_snapshot_image(snapshot_id: str) -> tuple[bytes, str] | None:
     return bytes(row[0]), "image/png"
 
 
-def update_snapshot_caption(snapshot_id: str, caption: str | None) -> SnapshotRow | None:
+def update_snapshot(
+    snapshot_id: str,
+    *,
+    title: Any = _UNSET,
+    caption: Any = _UNSET,
+) -> SnapshotRow | None:
+    """Partial update of a snapshot's editable metadata.
+
+    Each field is independent: passing ``_UNSET`` (the default) leaves the
+    column untouched, passing ``None`` writes ``NULL``, and passing a string
+    overwrites the column. Callers serialising from an HTTP body should use
+    ``model_fields_set`` to decide which kwargs to forward so an omitted
+    field in the JSON body does not wipe an existing value.
+
+    Returns the updated row, or ``None`` if the id is unknown.
+    """
+    updates: list[str] = []
+    values: list[Any] = []
+    if title is not _UNSET:
+        updates.append("title = ?")
+        values.append(title)
+    if caption is not _UNSET:
+        updates.append("caption = ?")
+        values.append(caption)
+    if not updates:
+        conn = get_connection()
+        try:
+            row = conn.execute(
+                f"SELECT {_SNAPSHOT_SELECT_COLUMNS} FROM snapshots WHERE id = ?",
+                [snapshot_id],
+            ).fetchone()
+        finally:
+            conn.close()
+        return _row_to_snapshot(row) if row is not None else None
+    values.append(snapshot_id)
     conn = get_connection()
     try:
         row = conn.execute(
-            """
-            UPDATE snapshots SET caption = ? WHERE id = ?
-            RETURNING id, scenario_id, snapshot_type, created_at, caption
+            f"""
+            UPDATE snapshots SET {", ".join(updates)} WHERE id = ?
+            RETURNING {_SNAPSHOT_SELECT_COLUMNS}
             """,
-            [caption, snapshot_id],
+            values,
         ).fetchone()
     finally:
         conn.close()
-    if row is None:
-        return None
-    return SnapshotRow(
-        id=row[0],
-        scenario_id=row[1],
-        snapshot_type=row[2],
-        created_at=row[3],
-        caption=row[4],
-    )
+    return _row_to_snapshot(row) if row is not None else None
 
 
 def delete_snapshot(snapshot_id: str) -> bool:

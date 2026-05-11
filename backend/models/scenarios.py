@@ -101,6 +101,10 @@ class SnapshotItem(BaseModel):
     scenario_id: str
     snapshot_type: str
     created_at: datetime | None = None
+    # PDF reports render ``title`` as the figure heading above the image and
+    # ``caption`` as the descriptive text below (#350); both are independently
+    # optional so legacy snapshots without either still serialise.
+    title: str | None = Field(default=None, max_length=120)
     caption: str | None = None
 
 
@@ -116,6 +120,7 @@ class CreateSnapshotRequest(BaseModel):
 
     snapshot_type: str = Field(..., min_length=1)
     image_base64: str = Field(..., min_length=1)
+    title: str | None = Field(default=None, max_length=120)
     caption: str | None = Field(default=None, max_length=500)
 
 
@@ -127,6 +132,7 @@ class CreateSnapshotResponse(BaseModel):
 class UpdateSnapshotRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    title: str | None = Field(default=None, max_length=120)
     caption: str | None = Field(default=None, max_length=500)
 
 
