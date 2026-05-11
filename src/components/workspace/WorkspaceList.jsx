@@ -20,6 +20,7 @@ import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { formatDateTime } from "../../lib/formatDate";
 import { enqueueToast } from "../../hooks/useToast";
+import useResultsStore from "../../store/useResultsStore";
 
 const formatCreatedAt = (value, locale) => {
   if (!value) return "";
@@ -33,6 +34,7 @@ const formatCreatedAt = (value, locale) => {
 const WorkspaceList = ({ onOpen, items: itemsProp }) => {
   const { i18n, t } = useTranslation();
   const locale = i18n.language;
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
   const [items, setItems] = useState(itemsProp || []);
   const [loading, setLoading] = useState(itemsProp === undefined);
   const [error, setError] = useState("");
@@ -129,37 +131,57 @@ const WorkspaceList = ({ onOpen, items: itemsProp }) => {
             secondaryAction={
               <Stack direction="row" spacing={0.5}>
                 <Tooltip
-                  title={t("workspace_scenario_actions_aria", { defaultValue: "Scenario actions" })}
+                  title={
+                    isScenarioRunning
+                      ? t("scenario_running_disabled_tooltip")
+                      : t("workspace_scenario_actions_aria", { defaultValue: "Scenario actions" })
+                  }
                 >
                   <span>
                     <IconButton
                       aria-label={`scenario-actions-${row.id}`}
                       onClick={(e) => openMenu(e, row.id)}
                       edge="end"
-                      disabled={busyId === row.id}
+                      disabled={busyId === row.id || isScenarioRunning}
                     >
                       <MoreVertIcon />
                     </IconButton>
                   </span>
                 </Tooltip>
-                <IconButton
-                  aria-label={`delete-${row.id}`}
-                  onClick={(e) => handleDelete(e, row.id)}
-                  edge="end"
-                >
-                  <DeleteIcon />
-                </IconButton>
+                <Tooltip title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}>
+                  <span>
+                    <IconButton
+                      aria-label={`delete-${row.id}`}
+                      onClick={(e) => handleDelete(e, row.id)}
+                      edge="end"
+                      disabled={isScenarioRunning}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
               </Stack>
             }
           >
-            <ListItemButton onClick={() => onOpen?.(row)}>
-              <ListItemText
-                primary={row.name || row.id}
-                secondary={[row.country, row.hazard_type, formatCreatedAt(row.created_at, locale)]
-                  .filter(Boolean)
-                  .join(" • ")}
-              />
-            </ListItemButton>
+            <Tooltip
+              title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
+              placement="top-start"
+            >
+              <span style={{ width: "100%" }}>
+                <ListItemButton onClick={() => onOpen?.(row)} disabled={isScenarioRunning}>
+                  <ListItemText
+                    primary={row.name || row.id}
+                    secondary={[
+                      row.country,
+                      row.hazard_type,
+                      formatCreatedAt(row.created_at, locale),
+                    ]
+                      .filter(Boolean)
+                      .join(" • ")}
+                  />
+                </ListItemButton>
+              </span>
+            </Tooltip>
           </ListItem>
         ))}
       </List>

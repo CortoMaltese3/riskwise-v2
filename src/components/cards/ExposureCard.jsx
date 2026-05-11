@@ -13,10 +13,12 @@ import {
   DialogTitle,
   IconButton,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
+import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { layoutTransition } from "../../theme/theme";
@@ -24,6 +26,7 @@ import { exposureCategoryMap, getExposuresForSelection } from "../../data/exposu
 
 const ExposureCard = () => {
   const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
   const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
   const selectedExposure = useWorkspaceStore((s) => s.selectedExposure);
   const selectedExposureFile = useWorkspaceStore((s) => s.selectedExposureFile);
@@ -107,25 +110,33 @@ const ExposureCard = () => {
   };
 
   const renderAssetButton = (asset) => (
-    <CardActionArea
+    <Tooltip
       key={asset}
-      onClick={() => handleCardSelect(asset)}
-      sx={{
-        backgroundColor: isAssetSelected(asset) ? "secondary.main" : "secondary.light",
-        borderRadius: (theme) => theme.spacing(1),
-        my: 1,
-        mx: 0,
-        textAlign: "center",
-        py: 1,
-        px: 0,
-        transition: layoutTransition(["transform"]),
-        "&:active": { transform: "scale(0.96)" },
-      }}
+      title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
+      placement="top"
     >
-      <Typography variant="body1" color="text.primary" sx={{ textAlign: "center" }}>
-        {t(`input_exposure_${exposureCategoryMap[asset]}_${asset}`)}
-      </Typography>
-    </CardActionArea>
+      <span style={{ display: "block", width: "100%" }}>
+        <CardActionArea
+          onClick={() => handleCardSelect(asset)}
+          disabled={isScenarioRunning}
+          sx={{
+            backgroundColor: isAssetSelected(asset) ? "secondary.main" : "secondary.light",
+            borderRadius: (theme) => theme.spacing(1),
+            my: 1,
+            mx: 0,
+            textAlign: "center",
+            py: 1,
+            px: 0,
+            transition: layoutTransition(["transform"]),
+            "&:active": { transform: "scale(0.96)" },
+          }}
+        >
+          <Typography variant="body1" color="text.primary" sx={{ textAlign: "center" }}>
+            {t(`input_exposure_${exposureCategoryMap[asset]}_${asset}`)}
+          </Typography>
+        </CardActionArea>
+      </span>
+    </Tooltip>
   );
 
   return (
@@ -163,22 +174,30 @@ const ExposureCard = () => {
 
         {selectedCountry && selectedHazard && selectedAppOption === "explore" && (
           <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
-            <Button
-              component="span"
-              onClick={handleLoadButtonClick}
-              sx={{
-                bgcolor: "secondary.bg",
-                color: "common.black",
-                fontWeight: "bold",
-                margin: 2,
-                "&:hover": { bgcolor: "secondary.light" },
-                transition: layoutTransition(["transform"]),
-                "&:active": { transform: "scale(0.96)" },
-              }}
-              variant="contained"
+            <Tooltip
+              title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
+              placement="top"
             >
-              {t("card_exposure_load_button")}
-            </Button>
+              <span>
+                <Button
+                  component="span"
+                  onClick={handleLoadButtonClick}
+                  disabled={isScenarioRunning}
+                  sx={{
+                    bgcolor: "secondary.bg",
+                    color: "common.black",
+                    fontWeight: "bold",
+                    margin: 2,
+                    "&:hover": { bgcolor: "secondary.light" },
+                    transition: layoutTransition(["transform"]),
+                    "&:active": { transform: "scale(0.96)" },
+                  }}
+                  variant="contained"
+                >
+                  {t("card_exposure_load_button")}
+                </Button>
+              </span>
+            </Tooltip>
             <input
               accept=".xlsx"
               hidden

@@ -1,7 +1,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardActionArea, Typography, CardContent } from "@mui/material";
+import { Box, Card, CardActionArea, Tooltip, Typography, CardContent } from "@mui/material";
+import useResultsStore from "../../store/useResultsStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { layoutTransition } from "../../theme/theme";
 
@@ -9,6 +10,7 @@ const ScenarioCard = () => {
   const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
   const selectedScenario = useWorkspaceStore((s) => s.selectedScenario);
   const setSelectedScenario = useWorkspaceStore((s) => s.setSelectedScenario);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
   const { t } = useTranslation();
 
   const scenarios =
@@ -55,27 +57,37 @@ const ScenarioCard = () => {
           {t("card_scenario_title")}
         </Typography>
         {scenarios.map((scenario) => (
-          <CardActionArea
+          <Tooltip
             key={scenario}
-            onClick={() => handleCardSelect(scenario)}
-            sx={{
-              backgroundColor: isButtonSelected(scenario) ? "secondary.main" : "secondary.light",
-              borderRadius: (theme) => theme.spacing(1),
-              margin: 2,
-              marginLeft: 0,
-              textAlign: "center",
-              py: 1,
-              px: 0,
-              transition: layoutTransition(["transform"]),
-              "&:active": {
-                transform: "scale(0.96)", // Slightly scale down when clicked
-              },
-            }}
+            title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
+            placement="top"
           >
-            <Typography variant="body1" color="text.primary" sx={{ textAlign: "center" }}>
-              {t(`card_scenario_scenarios_${scenario}`)}
-            </Typography>
-          </CardActionArea>
+            <span style={{ display: "block" }}>
+              <CardActionArea
+                onClick={() => handleCardSelect(scenario)}
+                disabled={isScenarioRunning}
+                sx={{
+                  backgroundColor: isButtonSelected(scenario)
+                    ? "secondary.main"
+                    : "secondary.light",
+                  borderRadius: (theme) => theme.spacing(1),
+                  margin: 2,
+                  marginLeft: 0,
+                  textAlign: "center",
+                  py: 1,
+                  px: 0,
+                  transition: layoutTransition(["transform"]),
+                  "&:active": {
+                    transform: "scale(0.96)", // Slightly scale down when clicked
+                  },
+                }}
+              >
+                <Typography variant="body1" color="text.primary" sx={{ textAlign: "center" }}>
+                  {t(`card_scenario_scenarios_${scenario}`)}
+                </Typography>
+              </CardActionArea>
+            </span>
+          </Tooltip>
         ))}
         <Box
           sx={{

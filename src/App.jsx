@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import AlertMessage from "./components/alerts/AlertMessage";
 import ErrorBoundary from "./components/errors/ErrorBoundary";
 import AppShell from "./components/layout/AppShell";
-import ProgressOverlay from "./components/layout/ProgressOverlay";
+import ScenarioProgressChip from "./components/layout/ScenarioProgressChip";
 import ToastProvider from "./components/layout/ToastProvider";
 import ScenarioPrintView from "./components/workspace/ScenarioPrintView";
 import HelpMenu from "./components/help/HelpMenu";
@@ -102,7 +102,7 @@ const App = () => {
         <ToastProvider>
           <Box display="flex" flexDirection="column" height="100vh" overflow="hidden">
             <AppShell />
-            <ProgressOverlay />
+            <ScenarioProgressChip />
             <AlertMessage />
             <HelpMenu />
             <GlossaryDrawer />

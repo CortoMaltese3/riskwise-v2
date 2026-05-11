@@ -168,8 +168,17 @@ const useUIStore = create((set, get) => ({
       errorMessage: envelope ? envelope.message : "",
     }),
   clearError: () => set({ error: null, errorMessage: "" }),
-  setModalMessage: (message) => set({ modalMessage: message }),
-  setProgress: (newProgress) => set({ progress: newProgress }),
+  // Backend often re-emits the same step label / progress percentage on
+  // consecutive IPC ticks; short-circuit identical values so subscribers
+  // don't fan-out for no-ops.
+  setModalMessage: (message) => {
+    if (get().modalMessage === message) return;
+    set({ modalMessage: message });
+  },
+  setProgress: (newProgress) => {
+    if (get().progress === newProgress) return;
+    set({ progress: newProgress });
+  },
 
   setSelectedCard: (card) => set({ selectedCard: card }),
   setSelectedMacroCard: (card) => set({ selectedMacroCard: card }),

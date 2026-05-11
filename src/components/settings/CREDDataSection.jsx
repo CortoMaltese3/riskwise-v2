@@ -16,6 +16,7 @@ const CREDDataSection = () => {
   const setCredDatasets = useResultsStore((s) => s.setCredDatasets);
   const activeCredDatasetId = useResultsStore((s) => s.activeCredDatasetId);
   const setActiveCredDatasetId = useResultsStore((s) => s.setActiveCredDatasetId);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
 
   const fetchCred = useCallback(async () => {
     const res = await RiskWiseClient.listCREDDatasets();
@@ -54,12 +55,19 @@ const CREDDataSection = () => {
   );
   const selectedId = activeCredDatasetId ?? builtinId;
 
+  // While a scenario is running, swallow CRED dataset selection clicks so
+  // the active dataset cannot change mid-run; the chip explains why.
   const handleSelect = useCallback(
     (dataset) => {
+      if (isScenarioRunning) return;
       setActiveCredDatasetId(dataset.is_builtin ? null : dataset.id);
     },
-    [setActiveCredDatasetId]
+    [isScenarioRunning, setActiveCredDatasetId]
   );
+
+  // OR-merge ``isScenarioRunning`` into the existing ``busy`` value (see
+  // CustomDataSection for the same pattern).
+  const effectiveBusy = isScenarioRunning ? (busy ?? "scenario_running") : busy;
 
   return (
     <Stack spacing={3}>
@@ -71,7 +79,7 @@ const CREDDataSection = () => {
       </Stack>
 
       <DataUploadForm
-        busy={busy}
+        busy={effectiveBusy}
         errors={upload.errors}
         pendingPath={upload.pendingPath}
         pendingName={upload.pendingName}
@@ -90,7 +98,7 @@ const CREDDataSection = () => {
         selectedId={selectedId}
         onSelect={handleSelect}
         onRequestDelete={setConfirmDelete}
-        deleteDisabled={busy !== null}
+        deleteDisabled={effectiveBusy !== null}
       />
 
       <DataDeleteConfirmation

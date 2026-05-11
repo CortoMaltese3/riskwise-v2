@@ -126,10 +126,11 @@ if semantically a heading were intended, there is no `<h1>` on any screen;
 heading order jumps from nothing to h3 / h6.
 
 #### Mi-2 — Loading/progress state not announced to assistive technology
-**Files:** [src/components/loaders/LoadModal.jsx](../../src/components/loaders/LoadModal.jsx)  
+**Files:** [src/components/layout/ScenarioProgressChip.jsx](../../src/components/layout/ScenarioProgressChip.jsx)  
 **Criterion:** WCAG 4.1.3 Status Messages (Level AA)  
-**Detail:** The run-scenario progress modal updates a `progress` value in Zustand
-but no `aria-live` region announces progress to screen-reader users.
+**Detail:** Resolved in #401. The legacy `LoadModal` / `ProgressOverlay` were
+replaced by a non-blocking bottom-left chip whose step-label `<Typography>`
+carries `aria-live="polite"` so screen readers announce phase transitions.
 
 ---
 
@@ -146,7 +147,7 @@ but no `aria-live` region announces progress to screen-reader users.
 | M-4 | Moderate | 2.1.1 | `Country`, `Hazard`, `Scenario`, `TimeHorizon` |
 | M-5 | Moderate | 2.4.1 | `index.html`, `App` |
 | Mi-1 | Minor | 1.3.1 | `Header` |
-| Mi-2 | Minor | 4.1.3 | `LoadModal` |
+| Mi-2 | Minor | 4.1.3 | `ScenarioProgressChip` (resolved #401) |
 
 **Totals:** 0 critical / 3 serious / 5 moderate / 2 minor = **10 issues**
 

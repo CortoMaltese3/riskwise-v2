@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Stack, Typography } from "@mui/material";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
+import useResultsStore from "../../store/useResultsStore";
 import { useListManager } from "../../hooks/useListManager";
 import DataList from "./customData/DataList";
 import DataUploadForm from "./customData/DataUploadForm";
@@ -11,6 +12,7 @@ import { useCustomDataUpload } from "./customData/useCustomDataUpload";
 
 const CustomDataSection = () => {
   const { t } = useTranslation();
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
 
   const fetchInstalled = useCallback(async () => {
     const res = await RiskWiseClient.listCustomDataPacks();
@@ -38,6 +40,13 @@ const CustomDataSection = () => {
 
   const upload = useCustomDataUpload({ refresh, setBusy });
 
+  // OR-merge ``isScenarioRunning`` into the existing ``busy`` value so the
+  // form/list/delete affordances disable in lock-step with the chip
+  // gating contract. The synthetic ``"scenario_running"`` token is a
+  // distinct sentinel that won't accidentally match the children's
+  // ``busy === "validating"|"importing"`` branches.
+  const effectiveBusy = isScenarioRunning ? (busy ?? "scenario_running") : busy;
+
   return (
     <Stack spacing={3}>
       <Stack spacing={1}>
@@ -48,7 +57,7 @@ const CustomDataSection = () => {
       </Stack>
 
       <DataUploadForm
-        busy={busy}
+        busy={effectiveBusy}
         isDragging={upload.isDragging}
         validation={upload.validation}
         pendingPath={upload.pendingPath}
@@ -63,7 +72,7 @@ const CustomDataSection = () => {
       <DataList
         installed={installed}
         onRequestDelete={setConfirmDelete}
-        deleteDisabled={busy !== null}
+        deleteDisabled={effectiveBusy !== null}
       />
 
       <DataDeleteConfirmation

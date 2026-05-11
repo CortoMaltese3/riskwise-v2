@@ -2,6 +2,15 @@ import { create } from "zustand";
 
 const useResultsStore = create((set, get) => ({
   isScenarioRunning: false,
+  // Lives alongside ``isScenarioRunning`` rather than replacing it because
+  // gating decisions (input safety) and chip presentation (UX) are
+  // conceptually distinct, and 11 existing consumers read the boolean.
+  // Values come from ``src/store/scenarioPhases.js``.
+  scenarioPhase: null,
+  // Snapshot of the run's inputs captured at dispatch so the chip can show
+  // a stable summary even after the user navigates the workspace mid-run.
+  // ``landingTab`` is the tab the "View results" link should jump to.
+  activeRunSummary: null,
   isScenarioRunCompleted: false,
   isPlotMacroChartRunning: false,
   isPlotMacroChartCompleted: false,
@@ -20,6 +29,11 @@ const useResultsStore = create((set, get) => ({
   costBenefitError: "",
 
   setIsScenarioRunning: (value) => set({ isScenarioRunning: value }),
+  setScenarioPhase: (phase) => set({ scenarioPhase: phase }),
+  setActiveRunSummary: (summary) => set({ activeRunSummary: summary }),
+  // Reset both phase and the captured summary together so the chip's "what's
+  // running" source of truth doesn't outlive the chip itself.
+  resetScenarioPhase: () => set({ scenarioPhase: null, activeRunSummary: null }),
   setIsScenarioRunCompleted: (value) => set({ isScenarioRunCompleted: value }),
   setIsPlotMacroChartRunning: (value) => set({ isPlotMacroChartRunning: value }),
   setIsPlotMacroChartCompleted: (value) => set({ isPlotMacroChartCompleted: value }),

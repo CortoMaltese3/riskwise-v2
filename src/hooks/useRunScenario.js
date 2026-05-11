@@ -4,12 +4,13 @@ import RiskWiseClient from "../lib/RiskWiseClient";
 import useResultsStore from "../store/useResultsStore";
 import useUIStore from "../store/useUIStore";
 import useWorkspaceStore from "../store/useWorkspaceStore";
+import { SCENARIO_PHASES } from "../store/scenarioPhases";
 import { TABS } from "../components/main/tabs";
 
 // Centralised scenario-run dispatch shared between the global Run button on
-// the Risk view (issue #1 original flow) and the Adaptation view's Apply
-// measure-selection button (issue #373). The hook owns the alert / map /
-// applied-selection plumbing so two callers do not drift.
+// the Risk view and the Adaptation view's Apply measure-selection button.
+// The hook owns the alert / map / applied-selection plumbing so two callers
+// do not drift.
 const useRunScenario = () => {
   const selectedAnnualGrowth = useWorkspaceStore((s) => s.selectedAnnualGrowth);
   const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
@@ -32,10 +33,11 @@ const useRunScenario = () => {
   const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
   const setError = useUIStore((s) => s.setError);
   const setSelectedReport = useUIStore((s) => s.setSelectedReport);
-  const setSelectedTab = useUIStore((s) => s.setSelectedTab);
 
   const setIsScenarioRunning = useResultsStore((s) => s.setIsScenarioRunning);
   const setIsScenarioRunCompleted = useResultsStore((s) => s.setIsScenarioRunCompleted);
+  const setScenarioPhase = useResultsStore((s) => s.setScenarioPhase);
+  const setActiveRunSummary = useResultsStore((s) => s.setActiveRunSummary);
 
   const runScenario = useCallback(
     ({ landingTab = TABS.RISK, onSuccess } = {}) => {
@@ -55,29 +57,42 @@ const useRunScenario = () => {
       if (appliedMeasureIds !== null) {
         body.selectedMeasureIds = appliedMeasureIds;
       }
+      // Snapshot the inputs that drive the chip's summary line at dispatch
+      // so the user can navigate the workspace freely mid-run without
+      // changing what the chip says is running. ``landingTab`` rides along
+      // so the post-run "View results" link knows which tab to jump to.
+      const [timeHorizonStart, timeHorizonEnd] = Array.isArray(selectedTimeHorizon)
+        ? selectedTimeHorizon
+        : [selectedTimeHorizon, selectedTimeHorizon];
+      setActiveRunSummary({
+        country: selectedCountry,
+        hazard: selectedHazard,
+        timeHorizonStart,
+        timeHorizonEnd,
+        landingTab,
+      });
       setIsScenarioRunning(true);
+      setScenarioPhase(SCENARIO_PHASES.RUNNING);
       setSelectedReport(null);
       return RiskWiseClient.runScenario(body)
         .then((response) => {
           setIsScenarioRunning(false);
           if (!response.success) {
             setError(response.error);
+            setScenarioPhase(SCENARIO_PHASES.FAILED);
             return { success: false, response };
           }
           setAlertMessage(response.result.status.message);
-          response.result.status.code === 2000
-            ? setAlertSeverity("success")
-            : setAlertSeverity("error");
+          const succeeded = response.result.status.code === 2000;
+          setAlertSeverity(succeeded ? "success" : "error");
           setAlertShowMessage(true);
-          if (response.result.status.code === 2000) {
+          if (succeeded) {
             markMeasureSelectionApplied(appliedMeasureIds ?? []);
           }
           setMapTitle(response.result.data.mapTitle);
           setScenarioRunCode(response.result.data.scenarioId);
           setIsScenarioRunCompleted(true);
-          if (landingTab) {
-            setSelectedTab(landingTab);
-          }
+          setScenarioPhase(succeeded ? SCENARIO_PHASES.COMPLETED : SCENARIO_PHASES.FAILED);
           if (typeof onSuccess === "function") {
             onSuccess(response);
           }
@@ -85,6 +100,7 @@ const useRunScenario = () => {
         })
         .catch((error) => {
           setIsScenarioRunning(false);
+          setScenarioPhase(SCENARIO_PHASES.FAILED);
           setError({
             code: "renderer_error",
             message: error?.message || "Unexpected failure in renderer",
@@ -108,16 +124,17 @@ const useRunScenario = () => {
       selectedMeasureIds,
       isMeasureSelectionInitialized,
       markMeasureSelectionApplied,
+      setActiveRunSummary,
       setAlertMessage,
       setAlertSeverity,
       setAlertShowMessage,
       setError,
       setIsScenarioRunCompleted,
       setIsScenarioRunning,
+      setScenarioPhase,
       setMapTitle,
       setScenarioRunCode,
       setSelectedReport,
-      setSelectedTab,
     ]
   );
 

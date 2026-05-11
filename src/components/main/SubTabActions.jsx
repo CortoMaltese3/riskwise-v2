@@ -1,8 +1,9 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Button } from "@mui/material";
+import { Box, Button, Tooltip } from "@mui/material";
 
+import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import { useMapTools } from "../../utils/mapTools";
 import { layoutTransition } from "../../theme/theme";
@@ -24,6 +25,7 @@ const BUTTON_SX = {
 const SubTabActions = () => {
   const activeViewControl = useUIStore((s) => s.activeViewControl);
   const selectedTab = useUIStore((s) => s.selectedTab);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
   const { handleSaveImage, handleSaveMap, handleAddToOutput } = useMapTools();
   const { t } = useTranslation();
 
@@ -40,6 +42,8 @@ const SubTabActions = () => {
       ? t("main_subsection_title_save_map")
       : t("main_subsection_title_save_chart");
 
+  const tooltip = isScenarioRunning ? t("scenario_running_disabled_tooltip") : "";
+
   return (
     <Box
       role="toolbar"
@@ -52,12 +56,32 @@ const SubTabActions = () => {
         pr: 1,
       }}
     >
-      <Button variant="contained" size="small" sx={BUTTON_SX} onClick={handleAddToOutput}>
-        {t("main_subsection_title_save_scenario")}
-      </Button>
-      <Button variant="contained" size="small" sx={BUTTON_SX} onClick={onSaveMapOrChart}>
-        {saveMapOrChartLabel}
-      </Button>
+      <Tooltip title={tooltip}>
+        <span>
+          <Button
+            variant="contained"
+            size="small"
+            sx={BUTTON_SX}
+            disabled={isScenarioRunning}
+            onClick={handleAddToOutput}
+          >
+            {t("main_subsection_title_save_scenario")}
+          </Button>
+        </span>
+      </Tooltip>
+      <Tooltip title={tooltip}>
+        <span>
+          <Button
+            variant="contained"
+            size="small"
+            sx={BUTTON_SX}
+            disabled={isScenarioRunning}
+            onClick={onSaveMapOrChart}
+          >
+            {saveMapOrChartLabel}
+          </Button>
+        </span>
+      </Tooltip>
     </Box>
   );
 };
