@@ -1463,7 +1463,7 @@ const waitForPrintReady = (webContents) =>
     check();
   });
 
-ipcMain.handle("export-pdf", async (_event, { scenarioId }) => {
+ipcMain.handle("export-pdf", async (_event, { scenarioId, snapshotIds }) => {
   let printWin = null;
   try {
     printWin = new BrowserWindow({
@@ -1476,12 +1476,19 @@ ipcMain.handle("export-pdf", async (_event, { scenarioId }) => {
       },
     });
 
+    const snapshotsQuery =
+      Array.isArray(snapshotIds) && snapshotIds.length > 0
+        ? `&snapshots=${encodeURIComponent(snapshotIds.join(","))}`
+        : "";
+
     await new Promise((resolve, reject) => {
       printWin.webContents.once("did-finish-load", resolve);
       printWin.webContents.once("did-fail-load", (_e, code, desc) =>
         reject(new Error(`Print view failed to load: ${desc} (${code})`))
       );
-      printWin.loadURL(`app://./index.html?view=print&scenarioId=${encodeURIComponent(scenarioId)}`);
+      printWin.loadURL(
+        `app://./index.html?view=print&scenarioId=${encodeURIComponent(scenarioId)}${snapshotsQuery}`
+      );
     });
 
     await waitForPrintReady(printWin.webContents);

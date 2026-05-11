@@ -55,7 +55,8 @@ export interface ElectronBridge {
   openReport: (reportPath: string) => Promise<unknown>;
   onProgress: (callback: (payload: { message?: string; progress?: number }) => void) => () => void;
   exportPdf: (
-    scenarioId: string
+    scenarioId: string,
+    options?: { snapshotIds?: string[] }
   ) => Promise<{ success: boolean; filePath?: string; reason?: string }>;
   exportWorkspace: () => Promise<{
     success: boolean;
