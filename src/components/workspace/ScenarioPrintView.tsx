@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Box,
@@ -13,6 +13,8 @@ import {
 
 import { formatDate as formatDateI18n, formatDateTime } from "../../lib/formatDate";
 import { useReportLocale } from "../../hooks/useReportLocale";
+import RiskWiseClient, { type SnapshotItem } from "../../lib/RiskWiseClient";
+import logger from "../../lib/logger";
 import gizLogo from "../../assets/giz_logo.png";
 import unuEhsLogo from "../../assets/unu_ehs_logo.png";
 
@@ -79,6 +81,22 @@ interface CostBenefitData {
 
 const SHA_PREFIX_LEN = 8;
 const TOTAL_KEYS = new Set(["risk_present", "risk_future"]);
+
+// Maps backend snapshot_type values to i18n keys for the fallback heading
+// used when a snapshot has no user-provided title.
+const SNAPSHOT_TYPE_LABEL_KEYS: Record<string, string> = {
+  map: "snapshot_type_map",
+  waterfall: "snapshot_type_waterfall",
+  cost_benefit: "snapshot_type_cost_benefit",
+};
+
+interface SnapshotFigure {
+  id: string;
+  title: string | null;
+  caption: string | null;
+  snapshotType: string;
+  imageUrl: string;
+}
 
 const shortSha = (value?: string | null): string | undefined => {
   if (!value) return undefined;
@@ -166,10 +184,12 @@ const computeExecutiveSummary = (data: WaterfallData): ExecutiveSummary | null =
 
 const ScenarioPrintView = ({
   scenarioId,
+  snapshotIds,
 }: {
   scenarioId: string;
-  // Passed through from the `snapshots` URL param (issue #352). Not consumed
-  // yet — the follow-up issue will use this to render the user's selection.
+  // Comes from the `snapshots` URL param (issue #352) — the user's ordered
+  // selection from ExportPdfDialog. Rendered as figures in the Visuals
+  // section in URL/selection order.
   snapshotIds?: string[];
 }) => {
   const { i18n, t } = useTranslation();
@@ -180,6 +200,13 @@ const ScenarioPrintView = ({
   const [costbenData, setCostbenData] = useState<CostBenefitData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [figures, setFigures] = useState<SnapshotFigure[]>([]);
+  const [snapshotsResolved, setSnapshotsResolved] = useState(false);
+  const [imagesSettled, setImagesSettled] = useState(0);
+
+  // Stabilise the snapshot effect's dependency: snapshotIds is a fresh array
+  // on every render from the parent, so memoise on its joined contents.
+  const snapshotIdsKey = (snapshotIds ?? []).join(",");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -211,8 +238,99 @@ const ScenarioPrintView = ({
   }, [scenarioId]);
 
   useEffect(() => {
-    if (loaded) document.body.dataset.printReady = "true";
-  }, [loaded]);
+    const ids = snapshotIdsKey ? snapshotIdsKey.split(",") : [];
+    if (ids.length === 0) {
+      setFigures([]);
+      setSnapshotsResolved(true);
+      setImagesSettled(0);
+      return;
+    }
+
+    let cancelled = false;
+    const createdUrls: string[] = [];
+
+    (async () => {
+      try {
+        const [baseUrl, listResp] = await Promise.all([
+          (window.api?.http?.getBaseUrl?.().catch(() => null) ?? Promise.resolve(null)).then(
+            (u) => u ?? ""
+          ),
+          RiskWiseClient.listSnapshots(scenarioId),
+        ]);
+        if (cancelled) return;
+
+        if (!listResp.success || listResp.result?.status?.code !== 2000) {
+          logger.warn("ScenarioPrintView: listSnapshots failed", {
+            scenario_id: scenarioId,
+            error: listResp.success ? listResp.result?.status : listResp.error,
+          });
+          setFigures([]);
+          setSnapshotsResolved(true);
+          return;
+        }
+
+        const byId = new Map<string, SnapshotItem>(
+          (listResp.result.data ?? []).map((s) => [s.id, s])
+        );
+        const ordered = ids.map((id) => byId.get(id)).filter((s): s is SnapshotItem => Boolean(s));
+
+        const fetched = await Promise.all(
+          ordered.map(async (snap): Promise<SnapshotFigure | null> => {
+            try {
+              const resp = await fetch(`${baseUrl}${RiskWiseClient.snapshotImageUrl(snap.id)}`);
+              if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+              const blob = await resp.blob();
+              const url = URL.createObjectURL(blob);
+              createdUrls.push(url);
+              return {
+                id: snap.id,
+                title: snap.title ?? null,
+                caption: snap.caption ?? null,
+                snapshotType: snap.snapshot_type,
+                imageUrl: url,
+              };
+            } catch (err: unknown) {
+              logger.warn("ScenarioPrintView: snapshot image fetch failed", {
+                snapshot_id: snap.id,
+                error: err instanceof Error ? err.message : String(err),
+              });
+              return null;
+            }
+          })
+        );
+
+        if (cancelled) return;
+        setFigures(fetched.filter((f): f is SnapshotFigure => f !== null));
+        setImagesSettled(0);
+        setSnapshotsResolved(true);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        logger.error("ScenarioPrintView: snapshot pipeline failed", {
+          scenario_id: scenarioId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        setFigures([]);
+        setSnapshotsResolved(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      createdUrls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [scenarioId, snapshotIdsKey]);
+
+  // Readiness gate also waits for every snapshot <img> to fire onLoad or
+  // onError, so printToPDF doesn't capture half-loaded blob URLs.
+  const allImagesSettled = figures.length === 0 || imagesSettled >= figures.length;
+  const printReady = loaded && snapshotsResolved && allImagesSettled;
+  useEffect(() => {
+    if (printReady) document.body.dataset.printReady = "true";
+  }, [printReady]);
+
+  const onImageSettled = useCallback(() => {
+    setImagesSettled((n) => n + 1);
+  }, []);
 
   const provenanceRows = useMemo<Array<[string, string]>>(() => {
     if (!meta) return [];
@@ -604,8 +722,48 @@ const ScenarioPrintView = ({
             </Typography>
           </Box>
 
-          {/* Snapshot embedding lands in the next issue; the slot is reserved here. */}
-          <Box data-testid="snapshots-slot" />
+          <Box data-testid="snapshots-slot">
+            {figures.map((fig, idx) => {
+              const figureLabel = t("figure_label", { number: idx + 1 });
+              const typeKey = SNAPSHOT_TYPE_LABEL_KEYS[fig.snapshotType];
+              const typeLabel = typeKey ? t(typeKey) : fig.snapshotType.replace(/_/g, " ");
+              const headingText = fig.title
+                ? `${figureLabel} — ${fig.title}`
+                : `${figureLabel} — ${typeLabel}`;
+              return (
+                <Box
+                  key={fig.id}
+                  data-testid={`snapshot-figure-${fig.id}`}
+                  sx={{ mb: 3, "@media print": { pageBreakInside: "avoid" } }}
+                >
+                  <Typography variant="subtitle1" gutterBottom>
+                    {headingText}
+                  </Typography>
+                  <Box
+                    component="img"
+                    src={fig.imageUrl}
+                    alt={fig.title ?? typeLabel}
+                    onLoad={onImageSettled}
+                    onError={onImageSettled}
+                    sx={{
+                      display: "block",
+                      maxWidth: "100%",
+                      maxHeight: "80vh",
+                      "@media print": { pageBreakInside: "avoid" },
+                    }}
+                  />
+                  {fig.caption && (
+                    <Typography
+                      variant="caption"
+                      sx={{ display: "block", fontStyle: "italic", mt: 0.5 }}
+                    >
+                      {fig.caption}
+                    </Typography>
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
         </Box>
 
         {/* Section 6 — Methodology & Provenance */}
