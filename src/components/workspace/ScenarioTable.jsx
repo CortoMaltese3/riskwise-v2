@@ -81,7 +81,11 @@ const ScenarioRow = ({
   const closeMenu = () => setMenuAnchor(null);
   const handleAction = (action) => {
     closeMenu();
-    onAction(action, row);
+    // Defer so the Menu finishes restoring focus to the trigger IconButton
+    // before a downstream Dialog applies aria-hidden to <div id="root">;
+    // otherwise Chromium logs an a11y warning about a focused descendant
+    // under an aria-hidden ancestor.
+    setTimeout(() => onAction(action, row), 0);
   };
 
   return (

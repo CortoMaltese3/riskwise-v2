@@ -47,6 +47,7 @@ from typing import Any
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from starlette.background import BackgroundTask
 
@@ -323,6 +324,17 @@ async def _lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="RISK WISE Backend", version="2.0.0-dev", lifespan=_lifespan)
+
+# The renderer's print BrowserWindow (origin ``app://.``) cross-origin
+# ``fetch()``es snapshot image bytes so ``printToPDF`` can gate on real load
+# completion via blob URLs (see ``src/components/workspace/ScenarioPrintView``).
+# Every other backend call routes through preload IPC in the main process, so
+# this is the only path that needs CORS — scope it accordingly.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["app://."],
+    allow_methods=["GET"],
+)
 
 
 @app.middleware("http")
