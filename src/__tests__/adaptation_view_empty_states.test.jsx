@@ -59,7 +59,6 @@ beforeEach(() => {
   useUIStore.setState({
     activeSection: "adaptation",
     selectedTab: TABS.ADAPTATION,
-    selectedSubTab: 0,
     activeViewControl: "display_chart",
     selectedReport: null,
   });

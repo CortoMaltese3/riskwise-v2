@@ -36,7 +36,6 @@ const setStateBag = {
   isScenarioRunCompleted: true,
   mapTitle: "Egypt — flood rcp85",
   scenarioRunCode: "scen-1",
-  selectedSubTab: 0,
   selectedTab: "risk",
   activeMap: "risk",
   activeMapRef: { _fake: "map" },

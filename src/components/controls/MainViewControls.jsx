@@ -7,7 +7,7 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import InputIcon from "@mui/icons-material/Input";
 
 import useUIStore from "../../store/useUIStore";
-import { RISK_SUB_TABS, TABS } from "../main/tabs";
+import { TABS } from "../main/tabs";
 
 const allControls = [
   { id: "display_parameters", icon: <InputIcon /> },
@@ -18,21 +18,16 @@ const allControls = [
 const MainViewControls = () => {
   const activeViewControl = useUIStore((s) => s.activeViewControl);
   const setActiveViewControl = useUIStore((s) => s.setActiveViewControl);
-  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const selectedTab = useUIStore((s) => s.selectedTab);
   const { t } = useTranslation();
 
-  // Risk → Adaptation sub-tab hides both the map (#198) and the
-  // input-parameter editor; only the chart toggle remains. The new
-  // top-level Adaptation section (#371) keeps the chart + map toggle
+  // The top-level Adaptation section (#371) keeps the chart + map toggle
   // (map is stubbed) but drops the parameter editor since there is no
   // parameter card in the side column.
-  let controls = allControls;
-  if (selectedTab === TABS.ADAPTATION) {
-    controls = allControls.filter((c) => c.id !== "display_parameters");
-  } else if (selectedSubTab === RISK_SUB_TABS.ADAPTATION) {
-    controls = allControls.filter((c) => c.id === "display_chart");
-  }
+  const controls =
+    selectedTab === TABS.ADAPTATION
+      ? allControls.filter((c) => c.id !== "display_parameters")
+      : allControls;
 
   const handleSelect = (control) => {
     setActiveViewControl(control);

@@ -30,8 +30,8 @@ const useResultsStore = create((set, get) => ({
     const next = id || null;
     if (get().activeCredDatasetId === next) return;
     // Clearing ``credOutputData`` forces the next Macroeconomic tab entry to
-    // re-fetch against the new dataset — MainTabs only reloads when the
-    // cached array is empty.
+    // re-fetch against the new dataset — the macro view only reloads when
+    // the cached array is empty.
     set({
       activeCredDatasetId: next,
       credOutputData: [],

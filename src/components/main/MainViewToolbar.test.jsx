@@ -35,7 +35,6 @@ const baseState = {
   isScenarioRunCompleted: true,
   mapTitle: "",
   scenarioRunCode: "scen-1",
-  selectedSubTab: 0,
   selectedTab: "risk",
 };
 
@@ -136,16 +135,8 @@ describe("MainViewToolbar — snapshot camera button", () => {
     await expectTooltipText(button, "workspace_snapshot_disabled_no_run_tooltip");
   });
 
-  it("is disabled with the chart tooltip on the waterfall sub-tab", async () => {
-    stateRef.current = { ...baseState, activeViewControl: "display_chart", selectedSubTab: 0 };
-    render(<MainViewToolbar />);
-    const button = getCameraButton();
-    expect(button).toBeDisabled();
-    await expectTooltipText(button, "workspace_snapshot_disabled_chart_tooltip");
-  });
-
-  it("is disabled with the chart tooltip on the cost-benefit sub-tab", async () => {
-    stateRef.current = { ...baseState, activeViewControl: "display_chart", selectedSubTab: 1 };
+  it("is disabled with the chart tooltip on the chart surface", async () => {
+    stateRef.current = { ...baseState, activeViewControl: "display_chart" };
     render(<MainViewToolbar />);
     const button = getCameraButton();
     expect(button).toBeDisabled();

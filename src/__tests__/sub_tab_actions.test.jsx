@@ -31,9 +31,7 @@ vi.mock("../utils/mapTools", () => ({
 const stateRef = {
   current: {
     activeViewControl: "display_map",
-    selectedSubTab: 0,
     selectedTab: "risk",
-    setSelectedSubTab: vi.fn(),
     setActiveViewControl: vi.fn(),
   },
 };
@@ -57,9 +55,7 @@ beforeEach(() => {
   handleAddToOutputMock.mockReset();
   setState({
     activeViewControl: "display_map",
-    selectedSubTab: 0,
     selectedTab: "risk",
-    setSelectedSubTab: vi.fn(),
     setActiveViewControl: vi.fn(),
   });
 });
@@ -128,25 +124,5 @@ describe("SubTabActions toolbar (Risk tab)", () => {
     fireEvent.click(screen.getByRole("button", { name: "main_subsection_title_save_chart" }));
     expect(handleSaveImageMock).toHaveBeenCalledTimes(1);
     expect(handleSaveMapMock).not.toHaveBeenCalled();
-  });
-});
-
-describe("MainSubTabs renders only `<Tab>` children inside `<Tabs>`", () => {
-  it("renders the Risk + Adaptation tabs but no buttons inside the tablist", async () => {
-    const { default: MainSubTabs } = await import("../components/main/MainSubTabs");
-    render(<MainSubTabs />);
-    const tabs = screen.getAllByRole("tab");
-    // Exactly two real tabs: Risk + Adaptation (no Save Scenario / Save Map tabs).
-    expect(tabs).toHaveLength(2);
-    expect(tabs[0]).toHaveTextContent("main_subsection_title_risk");
-    expect(tabs[1]).toHaveTextContent("main_subsection_title_adaptation");
-
-    // The Save buttons live in the sibling toolbar, not as tab list items.
-    // MUI Tab renders as <button role="tab">, so we check that nothing in
-    // the tablist exposes the button role to assistive tech (which is what
-    // caused the original a11y issue — toolbar buttons being announced as
-    // tabs).
-    const tablist = screen.getByRole("tablist");
-    expect(tablist.querySelectorAll('[role="button"]')).toHaveLength(0);
   });
 });

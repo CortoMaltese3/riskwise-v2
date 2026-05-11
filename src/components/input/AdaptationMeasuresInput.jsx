@@ -96,8 +96,7 @@ const AdaptationMeasuresInput = () => {
     runScenario({ landingTab: TABS.ADAPTATION });
   };
 
-  // Visible on Risk (legacy sub-tab, removed in #376) and top-level Adaptation.
-  if (selectedTab !== TABS.RISK && selectedTab !== TABS.ADAPTATION) {
+  if (selectedTab !== TABS.ADAPTATION) {
     return null;
   }
 

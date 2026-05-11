@@ -1,13 +1,13 @@
-// Coverage for #248: tab-entry data fetches were moved out of
-// MainTabs.handleTabChange and into the views that consume them. These tests
-// verify (a) MainTabs no longer triggers fetches when the user clicks a tab,
-// (b) ReportsView lazy-fetches reports on mount and doesn't double-fetch when
-// rapidly remounted while a fetch is still in flight, and (c) MainView's
-// macro branch lazy-loads CRED data on activation with the same guard.
+// Coverage for #248: tab-entry data fetches were moved out of the legacy
+// main-tab strip and into the views that consume them. These tests verify
+// (a) ReportsView lazy-fetches reports on mount and doesn't double-fetch
+// when rapidly remounted while a fetch is still in flight, and (b)
+// MainView's macro branch lazy-loads CRED data on activation with the
+// same guard.
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material/styles";
 
 import theme from "../theme/theme";
@@ -60,7 +60,6 @@ vi.mock("../components/reports/ReportCard", () => ({
   default: () => <div data-testid="report-card" />,
 }));
 
-import MainTabs from "../components/main/MainTabs";
 import MainView from "../components/main/MainView";
 import ReportsView from "../components/reports/ReportsView";
 import useResultsStore from "../store/useResultsStore";
@@ -79,41 +78,12 @@ beforeEach(() => {
   loadCREDOutputDataMock.mockResolvedValue(undefined);
   useUIStore.setState({
     selectedTab: TABS.PARAMETERS,
-    selectedSubTab: 0,
     activeViewControl: "",
     reports: [],
     selectedReport: null,
   });
   useResultsStore.setState({ credOutputData: [] });
   useWorkspaceStore.setState({ selectedAppOption: "era" });
-});
-
-describe("MainTabs.handleTabChange (#248)", () => {
-  it("does not call fetchReports when the user clicks the Reports tab", () => {
-    renderWithTheme(<MainTabs />);
-    const reportsTab = screen.getByRole("tab", { name: /main_section_title_outputs/i });
-    fireEvent.click(reportsTab);
-    expect(fetchReportsMock).not.toHaveBeenCalled();
-    expect(useUIStore.getState().selectedTab).toBe(TABS.REPORTS);
-  });
-
-  it("does not call loadCREDOutputData when the user clicks the Macro tab", () => {
-    renderWithTheme(<MainTabs />);
-    const macroTab = screen.getByRole("tab", { name: /main_section_title_macroeconomic/i });
-    fireEvent.click(macroTab);
-    expect(loadCREDOutputDataMock).not.toHaveBeenCalled();
-    expect(useUIStore.getState().selectedTab).toBe(TABS.MACRO);
-  });
-
-  it("still resets the sub-tab when a tab is clicked", () => {
-    useUIStore.setState({ selectedSubTab: 2 });
-    renderWithTheme(<MainTabs />);
-    const riskTab = screen.getByRole("tab", {
-      name: /main_section_title_economic_non_economic/i,
-    });
-    fireEvent.click(riskTab);
-    expect(useUIStore.getState().selectedSubTab).toBe(0);
-  });
 });
 
 describe("ReportsView lazy fetch (#248)", () => {

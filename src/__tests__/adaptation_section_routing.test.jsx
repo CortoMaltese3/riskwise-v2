@@ -80,7 +80,6 @@ beforeEach(() => {
   useUIStore.setState({
     activeSection: "home",
     selectedTab: TABS.PARAMETERS,
-    selectedSubTab: 0,
     activeViewControl: "",
     selectedReport: null,
   });

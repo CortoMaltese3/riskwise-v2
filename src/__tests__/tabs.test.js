@@ -6,14 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  ORDERED_TABS,
-  RISK_SUB_TABS,
-  TABS,
-  TAB_CONFIG,
-  isValidTab,
-  tabIndex,
-} from "../components/main/tabs";
+import { ORDERED_TABS, TABS, TAB_CONFIG, isValidTab, tabIndex } from "../components/main/tabs";
 
 describe("TABS / TAB_CONFIG", () => {
   it("exposes all tab ids as strings", () => {
@@ -48,16 +41,7 @@ describe("TABS / TAB_CONFIG", () => {
       expect(typeof cfg.resultsTitleKey).toBe("string");
       expect(typeof cfg.sectionTitleKey).toBe("string");
       expect(typeof cfg.defaultView).toBe("string");
-      expect(Array.isArray(cfg.subTabs)).toBe(true);
     }
-  });
-
-  it("only marks the Risk tab with sub-tabs", () => {
-    expect(TAB_CONFIG[TABS.PARAMETERS].subTabs).toHaveLength(0);
-    expect(TAB_CONFIG[TABS.RISK].subTabs.length).toBeGreaterThan(0);
-    expect(TAB_CONFIG[TABS.ADAPTATION].subTabs).toHaveLength(0);
-    expect(TAB_CONFIG[TABS.MACRO].subTabs).toHaveLength(0);
-    expect(TAB_CONFIG[TABS.REPORTS].subTabs).toHaveLength(0);
   });
 
   it("opens Risk on the map view, Adaptation on the chart, and Macro on the chart frame", () => {
@@ -94,19 +78,6 @@ describe("TABS / TAB_CONFIG", () => {
     it("falls back to 0 for unknown ids", () => {
       expect(tabIndex("nope")).toBe(0);
       expect(tabIndex(undefined)).toBe(0);
-    });
-  });
-
-  describe("RISK_SUB_TABS", () => {
-    it("documents the risk sub-tab indices (real tabs only)", () => {
-      // The Save Scenario / Save Map|Chart actions used to live at indices
-      // 2 and 3 inside `<Tabs>`; #249 moved them to the SubTabActions
-      // sibling toolbar, so only the real tabs remain here.
-      expect(RISK_SUB_TABS).toEqual({
-        RISK: 0,
-        ADAPTATION: 1,
-      });
-      expect(Object.isFrozen(RISK_SUB_TABS)).toBe(true);
     });
   });
 });

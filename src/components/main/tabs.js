@@ -1,7 +1,7 @@
 // Single source of truth for the main view tab identifiers and per-tab
 // configuration. Replaces the previous numeric-index scheme (0/1/2/3) that
-// was duplicated across MainTabs, MainSubTabs, MainView, the UI store, and
-// MainViewTitle — reordering a tab used to silently break all five.
+// was duplicated across the legacy main-tab strip, MainView, the UI store,
+// and MainViewTitle — reordering a tab used to silently break all of them.
 //
 // Tab values are stable strings (not array indices), so:
 //   * the `<Tabs value={selectedTab}>` wiring is order-independent;
@@ -18,21 +18,13 @@ export const TABS = Object.freeze({
   REPORTS: "reports",
 });
 
-// Sub-tab identifiers for tabs that have them. Sub-tabs remain index-keyed
-// in the runtime (selectedSubTab is an integer); these constants document
-// the indices so callers don't repeat magic numbers. The Save Scenario /
-// Save Map|Chart actions used to live at indices 2 and 3 inside `<Tabs>`,
-// but #249 moved them out into a sibling toolbar (`SubTabActions`), so
-// only the real tabs remain here.
-export const RISK_SUB_TABS = Object.freeze({
-  RISK: 0,
-  ADAPTATION: 1,
-});
-
-// Per-tab configuration consumed by MainTabs (rendering order), the UI
-// store (default ``activeViewControl`` when switching tabs), and
-// MainSubTabs (which sub-tabs to show). Keep ``order`` contiguous; it is
-// the only place that defines the visual order of the main tab strip.
+// Per-tab configuration. ``order`` is the only place that defines the
+// numeric sequence used by ``tabIndex`` (the legacy lookup that backs
+// ResultsTypography's ERA i18n keys); ``defaultView`` is the
+// ``activeViewControl`` to apply on tab entry. Adaptation keeps
+// ``order: 1.5`` so it sits between Risk and Macro for any consumer that
+// walks ``ORDERED_TABS``, while leaving the integer slots for Macro (2)
+// and Reports (3) untouched so the historical ERA key positions hold.
 export const TAB_CONFIG = Object.freeze({
   [TABS.PARAMETERS]: {
     order: 0,
@@ -40,7 +32,6 @@ export const TAB_CONFIG = Object.freeze({
     resultsTitleKey: "results_view_tab_parameters_title",
     sectionTitleKey: "main_section_title_parameters",
     defaultView: "",
-    subTabs: [],
   },
   [TABS.RISK]: {
     order: 1,
@@ -48,24 +39,13 @@ export const TAB_CONFIG = Object.freeze({
     resultsTitleKey: "results_view_tab_risk_title",
     sectionTitleKey: "main_section_title_economic_non_economic",
     defaultView: "display_map",
-    subTabs: [
-      { key: "risk", labelKey: "main_subsection_title_risk" },
-      { key: "adaptation", labelKey: "main_subsection_title_adaptation" },
-    ],
   },
-  // Adaptation is a top-level section reached via the sidebar; the legacy
-  // MainTabs strip is not mounted in AppShell. ``order: 1.5`` keeps it
-  // sequenced between Risk and Macro for any consumer that walks
-  // ``ORDERED_TABS``, while leaving the integer slots for Macro (2) and
-  // Reports (3) untouched so ``tabIndex`` keeps its historical positions
-  // used by ResultsTypography's ERA i18n keys.
   [TABS.ADAPTATION]: {
     order: 1.5,
     titleKey: "main_view_tab_adaptation_title",
     resultsTitleKey: "results_view_tab_adaptation_title",
     sectionTitleKey: "main_section_title_adaptation",
     defaultView: "display_chart",
-    subTabs: [],
   },
   [TABS.MACRO]: {
     order: 2,
@@ -76,7 +56,6 @@ export const TAB_CONFIG = Object.freeze({
     // chart container; parameter editors open on demand when a
     // side-column card is clicked.
     defaultView: "display_macro_chart",
-    subTabs: [],
   },
   [TABS.REPORTS]: {
     order: 3,
@@ -84,7 +63,6 @@ export const TAB_CONFIG = Object.freeze({
     resultsTitleKey: "results_view_tab_reports_title",
     sectionTitleKey: "main_section_title_outputs",
     defaultView: "",
-    subTabs: [],
   },
 });
 
