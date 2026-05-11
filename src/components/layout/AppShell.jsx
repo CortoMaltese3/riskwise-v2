@@ -26,7 +26,7 @@ import HorizontalSplit from "./primitives/HorizontalSplit";
 import FixedColumn from "./primitives/FixedColumn";
 import ScrollableRegion from "./primitives/ScrollableRegion";
 import { useMacroTools } from "../../utils/macroTools";
-import { TABS, RISK_SUB_TABS, isValidTab } from "../main/tabs";
+import { TABS, isValidTab } from "../main/tabs";
 
 const sectionToTab = {
   home: TABS.PARAMETERS,
@@ -46,10 +46,7 @@ const ADAPTATION_RESULTS_PANEL_WIDTH = 260;
 export const RiskAssessmentView = () => {
   const { t } = useTranslation();
   const selectedTab = useUIStore((s) => s.selectedTab);
-  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
-  const showRunButton =
-    selectedTab === TABS.PARAMETERS ||
-    (selectedTab === TABS.RISK && selectedSubTab === RISK_SUB_TABS.RISK);
+  const showRunButton = selectedTab === TABS.PARAMETERS || selectedTab === TABS.RISK;
   return (
     <HorizontalSplit>
       <FixedColumn width={RISK_LEFT_PANEL_WIDTH}>
@@ -65,7 +62,6 @@ export const RiskAssessmentView = () => {
           <ScrollableRegion>
             <Box sx={{ pt: 2, px: 1, pb: 1 }}>
               <DataInput />
-              <AdaptationMeasuresInput />
             </Box>
           </ScrollableRegion>
           {showRunButton && (

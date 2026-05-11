@@ -103,7 +103,6 @@ const useUIStore = create((set, get) => ({
   selectedCard: "country",
   selectedMacroCard: "country",
   selectedTab: TABS.PARAMETERS,
-  selectedSubTab: 0,
 
   // Reports
   reports: [],
@@ -174,7 +173,6 @@ const useUIStore = create((set, get) => ({
 
   setSelectedCard: (card) => set({ selectedCard: card }),
   setSelectedMacroCard: (card) => set({ selectedMacroCard: card }),
-  setSelectedSubTab: (subTab) => set({ selectedSubTab: subTab }),
   setSelectedTab: (tab) => {
     if (!isValidTab(tab)) return;
     // ``defaultView`` per TAB_CONFIG is the source of truth for the
@@ -182,7 +180,7 @@ const useUIStore = create((set, get) => ({
     // chart frame so the analyst always sees a chart container; parameter
     // editors open on demand when a side-column card is clicked.
     const viewControl = TAB_CONFIG[tab].defaultView;
-    set({ selectedTab: tab, selectedSubTab: 0, activeViewControl: viewControl });
+    set({ selectedTab: tab, activeViewControl: viewControl });
   },
   // Open the input-parameter editor for whichever card was just selected.
   // From the Risk tab the editor lives in a sibling view-control alongside

@@ -11,7 +11,6 @@ const ResultsTypography = () => {
   const activeMap = useUIStore((s) => s.activeMap);
   const activeViewControl = useUIStore((s) => s.activeViewControl);
   const selectedTab = useUIStore((s) => s.selectedTab);
-  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
   const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
   const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
@@ -22,7 +21,11 @@ const ResultsTypography = () => {
   // tab index (e.g. ``..._1_0_display_map_hazard``). Renaming all ~350
   // keys per locale is out of scope for #247, so we translate the enum
   // back to its historical position before composing the lookup key.
+  // The legacy keys also carried a numeric sub-tab segment; that index is
+  // pinned to ``0`` (the only Risk surface left) so the existing key
+  // shape stays intact without reviving the dead sub-tab state.
   const tabIdx = tabIndex(selectedTab);
+  const legacySubTabIdx = 0;
 
   const getText = () => {
     if (selectedAppOption === "era") {
@@ -35,7 +38,7 @@ const ResultsTypography = () => {
           `${selectedHazard}_` +
           `${selectedExposure}_` +
           `${tabIdx}_` +
-          `${selectedSubTab}_` +
+          `${legacySubTabIdx}_` +
           `${activeViewControl}_` +
           `${activeMap}`
       );
@@ -43,7 +46,7 @@ const ResultsTypography = () => {
     return t(
       `results_${selectedAppOption}_` +
         `${tabIdx}_` +
-        `${selectedSubTab}_` +
+        `${legacySubTabIdx}_` +
         `${activeViewControl}_` +
         `${activeMap}`
     );

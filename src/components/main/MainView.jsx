@@ -18,7 +18,7 @@ import ViewMacroCard from "../cards/ViewMacroCard";
 import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import { useMacroTools } from "../../utils/macroTools";
-import { TABS, RISK_SUB_TABS } from "./tabs";
+import { TABS } from "./tabs";
 
 const COLUMN_SX = {
   flex: 1,
@@ -75,7 +75,6 @@ const AdaptationEmptyState = () => {
 const MainView = () => {
   const activeViewControl = useUIStore((s) => s.activeViewControl);
   const selectedReport = useUIStore((s) => s.selectedReport);
-  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const selectedTab = useUIStore((s) => s.selectedTab);
   const credOutputData = useResultsStore((s) => s.credOutputData);
   const isScenarioRunCompleted = useResultsStore((s) => s.isScenarioRunCompleted);
@@ -105,7 +104,7 @@ const MainView = () => {
           <ViewCard />
         </Box>
       )}
-      {selectedTab === TABS.RISK && selectedSubTab === RISK_SUB_TABS.RISK && (
+      {selectedTab === TABS.RISK && (
         <>
           {activeViewControl === "display_parameters" ? (
             <Box sx={TOP_SX}>
@@ -117,18 +116,6 @@ const MainView = () => {
               {activeViewControl === "display_chart" && <RiskChartLayout />}
             </Box>
           )}
-          <Box sx={CONTROLS_ROW_SX}>
-            <MainViewControls />
-            <MainViewToolbar />
-          </Box>
-        </>
-      )}
-      {selectedTab === TABS.RISK && selectedSubTab === RISK_SUB_TABS.ADAPTATION && (
-        <>
-          <Box sx={STRETCH_SX}>
-            {activeViewControl === "display_map" && <AdaptationMap />}
-            {activeViewControl === "display_chart" && <AdaptationChartLayout />}
-          </Box>
           <Box sx={CONTROLS_ROW_SX}>
             <MainViewControls />
             <MainViewToolbar />

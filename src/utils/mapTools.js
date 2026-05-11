@@ -60,7 +60,6 @@ export const useMapTools = () => {
   const addReport = useUIStore((s) => s.addReport);
   const reports = useUIStore((s) => s.reports);
   const selectedReport = useUIStore((s) => s.selectedReport);
-  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const selectedTab = useUIStore((s) => s.selectedTab);
   const setAlertMessage = useUIStore((s) => s.setAlertMessage);
   const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
@@ -238,12 +237,8 @@ export const useMapTools = () => {
     }
 
     const onChart = activeViewControl === "display_chart";
-    const isWaterfall = onChart && selectedTab === TABS.RISK && selectedSubTab === 0;
-    // Cost-benefit fires from the legacy Risk → Adaptation sub-tab (currently
-    // unreachable) and from the new top-level Adaptation section (#371).
-    const isCostBenefit =
-      onChart &&
-      ((selectedTab === TABS.RISK && selectedSubTab === 1) || selectedTab === TABS.ADAPTATION);
+    const isWaterfall = onChart && selectedTab === TABS.RISK;
+    const isCostBenefit = onChart && selectedTab === TABS.ADAPTATION;
 
     if ((isScenarioRunCompleted || selectedReport) && isWaterfall) {
       const id = new Date().getTime().toString();
@@ -315,10 +310,8 @@ export const useMapTools = () => {
       // adaptation) so we do not need a UI state lookup for them.
       let surface;
       const onChart = activeViewControl === "display_chart";
-      const isWaterfall = onChart && selectedTab === TABS.RISK && selectedSubTab === 0;
-      const isCostBenefit =
-        onChart &&
-        ((selectedTab === TABS.RISK && selectedSubTab === 1) || selectedTab === TABS.ADAPTATION);
+      const isWaterfall = onChart && selectedTab === TABS.RISK;
+      const isCostBenefit = onChart && selectedTab === TABS.ADAPTATION;
       if (activeViewControl === "display_map") {
         base64 = await captureMapBase64(activeMapRef);
         snapshotType = "map";

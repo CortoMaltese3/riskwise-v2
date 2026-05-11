@@ -10,18 +10,12 @@ import Hazard from "./Hazard";
 import Scenario from "./Scenario";
 import TimeHorizon from "./TimeHorizon";
 import useUIStore from "../../store/useUIStore";
-import { TABS, RISK_SUB_TABS } from "../main/tabs";
+import { TABS } from "../main/tabs";
 
 const DataInput = () => {
-  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const selectedTab = useUIStore((s) => s.selectedTab);
 
-  if (
-    !(
-      selectedTab === TABS.PARAMETERS ||
-      (selectedTab === TABS.RISK && selectedSubTab === RISK_SUB_TABS.RISK)
-    )
-  ) {
+  if (selectedTab !== TABS.PARAMETERS && selectedTab !== TABS.RISK) {
     return null;
   }
 

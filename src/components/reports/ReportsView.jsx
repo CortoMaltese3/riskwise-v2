@@ -30,7 +30,7 @@ const ReportsView = () => {
   const { t } = useTranslation();
 
   // Lazy-fetch the scenario list when the Reports tab becomes active. Owning
-  // the fetch here (rather than in MainTabs.handleTabChange) keeps caching
+  // the fetch here (rather than in a global tab-switch handler) keeps caching
   // policy with the consumer. The module-scoped flag suppresses duplicate
   // requests when the user toggles tabs rapidly — a remount during a pending
   // fetch won't trigger a second one. See #248.

@@ -12,7 +12,6 @@ describe("useUIStore.setSelectedTab", () => {
   beforeEach(() => {
     useUIStore.setState({
       selectedTab: TABS.PARAMETERS,
-      selectedSubTab: 0,
       activeViewControl: "display_map",
     });
   });
@@ -26,7 +25,6 @@ describe("useUIStore.setSelectedTab", () => {
     const s = useUIStore.getState();
     expect(s.selectedTab).toBe(TABS.PARAMETERS);
     expect(s.activeViewControl).toBe("");
-    expect(s.selectedSubTab).toBe(0);
   });
 
   it("opens the map view when entering the Risk tab", () => {
@@ -41,12 +39,6 @@ describe("useUIStore.setSelectedTab", () => {
     const s = useUIStore.getState();
     expect(s.selectedTab).toBe(TABS.MACRO);
     expect(s.activeViewControl).toBe("display_macro_chart");
-  });
-
-  it("resets selectedSubTab when switching tabs", () => {
-    useUIStore.setState({ selectedSubTab: 2 });
-    useUIStore.getState().setSelectedTab(TABS.RISK);
-    expect(useUIStore.getState().selectedSubTab).toBe(0);
   });
 
   it("ignores unknown tab ids rather than corrupting the store", () => {
