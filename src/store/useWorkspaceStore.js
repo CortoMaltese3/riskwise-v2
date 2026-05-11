@@ -187,11 +187,39 @@ const useWorkspaceStore = create((set, get) => ({
   },
 
   deleteSelected: async () => {
-    const { selectedIds, deleteScenario } = get();
-    for (const id of selectedIds) {
-      await deleteScenario(id);
+    const { selectedIds, scenarios, pinnedIds } = get();
+    const ids = [...selectedIds];
+    if (ids.length === 0) {
+      return { ok: 0, failed: 0, total: 0, failedIds: [] };
     }
-    set({ selectedIds: [] });
+    const results = await Promise.allSettled(ids.map((id) => RiskWiseClient.deleteScenario(id)));
+    const succeededIds = [];
+    const failedIds = [];
+    results.forEach((result, idx) => {
+      const id = ids[idx];
+      const ok =
+        result.status === "fulfilled" &&
+        result.value?.success &&
+        result.value.result?.status?.code === 2000;
+      if (ok) succeededIds.push(id);
+      else failedIds.push(id);
+    });
+    const succeededSet = new Set(succeededIds);
+    const nextPinned = pinnedIds.filter((x) => !succeededSet.has(x));
+    if (nextPinned.length !== pinnedIds.length) {
+      writePinnedIds(nextPinned);
+    }
+    set({
+      scenarios: scenarios.filter((row) => !succeededSet.has(row.id)),
+      selectedIds: [],
+      pinnedIds: nextPinned,
+    });
+    return {
+      ok: succeededIds.length,
+      failed: failedIds.length,
+      total: ids.length,
+      failedIds,
+    };
   },
 
   setSelectedAppOption: (option) => set({ selectedAppOption: option }),
