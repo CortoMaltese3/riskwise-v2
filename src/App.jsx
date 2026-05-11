@@ -18,6 +18,13 @@ import useUIStore from "./store/useUIStore";
 const printParams = new URLSearchParams(window.location.search);
 const isPrintView = printParams.get("view") === "print";
 const printScenarioId = printParams.get("scenarioId") ?? "";
+// `snapshots=id1,id2,...` carries the user's selection from ExportPdfDialog
+// (issue #352). Parsed here so the print branch sees a typed list; the
+// follow-up issue will use it to render the chosen snapshots.
+const printSnapshotIds = (printParams.get("snapshots") ?? "")
+  .split(",")
+  .map((id) => id.trim())
+  .filter(Boolean);
 
 // MUI's CssVarsProvider (the implementation behind <ThemeProvider> when the
 // theme has `colorSchemes`) owns mode persistence and the
@@ -79,7 +86,7 @@ const App = () => {
         modeStorageKey={PRINT_THEME_MODE_STORAGE_KEY}
       >
         <CssBaseline />
-        <ScenarioPrintView scenarioId={printScenarioId} />
+        <ScenarioPrintView scenarioId={printScenarioId} snapshotIds={printSnapshotIds} />
       </ThemeProvider>
     );
   }

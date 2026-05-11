@@ -84,6 +84,13 @@ from backend.models.scenarios import (
     UpdateSnapshotRequest,
     UpdateSnapshotResponse,
 )
+from backend.models.settings import (
+    ReportCurrency,
+    ReportLocale,
+    UpdateUserSettingsRequest,
+    UserSettings,
+    UserSettingsResponse,
+)
 from backend.models.temp import TempClearResponse
 from backend.models.waterfall import WaterfallCategory, WaterfallPayload, WaterfallResponse
 from backend.models.workspace import (
@@ -166,8 +173,13 @@ __all__ = [
     "Status",
     "StatusEnvelope",
     "TempClearResponse",
+    "ReportCurrency",
+    "ReportLocale",
     "UpdateSnapshotRequest",
     "UpdateSnapshotResponse",
+    "UpdateUserSettingsRequest",
+    "UserSettings",
+    "UserSettingsResponse",
     "WaterfallCategory",
     "WaterfallPayload",
     "WaterfallResponse",

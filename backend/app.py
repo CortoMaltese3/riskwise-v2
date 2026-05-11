@@ -105,6 +105,8 @@ from backend.models import (
     TempClearResponse,
     UpdateSnapshotRequest,
     UpdateSnapshotResponse,
+    UpdateUserSettingsRequest,
+    UserSettingsResponse,
     WaterfallResponse,
     WorkspaceExportResponse,
     WorkspaceImportRequest,
@@ -416,6 +418,35 @@ async def _unhandled_exception_handler(_request: Request, exc: Exception) -> JSO
 @app.get(f"{API_PREFIX}/health", response_model=HealthResponse)
 async def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get(f"{API_PREFIX}/settings", response_model=UserSettingsResponse)
+async def get_settings_endpoint() -> dict:
+    from dataclasses import asdict
+
+    from backend.db import get_user_settings
+
+    row = await asyncio.to_thread(get_user_settings)
+    return {"data": asdict(row), "status": _status_ok()}
+
+
+@app.patch(f"{API_PREFIX}/settings", response_model=UserSettingsResponse)
+async def patch_settings_endpoint(payload: UpdateUserSettingsRequest) -> dict:
+    from dataclasses import asdict
+
+    from backend.db import update_user_settings
+
+    # ``model_fields_set`` lets us distinguish "the client omitted this key"
+    # from "the client explicitly sent null"; the store treats _UNSET as
+    # "leave column untouched" so a PATCH that only touches the locale never
+    # blanks the currency (mirrors the snapshot title/caption pattern in #350).
+    kwargs: dict = {}
+    if "report_locale" in payload.model_fields_set and payload.report_locale is not None:
+        kwargs["report_locale"] = payload.report_locale
+    if "report_currency" in payload.model_fields_set and payload.report_currency is not None:
+        kwargs["report_currency"] = payload.report_currency
+    row = await asyncio.to_thread(update_user_settings, **kwargs)
+    return {"data": asdict(row), "status": _status_ok()}
 
 
 @app.post(f"{API_PREFIX}/scenario/run", response_model=JobAcceptedResponse)
