@@ -699,77 +699,6 @@
         "title": "DeleteSnapshotResponse",
         "type": "object"
       },
-      "ExportReportData": {
-        "properties": {
-          "report_path": {
-            "default": "",
-            "title": "Report Path",
-            "type": "string"
-          },
-          "status": {
-            "default": "delegated_to_electron",
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "title": "ExportReportData",
-        "type": "object"
-      },
-      "ExportReportRequest": {
-        "additionalProperties": true,
-        "description": "Body posted to ``POST /api/v1/scenarios/{id}/export``.\n\n``scenarioRunCode`` is overwritten by the FastAPI handler with the path\nparameter, so the field is optional in the body.",
-        "properties": {
-          "exportType": {
-            "minLength": 1,
-            "title": "Exporttype",
-            "type": "string"
-          },
-          "report": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Report"
-          },
-          "scenarioRunCode": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Scenarioruncode"
-          }
-        },
-        "required": [
-          "exportType"
-        ],
-        "title": "ExportReportRequest",
-        "type": "object"
-      },
-      "ExportReportResponse": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ExportReportData"
-          },
-          "status": {
-            "$ref": "#/components/schemas/Status"
-          }
-        },
-        "required": [
-          "data",
-          "status"
-        ],
-        "title": "ExportReportResponse",
-        "type": "object"
-      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3366,55 +3295,6 @@
           }
         },
         "summary": "Patch Scenario Endpoint"
-      }
-    },
-    "/api/v1/scenarios/{scenario_id}/export": {
-      "post": {
-        "operationId": "export_scenario_api_v1_scenarios__scenario_id__export_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "scenario_id",
-            "required": true,
-            "schema": {
-              "title": "Scenario Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ExportReportRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExportReportResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Export Scenario"
       }
     },
     "/api/v1/scenarios/{scenario_id}/save": {

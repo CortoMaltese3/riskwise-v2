@@ -35,10 +35,8 @@ jobs:
       # geospatial install in CI (see pyproject.toml and tests/unit/ for
       # scope). h5py, rasterio, pyproj and scipy are included because the
       # engine raster/loader modules import them at module level — without
-      # them pytest fails at collection time (issue #207 follow-up).
-      # xlsxwriter is imported by backend/report/report_handler.py and is
-      # exercised by tests/unit/report/test_report_handler.py. All ship
-      # binary wheels (rasterio bundles its own GDAL) so no system
+      # them pytest fails at collection time (issue #207 follow-up). All
+      # ship binary wheels (rasterio bundles its own GDAL) so no system
       # packages are needed. Full-stack integration tests will get their
       # own job.
       - name: Install test dependencies
@@ -54,7 +52,6 @@ jobs:
             "psutil>=5.9,<7" \
             "duckdb>=1.0,<2" \
             "openpyxl>=3.1,<4" \
-            "xlsxwriter>=3.2,<4" \
             "h5py>=3.10,<4" \
             "rasterio>=1.3,<2" \
             "pyproj>=3.6,<4" \

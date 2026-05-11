@@ -171,7 +171,6 @@ const ScenarioRow = ({
               {t("workspace_action_rename")}
             </MenuItem>
             <MenuItem onClick={() => handleAction("export-pdf")}>Export PDF</MenuItem>
-            <MenuItem onClick={() => handleAction("export-excel")}>Export Excel</MenuItem>
             <MenuItem onClick={() => handleAction("delete")}>
               {t("workspace_action_delete")}
             </MenuItem>

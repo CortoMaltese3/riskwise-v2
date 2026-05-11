@@ -33,8 +33,6 @@ export type ScenarioWorkspaceItem = Schema<"ScenarioWorkspaceItem">;
 export type ScenarioListResponse = Schema<"ScenarioListResponse">;
 export type ScenarioDetailResponse = Schema<"ScenarioDetailResponse">;
 export type ScenarioDetailPayload = Schema<"ScenarioDetailPayload">;
-export type ExportReportRequest = Schema<"ExportReportRequest">;
-export type ExportReportResponse = Schema<"ExportReportResponse">;
 export type SaveScenarioRequest = Schema<"SaveScenarioRequest">;
 export type SaveScenarioResponse = Schema<"SaveScenarioResponse">;
 export type PatchScenarioRequest = Schema<"PatchScenarioRequest">;
@@ -144,9 +142,6 @@ const RiskWiseClient = {
 
   getScenario: (id: string) =>
     get<ScenarioDetailResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}`),
-
-  exportReport: (id: string, body: ExportReportRequest) =>
-    post<ExportReportResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}/export`, body),
 
   // .riskwise-scenario shareable export/import (issue #122). The renderer
   // never touches the binary — Electron's main process opens the

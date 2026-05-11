@@ -5,7 +5,6 @@ import { Box } from "@mui/material";
 import ResultsViewTitle from "../title/ResultsViewTitle";
 import EconomicResultsCard from "./EconomicResultsCard";
 import MacroEconomicResultsCard from "./MacroEconomicResultsCard";
-import OutputResultsCard from "./OutputResultsCard";
 import LoadingSkeleton from "../layout/LoadingSkeleton";
 import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
@@ -29,7 +28,6 @@ const ResultsView = () => {
           <>
             {selectedTab === TABS.RISK && <EconomicResultsCard />}
             {selectedTab === TABS.MACRO && <MacroEconomicResultsCard />}
-            {selectedTab === TABS.REPORTS && <OutputResultsCard />}
           </>
         )}
       </Box>

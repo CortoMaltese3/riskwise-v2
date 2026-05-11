@@ -100,7 +100,6 @@ class TestCommand:
     [
         ("backend.run_check_data_type", "RunCheckDataType", "run_check_data_type"),
         ("backend.run_clear_temp_dir", "RunClearTempDir", "run_clear_temp_dir"),
-        ("backend.run_export_report", "RunExportReport", "run_export_report"),
         ("backend.run_fetch_costbenefit", "RunFetchCostBenefit", "run_fetch_costbenefit"),
         ("backend.run_fetch_cred_output", "RunFetchCredOutput", "run_fetch_cred_output"),
         (

@@ -459,23 +459,6 @@ export interface paths {
         patch: operations["patch_scenario_endpoint_api_v1_scenarios__scenario_id__patch"];
         trace?: never;
     };
-    "/api/v1/scenarios/{scenario_id}/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Export Scenario */
-        post: operations["export_scenario_api_v1_scenarios__scenario_id__export_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/scenarios/{scenario_id}/save": {
         parameters: {
             query?: never;
@@ -877,43 +860,6 @@ export interface components {
             data: {
                 [key: string]: unknown;
             };
-            status: components["schemas"]["Status"];
-        };
-        /** ExportReportData */
-        ExportReportData: {
-            /**
-             * Report Path
-             * @default
-             */
-            report_path: string;
-            /**
-             * Status
-             * @default delegated_to_electron
-             */
-            status: string;
-        };
-        /**
-         * ExportReportRequest
-         * @description Body posted to ``POST /api/v1/scenarios/{id}/export``.
-         *
-         *     ``scenarioRunCode`` is overwritten by the FastAPI handler with the path
-         *     parameter, so the field is optional in the body.
-         */
-        ExportReportRequest: {
-            /** Exporttype */
-            exportType: string;
-            /** Report */
-            report?: {
-                [key: string]: unknown;
-            } | null;
-            /** Scenarioruncode */
-            scenarioRunCode?: string | null;
-        } & {
-            [key: string]: unknown;
-        };
-        /** ExportReportResponse */
-        ExportReportResponse: {
-            data: components["schemas"]["ExportReportData"];
             status: components["schemas"]["Status"];
         };
         /** HTTPValidationError */
@@ -2265,41 +2211,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SaveScenarioResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    export_scenario_api_v1_scenarios__scenario_id__export_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                scenario_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExportReportRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExportReportResponse"];
                 };
             };
             /** @description Validation Error */

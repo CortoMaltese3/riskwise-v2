@@ -165,30 +165,6 @@ class DeleteSnapshotResponse(BaseModel):
     status: Status
 
 
-class ExportReportRequest(BaseModel):
-    """Body posted to ``POST /api/v1/scenarios/{id}/export``.
-
-    ``scenarioRunCode`` is overwritten by the FastAPI handler with the path
-    parameter, so the field is optional in the body.
-    """
-
-    model_config = ConfigDict(extra="allow")
-
-    exportType: str = Field(..., min_length=1)
-    scenarioRunCode: str | None = None
-    report: dict | None = None
-
-
-class ExportReportData(BaseModel):
-    status: str = "delegated_to_electron"
-    report_path: str = ""
-
-
-class ExportReportResponse(BaseModel):
-    data: ExportReportData
-    status: Status
-
-
 class ScenarioExportData(BaseModel):
     """Shape returned by ``GET /api/v1/scenario/{id}/export-data`` (#122).
 
