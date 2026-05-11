@@ -26,6 +26,18 @@ vi.mock("../charts/CostBenefitChart", () => ({
 vi.mock("../../assets/giz_logo.png", () => ({ default: "giz-logo-stub" }));
 vi.mock("../../assets/unu_ehs_logo.png", () => ({ default: "unu-logo-stub" }));
 
+// Stub the locale-aware date formatter so timestamp tests are deterministic.
+vi.mock("../../lib/formatDate", () => ({
+  formatDate: (value: unknown) => {
+    if (value instanceof Date) return "2026-05-11";
+    return String(value ?? "");
+  },
+  formatDateTime: (value: unknown) => {
+    if (value instanceof Date) return "12:34:56";
+    return String(value ?? "");
+  },
+}));
+
 // useReportLocale fetches /api/v1/settings; the component shares the same
 // window.api.http.request mock for scenarios. Stub the hook directly so the
 // test only needs to control the scenario payload.
@@ -50,6 +62,7 @@ vi.mock("../../lib/RiskWiseClient", () => ({
 }));
 
 import ScenarioPrintView from "./ScenarioPrintView";
+import enLocale from "../../locales/en.json";
 
 const meta = {
   id: "scn-1",
@@ -114,6 +127,12 @@ const mockScenario = (payload: ScenarioPayload) => {
   return requestMock;
 };
 
+const mockElectron = (username: string | null = "alice") => {
+  const getCurrentUser = vi.fn().mockResolvedValue(username);
+  (window as unknown as { electron: unknown }).electron = { getCurrentUser };
+  return getCurrentUser;
+};
+
 interface SnapshotFixture {
   id: string;
   snapshot_type: string;
@@ -154,6 +173,7 @@ const mockSnapshots = (
 beforeEach(() => {
   delete (document.body.dataset as Record<string, string | undefined>).printReady;
   listSnapshotsMock.mockReset();
+  mockElectron("alice");
   // jsdom doesn't implement object URLs; stub so blob URLs are observable in
   // assertions and revocation can be tracked across test boundaries.
   let nextBlobId = 0;
@@ -167,8 +187,21 @@ const flushImageLoads = () => {
   document.querySelectorAll("img").forEach((img) => fireEvent.load(img));
 };
 
+const SECTION_TESTIDS_IN_ORDER = [
+  "print-cover",
+  "print-toc",
+  "print-input-parameters",
+  "print-executive-summary",
+  "print-section-hazard",
+  "print-section-exposure",
+  "print-section-impact",
+  "print-section-cost-benefit",
+  "print-methodology",
+  "print-disclaimer",
+];
+
 describe("ScenarioPrintView", () => {
-  it("renders all six sections with a fully populated fixture", async () => {
+  it("renders all ten sections with a fully populated fixture, in the correct order", async () => {
     mockScenario({
       scenario: meta,
       results: {
@@ -179,24 +212,29 @@ describe("ScenarioPrintView", () => {
 
     render(<ScenarioPrintView scenarioId="scn-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("print-cover")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("print-disclaimer")).toBeInTheDocument());
 
-    expect(screen.getByTestId("print-cover")).toBeInTheDocument();
-    expect(screen.getByTestId("print-executive-summary")).toBeInTheDocument();
-    expect(screen.getByTestId("print-scenario-inputs")).toBeInTheDocument();
-    expect(screen.getByTestId("print-key-results")).toBeInTheDocument();
-    expect(screen.getByTestId("print-visuals")).toBeInTheDocument();
-    expect(screen.getByTestId("print-methodology")).toBeInTheDocument();
+    // Section order: collect testids in DOM order and confirm they match.
+    const allSections = SECTION_TESTIDS_IN_ORDER.map((id) => screen.getByTestId(id));
+    const sectionDocOrder = [...document.querySelectorAll("[data-testid]")]
+      .map((el) => el.getAttribute("data-testid"))
+      .filter((id): id is string => id !== null && SECTION_TESTIDS_IN_ORDER.includes(id));
+    expect(sectionDocOrder).toEqual(SECTION_TESTIDS_IN_ORDER);
+    expect(allSections).toHaveLength(SECTION_TESTIDS_IN_ORDER.length);
 
-    expect(screen.getByTestId("snapshots-slot")).toBeInTheDocument();
     expect(screen.getByTestId("waterfall-chart")).toBeInTheDocument();
     expect(screen.getByTestId("costben-chart")).toBeInTheDocument();
     expect(screen.getByTestId("print-risk-table")).toBeInTheDocument();
     expect(screen.getByTestId("print-costben-table")).toBeInTheDocument();
     expect(screen.getByTestId("print-cover-logos")).toBeInTheDocument();
-    expect(screen.getByTestId("bibtex-snippet")).toBeInTheDocument();
     expect(screen.getByTestId("reproducibility-note")).toBeInTheDocument();
     expect(screen.getByTestId("print-methodology-body")).toBeInTheDocument();
+
+    // Per-domain snapshot slots exist as empty placeholders.
+    expect(screen.getByTestId("snapshots-slot-hazard")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("snapshots-slot-exposure")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("snapshots-slot-impact")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("snapshots-slot-cost-benefit")).toBeEmptyDOMElement();
 
     // Cost-benefit rows render sorted by BCR descending; "Retrofit" (5.0) > "Sea wall" (3.0).
     const costbenTable = screen.getByTestId("print-costben-table");
@@ -208,7 +246,83 @@ describe("ScenarioPrintView", () => {
     await waitFor(() => expect(document.body.dataset.printReady).toBe("true"));
   });
 
-  it("renders summary-unavailable branch when waterfall_data is missing", async () => {
+  it("section heading order matches the mini-TOC entries", async () => {
+    mockScenario({
+      scenario: meta,
+      results: {
+        waterfall_data: JSON.stringify(waterfall),
+        costben_data: JSON.stringify(costben),
+      },
+    });
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("print-toc-entries")).toBeInTheDocument());
+
+    const tocText = screen.getByTestId("print-toc-entries").textContent ?? "";
+    const tocList = tocText.split(" · ").map((s) => s.trim());
+
+    expect(tocList).toEqual([
+      "print_section_input_parameters",
+      "print_section_executive_summary",
+      "print_section_hazard",
+      "print_section_exposure",
+      "print_section_impact",
+      "print_section_cost_benefit_adaptation",
+      "print_section_methodology",
+      "print_section_disclaimer",
+    ]);
+  });
+
+  it("mini-TOC skips Impact and Cost-Benefit when their data is missing", async () => {
+    mockScenario({ scenario: meta, results: {} });
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("print-toc-entries")).toBeInTheDocument());
+    const tocText = screen.getByTestId("print-toc-entries").textContent ?? "";
+    expect(tocText).not.toContain("print_section_impact");
+    expect(tocText).not.toContain("print_section_cost_benefit_adaptation");
+  });
+
+  it("renders continuous Table and Figure captions in order", async () => {
+    mockScenario({
+      scenario: meta,
+      results: {
+        waterfall_data: JSON.stringify(waterfall),
+        costben_data: JSON.stringify(costben),
+      },
+    });
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("print-disclaimer")).toBeInTheDocument());
+
+    const tableCaptions = screen.getAllByTestId("caption-table").map((el) => el.textContent ?? "");
+    // 5 tables: parameters, executive summary, risk decomposition, cost-benefit summary, provenance.
+    expect(tableCaptions).toHaveLength(5);
+    expect(tableCaptions[0]).toContain("table_label|number=1");
+    expect(tableCaptions[1]).toContain("table_label|number=2");
+    expect(tableCaptions[2]).toContain("table_label|number=3");
+    expect(tableCaptions[3]).toContain("table_label|number=4");
+    expect(tableCaptions[4]).toContain("table_label|number=5");
+    expect(tableCaptions[0]).toContain("print_caption_table_parameters");
+    expect(tableCaptions[2]).toContain("print_caption_table_risk_decomposition");
+    expect(tableCaptions[3]).toContain("print_caption_table_cost_benefit_summary");
+    expect(tableCaptions[4]).toContain("print_caption_table_provenance");
+
+    const figureCaptions = screen
+      .getAllByTestId("caption-figure")
+      .map((el) => el.textContent ?? "");
+    // 2 chart figures: waterfall, cost-benefit.
+    expect(figureCaptions).toHaveLength(2);
+    expect(figureCaptions[0]).toContain("figure_label|number=1");
+    expect(figureCaptions[0]).toContain("print_caption_figure_waterfall");
+    expect(figureCaptions[1]).toContain("figure_label|number=2");
+    expect(figureCaptions[1]).toContain("print_caption_figure_cost_benefit");
+  });
+
+  it("renders Scenario-did-not-produce-results fallback when waterfall_data is missing", async () => {
     mockScenario({
       scenario: meta,
       results: { costben_data: JSON.stringify(costben) },
@@ -219,24 +333,155 @@ describe("ScenarioPrintView", () => {
     await waitFor(() =>
       expect(screen.getByTestId("print-summary-unavailable")).toBeInTheDocument()
     );
-    expect(screen.getByTestId("print-risk-table-missing")).toBeInTheDocument();
+    expect(screen.getByTestId("print-impact-missing")).toBeInTheDocument();
+    expect(screen.getByTestId("print-impact-missing").textContent).toBe("print_section_no_results");
+    expect(screen.queryByTestId("waterfall-chart")).not.toBeInTheDocument();
+    // Hazard / Exposure sections still render description + slot.
+    expect(screen.getByTestId("print-section-hazard")).toBeInTheDocument();
+    expect(screen.getByTestId("print-section-exposure")).toBeInTheDocument();
   });
 
-  it("renders not-available branches when both result tables are missing", async () => {
+  it("renders Scenario-did-not-produce-results fallback when costben_data is missing", async () => {
     mockScenario({
       scenario: meta,
-      results: {},
+      results: { waterfall_data: JSON.stringify(waterfall) },
     });
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("print-costben-missing")).toBeInTheDocument());
+    expect(screen.getByTestId("print-costben-missing").textContent).toBe(
+      "print_section_no_results"
+    );
+    expect(screen.queryByTestId("costben-chart")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("print-costben-table")).not.toBeInTheDocument();
+  });
+
+  it("renders both no-results fallbacks when both result tables are missing", async () => {
+    mockScenario({ scenario: meta, results: {} });
 
     render(<ScenarioPrintView scenarioId="scn-1" />);
 
     await waitFor(() =>
       expect(screen.getByTestId("print-summary-unavailable")).toBeInTheDocument()
     );
-    expect(screen.getByTestId("print-risk-table-missing")).toBeInTheDocument();
-    expect(screen.getByTestId("print-costben-table-missing")).toBeInTheDocument();
+    expect(screen.getByTestId("print-impact-missing")).toBeInTheDocument();
+    expect(screen.getByTestId("print-costben-missing")).toBeInTheDocument();
     expect(screen.queryByTestId("waterfall-chart")).not.toBeInTheDocument();
     expect(screen.queryByTestId("costben-chart")).not.toBeInTheDocument();
+  });
+
+  it("removes the BibTeX block and the CLIMADA Version row from provenance", async () => {
+    mockScenario({
+      scenario: meta,
+      results: {
+        waterfall_data: JSON.stringify(waterfall),
+        costben_data: JSON.stringify(costben),
+      },
+    });
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("print-methodology")).toBeInTheDocument());
+
+    expect(screen.queryByTestId("bibtex-snippet")).not.toBeInTheDocument();
+    const provenanceTable = screen.getByTestId("print-provenance-table");
+    expect(provenanceTable.textContent).not.toContain("CLIMADA Version");
+    // App Version and Engine Version rows survive.
+    expect(provenanceTable.textContent).toContain("App Version");
+    expect(provenanceTable.textContent).toContain("Engine Version");
+  });
+
+  it("en.json disclaimer body does not contain the CLIMADA license text", () => {
+    const body = (enLocale as Record<string, string>).print_disclaimer_body;
+    expect(body).toBeTruthy();
+    expect(body).not.toMatch(/License for CLIMADA/i);
+    expect(body).not.toMatch(/Copyright \(C\) 2017 ETH Zurich/i);
+    // Sanity check: the disclaimer still contains the legacy starting phrase.
+    expect(body).toMatch(/The user interface has been developed by GIZ and UNU-EHS\/MCII/);
+  });
+
+  it("renders the disclaimer without the License-for-CLIMADA paragraph", async () => {
+    mockScenario({
+      scenario: meta,
+      results: {
+        waterfall_data: JSON.stringify(waterfall),
+        costben_data: JSON.stringify(costben),
+      },
+    });
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("print-disclaimer-body")).toBeInTheDocument());
+
+    const disclaimerText = screen.getByTestId("print-disclaimer-body").textContent ?? "";
+    // The disclaimer body is keyed by i18n; the mocked t() returns the key. The
+    // *actual* string lives in locales/en.json and is asserted in the i18n
+    // integration test below.
+    expect(disclaimerText).toContain("print_disclaimer_body");
+    // The legacy License paragraph must not appear anywhere in the disclaimer
+    // section. The i18n keys for it don't exist; this guards against future
+    // accidental reintroduction.
+    expect(disclaimerText).not.toMatch(/License for CLIMADA/i);
+    expect(disclaimerText).not.toMatch(/Copyright \(C\) 2017 ETH Zurich/i);
+  });
+
+  it("renders creation metadata with the mocked getCurrentUser result", async () => {
+    mockScenario({
+      scenario: meta,
+      results: {
+        waterfall_data: JSON.stringify(waterfall),
+        costben_data: JSON.stringify(costben),
+      },
+    });
+    mockElectron("bob");
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("print-creation-user").textContent).toContain("bob")
+    );
+    expect(screen.getByTestId("print-creation-date").textContent).toContain("2026-05-11");
+    expect(screen.getByTestId("print-creation-time").textContent).toContain("12:34:56");
+  });
+
+  it("falls back to a dash when getCurrentUser resolves to null", async () => {
+    mockScenario({
+      scenario: meta,
+      results: {
+        waterfall_data: JSON.stringify(waterfall),
+        costben_data: JSON.stringify(costben),
+      },
+    });
+    mockElectron(null);
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("print-creation-user").textContent).toContain(
+        "print_creation_user_fallback"
+      )
+    );
+    // printReady must still flip even when the IPC returned null.
+    await waitFor(() => expect(document.body.dataset.printReady).toBe("true"));
+  });
+
+  it("falls back to a dash when getCurrentUser throws", async () => {
+    mockScenario({
+      scenario: meta,
+      results: { waterfall_data: JSON.stringify(waterfall) },
+    });
+    const failingGetUser = vi.fn().mockRejectedValue(new Error("ipc boom"));
+    (window as unknown as { electron: unknown }).electron = { getCurrentUser: failingGetUser };
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("print-creation-user").textContent).toContain(
+        "print_creation_user_fallback"
+      )
+    );
+    await waitFor(() => expect(document.body.dataset.printReady).toBe("true"));
   });
 
   it("leaves snapshots-slot empty when snapshotIds is empty", async () => {
@@ -252,7 +497,7 @@ describe("ScenarioPrintView", () => {
     expect(listSnapshotsMock).not.toHaveBeenCalled();
   });
 
-  it("renders the requested snapshots in URL order with auto-numbered figures", async () => {
+  it("renders snapshots continuing the global Figure counter after chart figures", async () => {
     mockScenario({
       scenario: meta,
       results: { waterfall_data: JSON.stringify(waterfall) },
@@ -271,8 +516,6 @@ describe("ScenarioPrintView", () => {
     render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-1", "snap-2", "snap-3"]} />);
 
     await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-1")).toBeInTheDocument());
-    expect(screen.getByTestId("snapshot-figure-snap-2")).toBeInTheDocument();
-    expect(screen.getByTestId("snapshot-figure-snap-3")).toBeInTheDocument();
 
     const slot = screen.getByTestId("snapshots-slot");
     const figures = within(slot).getAllByTestId(/^snapshot-figure-/);
@@ -282,10 +525,10 @@ describe("ScenarioPrintView", () => {
       "snapshot-figure-snap-3",
     ]);
 
-    // Figure numbers follow URL order, not the list-response order.
-    expect(within(figures[0]).getByText(/figure_label\|number=1.*First pick/)).toBeInTheDocument();
-    expect(within(figures[1]).getByText(/figure_label\|number=2.*Second pick/)).toBeInTheDocument();
-    expect(within(figures[2]).getByText(/figure_label\|number=3.*Third pick/)).toBeInTheDocument();
+    // Waterfall chart is Figure 1; snapshots continue at Figure 2, 3, 4.
+    expect(within(figures[0]).getByText(/figure_label\|number=2.*First pick/)).toBeInTheDocument();
+    expect(within(figures[1]).getByText(/figure_label\|number=3.*Second pick/)).toBeInTheDocument();
+    expect(within(figures[2]).getByText(/figure_label\|number=4.*Third pick/)).toBeInTheDocument();
 
     expect(within(figures[0]).getByText("first caption")).toBeInTheDocument();
     expect(within(figures[1]).getByText("second caption")).toBeInTheDocument();
@@ -306,43 +549,9 @@ describe("ScenarioPrintView", () => {
 
     await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-1")).toBeInTheDocument());
     const fig = screen.getByTestId("snapshot-figure-snap-1");
-    expect(within(fig).getByText(/figure_label\|number=1.*snapshot_type_map/)).toBeInTheDocument();
+    // Waterfall chart took Figure 1; this snapshot is Figure 2.
+    expect(within(fig).getByText(/figure_label\|number=2.*snapshot_type_map/)).toBeInTheDocument();
     expect(within(fig).getByText("tagged caption")).toBeInTheDocument();
-  });
-
-  it("omits the caption line when caption is missing (title present)", async () => {
-    mockScenario({
-      scenario: meta,
-      results: { waterfall_data: JSON.stringify(waterfall) },
-    });
-    mockSnapshots([{ id: "snap-1", snapshot_type: "map", title: "Just a title", caption: null }]);
-
-    render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-1"]} />);
-
-    await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-1")).toBeInTheDocument());
-    const fig = screen.getByTestId("snapshot-figure-snap-1");
-    expect(within(fig).getByText(/figure_label\|number=1.*Just a title/)).toBeInTheDocument();
-    // No caption paragraph rendered: figure has only the heading + the img.
-    expect(within(fig).queryByText(/caption/i)).not.toBeInTheDocument();
-    expect(within(fig).getAllByRole("img")).toHaveLength(1);
-  });
-
-  it("falls back to humanized type and skips caption when both are missing", async () => {
-    mockScenario({
-      scenario: meta,
-      results: { waterfall_data: JSON.stringify(waterfall) },
-    });
-    mockSnapshots([{ id: "snap-1", snapshot_type: "waterfall", title: null, caption: null }]);
-
-    render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-1"]} />);
-
-    await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-1")).toBeInTheDocument());
-    const fig = screen.getByTestId("snapshot-figure-snap-1");
-    expect(
-      within(fig).getByText(/figure_label\|number=1.*snapshot_type_waterfall/)
-    ).toBeInTheDocument();
-    // Only heading + image — no caption block.
-    expect(fig.querySelectorAll("p").length).toBeLessThanOrEqual(1);
   });
 
   it("skips a failing snapshot fetch without blocking remaining figures", async () => {
@@ -367,12 +576,12 @@ describe("ScenarioPrintView", () => {
     expect(screen.getByTestId("snapshot-figure-snap-2")).toBeInTheDocument();
     expect(screen.queryByTestId("snapshot-figure-snap-broken")).not.toBeInTheDocument();
 
-    // Renumbering continues without gaps: kept #1 → "Figure 1", kept #2 → "Figure 2".
+    // Renumbering continues without gaps after the waterfall chart's Figure 1.
     const slot = screen.getByTestId("snapshots-slot");
     const figures = within(slot).getAllByTestId(/^snapshot-figure-/);
     expect(figures).toHaveLength(2);
-    expect(within(figures[0]).getByText(/figure_label\|number=1.*Kept first/)).toBeInTheDocument();
-    expect(within(figures[1]).getByText(/figure_label\|number=2.*Kept second/)).toBeInTheDocument();
+    expect(within(figures[0]).getByText(/figure_label\|number=2.*Kept first/)).toBeInTheDocument();
+    expect(within(figures[1]).getByText(/figure_label\|number=3.*Kept second/)).toBeInTheDocument();
 
     flushImageLoads();
     await waitFor(() => expect(document.body.dataset.printReady).toBe("true"));

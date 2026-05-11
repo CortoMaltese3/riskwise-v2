@@ -54,6 +54,7 @@ export interface ElectronBridge {
   onCopyFolderReply: (callback: (payload: unknown) => void) => () => void;
   openReport: (reportPath: string) => Promise<unknown>;
   onProgress: (callback: (payload: { message?: string; progress?: number }) => void) => () => void;
+  getCurrentUser: () => Promise<string | null>;
   exportPdf: (
     scenarioId: string,
     options?: { snapshotIds?: string[] }
