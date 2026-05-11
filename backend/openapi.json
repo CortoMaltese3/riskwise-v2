@@ -1483,6 +1483,20 @@
             ],
             "title": "Scenario"
           },
+          "selectedMeasureIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selectedmeasureids"
+          },
           "timeHorizon": {
             "anyOf": [
               {

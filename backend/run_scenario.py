@@ -20,7 +20,7 @@ import sys
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, is_dataclass, replace
 from pathlib import Path
 from time import time
 from typing import Any
@@ -68,6 +68,36 @@ def _resolve_country_config_path(country_code: str) -> Path:
     return COUNTRIES_DIR / iso3 / "config.json"
 
 
+def _filter_entity_measures(entity: Any, selected_ids: list[str], logger: Any) -> Any:
+    """Return ``entity`` with its ``measures`` scoped to ``selected_ids``.
+
+    Matching is by ``MeasureSpec.name`` because xlsx-loaded measures only
+    carry a name; the catalog's row ``id`` is a per-seed UUID and would not
+    match anything on the entity side. Missing IDs are ignored silently —
+    they may belong to a different hazard. An empty post-filter list is
+    valid: the cost-benefit handler returns ``[]`` for zero measures.
+    """
+    selected = set(selected_ids)
+    measures = list(getattr(entity, "measures", []) or [])
+    filtered = [m for m in measures if getattr(m, "name", None) in selected]
+    if not filtered and selected:
+        logger.warning(
+            "selected_measure_ids matched no measures on the entity; "
+            "cost-benefit will be empty for this run."
+        )
+    if is_dataclass(entity):
+        return replace(entity, measures=filtered)
+    # Non-dataclass entities (test stubs / mocks) get the attribute mutated
+    # in place; this avoids forcing every test fixture to be a dataclass.
+    try:
+        entity.measures = filtered
+    except AttributeError:
+        # Read-only stub — log and leave untouched so the pipeline keeps
+        # progressing and the test failure (if any) surfaces downstream.
+        logger.warning("Could not filter measures on entity; attribute is read-only.")
+    return entity
+
+
 @dataclass
 class RequestData:
     """Plain data container for a scenario request.
@@ -91,6 +121,9 @@ class RequestData:
     is_era: bool
     scenario: str
     time_horizon: tuple[int, int]
+    # ``None`` means "no filter — use every measure on the entity"; an
+    # explicit list (including ``[]``) scopes the run to that subset.
+    selected_measure_ids: list[str] | None = None
     ref_year: int = field(init=False)
     future_year: int = field(init=False)
 
@@ -107,6 +140,12 @@ class RequestData:
         """Build a ``RequestData`` from the raw UI payload plus the hazard
         handler needed to derive the engine hazard code."""
         country_name = sanitize_country_name(request.get("countryName", ""))
+        raw_selected = request.get("selectedMeasureIds")
+        selected_measure_ids: list[str] | None
+        if raw_selected is None:
+            selected_measure_ids = None
+        else:
+            selected_measure_ids = [str(x) for x in raw_selected]
         return cls(
             adaptation_measures=request.get("adaptationMeasures", []),
             annual_growth=request.get("annualGrowth", 0),
@@ -121,6 +160,7 @@ class RequestData:
             is_era=request.get("isEra", False),
             scenario=request.get("scenario", ""),
             time_horizon=request.get("timeHorizon", [2024, 2050]),
+            selected_measure_ids=selected_measure_ids,
         )
 
 
@@ -257,6 +297,24 @@ class RunScenario:
             entity_future = self.entity_handler.get_future_entity(
                 entity_present, self.request_data.future_year, aag
             )
+
+        # Scope cost-benefit to the user's measure selection before any
+        # downstream step sees the entity. CLIMADA requires the present and
+        # future entities to carry identical measure sets, so the filter is
+        # applied to both — or to neither, when ``selected_measure_ids`` is
+        # ``None`` (the default, preserving prior behaviour).
+        if self.request_data.selected_measure_ids is not None:
+            entity_present = _filter_entity_measures(
+                entity_present,
+                self.request_data.selected_measure_ids,
+                self.logger,
+            )
+            if entity_future is not None:
+                entity_future = _filter_entity_measures(
+                    entity_future,
+                    self.request_data.selected_measure_ids,
+                    self.logger,
+                )
 
         # --- Exposure ---
         update_progress(20, strategy.exposure_progress_message)
@@ -563,6 +621,7 @@ class RunScenario:
             annual_growth=self.request_data.annual_growth,
             entity_sha256=entity_sha,
             hazard_sha256=hazard_sha,
+            selected_measure_ids=self.request_data.selected_measure_ids,
         )
 
     def _restore_from_computation_cache(self, cache_key: str) -> bool:
