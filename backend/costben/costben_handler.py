@@ -44,7 +44,6 @@ def _calculate_via_engine(
     hazard_present: Any,
     entity_present: Any,
     hazard_future: Any,
-    entity_future: Any,
     future_year: int | None,
 ) -> list[CostBenefitResult]:
     """Run ``cc.calc_cost_benefit`` via the engine adapter and normalise the output.
@@ -54,15 +53,17 @@ def _calculate_via_engine(
     ``EntityBundle.measures`` as ``list[MeasureSpec]`` and stores the
     discount rate as a scalar, so no per-call conversion is needed.
 
-    Returns an empty list when there is no future projection to compare
-    against (historical runs pass ``hazard_future=None``). The engine's
-    ``calc_cost_benefit`` divides by the present-vs-future risk delta,
-    which collapses to zero when the same hazard stands in for both —
-    and the runner discards the result for historical runs anyway.
+    Returns an empty list only when the present entity carries no measures —
+    no measures, no cost-benefit. Historical runs (``hazard_future=None``)
+    still produce non-zero benefits: ``cc_hazard_present`` is substituted for
+    the future hazard below, the engine's per-year benefit collapses to
+    ``avoided_present + (avoided_future − avoided_present) × time_dep =
+    avoided_present`` (because ``avoided_future = avoided_present`` when the
+    hazards are identical), and the total benefit becomes
+    ``avoided_present × Σ (1+g)^i × (1+r)^(−i)`` over the run's time horizon —
+    a finite, positive number whenever a measure reduces today's risk.
     """
     if not _has_measures(entity_present):
-        return []
-    if hazard_future is None or entity_future is None:
         return []
 
     from backend.engine.adapter import (
@@ -231,7 +232,6 @@ class CostBenefitHandler:
         hazard_present: Any,
         entity_present: Any,
         hazard_future: Any = None,
-        entity_future: Any = None,
         future_year: int = None,
     ) -> list[CostBenefitResult]:
         """Calculate per-measure cost-benefit results via the climate-lama-engine adapter.
@@ -239,11 +239,11 @@ class CostBenefitHandler:
         Returns a normalised ``list[CostBenefitResult]`` — one entry per measure,
         with ``cost`` / ``benefit`` / ``bcr`` plus the no-measure baseline risks
         needed by the waterfall payload. With zero measures, returns an empty list
-        without raising.
+        without raising. Historical runs (``hazard_future=None``) reuse
+        ``hazard_present`` as the future hazard so the engine still produces
+        per-measure benefits — see :func:`_calculate_via_engine` for the math.
         """
-        return _calculate_via_engine(
-            hazard_present, entity_present, hazard_future, entity_future, future_year
-        )
+        return _calculate_via_engine(hazard_present, entity_present, hazard_future, future_year)
 
     def compute_waterfall_data(
         self,
@@ -327,7 +327,8 @@ class CostBenefitHandler:
         self,
         cost_benefit_results: list[CostBenefitResult],
         entity_present: Any,
-        entity_future: Any,
+        future_year: int,
+        entity_future: Any = None,
     ) -> dict:
         """Compute the structured cost-benefit payload for the frontend.
 
@@ -338,6 +339,10 @@ class CostBenefitHandler:
         CLIMADA branch produced it. The result is persisted as JSON in
         ``DATA_TEMP_DIR`` so ``run_fetch_costbenefit.py`` can serve it
         through the FastAPI endpoint after the scenario run completes.
+
+        ``future_year`` is taken from the scenario request so the payload's
+        time horizon reflects the user's selection even for historical runs,
+        where no future :class:`EntityBundle` is constructed.
         """
         try:
             measures = [
@@ -350,10 +355,13 @@ class CostBenefitHandler:
                 for r in cost_benefit_results
             ]
 
+            future_year_int = (
+                int(entity_future.ref_year) if entity_future is not None else int(future_year)
+            )
             payload = {
                 "currency_unit": str(entity_present.exposures.value_unit or ""),
                 "present_year": int(entity_present.ref_year),
-                "future_year": int(entity_future.ref_year),
+                "future_year": future_year_int,
                 "measures": measures,
             }
 
