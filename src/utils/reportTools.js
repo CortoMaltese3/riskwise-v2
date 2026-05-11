@@ -78,6 +78,7 @@ export const useReportTools = () => {
     setIsValidExposure,
     setScenarioRunCode,
     setSelectedScenarioRunCode,
+    setScenarioRunSaved,
   } = useWorkspaceStore.getState();
 
   const fetchReports = async () => {
@@ -118,6 +119,7 @@ export const useReportTools = () => {
 
       setSelectedAppOption(scenario.is_era ? "era" : "custom");
       setScenarioRunCode(id);
+      setScenarioRunSaved(true);
       setSelectedScenarioRunCode(id);
       setIsScenarioRunCompleted(true);
       setSelectedCountry(scenario.country);

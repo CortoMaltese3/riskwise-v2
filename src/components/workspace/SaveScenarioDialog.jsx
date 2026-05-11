@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
+import { enqueueToast } from "../../hooks/useToast";
 
 const SaveScenarioDialog = ({ open, scenarioId, defaultName, onClose, onSaved }) => {
   const { t } = useTranslation();
@@ -31,7 +32,8 @@ const SaveScenarioDialog = ({ open, scenarioId, defaultName, onClose, onSaved })
   }, [open, defaultName]);
 
   const handleSubmit = async () => {
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       setError("Name is required");
       return;
     }
@@ -42,18 +44,28 @@ const SaveScenarioDialog = ({ open, scenarioId, defaultName, onClose, onSaved })
     setSubmitting(true);
     try {
       const response = await RiskWiseClient.saveScenario(scenarioId, {
-        name: name.trim(),
+        name: trimmedName,
         tags: tags.trim() || null,
         notes: notes.trim() || null,
       });
       if (response?.success && response.result?.status?.code === 2000) {
+        enqueueToast({
+          severity: "success",
+          message: t("save_scenario_success_toast", { name: trimmedName }),
+        });
         onSaved?.(response.result.data);
         onClose?.();
       } else {
-        setError(response?.error?.message || "Failed to save scenario");
+        enqueueToast({
+          severity: "error",
+          message: response?.error?.message || t("save_scenario_error_toast"),
+        });
       }
     } catch (err) {
-      setError(err?.message || "Failed to save scenario");
+      enqueueToast({
+        severity: "error",
+        message: err?.message || t("save_scenario_error_toast"),
+      });
     } finally {
       setSubmitting(false);
     }

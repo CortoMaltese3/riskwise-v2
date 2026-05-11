@@ -5,6 +5,8 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 const saveScenarioMock = vi.fn();
 const fetchReportsMock = vi.fn();
 const loadScenariosMock = vi.fn();
+const setScenarioRunSavedMock = vi.fn();
+const enqueueToastMock = vi.fn();
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -31,11 +33,17 @@ vi.mock("../utils/reportTools", () => ({
   useReportTools: () => ({ fetchReports: fetchReportsMock }),
 }));
 
+vi.mock("../hooks/useToast", () => ({
+  enqueueToast: (...args) => enqueueToastMock(...args),
+}));
+
 const setStateBag = {
   activeViewControl: "display_map",
   isScenarioRunCompleted: true,
   mapTitle: "Egypt — flood rcp85",
   scenarioRunCode: "scen-1",
+  scenarioRunSaved: false,
+  setScenarioRunSaved: setScenarioRunSavedMock,
   selectedTab: "risk",
   activeMap: "risk",
   activeMapRef: { _fake: "map" },
@@ -88,6 +96,8 @@ beforeEach(() => {
   saveScenarioMock.mockReset();
   fetchReportsMock.mockReset();
   loadScenariosMock.mockReset();
+  setScenarioRunSavedMock.mockReset();
+  enqueueToastMock.mockReset();
   stateRef.current = { ...setStateBag };
 });
 
@@ -131,7 +141,7 @@ describe("Save scenario button (analysis tab toolbar)", () => {
     );
   });
 
-  it("calls fetchReports + workspace reload after a successful save", async () => {
+  it("calls fetchReports + workspace reload + marks scenario saved after a successful save", async () => {
     saveScenarioMock.mockResolvedValue({
       success: true,
       result: { status: { code: 2000 }, data: { id: "scen-1" } },
@@ -146,5 +156,27 @@ describe("Save scenario button (analysis tab toolbar)", () => {
     );
     await waitFor(() => expect(fetchReportsMock).toHaveBeenCalled());
     expect(loadScenariosMock).toHaveBeenCalledWith({ force: true });
+    await waitFor(() => expect(setScenarioRunSavedMock).toHaveBeenCalledWith(true));
+  });
+
+  it("shows an info toast and does not open the dialog when the scenario is already saved", () => {
+    stateRef.current = { ...setStateBag, scenarioRunSaved: true };
+    render(<MainViewToolbar />);
+    fireEvent.click(screen.getByRole("button", { name: "save_scenario_button_aria" }));
+
+    expect(screen.queryByText("save_scenario_dialog_title")).not.toBeInTheDocument();
+    expect(enqueueToastMock).toHaveBeenCalledTimes(1);
+    expect(enqueueToastMock.mock.calls[0][0]).toEqual({
+      severity: "info",
+      message: "save_scenario_already_saved_toast",
+    });
+  });
+
+  it("opens the dialog and does not toast when the scenario is unsaved", () => {
+    render(<MainViewToolbar />);
+    fireEvent.click(screen.getByRole("button", { name: "save_scenario_button_aria" }));
+
+    expect(screen.getByText("save_scenario_dialog_title")).toBeInTheDocument();
+    expect(enqueueToastMock).not.toHaveBeenCalled();
   });
 });
