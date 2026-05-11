@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Button, Stack, Typography } from "@mui/material";
@@ -22,6 +22,7 @@ import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
+import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
 import ChartInfoPopover from "../help/ChartInfoPopover";
 
@@ -49,7 +50,18 @@ const MacroEconomicChart = () => {
   const locale = i18n.language;
   const rtl = isRtl(locale);
   const theme = useTheme();
+  const chartRef = useRef(null);
   const vizCategorical = theme.palette.viz.categorical;
+
+  // First-mount animation only (#370). Disabling animation after the initial
+  // paint means dropdown filter changes (country / scenario / sector /
+  // variable) update the chart silently. Unlike the waterfall / cost-benefit
+  // charts, this component is NOT remounted by the parent on scenario runs.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    chart.options.animation = false;
+  }, []);
   const colorForAdaptationKey = (key) => {
     const idx = ADAPTATION_KEY_ORDER.indexOf(key);
     // Unknown adaptation values fall through to the last categorical hue.
@@ -110,6 +122,13 @@ const MacroEconomicChart = () => {
       backgroundColor,
       fill: true,
       tension: 0.4,
+      // Bigger visible markers + a forgiving invisible hover hit area (#370).
+      // `pointHitRadius` extends the hover target ~16px beyond each point so
+      // tooltips fire from the surrounding plot area, not only when the
+      // cursor lands precisely on a data point.
+      pointRadius: 4,
+      pointHoverRadius: 7,
+      pointHitRadius: 16,
     };
   });
 
@@ -129,6 +148,14 @@ const MacroEconomicChart = () => {
     // the controls bar past the viewport, triggering a scrollbar in the parent
     // ScrollableRegion. Pair with the fixed-height wrapper below.
     maintainAspectRatio: false,
+    // Mount-only intro animation (#370). The post-mount effect disables
+    // animation after the first paint so dropdown filter changes update
+    // silently. `prefersReducedMotion()` honours the OS-level opt-out.
+    animation: prefersReducedMotion() ? false : { duration: 600, easing: "easeOutQuart" },
+    // `mode: "index"` + `intersect: false` lets users hover anywhere in the
+    // plot area to see the tooltip for the nearest x-value — small markers
+    // no longer need a pixel-perfect cursor position.
+    interaction: { mode: "index", intersect: false },
     scales: {
       x: {
         type: "category",
@@ -229,7 +256,13 @@ const MacroEconomicChart = () => {
           </Stack>
         )}
         <Box sx={{ position: "relative", flex: 1, minHeight: 320, mb: 1 }}>
-          <Line data={transformedData} options={options} aria-label={ariaLabel} role="img" />
+          <Line
+            ref={chartRef}
+            data={transformedData}
+            options={options}
+            aria-label={ariaLabel}
+            role="img"
+          />
         </Box>
         {hasData ? (
           <ChartDataTable
