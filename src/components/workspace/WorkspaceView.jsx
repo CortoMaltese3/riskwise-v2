@@ -19,6 +19,7 @@ import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { useReportTools } from "../../utils/reportTools";
 import { enqueueToast } from "../../hooks/useToast";
 import ScrollableRegion from "../layout/primitives/ScrollableRegion";
+import BulkDeleteBar from "./BulkDeleteBar";
 import ExportPdfDialog from "./ExportPdfDialog";
 import ScenarioTable from "./ScenarioTable";
 import WorkspaceImportExport from "./WorkspaceImportExport";
@@ -90,6 +91,7 @@ const WorkspaceView = ({ initialScenarios }) => {
     setSort,
     toggleSelected,
     setAllSelected,
+    clearSelected,
     setScenarios,
     loadScenarios,
     renameScenario,
@@ -158,6 +160,26 @@ const WorkspaceView = ({ initialScenarios }) => {
     setAllSelected(checked ? visibleRows.map((r) => r.id) : []);
   };
 
+  const handleBulkDelete = async () => {
+    const result = await deleteSelected();
+    if (result.total === 0) return;
+    if (result.failed === 0) {
+      enqueueToast({
+        severity: "success",
+        message: t("workspace_bulk_delete_success", { count: result.ok }),
+      });
+    } else {
+      enqueueToast({
+        severity: "error",
+        message: t("workspace_bulk_delete_partial", {
+          ok: result.ok,
+          failed: result.failed,
+          total: result.total,
+        }),
+      });
+    }
+  };
+
   return (
     <ScrollableRegion>
       <Stack
@@ -219,16 +241,12 @@ const WorkspaceView = ({ initialScenarios }) => {
               </FormControl>
             </Stack>
 
-            {selectedIds.length > 0 && (
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="body2">
-                  {t("workspace_scenarios_selected", { count: selectedIds.length })}
-                </Typography>
-                <Button size="small" color="error" onClick={deleteSelected}>
-                  Delete selected
-                </Button>
-              </Stack>
-            )}
+            <BulkDeleteBar
+              selectedIds={selectedIds}
+              scenarios={scenarios}
+              onConfirmDelete={handleBulkDelete}
+              onClear={clearSelected}
+            />
 
             {error && (
               <Typography role="alert" color="error">
