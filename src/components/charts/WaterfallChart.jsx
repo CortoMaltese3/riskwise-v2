@@ -61,6 +61,9 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
   const COLOR_TOTAL = alpha(theme.palette.viz.neutral, 0.85);
   const COLOR_INCREASE = alpha(theme.palette.viz.negative, 0.85);
   const COLOR_DECREASE = alpha(theme.palette.viz.positive, 0.85);
+  // Theme-aware pattern stroke keeps the diagonal / increase / decrease
+  // textures visible in both light and dark mode (issue #367).
+  const patternStroke = theme.palette.viz.patternStroke;
 
   useEffect(() => {
     return () => {
@@ -101,7 +104,9 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
     return c.value >= 0 ? PATTERN_INCREASE : PATTERN_DECREASE;
   });
 
-  const patterns = colors.map((color, i) => patternForIndex(color, patternIndices[i]));
+  const patterns = colors.map((color, i) =>
+    patternForIndex(color, patternIndices[i], patternStroke)
+  );
 
   const chartData = {
     labels,

@@ -42,6 +42,22 @@ vi.mock("chart.js", () => ({
 
 vi.mock("chartjs-plugin-datalabels", () => ({ default: {} }));
 
+// Spy on `patternForIndex` so we can assert the theme stroke is wired
+// through from `theme.palette.viz.patternStroke`. We still let the real
+// implementation run (it returns the colour string in jsdom, which is the
+// safe fallback path).
+const patternForIndexSpy = vi.fn();
+vi.mock("../utils/chartPatterns", async () => {
+  const actual = await vi.importActual("../utils/chartPatterns");
+  return {
+    ...actual,
+    patternForIndex: (...args) => {
+      patternForIndexSpy(...args);
+      return actual.patternForIndex(...args);
+    },
+  };
+});
+
 const FIXTURE = {
   present_year: 2024,
   future_year: 2050,
@@ -69,6 +85,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   barSpy.mockClear();
+  patternForIndexSpy.mockClear();
   globalThis.localStorage?.removeItem("riskwise.showChartValues");
   useStore.setState({ showChartValues: false });
 });
@@ -156,6 +173,19 @@ describe("WaterfallChart", () => {
     const serious = results.violations.filter((v) => v.impact === "serious");
     expect(critical).toHaveLength(0);
     expect(serious).toHaveLength(0);
+  });
+
+  it("threads theme.palette.viz.patternStroke into patternForIndex (#367)", () => {
+    // Default scheme is light → stroke must be the dark translucent overlay.
+    render(<WaterfallChart data={FIXTURE} />);
+    expect(patternForIndexSpy).toHaveBeenCalled();
+    const calls = patternForIndexSpy.mock.calls;
+    // Every call is `(color, patternIndex, stroke)` — the third arg is the
+    // theme-supplied stroke and must match the light-scheme token.
+    const expectedStroke = theme.colorSchemes.light.palette.viz.patternStroke;
+    for (const call of calls) {
+      expect(call[2]).toBe(expectedStroke);
+    }
   });
 
   it("exposes a Show values toggle that gates datalabels display", () => {

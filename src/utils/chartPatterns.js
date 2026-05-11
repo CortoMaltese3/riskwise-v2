@@ -72,11 +72,16 @@ const PAINTERS = {
 
 export const PATTERN_CYCLE = ["diagonal", "reverse", "cross", "dots", "horizontal"];
 
+// Default stroke kept for back-compat: the historic dark-on-light overlay.
+// Theme-aware callers pass `theme.palette.viz.patternStroke` so the texture
+// stays visible in dark mode (where the dark stroke vanishes on dark fills).
+const DEFAULT_STROKE = "rgba(0, 0, 0, 0.55)";
+
 // Build a CanvasPattern whose tile is tinted with `color` and overlaid with
-// the named texture in a darker contrasting stroke. Falls back to `color`
+// the named texture in a contrasting stroke. Falls back to `color`
 // when there's no DOM (tests, SSR) — callers can pass the result straight to
 // Chart.js `backgroundColor`.
-export const createPatternFill = (color, patternName = "diagonal") => {
+export const createPatternFill = (color, patternName = "diagonal", stroke = DEFAULT_STROKE) => {
   const tile = createTile();
   if (!tile) return color;
   const ctx = tile.getContext("2d");
@@ -84,10 +89,10 @@ export const createPatternFill = (color, patternName = "diagonal") => {
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, TILE, TILE);
   const painter = PAINTERS[patternName] ?? paintDiagonal;
-  painter(ctx, "rgba(0, 0, 0, 0.55)");
+  painter(ctx, stroke);
   const pattern = ctx.createPattern(tile, "repeat");
   return pattern ?? color;
 };
 
-export const patternForIndex = (color, index) =>
-  createPatternFill(color, PATTERN_CYCLE[index % PATTERN_CYCLE.length]);
+export const patternForIndex = (color, index, stroke = DEFAULT_STROKE) =>
+  createPatternFill(color, PATTERN_CYCLE[index % PATTERN_CYCLE.length], stroke);

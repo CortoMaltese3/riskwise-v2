@@ -57,6 +57,9 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
     marginal: alpha(theme.palette.viz.neutral, 0.85),
     unprofitable: alpha(theme.palette.viz.negative, 0.85),
   };
+  // Theme-aware pattern stroke keeps the profitable / marginal / unprofitable
+  // textures visible in both light and dark mode (issue #367).
+  const patternStroke = theme.palette.viz.patternStroke;
 
   useEffect(() => {
     return () => {
@@ -81,7 +84,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
   const ratios = data.measures.map((m) => m.benefit_cost_ratio);
   const styles = ratios.map((r) => styleForRatio(r, vizColors));
   const colors = styles.map((s) => s.color);
-  const patterns = styles.map((s) => patternForIndex(s.color, s.patternIndex));
+  const patterns = styles.map((s) => patternForIndex(s.color, s.patternIndex, patternStroke));
 
   const chartData = {
     labels,
