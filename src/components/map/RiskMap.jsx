@@ -177,7 +177,9 @@ const RiskMap = () => {
 
   const RPButtonStyle = (rp) => ({
     flex: "0 0 auto",
-    minWidth: 0,
+    // Floor at 7 spacing units so "RP2" pads up to the natural width of
+    // "RP100" — keeps the row visually uniform without clipping long labels.
+    minWidth: 7,
     px: 1,
     fontSize: "0.75rem",
     whiteSpace: "nowrap",

@@ -85,10 +85,13 @@ const ExposureMap = () => {
 
   const adminButtonStyle = (layer) => ({
     flex: "0 0 auto",
-    minWidth: 0,
+    // Floor wide enough to fit the natural width of "Admin 2" so all three
+    // buttons line up. textTransform:none disables MUI's default ALL-CAPS.
+    minWidth: 9,
     px: 1,
     fontSize: "0.75rem",
     whiteSpace: "nowrap",
+    textTransform: "none",
     bgcolor: layer === activeAdminLayer ? "primary.dark" : "primary.main",
     "&:hover": { bgcolor: "secondary.main" },
   });
@@ -192,8 +195,7 @@ const ExposureMap = () => {
             onClick={() => handleAdminLayerChange(layer)}
             variant="contained"
           >
-            {t("map_exposure_button_admin")}
-            {layer}
+            {t("map_exposure_button_admin")} {layer}
           </Button>
         ))}
       </Box>
