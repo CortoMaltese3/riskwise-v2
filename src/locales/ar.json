@@ -691,6 +691,8 @@
     "map_empty_state_message": "قم بتشغيل سيناريو لعرض الخريطة",
     "waterfall_empty_state_message": "قم بتشغيل سيناريو مستقبلي لعرض الرسم البياني الشلالي",
     "waterfall_empty_state_hint": "يقارن مكونات المخاطر الأساسية بالمستقبلية.",
+    "risk_view_link_to_adaptation": "TODO_TRANSLATION",
+    "risk_view_link_to_adaptation_aria": "TODO_TRANSLATION",
     "adaptation_empty_state_no_run": "Run a scenario in Risk to see cost-benefit analysis here.",
     "adaptation_empty_state_go_to_risk": "Go to Risk",
     "adaptation_empty_state_no_measures": "This scenario has no adaptation measures yet. Add measures to compare costs and benefits.",

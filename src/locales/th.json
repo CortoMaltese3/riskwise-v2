@@ -691,6 +691,8 @@
     "map_empty_state_message": "เรียกใช้สถานการณ์เพื่อดูแผนที่",
     "waterfall_empty_state_message": "เรียกใช้สถานการณ์ในอนาคตเพื่อดูแผนภูมิน้ำตก",
     "waterfall_empty_state_hint": "เปรียบเทียบองค์ประกอบความเสี่ยงพื้นฐานกับในอนาคต",
+    "risk_view_link_to_adaptation": "TODO_TRANSLATION",
+    "risk_view_link_to_adaptation_aria": "TODO_TRANSLATION",
     "adaptation_empty_state_no_run": "Run a scenario in Risk to see cost-benefit analysis here.",
     "adaptation_empty_state_go_to_risk": "Go to Risk",
     "adaptation_empty_state_no_measures": "This scenario has no adaptation measures yet. Add measures to compare costs and benefits.",

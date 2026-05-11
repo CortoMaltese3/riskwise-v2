@@ -691,6 +691,8 @@
     "map_empty_state_message": "Run a scenario to see the map",
     "waterfall_empty_state_message": "Run a future scenario to see the waterfall",
     "waterfall_empty_state_hint": "Compares baseline vs. future risk components.",
+    "risk_view_link_to_adaptation": "View as adaptation →",
+    "risk_view_link_to_adaptation_aria": "View this scenario as adaptation analysis",
     "adaptation_empty_state_no_run": "Run a scenario in Risk to see cost-benefit analysis here.",
     "adaptation_empty_state_go_to_risk": "Go to Risk",
     "adaptation_empty_state_no_measures": "This scenario has no adaptation measures yet. Add measures to compare costs and benefits.",
