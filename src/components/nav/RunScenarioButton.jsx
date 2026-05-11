@@ -5,8 +5,6 @@ import { Box, Button } from "@mui/material";
 import LoadingButton from "@mui/lab/LoadingButton";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 
-import SaveScenarioDialog from "../workspace/SaveScenarioDialog";
-import { useReportTools } from "../../utils/reportTools";
 import useRunScenario from "../../hooks/useRunScenario";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 
@@ -26,9 +24,6 @@ const RunScenarioButton = () => {
 
   const [isRunButtonLoading, setIsRunButtonLoading] = useState(false);
   const [isRunButtonDisabled, setIsRunButtonDisabled] = useState(true);
-  const [saveDialog, setSaveDialog] = useState({ open: false, id: null, name: "" });
-  const { fetchReports } = useReportTools();
-  const reloadWorkspaceScenarios = useWorkspaceStore((s) => s.loadScenarios);
   const { runScenario } = useRunScenario();
 
   const handleRunButton = () => {
@@ -63,17 +58,7 @@ const RunScenarioButton = () => {
   const onRunHandler = () => {
     setIsRunButtonDisabled(true);
     setIsRunButtonLoading(true);
-    runScenario({
-      onSuccess: (response) => {
-        if (response.result.data.scenarioId) {
-          setSaveDialog({
-            open: true,
-            id: response.result.data.scenarioId,
-            name: response.result.data.mapTitle || "",
-          });
-        }
-      },
-    }).finally(() => {
+    runScenario().finally(() => {
       setIsRunButtonLoading(false);
       setIsRunButtonDisabled(false);
     });
@@ -81,16 +66,6 @@ const RunScenarioButton = () => {
 
   return (
     <Box sx={{ textAlign: "center", mt: 2 }} data-tour="run-button">
-      <SaveScenarioDialog
-        open={saveDialog.open}
-        scenarioId={saveDialog.id}
-        defaultName={saveDialog.name}
-        onClose={() => setSaveDialog((s) => ({ ...s, open: false }))}
-        onSaved={() => {
-          fetchReports();
-          reloadWorkspaceScenarios({ force: true });
-        }}
-      />
       {!isRunButtonLoading ? (
         <Button
           key="runButton"

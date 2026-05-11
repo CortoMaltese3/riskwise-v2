@@ -63,6 +63,7 @@ const useWorkspaceStore = create((set, get) => ({
   selectedScenario: "",
   selectedScenarioRunCode: "",
   scenarioRunCode: "",
+  scenarioRunSaved: false,
   selectedTimeHorizon: [2024, 2050],
   selectedAnnualGrowth: 0,
   isValidExposure: false,
@@ -246,8 +247,9 @@ const useWorkspaceStore = create((set, get) => ({
   setSelectedScenario: (scenario) => set({ selectedScenario: scenario }),
   setSelectedScenarioRunCode: (code) => set({ selectedScenarioRunCode: code }),
   setScenarioRunCode: (code = null) => {
-    set({ scenarioRunCode: code || generateRunCode() });
+    set({ scenarioRunCode: code || generateRunCode(), scenarioRunSaved: false });
   },
+  setScenarioRunSaved: (saved) => set({ scenarioRunSaved: Boolean(saved) }),
   setSelectedTimeHorizon: (timeHorizon) => set({ selectedTimeHorizon: timeHorizon }),
 
   setSelectedMeasureIds: (ids) => {

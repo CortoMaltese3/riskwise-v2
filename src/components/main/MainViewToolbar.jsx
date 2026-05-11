@@ -7,6 +7,7 @@ import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
+import { enqueueToast } from "../../hooks/useToast";
 import { useMapTools } from "../../utils/mapTools";
 import { useReportTools } from "../../utils/reportTools";
 import { layoutTransition } from "../../theme/theme";
@@ -25,6 +26,8 @@ const MainViewToolbar = () => {
   const isScenarioRunCompleted = useResultsStore((s) => s.isScenarioRunCompleted);
   const mapTitle = useUIStore((s) => s.mapTitle);
   const scenarioRunCode = useWorkspaceStore((s) => s.scenarioRunCode);
+  const scenarioRunSaved = useWorkspaceStore((s) => s.scenarioRunSaved);
+  const setScenarioRunSaved = useWorkspaceStore((s) => s.setScenarioRunSaved);
   const selectedTab = useUIStore((s) => s.selectedTab);
   const { handleCaptureSnapshot } = useMapTools();
   const { fetchReports } = useReportTools();
@@ -59,6 +62,17 @@ const MainViewToolbar = () => {
     }
   };
 
+  const onSaveClick = () => {
+    if (scenarioRunSaved) {
+      enqueueToast({
+        severity: "info",
+        message: t("save_scenario_already_saved_toast"),
+      });
+      return;
+    }
+    setSaveDialogOpen(true);
+  };
+
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
       <Tooltip title={t(captureTooltipKey)}>
@@ -82,7 +96,7 @@ const MainViewToolbar = () => {
         size="small"
         variant="contained"
         disabled={saveScenarioDisabled}
-        onClick={() => setSaveDialogOpen(true)}
+        onClick={onSaveClick}
         aria-label={t("save_scenario_button_aria")}
         sx={{
           bgcolor: "secondary.light",
@@ -103,6 +117,7 @@ const MainViewToolbar = () => {
         onSaved={() => {
           fetchReports();
           reloadWorkspaceScenarios({ force: true });
+          setScenarioRunSaved(true);
         }}
       />
     </Box>
