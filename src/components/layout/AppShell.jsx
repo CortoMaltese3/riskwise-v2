@@ -6,6 +6,7 @@ import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import Sidebar, { SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from "./Sidebar";
 import TopBar from "./TopBar";
+import ActiveScenarioCard from "../adaptation/ActiveScenarioCard";
 import AdaptationMeasuresInput from "../input/AdaptationMeasuresInput";
 import DataInput from "../input/DataInput";
 import MacroEconomicInput from "../inputMacro/MacroEconomicInput";
@@ -201,7 +202,7 @@ export const AdaptationView = () => {
           <ScrollableRegion>
             <Box sx={{ pt: 2, px: 1, pb: 1 }}>
               <AdaptationMeasuresInput />
-              {/* TODO #CONTEXT_CARD: active scenario card */}
+              <ActiveScenarioCard />
             </Box>
           </ScrollableRegion>
         </Box>
