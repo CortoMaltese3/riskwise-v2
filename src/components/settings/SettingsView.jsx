@@ -9,6 +9,7 @@ import DiagnosticsSection from "./DiagnosticsSection";
 import ImportScenarioSection from "./ImportScenarioSection";
 import MeasuresSection from "./MeasuresSection";
 import OfflineSection from "./OfflineSection";
+import ReportFormattingSection from "./ReportFormattingSection";
 import UpdatesPanel from "./UpdatesPanel";
 
 const TABS = [
@@ -16,6 +17,7 @@ const TABS = [
   { id: "import-scenario", labelKey: "settings_tab_import_scenario" },
   { id: "cred-data", labelKey: "settings_tab_cred_data" },
   { id: "measures", labelKey: "settings_tab_measures" },
+  { id: "report-formatting", labelKey: "settings_tab_report_formatting" },
   { id: "updates", labelKey: "settings_tab_updates" },
   { id: "offline", labelKey: "settings_tab_offline" },
   { id: "diagnostics", labelKey: "settings_tab_diagnostics" },
@@ -67,6 +69,7 @@ const SettingsView = () => {
               {activeTab === "import-scenario" && <ImportScenarioSection />}
               {activeTab === "cred-data" && <CREDDataSection />}
               {activeTab === "measures" && <MeasuresSection />}
+              {activeTab === "report-formatting" && <ReportFormattingSection />}
               {activeTab === "updates" && <UpdatesPanel />}
               {activeTab === "offline" && <OfflineSection />}
               {activeTab === "diagnostics" && <DiagnosticsSection />}

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Box, Table, TableBody, TableCell, TableRow, Typography } from "@mui/material";
 
 import { formatDate as formatDateI18n, formatDateTime } from "../../lib/formatDate";
+import { useReportLocale } from "../../hooks/useReportLocale";
 
 // JSX chart components without TS prop declarations — cast to avoid forwardRef
 // inference issues when importing untyped JSX sources into a TS file.
@@ -119,6 +120,7 @@ const parseJsonResult = <T,>(json: string, setter: (v: T) => void) => {
 const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
   const { i18n, t } = useTranslation();
   const locale = i18n.language;
+  const { formatNumber: formatNumberLocale } = useReportLocale();
   const [meta, setMeta] = useState<ScenarioMeta | null>(null);
   const [waterfallData, setWaterfallData] = useState<WaterfallData | null>(null);
   const [costbenData, setCostbenData] = useState<CostBenefitData | null>(null);
@@ -238,7 +240,10 @@ const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
               value={meta.exposure_type}
             />
             {meta.annual_growth != null && (
-              <LabelRow label={t("annual_growth")} value={`${meta.annual_growth}%`} />
+              <LabelRow
+                label={t("annual_growth")}
+                value={`${formatNumberLocale(meta.annual_growth)}%`}
+              />
             )}
           </TableBody>
         </Table>
