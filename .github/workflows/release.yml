@@ -12,29 +12,49 @@ env:
 
 jobs:
   # Issue #252 — gate every release artifact on a green `tests.yml` run for
-  # the exact commit the tag points at. Without this, `git push --tags` on a
-  # known-failing main commit would still publish a signed installer.
-  # Branch protection on `main` ensures the tagged SHA already has a
-  # successful `tests.yml` run (from the merge commit's push), so this job
-  # just verifies the run exists and concluded green via the GitHub API.
+  # the PR that produced the tagged commit. Without this, `git push --tags`
+  # on a known-failing main commit would still publish a signed installer.
+  #
+  # `tests.yml` only runs on `pull_request` events (see CI minutes budget),
+  # so its run is keyed by the PR's head SHA — not the merge commit on main
+  # the tag points at. We resolve the PR for the tag commit, then verify
+  # the PR's tests.yml run concluded green. Direct pushes to main (no PR)
+  # have no associated run and will fail this gate by design.
   # See CONTRIBUTING.md § Release gating.
   verify-tests:
-    name: Verify tests.yml passed on tag SHA
+    name: Verify tests.yml passed for tag's PR
     runs-on: ubuntu-latest
     steps:
-      - name: Check tests.yml conclusion for ${{ github.sha }}
+      - name: Resolve PR head SHA for tag commit
+        id: resolve
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          SHA: ${{ github.sha }}
+          TAG_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          echo "Looking up tests.yml runs for SHA $SHA"
-          # Query the latest run of tests.yml for this exact SHA. The API
-          # returns the runs newest-first; we take the first entry. If no
-          # run exists, fail loudly — a release must never ship from a
-          # commit that was never tested.
+          echo "Looking up PR associated with tag commit $TAG_SHA"
+          pr=$(gh api "repos/${REPO}/commits/${TAG_SHA}/pulls" \
+            --jq '[.[] | select(.merged_at != null) | {number, head_sha: .head.sha, merged_at}] | sort_by(.merged_at) | reverse | .[0] // empty')
+          if [ -z "$pr" ] || [ "$pr" = "null" ]; then
+            echo "::error::No merged PR found for tag commit $TAG_SHA. Refusing to release a commit that did not pass tests.yml via a PR."
+            exit 1
+          fi
+          pr_number=$(echo "$pr" | jq -r '.number')
+          head_sha=$(echo "$pr" | jq -r '.head_sha')
+          echo "Tag $TAG_SHA originated from PR #$pr_number (head $head_sha)"
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Check tests.yml conclusion for PR head SHA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ steps.resolve.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          echo "Looking up tests.yml runs for PR head SHA $SHA"
           payload=$(gh api \
             "repos/${REPO}/actions/workflows/tests.yml/runs?head_sha=${SHA}&per_page=1" \
             --jq '{count: (.workflow_runs | length), status: (.workflow_runs[0].status // "missing"), conclusion: (.workflow_runs[0].conclusion // "missing"), url: (.workflow_runs[0].html_url // "")}')
@@ -44,7 +64,7 @@ jobs:
           conclusion=$(echo "$payload" | jq -r '.conclusion')
           url=$(echo "$payload" | jq -r '.url')
           if [ "$count" = "0" ]; then
-            echo "::error::No tests.yml run found for commit $SHA. Refusing to release an untested commit."
+            echo "::error::No tests.yml run found for PR head SHA $SHA. Refusing to release an untested commit."
             exit 1
           fi
           if [ "$status" != "completed" ]; then
