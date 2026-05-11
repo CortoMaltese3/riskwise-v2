@@ -19,6 +19,7 @@ import useUIStore from "../../store/useUIStore";
 import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
 import { patternForIndex } from "../../utils/chartPatterns";
+import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
 import ChartInfoPopover from "../help/ChartInfoPopover";
 
@@ -74,6 +75,16 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
     };
   }, [chartRef]);
 
+  // First-mount animation only (#370): after the chart paints, drop further
+  // animation so dataset updates don't replay the intro. The parent layout
+  // re-mounts the component via `key={scenarioRunCode}` to trigger a fresh
+  // animated entrance on each new scenario run.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    chart.options.animation = false;
+  }, [chartRef]);
+
   if (!data || !Array.isArray(data.categories) || data.categories.length === 0) {
     return (
       <Box textAlign="center" p={3}>
@@ -126,7 +137,14 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 0 },
+    // Mount-only intro animation (#370). `prefersReducedMotion()` honours the
+    // OS-level reduce-motion setting; otherwise we use Chart.js's canonical
+    // fast-then-settle easing to match the rest of the UI's motion language.
+    animation: prefersReducedMotion() ? false : { duration: 600, easing: "easeOutQuart" },
+    // `mode: "index"` + `intersect: false` makes tooltips fire on the nearest
+    // x-category from anywhere in the plot area, not only when the cursor sits
+    // directly on a bar.
+    interaction: { mode: "index", intersect: false },
     rtl,
     scales: {
       y: {
