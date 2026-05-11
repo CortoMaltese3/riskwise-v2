@@ -215,3 +215,125 @@ def test_post_snapshot_rejects_title_over_120_chars(api_client: TestClient) -> N
     }
     response = api_client.post("/api/v1/scenarios/scen-1/snapshots", json=payload)
     assert response.status_code == 422
+
+
+def test_post_snapshot_persists_surface_and_lists_it(api_client: TestClient) -> None:
+    # #362: ``surface`` flows through the create/list endpoints so the PDF
+    # report can route each captured snapshot into the right per-domain
+    # section. Omitting the field round-trips as null (uncategorized).
+    _seed_scenario(saved=True)
+    payload = {
+        "snapshot_type": "map",
+        "image_base64": base64.b64encode(_PNG).decode("ascii"),
+        "surface": "exposure",
+    }
+    response = api_client.post("/api/v1/scenarios/scen-1/snapshots", json=payload)
+    assert response.status_code == 200, response.text
+    snap = response.json()["data"]
+    assert snap["surface"] == "exposure"
+
+    listing = api_client.get("/api/v1/scenarios/scen-1/snapshots").json()
+    assert listing["data"][0]["surface"] == "exposure"
+
+
+def test_post_snapshot_without_surface_defaults_to_null(api_client: TestClient) -> None:
+    _seed_scenario(saved=True)
+    payload = {
+        "snapshot_type": "map",
+        "image_base64": base64.b64encode(_PNG).decode("ascii"),
+    }
+    response = api_client.post("/api/v1/scenarios/scen-1/snapshots", json=payload)
+    assert response.status_code == 200
+    assert response.json()["data"]["surface"] is None
+
+
+def test_post_snapshot_rejects_invalid_surface(api_client: TestClient) -> None:
+    # The ``Literal`` validator in ``SnapshotSurface`` is the boundary check
+    # for the four allowed domains — anything else trips a 422 before the
+    # store is touched.
+    _seed_scenario(saved=True)
+    payload = {
+        "snapshot_type": "map",
+        "image_base64": base64.b64encode(_PNG).decode("ascii"),
+        "surface": "not-a-domain",
+    }
+    response = api_client.post("/api/v1/scenarios/scen-1/snapshots", json=payload)
+    assert response.status_code == 422
+
+
+def test_patch_snapshot_updates_each_field_independently(api_client: TestClient) -> None:
+    # PATCH on title, caption, surface, or any combination must update
+    # only the keys present in the body — omitting one leaves its column
+    # untouched (#362, extends the title/caption guarantee from #350).
+    _seed_scenario(saved=True)
+    create = api_client.post(
+        "/api/v1/scenarios/scen-1/snapshots",
+        json={
+            "snapshot_type": "map",
+            "image_base64": base64.b64encode(_PNG).decode("ascii"),
+            "title": "initial title",
+            "caption": "initial caption",
+            "surface": "hazard",
+        },
+    )
+    snap_id = create.json()["data"]["id"]
+
+    # Surface-only PATCH preserves title and caption.
+    only_surface = api_client.patch(f"/api/v1/snapshots/{snap_id}", json={"surface": "impact"})
+    assert only_surface.status_code == 200
+    data = only_surface.json()["data"]
+    assert data["surface"] == "impact"
+    assert data["title"] == "initial title"
+    assert data["caption"] == "initial caption"
+
+    # Title-only PATCH leaves the new surface alone.
+    only_title = api_client.patch(f"/api/v1/snapshots/{snap_id}", json={"title": "renamed"})
+    assert only_title.status_code == 200
+    data = only_title.json()["data"]
+    assert data["title"] == "renamed"
+    assert data["surface"] == "impact"
+
+    # Caption-only PATCH leaves both surface and title alone.
+    only_caption = api_client.patch(f"/api/v1/snapshots/{snap_id}", json={"caption": "new caption"})
+    assert only_caption.status_code == 200
+    data = only_caption.json()["data"]
+    assert data["caption"] == "new caption"
+    assert data["title"] == "renamed"
+    assert data["surface"] == "impact"
+
+    # Updating multiple fields at once still respects each value.
+    multi = api_client.patch(
+        f"/api/v1/snapshots/{snap_id}",
+        json={
+            "title": "final title",
+            "caption": "final caption",
+            "surface": "adaptation",
+        },
+    )
+    assert multi.status_code == 200
+    data = multi.json()["data"]
+    assert data["title"] == "final title"
+    assert data["caption"] == "final caption"
+    assert data["surface"] == "adaptation"
+
+    # Explicit null on surface only clears that one column.
+    cleared = api_client.patch(f"/api/v1/snapshots/{snap_id}", json={"surface": None})
+    assert cleared.status_code == 200
+    data = cleared.json()["data"]
+    assert data["surface"] is None
+    assert data["title"] == "final title"
+    assert data["caption"] == "final caption"
+
+
+def test_patch_snapshot_rejects_invalid_surface(api_client: TestClient) -> None:
+    _seed_scenario(saved=True)
+    create = api_client.post(
+        "/api/v1/scenarios/scen-1/snapshots",
+        json={
+            "snapshot_type": "map",
+            "image_base64": base64.b64encode(_PNG).decode("ascii"),
+        },
+    )
+    snap_id = create.json()["data"]["id"]
+    response = api_client.patch(f"/api/v1/snapshots/{snap_id}", json={"surface": "garbage"})
+    assert response.status_code == 422

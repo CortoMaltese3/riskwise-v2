@@ -29,11 +29,20 @@ const captureChartBase64 = (chartInstance) => {
   return Promise.resolve(chartInstance.toBase64Image("image/png", 1).split(",")[1]);
 };
 
-const captureToScenario = async ({ scenarioId, snapshotType, base64 }) => {
-  const response = await RiskWiseClient.createSnapshot(scenarioId, {
+const captureToScenario = async ({ scenarioId, snapshotType, base64, surface }) => {
+  // ``surface`` is the originating UI domain (#362). The backend accepts it
+  // as optional so legacy callers stay valid, but every code path in this
+  // module now passes it so the snapshot can be routed into the correct
+  // PDF section later. Undefined surfaces are dropped from the body to keep
+  // the JSON minimal and avoid sending ``surface: undefined``.
+  const body = {
     snapshot_type: snapshotType,
     image_base64: base64,
-  });
+  };
+  if (surface) {
+    body.surface = surface;
+  }
+  const response = await RiskWiseClient.createSnapshot(scenarioId, body);
   if (!(response?.success && response.result?.status?.code === 2000)) {
     throw new Error(response?.error?.message || "Snapshot save failed");
   }
@@ -301,15 +310,24 @@ export const useMapTools = () => {
     try {
       let base64;
       let snapshotType;
+      // ``surface`` records the originating UI domain (#362) so the PDF
+      // report can route each snapshot into the right section. For maps we
+      // read ``activeMap`` (hazard / exposure / impact); the two chart
+      // surfaces map to fixed domains (waterfall -> impact, cost-benefit ->
+      // adaptation) so we do not need a UI state lookup for them.
+      let surface;
       if (activeViewControl === "display_map") {
         base64 = await captureMapBase64(activeMapRef);
         snapshotType = "map";
+        surface = activeMap;
       } else if (activeViewControl === "display_chart" && selectedSubTab === 0) {
         base64 = await captureChartBase64(waterfallChartRef);
         snapshotType = "waterfall";
+        surface = "impact";
       } else if (activeViewControl === "display_chart" && selectedSubTab === 1) {
         base64 = await captureChartBase64(costBenefitChartRef);
         snapshotType = "cost_benefit";
+        surface = "adaptation";
       } else {
         return null;
       }
@@ -317,6 +335,7 @@ export const useMapTools = () => {
         scenarioId: scenarioRunCode,
         snapshotType,
         base64,
+        surface,
       });
       setAlertMessage(t("alert_message_snapshot_saved"));
       setAlertSeverity("success");

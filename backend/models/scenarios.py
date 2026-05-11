@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.models.common import Status
+
+# Domain that produced a snapshot — used by the PDF report to route each
+# selected snapshot into the right per-domain section (#362). The literal
+# union doubles as both the boundary validator and the source of truth
+# for the four i18n chip labels in :file:`SnapshotDrawer.jsx`.
+SnapshotSurface = Literal["hazard", "exposure", "impact", "adaptation"]
 
 
 class ScenarioWorkspaceItem(BaseModel):
@@ -106,6 +113,10 @@ class SnapshotItem(BaseModel):
     # optional so legacy snapshots without either still serialise.
     title: str | None = Field(default=None, max_length=120)
     caption: str | None = None
+    # Domain that produced the snapshot (#362). NULL means "uncategorized"
+    # for pre-#362 rows; new captures always set this from the active UI
+    # surface so the PDF report can route the figure into the right section.
+    surface: SnapshotSurface | None = Field(default=None)
 
 
 class SnapshotListResponse(BaseModel):
@@ -122,6 +133,10 @@ class CreateSnapshotRequest(BaseModel):
     image_base64: str = Field(..., min_length=1)
     title: str | None = Field(default=None, max_length=120)
     caption: str | None = Field(default=None, max_length=500)
+    # ``surface`` is the originating UI domain (#362). The :data:`SnapshotSurface`
+    # ``Literal`` restricts non-null values to the four known sections so a
+    # typo at the boundary trips a 422 rather than persisting a junk tag.
+    surface: SnapshotSurface | None = Field(default=None)
 
 
 class CreateSnapshotResponse(BaseModel):
@@ -134,6 +149,10 @@ class UpdateSnapshotRequest(BaseModel):
 
     title: str | None = Field(default=None, max_length=120)
     caption: str | None = Field(default=None, max_length=500)
+    # PATCH respects ``model_fields_set`` in the handler, so omitting
+    # ``surface`` from the body leaves the column untouched while passing
+    # ``null`` explicitly clears it (#362).
+    surface: SnapshotSurface | None = Field(default=None)
 
 
 class UpdateSnapshotResponse(BaseModel):

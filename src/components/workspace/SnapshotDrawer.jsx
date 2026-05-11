@@ -1,11 +1,29 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
-import { Box, IconButton, Stack, TextField, Typography } from "@mui/material";
+import { Box, Chip, IconButton, Stack, TextField, Typography } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { formatDateTime } from "../../lib/formatDate";
+
+// Map each surface tag to a MUI semantic color (#362). The four domains map
+// 1:1 to existing palette slots, so the chips stay readable in both light
+// and dark themes without a custom palette extension. Unknown / NULL falls
+// back to a default-colored chip via the caller's omit-when-null branch.
+const SURFACE_CHIP_COLOR = {
+  hazard: "warning",
+  exposure: "info",
+  impact: "error",
+  adaptation: "success",
+};
+
+const SURFACE_I18N_KEY = {
+  hazard: "snapshot_surface_hazard",
+  exposure: "snapshot_surface_exposure",
+  impact: "snapshot_surface_impact",
+  adaptation: "snapshot_surface_adaptation",
+};
 
 const formatCreatedAt = (value, locale) => {
   if (!value) return "";
@@ -160,9 +178,20 @@ const SnapshotDrawer = ({ scenarioId }) => {
               ariaLabel={`caption-${snap.id}`}
               maxLength={500}
             />
-            <Typography variant="caption" color="text.secondary">
-              {snap.snapshot_type} · {formatCreatedAt(snap.created_at, locale)}
-            </Typography>
+            <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.25 }}>
+              <Typography variant="caption" color="text.secondary">
+                {snap.snapshot_type} · {formatCreatedAt(snap.created_at, locale)}
+              </Typography>
+              {snap.surface && SURFACE_I18N_KEY[snap.surface] ? (
+                <Chip
+                  size="small"
+                  data-testid={`snapshot-surface-${snap.id}`}
+                  color={SURFACE_CHIP_COLOR[snap.surface]}
+                  variant="outlined"
+                  label={t(SURFACE_I18N_KEY[snap.surface])}
+                />
+              ) : null}
+            </Stack>
           </Box>
           <IconButton
             size="small"

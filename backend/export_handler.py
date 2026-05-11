@@ -168,6 +168,10 @@ def _write_archive(
                     "snapshot_type": snap.get("snapshot_type"),
                     "title": snap.get("title"),
                     "caption": snap.get("caption"),
+                    # ``surface`` (#362) is best-effort metadata: pre-#362
+                    # bundles omit the key and the import side falls back
+                    # to NULL, matching the migration's nullable column.
+                    "surface": snap.get("surface"),
                 }
             )
         if manifest_entries:
@@ -288,6 +292,7 @@ def _read_snapshots_from_zip(zf: zipfile.ZipFile) -> list[dict[str, Any]]:
                 "created_at": now,
                 "title": meta.get("title"),
                 "caption": meta.get("caption"),
+                "surface": meta.get("surface"),
             }
         )
     return snapshots

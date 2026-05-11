@@ -189,8 +189,9 @@ def insert_scenario(
                 conn.execute(
                     """
                     INSERT INTO snapshots
-                        (id, scenario_id, snapshot_type, image, created_at, title, caption)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                        (id, scenario_id, snapshot_type, image, created_at,
+                         title, caption, surface)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     [
                         snap["id"],
@@ -200,6 +201,7 @@ def insert_scenario(
                         snap.get("created_at"),
                         snap.get("title"),
                         snap.get("caption"),
+                        snap.get("surface"),
                     ],
                 )
     finally:
@@ -217,7 +219,8 @@ def get_scenario_snapshots_with_image(scenario_id: str) -> list[dict[str, Any]]:
     try:
         rows = conn.execute(
             """
-            SELECT id, scenario_id, snapshot_type, image, created_at, title, caption
+            SELECT id, scenario_id, snapshot_type, image, created_at,
+                   title, caption, surface
             FROM snapshots WHERE scenario_id = ?
             ORDER BY created_at ASC
             """,
@@ -234,6 +237,7 @@ def get_scenario_snapshots_with_image(scenario_id: str) -> list[dict[str, Any]]:
             "created_at": r[4],
             "title": r[5],
             "caption": r[6],
+            "surface": r[7],
         }
         for r in rows
     ]
@@ -360,6 +364,10 @@ class SnapshotRow:
     # Optional short heading rendered above the image in PDF reports (#350).
     title: str | None = None
     caption: str | None = None
+    # Originating UI domain (#362) — "hazard" / "exposure" / "impact" /
+    # "adaptation". NULL on pre-#362 rows; the PDF report treats NULL as
+    # "uncategorized" rather than failing.
+    surface: str | None = None
 
 
 # Sentinel used by :func:`update_snapshot` to distinguish "field omitted from
@@ -376,10 +384,11 @@ def _row_to_snapshot(row: tuple) -> SnapshotRow:
         created_at=row[3],
         title=row[4],
         caption=row[5],
+        surface=row[6],
     )
 
 
-_SNAPSHOT_SELECT_COLUMNS = "id, scenario_id, snapshot_type, created_at, title, caption"
+_SNAPSHOT_SELECT_COLUMNS = "id, scenario_id, snapshot_type, created_at, title, caption, surface"
 
 
 def list_snapshots(scenario_id: str) -> list[SnapshotRow]:
@@ -405,11 +414,17 @@ def create_snapshot(
     image: bytes,
     title: str | None = None,
     caption: str | None = None,
+    surface: str | None = None,
 ) -> SnapshotRow:
     """Insert one snapshot row and promote the parent scenario to ``saved=TRUE``.
 
     Raises :class:`ScenarioNotFound` if ``scenario_id`` does not exist;
     no row is created. Returns the inserted row (without the image bytes).
+
+    ``surface`` is validated at the model layer (`CreateSnapshotRequest`),
+    so this writer stores it verbatim — keeping the store thin lets the
+    Pydantic ``Literal`` stay the single source of truth for the allowed
+    set (#362).
     """
     snapshot_id = str(uuid.uuid4())
     conn = get_connection()
@@ -419,10 +434,11 @@ def create_snapshot(
             raise ScenarioNotFound(scenario_id)
         conn.execute(
             """
-            INSERT INTO snapshots (id, scenario_id, snapshot_type, image, title, caption)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO snapshots
+                (id, scenario_id, snapshot_type, image, title, caption, surface)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            [snapshot_id, scenario_id, snapshot_type, image, title, caption],
+            [snapshot_id, scenario_id, snapshot_type, image, title, caption, surface],
         )
         # Save promotion (#302): the user has invested effort in this scenario,
         # so it must remain visible in the workspace. Capturing without this
@@ -461,6 +477,7 @@ def update_snapshot(
     *,
     title: Any = _UNSET,
     caption: Any = _UNSET,
+    surface: Any = _UNSET,
 ) -> SnapshotRow | None:
     """Partial update of a snapshot's editable metadata.
 
@@ -480,6 +497,9 @@ def update_snapshot(
     if caption is not _UNSET:
         updates.append("caption = ?")
         values.append(caption)
+    if surface is not _UNSET:
+        updates.append("surface = ?")
+        values.append(surface)
     if not updates:
         conn = get_connection()
         try:
