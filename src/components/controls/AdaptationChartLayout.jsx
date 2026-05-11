@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Paper, Typography } from "@mui/material";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import CostBenefitChart from "../charts/CostBenefitChart";
+import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 
@@ -48,36 +49,36 @@ const renderCostBenefitBody = ({
 const AdaptationChartLayout = () => {
   const { t } = useTranslation();
   const setCostBenefitChartRef = useUIStore((state) => state.setCostBenefitChartRef);
-  // Re-keying on `scenarioRunCode` re-mounts the chart on each new run (#370)
-  // so the first-mount intro animation replays. The macro chart deliberately
-  // does NOT get this key — dropdown changes should update silently.
+  // Re-keying on `scenarioRunCode` re-mounts the chart on each new run so the
+  // first-mount intro animation replays. The macro chart deliberately does
+  // NOT get this key — dropdown changes should update silently.
   const scenarioRunCode = useWorkspaceStore((state) => state.scenarioRunCode);
-  const [costBenefitData, setCostBenefitData] = useState(null);
-  const [errorMessage, setErrorMessage] = useState("");
+  const costBenefitData = useResultsStore((state) => state.costBenefitData);
+  const errorMessage = useResultsStore((state) => state.costBenefitError);
+  const beginCostBenefitFetch = useResultsStore((state) => state.beginCostBenefitFetch);
+  const endCostBenefitFetch = useResultsStore((state) => state.endCostBenefitFetch);
 
   useEffect(() => {
     let cancelled = false;
+    beginCostBenefitFetch();
     (async () => {
       const response = await RiskWiseClient.fetchCostBenefitData();
       if (cancelled) return;
       if (!response.success) {
-        setErrorMessage(response.error.message);
-        setCostBenefitData(null);
+        endCostBenefitFetch({ error: response.error.message });
         return;
       }
       const { data, status } = response.result;
       if (status.code !== STATUS_OK) {
-        setErrorMessage(status.message);
-        setCostBenefitData(null);
+        endCostBenefitFetch({ error: status.message });
         return;
       }
-      setErrorMessage("");
-      setCostBenefitData(data);
+      endCostBenefitFetch({ data });
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [beginCostBenefitFetch, endCostBenefitFetch]);
 
   return (
     <div

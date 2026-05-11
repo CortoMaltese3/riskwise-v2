@@ -17,7 +17,7 @@ import ChartDataLabels from "chartjs-plugin-datalabels";
 
 import useUIStore from "../../store/useUIStore";
 import { isRtl } from "../../i18nConfig";
-import { formatNumber } from "../../lib/formatNumber";
+import { formatNumber, formatNumberWithUnit } from "../../lib/formatNumber";
 import { patternForIndex } from "../../utils/chartPatterns";
 import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
@@ -29,10 +29,7 @@ const PATTERN_PROFITABLE = 0;
 const PATTERN_MARGINAL = 1;
 const PATTERN_UNPROFITABLE = 2;
 
-const formatCurrency = (value, unit, locale) => {
-  const formatted = formatNumber(Number(value), locale);
-  return unit ? `${formatted} ${unit}` : formatted;
-};
+const formatCurrency = (value, unit, locale) => formatNumberWithUnit(Number(value), unit, locale);
 
 const formatRatio = (value, locale) => formatNumber(Number(value), locale);
 
