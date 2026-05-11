@@ -717,6 +717,7 @@ async def create_snapshot_endpoint(scenario_id: str, payload: CreateSnapshotRequ
             image=image_bytes,
             title=payload.title,
             caption=payload.caption,
+            surface=payload.surface,
         )
     except ScenarioNotFound as exc:
         raise HTTPException(status_code=404, detail="Scenario not found") from exc
@@ -754,6 +755,8 @@ async def update_snapshot_endpoint(snapshot_id: str, payload: UpdateSnapshotRequ
         kwargs["title"] = payload.title
     if "caption" in payload.model_fields_set:
         kwargs["caption"] = payload.caption
+    if "surface" in payload.model_fields_set:
+        kwargs["surface"] = payload.surface
     row = await asyncio.to_thread(update_snapshot, snapshot_id, **kwargs)
     if row is None:
         raise HTTPException(status_code=404, detail="Snapshot not found")

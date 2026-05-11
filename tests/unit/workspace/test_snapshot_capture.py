@@ -222,6 +222,60 @@ def test_list_snapshots_includes_caption(tmp_db: Path) -> None:
     assert listed[0].snapshot_type == "cost_benefit"
 
 
+def test_create_snapshot_persists_surface_or_null(tmp_db: Path) -> None:
+    # #362: ``surface`` records the originating UI domain so the PDF report
+    # can route the snapshot. Omitting it round-trips as NULL (pre-#362
+    # behaviour preserved); supplying one of the four domain tags persists
+    # verbatim and surfaces via ``list_snapshots``.
+    _seed_unsaved_scenario()
+    without_surface = create_snapshot(scenario_id="s-cap", snapshot_type="map", image=_PNG_BYTES)
+    assert without_surface.surface is None
+    with_surface = create_snapshot(
+        scenario_id="s-cap",
+        snapshot_type="map",
+        image=_PNG_BYTES,
+        surface="exposure",
+    )
+    assert with_surface.surface == "exposure"
+
+    surfaces = {snap.id: snap.surface for snap in list_snapshots("s-cap")}
+    assert surfaces[without_surface.id] is None
+    assert surfaces[with_surface.id] == "exposure"
+
+
+def test_update_snapshot_surface_round_trips(tmp_db: Path) -> None:
+    # PATCH semantics: ``surface`` is independent from title and caption.
+    # Omitting the kwarg leaves the column untouched; passing ``None``
+    # clears it; passing a domain tag overwrites it.
+    _seed_unsaved_scenario()
+    row = create_snapshot(
+        scenario_id="s-cap",
+        snapshot_type="map",
+        image=_PNG_BYTES,
+        title="initial title",
+        caption="initial caption",
+        surface="hazard",
+    )
+
+    only_surface = update_snapshot(row.id, surface="impact")
+    assert only_surface is not None
+    assert only_surface.surface == "impact"
+    assert only_surface.title == "initial title"
+    assert only_surface.caption == "initial caption"
+
+    title_only = update_snapshot(row.id, title="renamed")
+    assert title_only is not None
+    # Omitting ``surface`` from the PATCH must leave the existing value alone.
+    assert title_only.surface == "impact"
+    assert title_only.title == "renamed"
+
+    cleared = update_snapshot(row.id, surface=None)
+    assert cleared is not None
+    assert cleared.surface is None
+    assert cleared.title == "renamed"
+    assert cleared.caption == "initial caption"
+
+
 def test_delete_snapshot_then_get_image_returns_none(tmp_db: Path) -> None:
     _seed_unsaved_scenario()
     row = create_snapshot(scenario_id="s-cap", snapshot_type="map", image=_PNG_BYTES)

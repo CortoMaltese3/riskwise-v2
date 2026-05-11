@@ -204,6 +204,72 @@ def test_transactional_migration_rolls_back_on_failure(
     assert rows is not None and rows[0] == 0
 
 
+def test_0013_adds_null_surface_to_existing_snapshots(
+    conn: duckdb.DuckDBPyConnection, tmp_path: Path
+) -> None:
+    # 0013 adds the ``surface`` column to ``snapshots`` (#362). On a DB that
+    # already has snapshot rows from a pre-#362 build, the migration must
+    # apply cleanly and the existing rows must surface as NULL — explicitly
+    # checked here because the issue calls out the "no backfill" contract.
+    migrations_dir = tmp_path / "migrations"
+    migrations_dir.mkdir()
+    pre_0013 = sorted(p for p in MIGRATIONS_DIR.glob("00[01][0-9]_*.sql") if int(p.name[:4]) < 13)
+    assert pre_0013, "expected at least one pre-0013 migration on disk"
+    for src in pre_0013:
+        (migrations_dir / src.name).write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+
+    run_migrations(conn, migrations_dir=migrations_dir)
+
+    conn.execute(
+        """
+        INSERT INTO scenarios (id, name, country, hazard_type, ref_year, app_version,
+            entity_data_sha256, hazard_data_sha256, country_config_sha256,
+            config_version, random_seed, saved)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            "scen-pre-13",
+            "pre-surface scenario",
+            "EGY",
+            "flood",
+            2024,
+            "1.0.0",
+            "a" * 64,
+            "b" * 64,
+            "c" * 64,
+            "1",
+            42,
+            True,
+        ],
+    )
+    # Insert a snapshot row using only the pre-0013 columns. After 0013
+    # runs, the new ``surface`` column must default to NULL for this row.
+    conn.execute(
+        """
+        INSERT INTO snapshots (id, scenario_id, snapshot_type, image, title, caption)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        ["snap-pre-13", "scen-pre-13", "map", b"\x89PNG", None, "legacy caption"],
+    )
+
+    src_0013 = MIGRATIONS_DIR / "0013_snapshot_surface.sql"
+    (migrations_dir / src_0013.name).write_text(
+        src_0013.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    run_migrations(conn, migrations_dir=migrations_dir)
+
+    row = conn.execute(
+        "SELECT id, surface, caption FROM snapshots WHERE id = 'snap-pre-13'"
+    ).fetchone()
+    assert row is not None
+    assert row[0] == "snap-pre-13"
+    assert row[1] is None
+    # Other columns must round-trip untouched — a regression in 0013 that
+    # rebuilt the table without preserving values would be caught here.
+    assert row[2] == "legacy caption"
+
+
 def test_0008_backfills_existing_rows_to_saved_true(
     conn: duckdb.DuckDBPyConnection, tmp_path: Path
 ) -> None:

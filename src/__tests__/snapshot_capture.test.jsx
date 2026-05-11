@@ -31,7 +31,10 @@ vi.mock("leaflet-simple-map-screenshoter", () => ({}));
 
 const setStateBag = {
   // Defaults match an unfinished run — the camera should be disabled.
-  activeMap: "risk",
+  // ``activeMap`` mirrors the live UI state (#362): map captures forward
+  // the domain through ``surface`` so the PDF report can route the figure
+  // into the right per-domain section.
+  activeMap: "hazard",
   activeMapRef: { _fake: "map" },
   activeViewControl: "display_map",
   isScenarioRunCompleted: false,
@@ -130,6 +133,9 @@ describe("snapshot capture button", () => {
     expect(createSnapshotMock).toHaveBeenCalledWith("scen-1", {
       snapshot_type: "map",
       image_base64: "YWFh",
+      // #362: ``activeMap`` propagates as ``surface`` so the snapshot can
+      // be routed to the hazard/exposure/impact section in the PDF report.
+      surface: "hazard",
     });
     expect(loadScenariosMock).toHaveBeenCalledWith({ force: true });
   });

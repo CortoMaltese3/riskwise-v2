@@ -217,6 +217,23 @@
             "title": "Snapshot Type",
             "type": "string"
           },
+          "surface": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hazard",
+                  "exposure",
+                  "impact",
+                  "adaptation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface"
+          },
           "title": {
             "anyOf": [
               {
@@ -1882,6 +1899,23 @@
             "title": "Snapshot Type",
             "type": "string"
           },
+          "surface": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hazard",
+                  "exposure",
+                  "impact",
+                  "adaptation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface"
+          },
           "title": {
             "anyOf": [
               {
@@ -1991,6 +2025,23 @@
             ],
             "title": "Caption"
           },
+          "surface": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hazard",
+                  "exposure",
+                  "impact",
+                  "adaptation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface"
+          },
           "title": {
             "anyOf": [
               {
@@ -2021,6 +2072,100 @@
           "status"
         ],
         "title": "UpdateSnapshotResponse",
+        "type": "object"
+      },
+      "UpdateUserSettingsRequest": {
+        "properties": {
+          "report_currency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "EUR",
+                  "USD",
+                  "GBP",
+                  "CHF",
+                  "THB",
+                  "EGP"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Currency"
+          },
+          "report_locale": {
+            "anyOf": [
+              {
+                "enum": [
+                  "en-US",
+                  "en-GB",
+                  "de-DE",
+                  "fr-FR",
+                  "es-ES",
+                  "th-TH",
+                  "ar-EG"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Locale"
+          }
+        },
+        "title": "UpdateUserSettingsRequest",
+        "type": "object"
+      },
+      "UserSettings": {
+        "properties": {
+          "report_currency": {
+            "default": "EUR",
+            "enum": [
+              "EUR",
+              "USD",
+              "GBP",
+              "CHF",
+              "THB",
+              "EGP"
+            ],
+            "title": "Report Currency",
+            "type": "string"
+          },
+          "report_locale": {
+            "default": "en-US",
+            "enum": [
+              "en-US",
+              "en-GB",
+              "de-DE",
+              "fr-FR",
+              "es-ES",
+              "th-TH",
+              "ar-EG"
+            ],
+            "title": "Report Locale",
+            "type": "string"
+          }
+        },
+        "title": "UserSettings",
+        "type": "object"
+      },
+      "UserSettingsResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UserSettings"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "UserSettingsResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -3405,6 +3550,60 @@
           }
         },
         "summary": "Create Snapshot Endpoint"
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "operationId": "get_settings_endpoint_api_v1_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Settings Endpoint"
+      },
+      "patch": {
+        "operationId": "patch_settings_endpoint_api_v1_settings_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Settings Endpoint"
       }
     },
     "/api/v1/snapshots/{snapshot_id}": {
