@@ -76,10 +76,15 @@ function contrastRatio(fgHex, bgHex) {
 // would otherwise overwrite each other.
 function parseThemeHexLiterals(source) {
   const out = new Set();
-  const re = /(\w+)\s*:\s*"(#[0-9a-fA-F]{3,6})"/g;
+  // Match every quoted hex literal in the theme file, regardless of whether
+  // it sits behind a `key:` (palette slot) or directly inside an array
+  // (positional palettes like `VIZ_CATEGORICAL`). The narrower previous
+  // form missed the categorical array and emitted spurious warnings for
+  // hues referenced in PAIRS below.
+  const re = /"(#[0-9a-fA-F]{3,6})"/g;
   let match;
   while ((match = re.exec(source)) !== null) {
-    out.add(match[2].toLowerCase());
+    out.add(match[1].toLowerCase());
   }
   return out;
 }
@@ -223,6 +228,83 @@ const PAIRS = [
     fg: "#5B8DEF",
     bg: "#1E293B",
     size: "normal",
+  },
+  // VIZ_CATEGORICAL non-text contrast (#367). Each of the six positional
+  // categorical hues is consumed as a chart bar / line fill that sits
+  // directly on `background.paper` in both schemes. WCAG 2.1 § 1.4.11 sets
+  // the non-text contrast floor at 3:1 — these pairs use `size: "large"`
+  // to opt into the 3:1 threshold from the same script.
+  {
+    name: "[viz] categorical[0] (teal) on light background.paper",
+    fg: "#3F8E9C",
+    bg: "#FFFFFF",
+    size: "large",
+  },
+  {
+    name: "[viz] categorical[0] (teal) on dark background.paper",
+    fg: "#3F8E9C",
+    bg: "#1E293B",
+    size: "large",
+  },
+  {
+    name: "[viz] categorical[1] (salmon) on light background.paper",
+    fg: "#E15555",
+    bg: "#FFFFFF",
+    size: "large",
+  },
+  {
+    name: "[viz] categorical[1] (salmon) on dark background.paper",
+    fg: "#E15555",
+    bg: "#1E293B",
+    size: "large",
+  },
+  {
+    name: "[viz] categorical[2] (gold) on light background.paper",
+    fg: "#A07A18",
+    bg: "#FFFFFF",
+    size: "large",
+  },
+  {
+    name: "[viz] categorical[2] (gold) on dark background.paper",
+    fg: "#A07A18",
+    bg: "#1E293B",
+    size: "large",
+  },
+  {
+    name: "[viz] categorical[3] (blue) on light background.paper",
+    fg: "#5B8DEF",
+    bg: "#FFFFFF",
+    size: "large",
+  },
+  {
+    name: "[viz] categorical[3] (blue) on dark background.paper",
+    fg: "#5B8DEF",
+    bg: "#1E293B",
+    size: "large",
+  },
+  {
+    name: "[viz] categorical[4] (purple) on light background.paper",
+    fg: "#9966FF",
+    bg: "#FFFFFF",
+    size: "large",
+  },
+  {
+    name: "[viz] categorical[4] (purple) on dark background.paper",
+    fg: "#9966FF",
+    bg: "#1E293B",
+    size: "large",
+  },
+  {
+    name: "[viz] categorical[5] (green) on light background.paper",
+    fg: "#15915A",
+    bg: "#FFFFFF",
+    size: "large",
+  },
+  {
+    name: "[viz] categorical[5] (green) on dark background.paper",
+    fg: "#15915A",
+    bg: "#1E293B",
+    size: "large",
   },
 ];
 

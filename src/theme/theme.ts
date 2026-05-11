@@ -112,13 +112,32 @@ const lightFeedback = {
 
 // Categorical chart palette (six fixed hues, used in both schemes). The order
 // is stable so chart series colours don't shift when datasets change.
+//
+// All six hues must clear the WCAG 2.1 AA non-text 3:1 contrast ratio against
+// both `background.paper` swatches (`#FFFFFF` light, `#1E293B` dark) so bar /
+// line fills stay readable in either scheme. The brand-aligned originals
+// (primary teal, secondary salmon, warning yellow, success green) failed one
+// or both backgrounds — see the per-hue audit in `scripts/check-color-contrast.js`.
+// The current values are near-neighbour swaps within the same hue families:
+//
+//   teal    #2F7A86 → #3F8E9C   (was fail-dark 2.96:1; now 3.78 light / 3.87 dark)
+//   salmon  #F79191 → #E15555   (was fail-light 2.23:1; now 3.73 light / 3.92 dark)
+//   yellow  #FDDD48 → #A07A18   (was fail-light 1.35:1; now 3.97 light / 3.69 dark)
+//   blue    #5B8DEF             (unchanged: 3.23 light / 4.53 dark)
+//   purple  #9966FF             (unchanged: 3.68 light / 3.97 dark)
+//   green   #39D98A → #15915A   (was fail-light 1.83:1; now 4.02 light / 3.64 dark)
+//
+// Brand swatches in `primary`, `secondary`, `feedback` are left at their
+// originals — those are paired with specific contrast text and pass their own
+// 4.5:1 lints in the curated `PAIRS` list. The categorical array is the only
+// place where a hue meets the dark *and* light paper directly.
 const VIZ_CATEGORICAL = [
-  "#2F7A86", // primary teal
-  "#F79191", // secondary salmon
-  "#FDDD48", // warning yellow
-  "#5B8DEF", // info blue
-  "#9966FF", // purple
-  "#39D98A", // success green
+  "#3F8E9C", // teal family (near-neighbour of primary teal)
+  "#E15555", // salmon family (deeper red than secondary salmon)
+  "#A07A18", // gold / mustard (deeper than warning yellow)
+  "#5B8DEF", // info blue (unchanged)
+  "#9966FF", // purple (unchanged)
+  "#15915A", // green family (deeper than success green)
 ] as const;
 
 const lightViz = {
@@ -126,6 +145,12 @@ const lightViz = {
   positive: "#05A660",
   neutral: "#2F7A86",
   negative: "#E53535",
+  // Pattern stroke for the canvas-pattern overlay on chart bar fills
+  // (`src/utils/chartPatterns.js`). The dark translucent overlay reads as
+  // hatching on the lighter bar colours used in light mode. Mirrored in
+  // `darkViz` with an inverted (white) stroke so the same textures stay
+  // visible on dark mode's darker bar fills.
+  patternStroke: "rgba(0, 0, 0, 0.55)",
   // Light-mode ramps use D3's pre-baked schemeXxx[9] arrays sliced to the
   // dark end (resolved in `src/utils/colorScales.js`). Domain `[0, 1]`
   // means "use the scheme as-is".
@@ -211,6 +236,10 @@ const darkViz = {
   positive: "#39D98A",
   neutral: "#5FB3C2",
   negative: "#FF5C5C",
+  // Inverted stroke so the diagonal / cross / dots / horizontal overlays in
+  // `chartPatterns.js` stay visible against the dark bar fills used in dark
+  // mode — the light-mode `rgba(0, 0, 0, 0.55)` vanishes here.
+  patternStroke: "rgba(255, 255, 255, 0.55)",
   // Dark-mode ramps clip the unreadable pale steps at the start of each D3
   // sequential scheme, preserving direction + hue family. Resolved via
   // `d3.interpolateXxx` in `src/utils/colorScales.js`.

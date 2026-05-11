@@ -19,6 +19,7 @@ import useUIStore from "../../store/useUIStore";
 import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
 import { patternForIndex } from "../../utils/chartPatterns";
+import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
 import ChartInfoPopover from "../help/ChartInfoPopover";
 
@@ -61,6 +62,9 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
   const COLOR_TOTAL = alpha(theme.palette.viz.neutral, 0.85);
   const COLOR_INCREASE = alpha(theme.palette.viz.negative, 0.85);
   const COLOR_DECREASE = alpha(theme.palette.viz.positive, 0.85);
+  // Theme-aware pattern stroke keeps the diagonal / increase / decrease
+  // textures visible in both light and dark mode (issue #367).
+  const patternStroke = theme.palette.viz.patternStroke;
 
   useEffect(() => {
     return () => {
@@ -69,6 +73,16 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
         chartRef.current = null;
       }
     };
+  }, [chartRef]);
+
+  // First-mount animation only (#370): after the chart paints, drop further
+  // animation so dataset updates don't replay the intro. The parent layout
+  // re-mounts the component via `key={scenarioRunCode}` to trigger a fresh
+  // animated entrance on each new scenario run.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    chart.options.animation = false;
   }, [chartRef]);
 
   if (!data || !Array.isArray(data.categories) || data.categories.length === 0) {
@@ -101,7 +115,9 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
     return c.value >= 0 ? PATTERN_INCREASE : PATTERN_DECREASE;
   });
 
-  const patterns = colors.map((color, i) => patternForIndex(color, patternIndices[i]));
+  const patterns = colors.map((color, i) =>
+    patternForIndex(color, patternIndices[i], patternStroke)
+  );
 
   const chartData = {
     labels,
@@ -121,7 +137,14 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 0 },
+    // Mount-only intro animation (#370). `prefersReducedMotion()` honours the
+    // OS-level reduce-motion setting; otherwise we use Chart.js's canonical
+    // fast-then-settle easing to match the rest of the UI's motion language.
+    animation: prefersReducedMotion() ? false : { duration: 600, easing: "easeOutQuart" },
+    // `mode: "index"` + `intersect: false` makes tooltips fire on the nearest
+    // x-category from anywhere in the plot area, not only when the cursor sits
+    // directly on a bar.
+    interaction: { mode: "index", intersect: false },
     rtl,
     scales: {
       y: {
