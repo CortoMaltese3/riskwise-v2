@@ -127,7 +127,11 @@ describe("preload bridge surface", () => {
     exposed.electron.copyFolder("a", "b");
     exposed.electron.openReport("/tmp/r.docx");
     exposed.electron.getCurrentUser();
-    exposed.electron.exportPdf("scenario-id", { snapshotIds: ["snap-1", "snap-2"] });
+    exposed.electron.exportPdf("scenario-id", {
+      snapshotIds: ["snap-1", "snap-2"],
+      includeWaterfall: false,
+      includeCostBenefit: false,
+    });
     exposed.electron.exportWorkspace();
     exposed.electron.importWorkspace();
     exposed.electron.exportScenario("scenario-id");
@@ -223,10 +227,42 @@ describe("preload bridge surface", () => {
     expect(ipc.invoke).toHaveBeenNthCalledWith(1, "export-pdf", {
       scenarioId: "scn-a",
       snapshotIds: ["s1", "s2"],
+      includeWaterfall: true,
+      includeCostBenefit: true,
     });
     expect(ipc.invoke).toHaveBeenNthCalledWith(2, "export-pdf", {
       scenarioId: "scn-b",
       snapshotIds: [],
+      includeWaterfall: true,
+      includeCostBenefit: true,
+    });
+  });
+
+  it("forwards exportPdf chart-inclusion flags when explicitly set", () => {
+    const { exposed, ipc } = loadPreload();
+
+    exposed.electron.exportPdf("scn-c", {
+      snapshotIds: ["s1"],
+      includeWaterfall: false,
+      includeCostBenefit: false,
+    });
+    exposed.electron.exportPdf("scn-d", {
+      snapshotIds: [],
+      includeWaterfall: true,
+      includeCostBenefit: false,
+    });
+
+    expect(ipc.invoke).toHaveBeenNthCalledWith(1, "export-pdf", {
+      scenarioId: "scn-c",
+      snapshotIds: ["s1"],
+      includeWaterfall: false,
+      includeCostBenefit: false,
+    });
+    expect(ipc.invoke).toHaveBeenNthCalledWith(2, "export-pdf", {
+      scenarioId: "scn-d",
+      snapshotIds: [],
+      includeWaterfall: true,
+      includeCostBenefit: false,
     });
   });
 });

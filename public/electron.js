@@ -1485,7 +1485,8 @@ ipcMain.handle("get-current-user", () => {
   }
 });
 
-ipcMain.handle("export-pdf", async (_event, { scenarioId, snapshotIds }) => {
+ipcMain.handle("export-pdf", async (_event, payload) => {
+  const { scenarioId, snapshotIds, includeWaterfall, includeCostBenefit } = payload;
   let printWin = null;
   try {
     printWin = new BrowserWindow({
@@ -1502,6 +1503,9 @@ ipcMain.handle("export-pdf", async (_event, { scenarioId, snapshotIds }) => {
       Array.isArray(snapshotIds) && snapshotIds.length > 0
         ? `&snapshots=${encodeURIComponent(snapshotIds.join(","))}`
         : "";
+    // Default-true flags are encoded implicitly so the print URL stays clean.
+    const waterfallQuery = includeWaterfall === false ? "&waterfall=0" : "";
+    const costbenQuery = includeCostBenefit === false ? "&costben=0" : "";
 
     await new Promise((resolve, reject) => {
       printWin.webContents.once("did-finish-load", resolve);
@@ -1509,7 +1513,7 @@ ipcMain.handle("export-pdf", async (_event, { scenarioId, snapshotIds }) => {
         reject(new Error(`Print view failed to load: ${desc} (${code})`))
       );
       printWin.loadURL(
-        `app://./index.html?view=print&scenarioId=${encodeURIComponent(scenarioId)}${snapshotsQuery}`
+        `app://./index.html?view=print&scenarioId=${encodeURIComponent(scenarioId)}${snapshotsQuery}${waterfallQuery}${costbenQuery}`
       );
     });
 

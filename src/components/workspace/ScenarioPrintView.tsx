@@ -90,13 +90,28 @@ const SNAPSHOT_TYPE_LABEL_KEYS: Record<string, string> = {
   cost_benefit: "snapshot_type_cost_benefit",
 };
 
+type SurfaceKey = "hazard" | "exposure" | "impact" | "adaptation" | "other";
+
 interface SnapshotFigure {
   id: string;
   title: string | null;
   caption: string | null;
   snapshotType: string;
+  surface: SurfaceKey;
   imageUrl: string;
 }
+
+type SurfaceCounts = Record<SurfaceKey, number>;
+const EMPTY_SURFACE_COUNTS: SurfaceCounts = {
+  hazard: 0,
+  exposure: 0,
+  impact: 0,
+  adaptation: 0,
+  other: 0,
+};
+
+const surfaceKey = (snap: Pick<SnapshotItem, "surface">): SurfaceKey =>
+  (snap.surface ?? "other") as SurfaceKey;
 
 const shortSha = (value?: string | null): string | undefined => {
   if (!value) return undefined;
@@ -177,9 +192,13 @@ const SectionHeading = ({ children }: { children: React.ReactNode }) => (
 const ScenarioPrintView = ({
   scenarioId,
   snapshotIds,
+  includeWaterfall = true,
+  includeCostBenefit = true,
 }: {
   scenarioId: string;
   snapshotIds?: string[];
+  includeWaterfall?: boolean;
+  includeCostBenefit?: boolean;
 }) => {
   const { i18n, t } = useTranslation();
   const locale = i18n.language;
@@ -190,6 +209,8 @@ const ScenarioPrintView = ({
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [figures, setFigures] = useState<SnapshotFigure[]>([]);
+  const [availableSurfaceCounts, setAvailableSurfaceCounts] =
+    useState<SurfaceCounts>(EMPTY_SURFACE_COUNTS);
   const [snapshotsResolved, setSnapshotsResolved] = useState(false);
   const [imagesSettled, setImagesSettled] = useState(0);
   // `undefined` = IPC pending; `null` = resolved with no/failed username
@@ -253,14 +274,6 @@ const ScenarioPrintView = ({
   }, []);
 
   useEffect(() => {
-    const ids = snapshotIdsKey ? snapshotIdsKey.split(",") : [];
-    if (ids.length === 0) {
-      setFigures([]);
-      setSnapshotsResolved(true);
-      setImagesSettled(0);
-      return;
-    }
-
     let cancelled = false;
     const createdUrls: string[] = [];
 
@@ -280,13 +293,31 @@ const ScenarioPrintView = ({
             error: listResp.success ? listResp.result?.status : listResp.error,
           });
           setFigures([]);
+          setAvailableSurfaceCounts(EMPTY_SURFACE_COUNTS);
           setSnapshotsResolved(true);
           return;
         }
 
-        const byId = new Map<string, SnapshotItem>(
-          (listResp.result.data ?? []).map((s) => [s.id, s])
-        );
+        const all = listResp.result.data ?? [];
+        // Count only what the user could have picked: the picker shows
+        // map-type snapshots, so the "available but not selected" notice
+        // mirrors that surface.
+        const counts: SurfaceCounts = { ...EMPTY_SURFACE_COUNTS };
+        for (const s of all) {
+          if (s.snapshot_type !== "map") continue;
+          counts[surfaceKey(s)] += 1;
+        }
+        setAvailableSurfaceCounts(counts);
+
+        const ids = snapshotIdsKey ? snapshotIdsKey.split(",") : [];
+        if (ids.length === 0) {
+          setFigures([]);
+          setSnapshotsResolved(true);
+          setImagesSettled(0);
+          return;
+        }
+
+        const byId = new Map<string, SnapshotItem>(all.map((s) => [s.id, s]));
         const ordered = ids.map((id) => byId.get(id)).filter((s): s is SnapshotItem => Boolean(s));
 
         const fetched = await Promise.all(
@@ -302,6 +333,7 @@ const ScenarioPrintView = ({
                 title: snap.title ?? null,
                 caption: snap.caption ?? null,
                 snapshotType: snap.snapshot_type,
+                surface: surfaceKey(snap),
                 imageUrl: url,
               };
             } catch (err: unknown) {
@@ -325,6 +357,7 @@ const ScenarioPrintView = ({
           error: err instanceof Error ? err.message : String(err),
         });
         setFigures([]);
+        setAvailableSurfaceCounts(EMPTY_SURFACE_COUNTS);
         setSnapshotsResolved(true);
       }
     })();
@@ -374,6 +407,23 @@ const ScenarioPrintView = ({
   );
 
   const hasCostbenMeasures = !!(costbenData && costbenData.measures.length > 0);
+  const showWaterfall = includeWaterfall && Boolean(waterfallData);
+  const showCostBenefit = includeCostBenefit && hasCostbenMeasures;
+
+  const figuresBySurface = useMemo(() => {
+    const buckets: Record<SurfaceKey, SnapshotFigure[]> = {
+      hazard: [],
+      exposure: [],
+      impact: [],
+      adaptation: [],
+      other: [],
+    };
+    for (const fig of figures) buckets[fig.surface].push(fig);
+    return buckets;
+  }, [figures]);
+
+  const hasOtherVisuals = figuresBySurface.other.length > 0;
+
   const tocEntries = useMemo(() => {
     const entries = [
       t("print_section_input_parameters"),
@@ -381,11 +431,17 @@ const ScenarioPrintView = ({
       t("print_section_hazard"),
       t("print_section_exposure"),
     ];
+    // Impact / Cost-Benefit TOC entries still appear when their data is
+    // present even if the chart toggle is unchecked, because the section
+    // itself still renders (description + slot).
+    // Section keeps its TOC entry whenever the data exists; the chart toggle
+    // only suppresses the chart, not the surrounding description and slot.
     if (waterfallData) entries.push(t("print_section_impact"));
     if (hasCostbenMeasures) entries.push(t("print_section_cost_benefit_adaptation"));
+    if (hasOtherVisuals) entries.push(t("print_section_other_visuals"));
     entries.push(t("print_section_methodology"), t("print_section_disclaimer"));
     return entries;
-  }, [t, waterfallData, hasCostbenMeasures]);
+  }, [t, waterfallData, hasCostbenMeasures, hasOtherVisuals]);
 
   const dateString = useMemo(
     () =>
@@ -436,10 +492,10 @@ const ScenarioPrintView = ({
   const horizon =
     meta.ref_year && meta.future_year ? `${meta.ref_year} – ${meta.future_year}` : "—";
 
-  // Counters mutate during the single render pass and never escape it; the
-  // global Figure counter is continued by the snapshot block at the bottom
-  // so the follow-up issue can route snapshots into per-domain slots
-  // without re-numbering.
+  // Counters mutate during the single render pass and never escape it. The
+  // global Figure counter is incremented in DOM order across the auto chart
+  // figures and the per-surface snapshot slots, so numbering stays
+  // continuous regardless of which sections are populated.
   let tableCount = 0;
   let figureCount = 0;
   const nextTableNumber = () => ++tableCount;
@@ -461,6 +517,66 @@ const ScenarioPrintView = ({
     renderCaption("table", number, descriptionKey);
   const renderFigureCaption = (number: number, descriptionKey: string) =>
     renderCaption("figure", number, descriptionKey);
+
+  const renderSnapshotFigure = (fig: SnapshotFigure) => {
+    const figureLabel = t("figure_label", { number: nextFigureNumber() });
+    const typeKey = SNAPSHOT_TYPE_LABEL_KEYS[fig.snapshotType];
+    const typeLabel = typeKey ? t(typeKey) : fig.snapshotType.replace(/_/g, " ");
+    const headingText = fig.title
+      ? `${figureLabel} — ${fig.title}`
+      : `${figureLabel} — ${typeLabel}`;
+    return (
+      <Box
+        key={fig.id}
+        data-testid={`snapshot-figure-${fig.id}`}
+        sx={{ mb: 3, "@media print": { pageBreakInside: "avoid" } }}
+      >
+        <Typography variant="subtitle1" gutterBottom>
+          {headingText}
+        </Typography>
+        <Box
+          component="img"
+          src={fig.imageUrl}
+          alt={fig.title ?? typeLabel}
+          onLoad={onImageSettled}
+          onError={onImageSettled}
+          sx={{
+            display: "block",
+            maxWidth: "100%",
+            maxHeight: "80vh",
+            "@media print": { pageBreakInside: "avoid" },
+          }}
+        />
+        {fig.caption && (
+          <Typography variant="caption" sx={{ display: "block", fontStyle: "italic", mt: 0.5 }}>
+            {fig.caption}
+          </Typography>
+        )}
+      </Box>
+    );
+  };
+
+  // Section slot contents: per-surface snapshots, or — when the scenario has
+  // map snapshots in this surface that the user did not pick — a single
+  // italic line telling the reader they exist in the application.
+  const renderSlotContents = (surface: SurfaceKey, sectionLabel: string) => {
+    const surfaceFigures = figuresBySurface[surface];
+    if (surfaceFigures.length > 0) {
+      return surfaceFigures.map((fig) => renderSnapshotFigure(fig));
+    }
+    if (availableSurfaceCounts[surface] > 0) {
+      return (
+        <Typography
+          variant="body2"
+          data-testid={`snapshots-available-note-${surface}`}
+          sx={{ fontStyle: "italic", mt: 1 }}
+        >
+          {t("print_section_snapshots_available_note", { section: sectionLabel })}
+        </Typography>
+      );
+    }
+    return null;
+  };
 
   return (
     <>
@@ -667,7 +783,9 @@ const ScenarioPrintView = ({
           <Typography variant="body2" sx={{ mb: 1 }}>
             {t("print_section_hazard_description")}
           </Typography>
-          <div data-testid="snapshots-slot-hazard" />
+          <Box data-testid="snapshots-slot-hazard">
+            {renderSlotContents("hazard", t("print_section_hazard"))}
+          </Box>
         </Box>
 
         {/* Section 6 — Exposure */}
@@ -679,7 +797,9 @@ const ScenarioPrintView = ({
           <Typography variant="body2" sx={{ mb: 1 }}>
             {t("print_section_exposure_description")}
           </Typography>
-          <div data-testid="snapshots-slot-exposure" />
+          <Box data-testid="snapshots-slot-exposure">
+            {renderSlotContents("exposure", t("print_section_exposure"))}
+          </Box>
         </Box>
 
         {/* Section 7 — Impact */}
@@ -693,10 +813,14 @@ const ScenarioPrintView = ({
           </Typography>
           {waterfallData ? (
             <>
-              <Box sx={{ height: 380, mb: 1 }}>
-                <WaterfallChartView data={waterfallData} />
-              </Box>
-              {renderFigureCaption(nextFigureNumber(), "print_caption_figure_waterfall")}
+              {showWaterfall && (
+                <>
+                  <Box sx={{ height: 380, mb: 1 }}>
+                    <WaterfallChartView data={waterfallData} />
+                  </Box>
+                  {renderFigureCaption(nextFigureNumber(), "print_caption_figure_waterfall")}
+                </>
+              )}
 
               <Table size="small" data-testid="print-risk-table" sx={{ mt: 2 }}>
                 <TableHead>
@@ -742,7 +866,9 @@ const ScenarioPrintView = ({
               {t("print_section_no_results")}
             </Typography>
           )}
-          <div data-testid="snapshots-slot-impact" />
+          <Box data-testid="snapshots-slot-impact">
+            {renderSlotContents("impact", t("print_section_impact"))}
+          </Box>
         </Box>
 
         {/* Section 8 — Cost-Benefit / Adaptation */}
@@ -754,7 +880,7 @@ const ScenarioPrintView = ({
           <Typography variant="body2" sx={{ mb: 1 }}>
             {t("print_section_cost_benefit_description")}
           </Typography>
-          {costbenData && costbenData.measures.length > 0 ? (
+          {showCostBenefit && costbenData && (
             <>
               <Box sx={{ height: 380, mb: 1 }}>
                 <CostBenefitChartView data={costbenData} />
@@ -799,62 +925,31 @@ const ScenarioPrintView = ({
               </Table>
               {renderTableCaption(nextTableNumber(), "print_caption_table_cost_benefit_summary")}
             </>
-          ) : (
+          )}
+          {!hasCostbenMeasures && (
             <Typography variant="body2" color="text.secondary" data-testid="print-costben-missing">
               {t("print_section_no_results")}
             </Typography>
           )}
-          <div data-testid="snapshots-slot-cost-benefit" />
+          <Box data-testid="snapshots-slot-cost-benefit">
+            {renderSlotContents("adaptation", t("print_section_cost_benefit_adaptation"))}
+          </Box>
         </Box>
 
-        {/* Snapshot figures render here transitionally; the follow-up
-            issue routes them into the per-domain slots above while
-            continuing this global Figure counter. */}
-        <Box
-          data-testid="snapshots-slot"
-          sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}
-        >
-          {figures.map((fig) => {
-            const figureLabel = t("figure_label", { number: nextFigureNumber() });
-            const typeKey = SNAPSHOT_TYPE_LABEL_KEYS[fig.snapshotType];
-            const typeLabel = typeKey ? t(typeKey) : fig.snapshotType.replace(/_/g, " ");
-            const headingText = fig.title
-              ? `${figureLabel} — ${fig.title}`
-              : `${figureLabel} — ${typeLabel}`;
-            return (
-              <Box
-                key={fig.id}
-                data-testid={`snapshot-figure-${fig.id}`}
-                sx={{ mb: 3, "@media print": { pageBreakInside: "avoid" } }}
-              >
-                <Typography variant="subtitle1" gutterBottom>
-                  {headingText}
-                </Typography>
-                <Box
-                  component="img"
-                  src={fig.imageUrl}
-                  alt={fig.title ?? typeLabel}
-                  onLoad={onImageSettled}
-                  onError={onImageSettled}
-                  sx={{
-                    display: "block",
-                    maxWidth: "100%",
-                    maxHeight: "80vh",
-                    "@media print": { pageBreakInside: "avoid" },
-                  }}
-                />
-                {fig.caption && (
-                  <Typography
-                    variant="caption"
-                    sx={{ display: "block", fontStyle: "italic", mt: 0.5 }}
-                  >
-                    {fig.caption}
-                  </Typography>
-                )}
-              </Box>
-            );
-          })}
-        </Box>
+        {/* Other Visuals — rendered only when at least one selected snapshot
+            had no surface tag. Sits between Cost-Benefit and Methodology so
+            the per-domain ordering above stays intact. */}
+        {hasOtherVisuals && (
+          <Box
+            data-testid="print-section-other-visuals"
+            sx={{ mb: 4, "@media print": { pageBreakInside: "avoid" } }}
+          >
+            <SectionHeading>{t("print_section_other_visuals")}</SectionHeading>
+            <Box data-testid="snapshots-slot-other">
+              {figuresBySurface.other.map((fig) => renderSnapshotFigure(fig))}
+            </Box>
+          </Box>
+        )}
 
         {/* Section 9 — Methodology & Provenance */}
         <Box

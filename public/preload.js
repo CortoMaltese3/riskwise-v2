@@ -52,6 +52,8 @@ contextBridge.exposeInMainWorld("electron", {
     ipcRenderer.invoke("export-pdf", {
       scenarioId,
       snapshotIds: Array.isArray(options?.snapshotIds) ? options.snapshotIds : [],
+      includeWaterfall: options?.includeWaterfall !== false,
+      includeCostBenefit: options?.includeCostBenefit !== false,
     }),
 
   // Workspace export/import (issue #82): main process shows the OS save/open
