@@ -1145,6 +1145,8 @@ export interface components {
             isEra?: boolean | null;
             /** Scenario */
             scenario?: string | null;
+            /** Selectedmeasureids */
+            selectedMeasureIds?: string[] | null;
             /** Timehorizon */
             timeHorizon?: number[] | null;
         } & {

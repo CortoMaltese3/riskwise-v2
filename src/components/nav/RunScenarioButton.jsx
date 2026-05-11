@@ -5,13 +5,10 @@ import { Box, Button } from "@mui/material";
 import LoadingButton from "@mui/lab/LoadingButton";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 
-import RiskWiseClient from "../../lib/RiskWiseClient";
 import SaveScenarioDialog from "../workspace/SaveScenarioDialog";
 import { useReportTools } from "../../utils/reportTools";
-import useResultsStore from "../../store/useResultsStore";
-import useUIStore from "../../store/useUIStore";
+import useRunScenario from "../../hooks/useRunScenario";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
-import { TABS } from "../main/tabs";
 
 const RunScenarioButton = () => {
   const { t } = useTranslation();
@@ -21,28 +18,18 @@ const RunScenarioButton = () => {
   const selectedAnnualGrowth = useWorkspaceStore((s) => s.selectedAnnualGrowth);
   const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
   const selectedExposure = useWorkspaceStore((s) => s.selectedExposure);
-  const selectedExposureCategory = useWorkspaceStore((s) => s.selectedExposureCategory);
   const selectedExposureFile = useWorkspaceStore((s) => s.selectedExposureFile);
   const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
   const selectedHazardFile = useWorkspaceStore((s) => s.selectedHazardFile);
   const selectedScenario = useWorkspaceStore((s) => s.selectedScenario);
   const selectedTimeHorizon = useWorkspaceStore((s) => s.selectedTimeHorizon);
-  const setScenarioRunCode = useWorkspaceStore((s) => s.setScenarioRunCode);
-  const setMapTitle = useUIStore((s) => s.setMapTitle);
-  const setAlertMessage = useUIStore((s) => s.setAlertMessage);
-  const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
-  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
-  const setError = useUIStore((s) => s.setError);
-  const setSelectedReport = useUIStore((s) => s.setSelectedReport);
-  const setSelectedTab = useUIStore((s) => s.setSelectedTab);
-  const setIsScenarioRunning = useResultsStore((s) => s.setIsScenarioRunning);
-  const setIsScenarioRunCompleted = useResultsStore((s) => s.setIsScenarioRunCompleted);
 
   const [isRunButtonLoading, setIsRunButtonLoading] = useState(false);
   const [isRunButtonDisabled, setIsRunButtonDisabled] = useState(true);
   const [saveDialog, setSaveDialog] = useState({ open: false, id: null, name: "" });
   const { fetchReports } = useReportTools();
   const reloadWorkspaceScenarios = useWorkspaceStore((s) => s.loadScenarios);
+  const { runScenario } = useRunScenario();
 
   const handleRunButton = () => {
     if (
@@ -74,46 +61,10 @@ const RunScenarioButton = () => {
   ]);
 
   const onRunHandler = () => {
-    const body = {
-      annualGrowth: selectedAnnualGrowth,
-      countryName: selectedCountry,
-      // Custom uploads with no category default to "economic" so the engine's
-      // display rounding stays consistent.
-      assetType: selectedExposureCategory ?? "economic",
-      exposureType: selectedExposure,
-      exposureFile: selectedExposureFile,
-      hazardType: selectedHazard,
-      isEra: selectedAppOption === "era",
-      hazardFile: selectedHazardFile,
-      scenario: selectedScenario,
-      timeHorizon: selectedTimeHorizon,
-    };
     setIsRunButtonDisabled(true);
     setIsRunButtonLoading(true);
-    setIsScenarioRunning(true);
-    setSelectedReport(null);
-    RiskWiseClient.runScenario(body)
-      .then((response) => {
-        setIsRunButtonLoading(false);
-        setIsRunButtonDisabled(false);
-        setIsScenarioRunning(false);
-        if (!response.success) {
-          setError(response.error);
-          return;
-        }
-        setAlertMessage(response.result.status.message);
-        response.result.status.code === 2000
-          ? setAlertSeverity("success")
-          : setAlertSeverity("error");
-        setAlertShowMessage(true);
-        setMapTitle(response.result.data.mapTitle);
-        setScenarioRunCode(response.result.data.scenarioId);
-        setIsScenarioRunCompleted(true);
-        // Land the user on the analysis tab so the map/chart toggle and the
-        // newly-generated geodata are visible the moment the save dialog
-        // closes. Without this they stay on the Parameters tab (Input
-        // Selection) and only see the toggle after navigating away and back.
-        setSelectedTab(TABS.RISK);
+    runScenario({
+      onSuccess: (response) => {
         if (response.result.data.scenarioId) {
           setSaveDialog({
             open: true,
@@ -121,18 +72,11 @@ const RunScenarioButton = () => {
             name: response.result.data.mapTitle || "",
           });
         }
-      })
-      .catch((error) => {
-        setIsRunButtonLoading(false);
-        setIsRunButtonDisabled(false);
-        setIsScenarioRunning(false);
-        setError({
-          code: "renderer_error",
-          message: error?.message || "Unexpected failure in renderer",
-          detail: null,
-          error_id: crypto.randomUUID(),
-        });
-      });
+      },
+    }).finally(() => {
+      setIsRunButtonLoading(false);
+      setIsRunButtonDisabled(false);
+    });
   };
 
   return (
