@@ -201,7 +201,8 @@ class RunScenario:
         try:
             config = load_country_config(self.request_data.country_code)
         except CountryConfigError as exc:
-            self.logger.error(f"Country config unavailable for {self.request_data.country_code}; "
+            self.logger.error(
+                f"Country config unavailable for {self.request_data.country_code}; "
                 f"defaulting growth rate to 0. More info: {exc}",
             )
             return 0.0
@@ -283,15 +284,18 @@ class RunScenario:
             hazard_present,
             entity_present,
             hazard_future,
-            entity_future,
             self.request_data.future_year,
         )
 
-        if is_future:
+        if cost_benefit:
             update_progress(50, "Computing cost-benefit chart data...")
             self.costben_handler.compute_cost_benefit_data(
-                cost_benefit, entity_present, entity_future
+                cost_benefit,
+                entity_present,
+                self.request_data.future_year,
+                entity_future,
             )
+        if is_future:
             update_progress(55, "Computing waterfall chart data...")
             self.costben_handler.compute_waterfall_data(
                 cost_benefit, hazard_present, entity_present, hazard_future, entity_future
@@ -331,9 +335,7 @@ class RunScenario:
             exposure_active,
             self.request_data.country_name,
         )
-        save_parquet_file(
-            exp_rep_df, DATA_TEMP_DIR / "exposure_report_data.parquet"
-        )
+        save_parquet_file(exp_rep_df, DATA_TEMP_DIR / "exposure_report_data.parquet")
 
         update_progress(90, "Generating Hazard report data files...")
         haz_rep_df = self.hazard_handler.generate_hazard_report_dataset(
@@ -341,9 +343,7 @@ class RunScenario:
             self.request_data.country_name,
             return_periods,
         )
-        save_parquet_file(
-            haz_rep_df, DATA_TEMP_DIR / "hazard_report_data.parquet"
-        )
+        save_parquet_file(haz_rep_df, DATA_TEMP_DIR / "hazard_report_data.parquet")
 
         update_progress(95, "Generating Impact report data files...")
         imp_rep_df = self.impact_handler.generate_impact_report_dataset(
@@ -353,9 +353,7 @@ class RunScenario:
             return_periods,
             self.request_data.asset_type,
         )
-        save_parquet_file(
-            imp_rep_df, DATA_TEMP_DIR / "impact_report_data.parquet"
-        )
+        save_parquet_file(imp_rep_df, DATA_TEMP_DIR / "impact_report_data.parquet")
 
         update_progress(100, "Scenario run successfully.")
 
@@ -392,19 +390,22 @@ class RunScenario:
         exposure_type = self.request_data.exposure_type
 
         def _run_exposure() -> str:
-            self.logger.info(f"Generating exposure geojson on thread {threading.current_thread().name}",
+            self.logger.info(
+                f"Generating exposure geojson on thread {threading.current_thread().name}",
             )
             self.exposure_handler.generate_exposure_geojson(exposure_active, country_name)
             return "exposure_ready"
 
         def _run_hazard() -> str:
-            self.logger.info(f"Generating hazard geojson on thread {threading.current_thread().name}",
+            self.logger.info(
+                f"Generating hazard geojson on thread {threading.current_thread().name}",
             )
             self.hazard_handler.generate_hazard_geojson(hazard_active, country_name, return_periods)
             return "hazard_ready"
 
         def _run_impact() -> str:
-            self.logger.info(f"Generating impact geojson on thread {threading.current_thread().name}",
+            self.logger.info(
+                f"Generating impact geojson on thread {threading.current_thread().name}",
             )
             self.impact_handler.generate_impact_geojson(
                 impact_active,
@@ -426,7 +427,14 @@ class RunScenario:
             for future in as_completed(futures):
                 try:
                     step = future.result()
-                except (OSError, ValueError, KeyError, AttributeError, TypeError, RuntimeError) as exc:
+                except (
+                    OSError,
+                    ValueError,
+                    KeyError,
+                    AttributeError,
+                    TypeError,
+                    RuntimeError,
+                ) as exc:
                     # GeoJSON generation runs CLIMADA-adjacent code in a
                     # worker thread; failures here are isolated so the
                     # other partials can still render.
@@ -451,7 +459,8 @@ class RunScenario:
         is shared.
         """
         initial_time = time()
-        self.logger.info(f"Running new {'ERA' if self.request_data.is_era else 'custom'} scenario for "
+        self.logger.info(
+            f"Running new {'ERA' if self.request_data.is_era else 'custom'} scenario for "
             f"{self.request_data.hazard_type} hazard affecting "
             f"{self.request_data.exposure_type} in "
             f"{self.request_data.country_name} for a {self.request_data.scenario}.",
@@ -676,7 +685,8 @@ class RunScenario:
             )
             return scenario_id
         except (duckdb.Error, OSError, ValueError, KeyError, TypeError) as exc:
-            self.logger.error(f"Failed to persist scenario to DuckDB. More info: {exc}",
+            self.logger.error(
+                f"Failed to persist scenario to DuckDB. More info: {exc}",
             )
             return None
 
