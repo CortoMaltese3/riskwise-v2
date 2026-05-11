@@ -136,6 +136,7 @@ const mockElectron = (username: string | null = "alice") => {
 interface SnapshotFixture {
   id: string;
   snapshot_type: string;
+  surface?: "hazard" | "exposure" | "impact" | "adaptation" | null;
   title?: string | null;
   caption?: string | null;
 }
@@ -152,6 +153,7 @@ const mockSnapshots = (
         id: s.id,
         scenario_id: "scn-1",
         snapshot_type: s.snapshot_type,
+        surface: s.surface ?? null,
         title: s.title ?? null,
         caption: s.caption ?? null,
         created_at: "2026-04-20T10:00:00Z",
@@ -173,6 +175,13 @@ const mockSnapshots = (
 beforeEach(() => {
   delete (document.body.dataset as Record<string, string | undefined>).printReady;
   listSnapshotsMock.mockReset();
+  // Default to an empty snapshot list so the surface-count effect (#364)
+  // always resolves cleanly; tests that need specific snapshots override
+  // this via mockSnapshots().
+  listSnapshotsMock.mockResolvedValue({
+    success: true,
+    result: { status: { code: 2000 }, data: [] },
+  });
   mockElectron("alice");
   // jsdom doesn't implement object URLs; stub so blob URLs are observable in
   // assertions and revocation can be tracked across test boundaries.
@@ -484,58 +493,165 @@ describe("ScenarioPrintView", () => {
     await waitFor(() => expect(document.body.dataset.printReady).toBe("true"));
   });
 
-  it("leaves snapshots-slot empty when snapshotIds is empty", async () => {
+  it("leaves the per-surface slots empty when snapshotIds is empty and scenario has none", async () => {
     mockScenario({
       scenario: meta,
       results: { waterfall_data: JSON.stringify(waterfall) },
     });
+    mockSnapshots([]);
 
     render(<ScenarioPrintView scenarioId="scn-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("snapshots-slot")).toBeInTheDocument());
-    expect(screen.getByTestId("snapshots-slot")).toBeEmptyDOMElement();
-    expect(listSnapshotsMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByTestId("snapshots-slot-hazard")).toBeEmptyDOMElement());
+    expect(screen.getByTestId("snapshots-slot-exposure")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("snapshots-slot-impact")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("snapshots-slot-cost-benefit")).toBeEmptyDOMElement();
   });
 
-  it("renders snapshots continuing the global Figure counter after chart figures", async () => {
+  it("routes a hazard snapshot into the hazard slot", async () => {
     mockScenario({
       scenario: meta,
       results: { waterfall_data: JSON.stringify(waterfall) },
     });
     mockSnapshots([
-      { id: "snap-3", snapshot_type: "map", title: "Third pick", caption: "third caption" },
-      { id: "snap-1", snapshot_type: "waterfall", title: "First pick", caption: "first caption" },
-      {
-        id: "snap-2",
-        snapshot_type: "cost_benefit",
-        title: "Second pick",
-        caption: "second caption",
-      },
+      { id: "snap-h", snapshot_type: "map", surface: "hazard", title: "Hazard map", caption: "h" },
     ]);
 
-    render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-1", "snap-2", "snap-3"]} />);
+    render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-h"]} />);
 
-    await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-1")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-h")).toBeInTheDocument());
+    const slot = screen.getByTestId("snapshots-slot-hazard");
+    expect(within(slot).getByTestId("snapshot-figure-snap-h")).toBeInTheDocument();
+    // Not in any other surface slot.
+    expect(
+      within(screen.getByTestId("snapshots-slot-impact")).queryByTestId("snapshot-figure-snap-h")
+    ).not.toBeInTheDocument();
+  });
 
-    const slot = screen.getByTestId("snapshots-slot");
+  it("routes two impact snapshots into the impact slot and continues figure numbering", async () => {
+    mockScenario({
+      scenario: meta,
+      results: { waterfall_data: JSON.stringify(waterfall) },
+    });
+    mockSnapshots([
+      { id: "snap-i1", snapshot_type: "map", surface: "impact", title: "Impact 1", caption: "i1" },
+      { id: "snap-i2", snapshot_type: "map", surface: "impact", title: "Impact 2", caption: "i2" },
+    ]);
+
+    render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-i1", "snap-i2"]} />);
+
+    await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-i1")).toBeInTheDocument());
+
+    const slot = screen.getByTestId("snapshots-slot-impact");
     const figures = within(slot).getAllByTestId(/^snapshot-figure-/);
     expect(figures.map((f) => f.getAttribute("data-testid"))).toEqual([
-      "snapshot-figure-snap-1",
-      "snapshot-figure-snap-2",
-      "snapshot-figure-snap-3",
+      "snapshot-figure-snap-i1",
+      "snapshot-figure-snap-i2",
     ]);
 
-    // Waterfall chart is Figure 1; snapshots continue at Figure 2, 3, 4.
-    expect(within(figures[0]).getByText(/figure_label\|number=2.*First pick/)).toBeInTheDocument();
-    expect(within(figures[1]).getByText(/figure_label\|number=3.*Second pick/)).toBeInTheDocument();
-    expect(within(figures[2]).getByText(/figure_label\|number=4.*Third pick/)).toBeInTheDocument();
-
-    expect(within(figures[0]).getByText("first caption")).toBeInTheDocument();
-    expect(within(figures[1]).getByText("second caption")).toBeInTheDocument();
-    expect(within(figures[2]).getByText("third caption")).toBeInTheDocument();
+    // Waterfall chart is Figure 1; impact snapshots continue at 2 and 3.
+    expect(within(figures[0]).getByText(/figure_label\|number=2.*Impact 1/)).toBeInTheDocument();
+    expect(within(figures[1]).getByText(/figure_label\|number=3.*Impact 2/)).toBeInTheDocument();
 
     flushImageLoads();
     await waitFor(() => expect(document.body.dataset.printReady).toBe("true"));
+  });
+
+  it("removes the waterfall chart and its caption when waterfall toggle is off", async () => {
+    mockScenario({
+      scenario: meta,
+      results: { waterfall_data: JSON.stringify(waterfall) },
+    });
+    mockSnapshots([]);
+
+    render(<ScenarioPrintView scenarioId="scn-1" includeWaterfall={false} />);
+
+    await waitFor(() => expect(screen.getByTestId("print-section-impact")).toBeInTheDocument());
+    expect(screen.queryByTestId("waterfall-chart")).not.toBeInTheDocument();
+
+    // The risk decomposition figure caption is gone; the only figure caption
+    // left is the cost-benefit one.
+    const figureCaptions = screen.queryAllByTestId("caption-figure");
+    for (const caption of figureCaptions) {
+      expect(caption.textContent).not.toContain("print_caption_figure_waterfall");
+    }
+    // Impact section still renders description + slot.
+    expect(screen.getByTestId("snapshots-slot-impact")).toBeInTheDocument();
+  });
+
+  it("removes the cost-benefit chart and table when cost-benefit toggle is off", async () => {
+    mockScenario({
+      scenario: meta,
+      results: {
+        waterfall_data: JSON.stringify(waterfall),
+        costben_data: JSON.stringify(costben),
+      },
+    });
+    mockSnapshots([]);
+
+    render(<ScenarioPrintView scenarioId="scn-1" includeCostBenefit={false} />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("print-section-cost-benefit")).toBeInTheDocument()
+    );
+    expect(screen.queryByTestId("costben-chart")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("print-costben-table")).not.toBeInTheDocument();
+    // Section still renders description + slot.
+    expect(screen.getByTestId("snapshots-slot-cost-benefit")).toBeInTheDocument();
+  });
+
+  it("renders the available-but-not-selected notice in Exposure when snapshots exist but none picked", async () => {
+    mockScenario({ scenario: meta, results: {} });
+    mockSnapshots([
+      { id: "snap-e", snapshot_type: "map", surface: "exposure", title: "Exposure", caption: "e" },
+    ]);
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("snapshots-available-note-exposure")).toBeInTheDocument()
+    );
+    expect(screen.queryByTestId("snapshots-available-note-hazard")).not.toBeInTheDocument();
+  });
+
+  it("does not render the notice when scenario has no snapshots in that surface at all", async () => {
+    mockScenario({ scenario: meta, results: {} });
+    mockSnapshots([]);
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("print-section-hazard")).toBeInTheDocument());
+    expect(screen.queryByTestId("snapshots-available-note-hazard")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("snapshots-available-note-exposure")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("snapshots-available-note-impact")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("snapshots-available-note-adaptation")).not.toBeInTheDocument();
+  });
+
+  it("renders an uncategorized snapshot in the Other Visuals section", async () => {
+    mockScenario({ scenario: meta, results: {} });
+    mockSnapshots([
+      { id: "snap-x", snapshot_type: "map", surface: null, title: "Uncategorized", caption: "x" },
+    ]);
+
+    render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-x"]} />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("print-section-other-visuals")).toBeInTheDocument()
+    );
+    const slot = screen.getByTestId("snapshots-slot-other");
+    expect(within(slot).getByTestId("snapshot-figure-snap-x")).toBeInTheDocument();
+  });
+
+  it("omits the Other Visuals section when no selected snapshot is uncategorized", async () => {
+    mockScenario({ scenario: meta, results: {} });
+    mockSnapshots([
+      { id: "snap-h", snapshot_type: "map", surface: "hazard", title: "H", caption: "h" },
+    ]);
+
+    render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-h"]} />);
+
+    await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-h")).toBeInTheDocument());
+    expect(screen.queryByTestId("print-section-other-visuals")).not.toBeInTheDocument();
   });
 
   it("falls back to the humanized snapshot type when title is missing", async () => {
@@ -543,13 +659,21 @@ describe("ScenarioPrintView", () => {
       scenario: meta,
       results: { waterfall_data: JSON.stringify(waterfall) },
     });
-    mockSnapshots([{ id: "snap-1", snapshot_type: "map", title: null, caption: "tagged caption" }]);
+    mockSnapshots([
+      {
+        id: "snap-1",
+        snapshot_type: "map",
+        surface: "impact",
+        title: null,
+        caption: "tagged caption",
+      },
+    ]);
 
     render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-1"]} />);
 
     await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-1")).toBeInTheDocument());
     const fig = screen.getByTestId("snapshot-figure-snap-1");
-    // Waterfall chart took Figure 1; this snapshot is Figure 2.
+    // Waterfall chart took Figure 1; this impact snapshot is Figure 2.
     expect(within(fig).getByText(/figure_label\|number=2.*snapshot_type_map/)).toBeInTheDocument();
     expect(within(fig).getByText("tagged caption")).toBeInTheDocument();
   });
@@ -561,9 +685,27 @@ describe("ScenarioPrintView", () => {
     });
     mockSnapshots(
       [
-        { id: "snap-1", snapshot_type: "map", title: "Kept first", caption: "k1" },
-        { id: "snap-broken", snapshot_type: "map", title: "Broken middle", caption: "x" },
-        { id: "snap-2", snapshot_type: "waterfall", title: "Kept second", caption: "k2" },
+        {
+          id: "snap-1",
+          snapshot_type: "map",
+          surface: "impact",
+          title: "Kept first",
+          caption: "k1",
+        },
+        {
+          id: "snap-broken",
+          snapshot_type: "map",
+          surface: "impact",
+          title: "Broken middle",
+          caption: "x",
+        },
+        {
+          id: "snap-2",
+          snapshot_type: "map",
+          surface: "impact",
+          title: "Kept second",
+          caption: "k2",
+        },
       ],
       ["snap-broken"]
     );
@@ -577,7 +719,7 @@ describe("ScenarioPrintView", () => {
     expect(screen.queryByTestId("snapshot-figure-snap-broken")).not.toBeInTheDocument();
 
     // Renumbering continues without gaps after the waterfall chart's Figure 1.
-    const slot = screen.getByTestId("snapshots-slot");
+    const slot = screen.getByTestId("snapshots-slot-impact");
     const figures = within(slot).getAllByTestId(/^snapshot-figure-/);
     expect(figures).toHaveLength(2);
     expect(within(figures[0]).getByText(/figure_label\|number=2.*Kept first/)).toBeInTheDocument();

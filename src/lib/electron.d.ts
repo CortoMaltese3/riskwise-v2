@@ -57,7 +57,11 @@ export interface ElectronBridge {
   getCurrentUser: () => Promise<string | null>;
   exportPdf: (
     scenarioId: string,
-    options?: { snapshotIds?: string[] }
+    options?: {
+      snapshotIds?: string[];
+      includeWaterfall?: boolean;
+      includeCostBenefit?: boolean;
+    }
   ) => Promise<{ success: boolean; filePath?: string; reason?: string }>;
   exportWorkspace: () => Promise<{
     success: boolean;

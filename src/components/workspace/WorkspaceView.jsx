@@ -120,11 +120,16 @@ const WorkspaceView = ({ initialScenarios }) => {
     return [...filtered].sort(compareBy(sortKey, sortDir));
   }, [scenarios, search, countryFilter, hazardFilter, sortKey, sortDir]);
 
-  const handleExportDialogClose = async (snapshotIds) => {
+  const handleExportDialogClose = async (payload) => {
     const target = exportTarget;
     setExportTarget(null);
-    if (!target || snapshotIds === null) return;
-    const result = await window.electron.exportPdf(target.id, { snapshotIds });
+    if (!target || payload === null) return;
+    const { snapshotIds, includeWaterfall, includeCostBenefit } = payload;
+    const result = await window.electron.exportPdf(target.id, {
+      snapshotIds,
+      includeWaterfall,
+      includeCostBenefit,
+    });
     if (result.success) {
       enqueueToast({ severity: "success", message: "PDF saved successfully." });
     } else if (result.reason !== "cancelled") {

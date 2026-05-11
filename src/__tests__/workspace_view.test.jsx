@@ -70,7 +70,18 @@ beforeEach(() => {
   listSnapshotsMock.mockReset();
   exportPdfMock.mockReset();
   window.electron = { ...(window.electron || {}), exportPdf: exportPdfMock };
-  window.api = window.api || { http: { getBaseUrl: vi.fn().mockResolvedValue("") } };
+  window.api = {
+    http: {
+      getBaseUrl: vi.fn().mockResolvedValue(""),
+      // ExportPdfDialog fetches the scenario to decide which chart-include
+      // checkboxes to render; stub a no-results response so the dialog opens
+      // without firing the toggles.
+      request: vi.fn().mockResolvedValue({
+        success: true,
+        result: { data: { scenario: { id: "s-1" }, results: {} } },
+      }),
+    },
+  };
   useWorkspaceStore.setState({
     scenarios: [],
     search: "",
