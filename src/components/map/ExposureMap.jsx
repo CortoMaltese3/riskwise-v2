@@ -84,15 +84,17 @@ const ExposureMap = () => {
   };
 
   const adminButtonStyle = (layer) => ({
-    flexGrow: 0,
-    margin: 1,
-    minWidth: 7.5,
-    maxWidth: 7.5,
+    flex: "0 0 auto",
+    minWidth: 0,
+    px: 1,
     fontSize: "0.75rem",
+    whiteSpace: "nowrap",
     bgcolor: layer === activeAdminLayer ? "primary.dark" : "primary.main",
     "&:hover": { bgcolor: "secondary.main" },
   });
 
+  // Right-anchored, gap-spaced row that wraps on narrow map widths so the
+  // group never overflows the map viewport or clips long localized labels.
   const buttonContainerSx = {
     position: "absolute",
     top: 1.25,
@@ -100,6 +102,10 @@ const ExposureMap = () => {
     zIndex: 1000,
     display: "flex",
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 0.5,
+    justifyContent: "flex-end",
+    maxWidth: (theme) => `calc(100% - ${theme.spacing(2.5)})`,
   };
 
   const countryCoordinates = {
