@@ -79,23 +79,27 @@ const SnapshotDrawer = ({ scenarioId }) => {
     }
   };
 
-  const handleCaptionCommit = async (snap, nextCaption) => {
-    const trimmed = nextCaption.trim();
+  // Generic single-field PATCH for the snapshot drawer. The title and caption
+  // fields commit independently (per #350) so each blur sends only the field
+  // it owns — the backend reads ``model_fields_set`` and leaves untouched
+  // columns alone, so this cannot accidentally null out the other value.
+  const handleFieldCommit = async (snap, field, nextValue) => {
+    const trimmed = nextValue.trim();
     const value = trimmed.length === 0 ? null : trimmed;
-    if ((snap.caption ?? null) === value) return;
+    if ((snap[field] ?? null) === value) return;
     const previous = snapshots;
     setSnapshots((current) =>
-      current.map((s) => (s.id === snap.id ? { ...s, caption: value } : s))
+      current.map((s) => (s.id === snap.id ? { ...s, [field]: value } : s))
     );
     try {
-      const response = await RiskWiseClient.updateSnapshot(snap.id, { caption: value });
+      const response = await RiskWiseClient.updateSnapshot(snap.id, { [field]: value });
       if (!(response?.success && response.result?.status?.code === 2000)) {
         setSnapshots(previous);
-        setError(response?.error?.message || "Caption update failed");
+        setError(response?.error?.message || `${field} update failed`);
       }
     } catch (err) {
       setSnapshots(previous);
-      setError(err?.message || "Caption update failed");
+      setError(err?.message || `${field} update failed`);
     }
   };
 
@@ -141,10 +145,20 @@ const SnapshotDrawer = ({ scenarioId }) => {
             />
           ) : null}
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <SnapshotCaptionField
-              snapshot={snap}
-              onCommit={(value) => handleCaptionCommit(snap, value)}
+            <SnapshotTextField
+              value={snap.title}
+              onCommit={(value) => handleFieldCommit(snap, "title", value)}
+              placeholder={t("snapshot_title_helper")}
+              ariaLabel={`title-${snap.id}`}
+              maxLength={120}
+              labelText={t("snapshot_title_label")}
+            />
+            <SnapshotTextField
+              value={snap.caption}
+              onCommit={(value) => handleFieldCommit(snap, "caption", value)}
               placeholder={t("workspace_snapshot_caption_placeholder")}
+              ariaLabel={`caption-${snap.id}`}
+              maxLength={500}
             />
             <Typography variant="caption" color="text.secondary">
               {snap.snapshot_type} · {formatCreatedAt(snap.created_at, locale)}
@@ -163,21 +177,25 @@ const SnapshotDrawer = ({ scenarioId }) => {
   );
 };
 
-const SnapshotCaptionField = ({ snapshot, onCommit, placeholder }) => {
-  const [value, setValue] = useState(snapshot.caption || "");
+// Shared inline-edit input for title and caption. A single component keeps
+// the commit-on-blur, Enter-to-blur, and controlled-input behaviour identical
+// across both fields; the parent only varies the aria-label and length cap.
+const SnapshotTextField = ({ value, onCommit, placeholder, ariaLabel, maxLength, labelText }) => {
+  const [internal, setInternal] = useState(value || "");
 
   useEffect(() => {
-    setValue(snapshot.caption || "");
-  }, [snapshot.caption]);
+    setInternal(value || "");
+  }, [value]);
 
   return (
     <TextField
       variant="standard"
       size="small"
       fullWidth
-      value={value}
+      label={labelText}
+      value={internal}
       placeholder={placeholder}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => setInternal(e.target.value)}
       onBlur={(e) => onCommit(e.target.value)}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
@@ -187,21 +205,21 @@ const SnapshotCaptionField = ({ snapshot, onCommit, placeholder }) => {
       }}
       slotProps={{
         htmlInput: {
-          "aria-label": `caption-${snapshot.id}`,
-          maxLength: 500,
+          "aria-label": ariaLabel,
+          maxLength,
         },
       }}
     />
   );
 };
 
-SnapshotCaptionField.propTypes = {
-  snapshot: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    caption: PropTypes.string,
-  }).isRequired,
+SnapshotTextField.propTypes = {
+  value: PropTypes.string,
   onCommit: PropTypes.func.isRequired,
   placeholder: PropTypes.string.isRequired,
+  ariaLabel: PropTypes.string.isRequired,
+  maxLength: PropTypes.number.isRequired,
+  labelText: PropTypes.string,
 };
 
 SnapshotDrawer.propTypes = {

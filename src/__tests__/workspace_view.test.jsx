@@ -5,6 +5,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 const deleteScenarioMock = vi.fn();
 const patchScenarioMock = vi.fn();
 const listSnapshotsMock = vi.fn();
+const exportPdfMock = vi.fn();
 
 vi.mock("../lib/RiskWiseClient", () => ({
   default: {
@@ -15,6 +16,7 @@ vi.mock("../lib/RiskWiseClient", () => ({
     deleteScenario: (...args) => deleteScenarioMock(...args),
     patchScenario: (...args) => patchScenarioMock(...args),
     listSnapshots: (...args) => listSnapshotsMock(...args),
+    snapshotImageUrl: (id) => `/api/v1/snapshots/${id}/image`,
   },
 }));
 
@@ -66,6 +68,9 @@ beforeEach(() => {
   deleteScenarioMock.mockReset();
   patchScenarioMock.mockReset();
   listSnapshotsMock.mockReset();
+  exportPdfMock.mockReset();
+  window.electron = { ...(window.electron || {}), exportPdf: exportPdfMock };
+  window.api = window.api || { http: { getBaseUrl: vi.fn().mockResolvedValue("") } };
   useWorkspaceStore.setState({
     scenarios: [],
     search: "",
@@ -112,6 +117,22 @@ describe("WorkspaceView", () => {
     renderView([]);
     expect(screen.getByText(/no scenarios yet/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /run your first scenario/i })).toBeInTheDocument();
+  });
+
+  it("opens the export-pdf dialog instead of firing IPC immediately", async () => {
+    listSnapshotsMock.mockResolvedValue({
+      success: true,
+      result: { status: { code: 2000 }, data: [] },
+    });
+
+    renderView();
+
+    fireEvent.click(screen.getByLabelText("actions-s-1"));
+    fireEvent.click(screen.getByText("Export PDF"));
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    expect(exportPdfMock).not.toHaveBeenCalled();
+    expect(listSnapshotsMock).toHaveBeenCalledWith("s-1");
   });
 
   it("calls patchScenario on Enter after double-clicking the name cell", async () => {

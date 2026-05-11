@@ -46,7 +46,11 @@ contextBridge.exposeInMainWorld("electron", {
 
   openReport: (reportPath) => ipcRenderer.invoke("open-report", reportPath),
 
-  exportPdf: (scenarioId) => ipcRenderer.invoke("export-pdf", { scenarioId }),
+  exportPdf: (scenarioId, options) =>
+    ipcRenderer.invoke("export-pdf", {
+      scenarioId,
+      snapshotIds: Array.isArray(options?.snapshotIds) ? options.snapshotIds : [],
+    }),
 
   // Workspace export/import (issue #82): main process shows the OS save/open
   // dialog and delegates build/merge to the backend. Renderer only triggers

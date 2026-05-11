@@ -31,7 +31,12 @@ from backend.db.scenario_store import (
     patch_scenario_metadata,
     read_result_blobs,
     update_scenario_metadata,
-    update_snapshot_caption,
+    update_snapshot,
+)
+from backend.db.user_settings_store import (
+    UserSettingsRow,
+    get_user_settings,
+    update_user_settings,
 )
 
 __all__ = [
@@ -44,6 +49,7 @@ __all__ = [
     "ScenarioNotFound",
     "ScenarioRow",
     "SnapshotRow",
+    "UserSettingsRow",
     "create_snapshot",
     "delete_scenario",
     "delete_snapshot",
@@ -51,6 +57,7 @@ __all__ = [
     "get_scenario",
     "get_scenario_snapshots_with_image",
     "get_snapshot_image",
+    "get_user_settings",
     "insert_scenario",
     "list_scenarios",
     "list_snapshots",
@@ -60,5 +67,6 @@ __all__ = [
     "run_migrations",
     "run_startup_migrations",
     "update_scenario_metadata",
-    "update_snapshot_caption",
+    "update_snapshot",
+    "update_user_settings",
 ]

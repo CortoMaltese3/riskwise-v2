@@ -105,6 +105,8 @@ from backend.models import (
     TempClearResponse,
     UpdateSnapshotRequest,
     UpdateSnapshotResponse,
+    UpdateUserSettingsRequest,
+    UserSettingsResponse,
     WaterfallResponse,
     WorkspaceExportResponse,
     WorkspaceImportRequest,
@@ -418,6 +420,35 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get(f"{API_PREFIX}/settings", response_model=UserSettingsResponse)
+async def get_settings_endpoint() -> dict:
+    from dataclasses import asdict
+
+    from backend.db import get_user_settings
+
+    row = await asyncio.to_thread(get_user_settings)
+    return {"data": asdict(row), "status": _status_ok()}
+
+
+@app.patch(f"{API_PREFIX}/settings", response_model=UserSettingsResponse)
+async def patch_settings_endpoint(payload: UpdateUserSettingsRequest) -> dict:
+    from dataclasses import asdict
+
+    from backend.db import update_user_settings
+
+    # ``model_fields_set`` lets us distinguish "the client omitted this key"
+    # from "the client explicitly sent null"; the store treats _UNSET as
+    # "leave column untouched" so a PATCH that only touches the locale never
+    # blanks the currency (mirrors the snapshot title/caption pattern in #350).
+    kwargs: dict = {}
+    if "report_locale" in payload.model_fields_set and payload.report_locale is not None:
+        kwargs["report_locale"] = payload.report_locale
+    if "report_currency" in payload.model_fields_set and payload.report_currency is not None:
+        kwargs["report_currency"] = payload.report_currency
+    row = await asyncio.to_thread(update_user_settings, **kwargs)
+    return {"data": asdict(row), "status": _status_ok()}
+
+
 @app.post(f"{API_PREFIX}/scenario/run", response_model=JobAcceptedResponse)
 async def scenario_run(payload: ScenarioRunRequest) -> dict:
     global _active_job_id
@@ -684,6 +715,7 @@ async def create_snapshot_endpoint(scenario_id: str, payload: CreateSnapshotRequ
             scenario_id=scenario_id,
             snapshot_type=payload.snapshot_type,
             image=image_bytes,
+            title=payload.title,
             caption=payload.caption,
         )
     except ScenarioNotFound as exc:
@@ -711,9 +743,18 @@ async def get_snapshot_image_endpoint(snapshot_id: str):
 async def update_snapshot_endpoint(snapshot_id: str, payload: UpdateSnapshotRequest) -> dict:
     from dataclasses import asdict
 
-    from backend.db import update_snapshot_caption
+    from backend.db import update_snapshot
 
-    row = await asyncio.to_thread(update_snapshot_caption, snapshot_id, payload.caption)
+    # ``model_fields_set`` lets us distinguish "the client omitted this key"
+    # from "the client explicitly sent null". Forwarding only the explicit
+    # fields means a PATCH that touches only the title leaves the caption
+    # untouched (and vice versa) — required by #350 for independent editing.
+    kwargs: dict = {}
+    if "title" in payload.model_fields_set:
+        kwargs["title"] = payload.title
+    if "caption" in payload.model_fields_set:
+        kwargs["caption"] = payload.caption
+    row = await asyncio.to_thread(update_snapshot, snapshot_id, **kwargs)
     if row is None:
         raise HTTPException(status_code=404, detail="Snapshot not found")
     return {"data": asdict(row), "status": _status_ok()}

@@ -19,7 +19,7 @@ from backend.db import (
     list_scenarios,
     list_snapshots,
     run_migrations,
-    update_snapshot_caption,
+    update_snapshot,
 )
 
 
@@ -133,20 +133,79 @@ def test_update_snapshot_caption_round_trips(tmp_db: Path) -> None:
     row = create_snapshot(scenario_id="s-cap", snapshot_type="map", image=_PNG_BYTES)
     assert row.caption is None
 
-    updated = update_snapshot_caption(row.id, "Cairo, June 2050")
+    updated = update_snapshot(row.id, caption="Cairo, June 2050")
     assert updated is not None
     assert updated.caption == "Cairo, June 2050"
 
     listed = list_snapshots("s-cap")
     assert listed[0].caption == "Cairo, June 2050"
 
-    cleared = update_snapshot_caption(row.id, None)
+    cleared = update_snapshot(row.id, caption=None)
     assert cleared is not None
     assert cleared.caption is None
 
 
 def test_update_snapshot_caption_unknown_id_returns_none(tmp_db: Path) -> None:
-    assert update_snapshot_caption("nope", "x") is None
+    assert update_snapshot("nope", caption="x") is None
+
+
+def test_create_snapshot_persists_title_or_null(tmp_db: Path) -> None:
+    # #350: ``title`` is independent from caption; an omitted title round-trips
+    # as NULL while a supplied title persists verbatim.
+    _seed_unsaved_scenario()
+    without_title = create_snapshot(scenario_id="s-cap", snapshot_type="map", image=_PNG_BYTES)
+    assert without_title.title is None
+    with_title = create_snapshot(
+        scenario_id="s-cap",
+        snapshot_type="waterfall",
+        image=_PNG_BYTES,
+        title="Figure 1: Annual loss",
+        caption="Egypt, 2050 baseline",
+    )
+    assert with_title.title == "Figure 1: Annual loss"
+    assert with_title.caption == "Egypt, 2050 baseline"
+
+    # ``list_snapshots`` surfaces the new column so the drawer can render it.
+    listed = list_snapshots("s-cap")
+    titles = {snap.id: snap.title for snap in listed}
+    assert titles[without_title.id] is None
+    assert titles[with_title.id] == "Figure 1: Annual loss"
+
+
+def test_update_snapshot_partial_fields_are_independent(tmp_db: Path) -> None:
+    # PATCH semantics: each field is touched only when explicitly passed.
+    # Omitting a kwarg must leave the existing column value alone — required
+    # so the drawer's title-only and caption-only blurs don't clobber each
+    # other.
+    _seed_unsaved_scenario()
+    row = create_snapshot(
+        scenario_id="s-cap",
+        snapshot_type="map",
+        image=_PNG_BYTES,
+        title="initial title",
+        caption="initial caption",
+    )
+
+    only_title = update_snapshot(row.id, title="new title")
+    assert only_title is not None
+    assert only_title.title == "new title"
+    assert only_title.caption == "initial caption"
+
+    only_caption = update_snapshot(row.id, caption="new caption")
+    assert only_caption is not None
+    assert only_caption.title == "new title"
+    assert only_caption.caption == "new caption"
+
+    both = update_snapshot(row.id, title="t2", caption="c2")
+    assert both is not None
+    assert both.title == "t2"
+    assert both.caption == "c2"
+
+    # Explicit None clears just the targeted column.
+    cleared_title = update_snapshot(row.id, title=None)
+    assert cleared_title is not None
+    assert cleared_title.title is None
+    assert cleared_title.caption == "c2"
 
 
 def test_list_snapshots_includes_caption(tmp_db: Path) -> None:
