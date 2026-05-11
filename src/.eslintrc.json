@@ -43,7 +43,7 @@
           "whiteSpace",
           "wordBreak"
         ],
-        "ignore": ["Export PDF", "Export Excel"]
+        "ignore": ["Export PDF"]
       }
     ]
   }

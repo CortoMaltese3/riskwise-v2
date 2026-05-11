@@ -4,7 +4,6 @@ setuptools==82.0.1
 wheel==0.47.0
 geopandas==1.1.3
 shapely==2.1.2
-XlsxWriter==3.2.9
 pycountry==26.2.16
 pylint==4.0.5
 

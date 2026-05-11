@@ -276,9 +276,9 @@ Original v1 baseline: ~500MB conda env with unused packages (Flask, Selenium, fo
 - **Track B** (shipped Phase 6): `climate-lama-engine` (NumPy+SciPy only) replaces CLIMADA as the runtime compute layer; HDF5/GeoTIFF/XLSX file I/O lives in `backend/engine/loaders/` and a local catalog (`data/catalog.json` + `backend/engine/catalog.py`) replaces `climada.util.api_client.Client`.
 - **Track C**: Remote backend (rejected — breaks offline use).
 
-**Keep**: climate-lama-engine, geopandas, numpy, pandas, scipy, shapely, pycountry, openpyxl, pyarrow, h5py, rasterio, xlsxwriter, duckdb, fastapi, uvicorn, pyproj
+**Keep**: climate-lama-engine, geopandas, numpy, pandas, scipy, shapely, pycountry, openpyxl, pyarrow, h5py, rasterio, duckdb, fastapi, uvicorn, pyproj
 
-**Removed**: climada (Phase 6 #166), matplotlib, Flask, Flask-CORS, Flask-SocketIO, Selenium, Werkzeug, folium, geocoder, ipykernel, cartopy, python-docx, docxtpl, docx2pdf
+**Removed**: climada (Phase 6 #166), matplotlib, Flask, Flask-CORS, Flask-SocketIO, Selenium, Werkzeug, folium, geocoder, ipykernel, cartopy, python-docx, docxtpl, docx2pdf, xlsxwriter (#355, superseded by enriched PDF export)
 
 **Files**: `pyproject.toml`, `requirements/requirements.txt`, `requirements/environment.yml`, `backend/engine/`
 

@@ -80,8 +80,6 @@ from backend.models import (
     DeleteScenarioResponse,
     DeleteSnapshotResponse,
     ErrorResponse,
-    ExportReportRequest,
-    ExportReportResponse,
     HealthResponse,
     JobAcceptedResponse,
     MacroChartDataRequest,
@@ -225,10 +223,6 @@ def _dispatch_sync(script_name: str, data: Any) -> dict:
         from backend.run_clear_temp_dir import RunClearTempDir
 
         return RunClearTempDir().run_clear_temp_dir()
-    if script_name == "run_export_report.py":
-        from backend.run_export_report import RunExportReport
-
-        return RunExportReport(data).run_export_report()
     if script_name == "run_fetch_macro_chart_data.py":
         from backend.run_fetch_macro_chart_data import RunFetchMacroChartData
 
@@ -649,14 +643,6 @@ async def get_scenario_endpoint(scenario_id: str) -> dict:
         },
         "status": _status_ok(),
     }
-
-
-@app.post(f"{API_PREFIX}/scenarios/{{scenario_id}}/export", response_model=ExportReportResponse)
-async def export_scenario(scenario_id: str, payload: ExportReportRequest) -> dict:
-    if payload.exportType == "excel":
-        body = {**payload.model_dump(exclude_none=True), "scenarioRunCode": scenario_id}
-        return await _dispatch("run_export_report.py", body)
-    return {"data": {"status": "delegated_to_electron"}, "status": _status_ok()}
 
 
 @app.patch(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=SaveScenarioResponse)

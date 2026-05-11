@@ -155,22 +155,6 @@ class TestSynchronousEndpoints:
             response = client.get("/api/v1/scenarios/missing")
         assert response.status_code == 404
 
-    def test_export_scenario_injects_scenario_run_code(self, client: TestClient) -> None:
-        with patch.object(
-            app_module,
-            "_dispatch_sync",
-            return_value={"data": {"report_path": "/tmp/r.xlsx"}, "status": {"code": 2000}},
-        ) as m:
-            response = client.post(
-                "/api/v1/scenarios/abc/export",
-                json={"exportType": "excel", "report": {"type": "output_data", "id": "1"}},
-            )
-        assert response.status_code == 200
-        args, _ = m.call_args
-        assert args[0] == "run_export_report.py"
-        assert args[1]["scenarioRunCode"] == "abc"
-        assert args[1]["exportType"] == "excel"
-
     def test_save_scenario_updates_metadata(self, client: TestClient) -> None:
         import backend.db as db
         from backend.db.scenario_store import ScenarioRow
