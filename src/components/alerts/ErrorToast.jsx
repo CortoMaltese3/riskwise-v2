@@ -36,7 +36,7 @@ const ErrorToast = () => {
         open
         autoHideDuration={15000}
         onClose={clearError}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert onClose={clearError} sx={{ width: "100%" }}>
           <Typography variant="body2">{error.message}</Typography>

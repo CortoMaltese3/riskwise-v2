@@ -22,6 +22,7 @@ describe("GlossaryDrawer", () => {
 
   it("renders terms from the English glossary when opened", () => {
     renderOpen();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^glossary$/i })).toBeInTheDocument();
     expect(screen.getByText(/AAL \(Average Annual Loss\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Return Period/)).toBeInTheDocument();
