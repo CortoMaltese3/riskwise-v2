@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -36,6 +36,17 @@ vi.mock("../../hooks/useReportLocale", () => ({
     formatNumber: (v: number) => v.toLocaleString("en-US"),
     formatCurrency: (v: number) => `EUR ${v.toLocaleString("en-US")}`,
   }),
+}));
+
+// Snapshot list + image-URL helper sit behind RiskWiseClient. Mock the whole
+// module so the snapshot-embedding effect can be exercised without an Electron
+// IPC bridge or a real loopback server.
+const listSnapshotsMock = vi.fn();
+vi.mock("../../lib/RiskWiseClient", () => ({
+  default: {
+    listSnapshots: (...args: unknown[]) => listSnapshotsMock(...args),
+    snapshotImageUrl: (id: string) => `/api/v1/snapshots/${id}/image`,
+  },
 }));
 
 import ScenarioPrintView from "./ScenarioPrintView";
@@ -95,14 +106,66 @@ const mockScenario = (payload: ScenarioPayload) => {
     result: { data: payload },
   });
   (window as unknown as { api: unknown }).api = {
-    http: { request: requestMock },
+    http: {
+      request: requestMock,
+      getBaseUrl: vi.fn().mockResolvedValue("http://127.0.0.1:8000"),
+    },
   };
   return requestMock;
 };
 
+interface SnapshotFixture {
+  id: string;
+  snapshot_type: string;
+  title?: string | null;
+  caption?: string | null;
+}
+
+const mockSnapshots = (
+  items: SnapshotFixture[],
+  failingIds: string[] = []
+): { fetchMock: ReturnType<typeof vi.fn> } => {
+  listSnapshotsMock.mockResolvedValue({
+    success: true,
+    result: {
+      status: { code: 2000 },
+      data: items.map((s) => ({
+        id: s.id,
+        scenario_id: "scn-1",
+        snapshot_type: s.snapshot_type,
+        title: s.title ?? null,
+        caption: s.caption ?? null,
+        created_at: "2026-04-20T10:00:00Z",
+      })),
+    },
+  });
+  const fetchMock = vi.fn((url: string) => {
+    const fail = failingIds.some((id) => url.includes(`/snapshots/${id}/image`));
+    if (fail) return Promise.resolve({ ok: false, status: 404 });
+    return Promise.resolve({
+      ok: true,
+      blob: () => Promise.resolve(new Blob(["png-bytes"], { type: "image/png" })),
+    });
+  });
+  globalThis.fetch = fetchMock as unknown as typeof fetch;
+  return { fetchMock };
+};
+
 beforeEach(() => {
   delete (document.body.dataset as Record<string, string | undefined>).printReady;
+  listSnapshotsMock.mockReset();
+  // jsdom doesn't implement object URLs; stub so blob URLs are observable in
+  // assertions and revocation can be tracked across test boundaries.
+  let nextBlobId = 0;
+  globalThis.URL.createObjectURL = vi.fn(() => `blob:fake-${++nextBlobId}`);
+  globalThis.URL.revokeObjectURL = vi.fn();
 });
+
+// Drives the readiness gate forward: every <img> in the document fires
+// load so the Promise.all-on-load contract resolves.
+const flushImageLoads = () => {
+  document.querySelectorAll("img").forEach((img) => fireEvent.load(img));
+};
 
 describe("ScenarioPrintView", () => {
   it("renders all six sections with a fully populated fixture", async () => {
@@ -176,7 +239,7 @@ describe("ScenarioPrintView", () => {
     expect(screen.queryByTestId("costben-chart")).not.toBeInTheDocument();
   });
 
-  it("renders snapshots-slot placeholder reserved for the next issue", async () => {
+  it("leaves snapshots-slot empty when snapshotIds is empty", async () => {
     mockScenario({
       scenario: meta,
       results: { waterfall_data: JSON.stringify(waterfall) },
@@ -186,5 +249,132 @@ describe("ScenarioPrintView", () => {
 
     await waitFor(() => expect(screen.getByTestId("snapshots-slot")).toBeInTheDocument());
     expect(screen.getByTestId("snapshots-slot")).toBeEmptyDOMElement();
+    expect(listSnapshotsMock).not.toHaveBeenCalled();
+  });
+
+  it("renders the requested snapshots in URL order with auto-numbered figures", async () => {
+    mockScenario({
+      scenario: meta,
+      results: { waterfall_data: JSON.stringify(waterfall) },
+    });
+    mockSnapshots([
+      { id: "snap-3", snapshot_type: "map", title: "Third pick", caption: "third caption" },
+      { id: "snap-1", snapshot_type: "waterfall", title: "First pick", caption: "first caption" },
+      {
+        id: "snap-2",
+        snapshot_type: "cost_benefit",
+        title: "Second pick",
+        caption: "second caption",
+      },
+    ]);
+
+    render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-1", "snap-2", "snap-3"]} />);
+
+    await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-1")).toBeInTheDocument());
+    expect(screen.getByTestId("snapshot-figure-snap-2")).toBeInTheDocument();
+    expect(screen.getByTestId("snapshot-figure-snap-3")).toBeInTheDocument();
+
+    const slot = screen.getByTestId("snapshots-slot");
+    const figures = within(slot).getAllByTestId(/^snapshot-figure-/);
+    expect(figures.map((f) => f.getAttribute("data-testid"))).toEqual([
+      "snapshot-figure-snap-1",
+      "snapshot-figure-snap-2",
+      "snapshot-figure-snap-3",
+    ]);
+
+    // Figure numbers follow URL order, not the list-response order.
+    expect(within(figures[0]).getByText(/figure_label\|number=1.*First pick/)).toBeInTheDocument();
+    expect(within(figures[1]).getByText(/figure_label\|number=2.*Second pick/)).toBeInTheDocument();
+    expect(within(figures[2]).getByText(/figure_label\|number=3.*Third pick/)).toBeInTheDocument();
+
+    expect(within(figures[0]).getByText("first caption")).toBeInTheDocument();
+    expect(within(figures[1]).getByText("second caption")).toBeInTheDocument();
+    expect(within(figures[2]).getByText("third caption")).toBeInTheDocument();
+
+    flushImageLoads();
+    await waitFor(() => expect(document.body.dataset.printReady).toBe("true"));
+  });
+
+  it("falls back to the humanized snapshot type when title is missing", async () => {
+    mockScenario({
+      scenario: meta,
+      results: { waterfall_data: JSON.stringify(waterfall) },
+    });
+    mockSnapshots([{ id: "snap-1", snapshot_type: "map", title: null, caption: "tagged caption" }]);
+
+    render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-1"]} />);
+
+    await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-1")).toBeInTheDocument());
+    const fig = screen.getByTestId("snapshot-figure-snap-1");
+    expect(within(fig).getByText(/figure_label\|number=1.*snapshot_type_map/)).toBeInTheDocument();
+    expect(within(fig).getByText("tagged caption")).toBeInTheDocument();
+  });
+
+  it("omits the caption line when caption is missing (title present)", async () => {
+    mockScenario({
+      scenario: meta,
+      results: { waterfall_data: JSON.stringify(waterfall) },
+    });
+    mockSnapshots([{ id: "snap-1", snapshot_type: "map", title: "Just a title", caption: null }]);
+
+    render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-1"]} />);
+
+    await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-1")).toBeInTheDocument());
+    const fig = screen.getByTestId("snapshot-figure-snap-1");
+    expect(within(fig).getByText(/figure_label\|number=1.*Just a title/)).toBeInTheDocument();
+    // No caption paragraph rendered: figure has only the heading + the img.
+    expect(within(fig).queryByText(/caption/i)).not.toBeInTheDocument();
+    expect(within(fig).getAllByRole("img")).toHaveLength(1);
+  });
+
+  it("falls back to humanized type and skips caption when both are missing", async () => {
+    mockScenario({
+      scenario: meta,
+      results: { waterfall_data: JSON.stringify(waterfall) },
+    });
+    mockSnapshots([{ id: "snap-1", snapshot_type: "waterfall", title: null, caption: null }]);
+
+    render(<ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-1"]} />);
+
+    await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-1")).toBeInTheDocument());
+    const fig = screen.getByTestId("snapshot-figure-snap-1");
+    expect(
+      within(fig).getByText(/figure_label\|number=1.*snapshot_type_waterfall/)
+    ).toBeInTheDocument();
+    // Only heading + image — no caption block.
+    expect(fig.querySelectorAll("p").length).toBeLessThanOrEqual(1);
+  });
+
+  it("skips a failing snapshot fetch without blocking remaining figures", async () => {
+    mockScenario({
+      scenario: meta,
+      results: { waterfall_data: JSON.stringify(waterfall) },
+    });
+    mockSnapshots(
+      [
+        { id: "snap-1", snapshot_type: "map", title: "Kept first", caption: "k1" },
+        { id: "snap-broken", snapshot_type: "map", title: "Broken middle", caption: "x" },
+        { id: "snap-2", snapshot_type: "waterfall", title: "Kept second", caption: "k2" },
+      ],
+      ["snap-broken"]
+    );
+
+    render(
+      <ScenarioPrintView scenarioId="scn-1" snapshotIds={["snap-1", "snap-broken", "snap-2"]} />
+    );
+
+    await waitFor(() => expect(screen.getByTestId("snapshot-figure-snap-1")).toBeInTheDocument());
+    expect(screen.getByTestId("snapshot-figure-snap-2")).toBeInTheDocument();
+    expect(screen.queryByTestId("snapshot-figure-snap-broken")).not.toBeInTheDocument();
+
+    // Renumbering continues without gaps: kept #1 → "Figure 1", kept #2 → "Figure 2".
+    const slot = screen.getByTestId("snapshots-slot");
+    const figures = within(slot).getAllByTestId(/^snapshot-figure-/);
+    expect(figures).toHaveLength(2);
+    expect(within(figures[0]).getByText(/figure_label\|number=1.*Kept first/)).toBeInTheDocument();
+    expect(within(figures[1]).getByText(/figure_label\|number=2.*Kept second/)).toBeInTheDocument();
+
+    flushImageLoads();
+    await waitFor(() => expect(document.body.dataset.printReady).toBe("true"));
   });
 });
