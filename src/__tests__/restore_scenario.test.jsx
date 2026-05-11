@@ -140,8 +140,7 @@ describe("WorkspaceView restore action", () => {
 
     render(<WorkspaceView initialScenarios={FIXTURE} />);
 
-    fireEvent.click(screen.getByLabelText("actions-scn-7"));
-    fireEvent.click(screen.getByText(/restore/i));
+    fireEvent.click(screen.getByLabelText("restore-scn-7"));
 
     await waitFor(() => expect(getScenarioMock).toHaveBeenCalledWith("scn-7"));
     await waitFor(() => expect(useUIStore.getState().activeSection).toBe("risk"));
