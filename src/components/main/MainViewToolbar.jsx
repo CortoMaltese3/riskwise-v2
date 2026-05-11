@@ -34,7 +34,7 @@ const MainViewToolbar = () => {
   const [snapshotBusy, setSnapshotBusy] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
-  if (selectedTab !== TABS.RISK) return null;
+  if (selectedTab !== TABS.RISK && selectedTab !== TABS.ADAPTATION) return null;
 
   const noScenarioRun = !scenarioRunCode || !isScenarioRunCompleted;
   const surfaceUnsupported = UNSUPPORTED_CAPTURE_SURFACES.has(activeViewControl);

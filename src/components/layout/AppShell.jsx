@@ -30,6 +30,7 @@ const sectionToTab = {
   home: TABS.PARAMETERS,
   risk: TABS.RISK,
   macro: TABS.MACRO,
+  adaptation: TABS.ADAPTATION,
   workspace: TABS.REPORTS,
   settings: TABS.PARAMETERS,
 };
@@ -37,6 +38,8 @@ const sectionToTab = {
 const RISK_LEFT_PANEL_WIDTH = 280;
 const RISK_RESULTS_PANEL_WIDTH = 260;
 const MACRO_LEFT_PANEL_WIDTH = 280;
+const ADAPTATION_LEFT_PANEL_WIDTH = 280;
+const ADAPTATION_RESULTS_PANEL_WIDTH = 260;
 
 export const RiskAssessmentView = () => {
   const { t } = useTranslation();
@@ -181,10 +184,71 @@ const MacroeconomicView = () => {
   );
 };
 
+export const AdaptationView = () => {
+  const { t } = useTranslation();
+  return (
+    <HorizontalSplit>
+      <FixedColumn width={ADAPTATION_LEFT_PANEL_WIDTH}>
+        <Box
+          sx={{
+            height: "100%",
+            borderRight: 1,
+            borderColor: "divider",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <ScrollableRegion>
+            <Box sx={{ pt: 2, px: 1, pb: 1 }}>
+              <AdaptationMeasuresInput />
+              {/* TODO #CONTEXT_CARD: active scenario card */}
+            </Box>
+          </ScrollableRegion>
+        </Box>
+      </FixedColumn>
+      <ScrollableRegion>
+        <Box
+          sx={{
+            pt: 2,
+            px: 2,
+            pb: 2,
+            minHeight: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <MainView />
+        </Box>
+      </ScrollableRegion>
+      <FixedColumn width={ADAPTATION_RESULTS_PANEL_WIDTH}>
+        <Box
+          component="aside"
+          role="complementary"
+          aria-label={t("results_panel_aria")}
+          sx={{
+            height: "100%",
+            borderLeft: 1,
+            borderColor: "divider",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <ScrollableRegion>
+            <Box sx={{ pt: 2, px: 1, pb: 1 }}>
+              <ResultsView />
+            </Box>
+          </ScrollableRegion>
+        </Box>
+      </FixedColumn>
+    </HorizontalSplit>
+  );
+};
+
 const sectionComponents = {
   home: HomeView,
   risk: RiskAssessmentView,
   macro: MacroeconomicView,
+  adaptation: AdaptationView,
   workspace: WorkspaceView,
   settings: SettingsView,
 };
