@@ -7,6 +7,7 @@ import RiskWiseClient from "../lib/RiskWiseClient";
 import useResultsStore from "../store/useResultsStore";
 import useUIStore from "../store/useUIStore";
 import useWorkspaceStore from "../store/useWorkspaceStore";
+import { TABS } from "../components/main/tabs";
 
 const captureMapBase64 = (map) =>
   new Promise((resolve, reject) => {
@@ -60,6 +61,7 @@ export const useMapTools = () => {
   const reports = useUIStore((s) => s.reports);
   const selectedReport = useUIStore((s) => s.selectedReport);
   const selectedSubTab = useUIStore((s) => s.selectedSubTab);
+  const selectedTab = useUIStore((s) => s.selectedTab);
   const setAlertMessage = useUIStore((s) => s.setAlertMessage);
   const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
   const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
@@ -235,13 +237,15 @@ export const useMapTools = () => {
       setAlertShowMessage(true);
     }
 
-    // Checks if the scenario has finished running, the selected sub tab is Risk
-    // and the selected view control is the display chart
-    if (
-      (isScenarioRunCompleted || selectedReport) &&
-      activeViewControl === "display_chart" &&
-      selectedSubTab === 0
-    ) {
+    const onChart = activeViewControl === "display_chart";
+    const isWaterfall = onChart && selectedTab === TABS.RISK && selectedSubTab === 0;
+    // Cost-benefit fires from the legacy Risk → Adaptation sub-tab (currently
+    // unreachable) and from the new top-level Adaptation section (#371).
+    const isCostBenefit =
+      onChart &&
+      ((selectedTab === TABS.RISK && selectedSubTab === 1) || selectedTab === TABS.ADAPTATION);
+
+    if ((isScenarioRunCompleted || selectedReport) && isWaterfall) {
       const id = new Date().getTime().toString();
       const destinationFile = `${reportPath}\\${scenarioRunCode}\\snapshot_risk_plot_data_${id}.png`;
 
@@ -266,13 +270,7 @@ export const useMapTools = () => {
         });
     }
 
-    // Checks if the scenario has finished running, the selected sub tab is Adaptation
-    // and the selected view control is the display chart
-    if (
-      (isScenarioRunCompleted || selectedReport) &&
-      activeViewControl === "display_chart" &&
-      selectedSubTab === 1
-    ) {
+    if ((isScenarioRunCompleted || selectedReport) && isCostBenefit) {
       const id = new Date().getTime().toString();
       const destinationFile = `${reportPath}\\${scenarioRunCode}\\snapshot_adaptation_plot_data_${id}.png`;
 
@@ -316,15 +314,20 @@ export const useMapTools = () => {
       // surfaces map to fixed domains (waterfall -> impact, cost-benefit ->
       // adaptation) so we do not need a UI state lookup for them.
       let surface;
+      const onChart = activeViewControl === "display_chart";
+      const isWaterfall = onChart && selectedTab === TABS.RISK && selectedSubTab === 0;
+      const isCostBenefit =
+        onChart &&
+        ((selectedTab === TABS.RISK && selectedSubTab === 1) || selectedTab === TABS.ADAPTATION);
       if (activeViewControl === "display_map") {
         base64 = await captureMapBase64(activeMapRef);
         snapshotType = "map";
         surface = activeMap;
-      } else if (activeViewControl === "display_chart" && selectedSubTab === 0) {
+      } else if (isWaterfall) {
         base64 = await captureChartBase64(waterfallChartRef);
         snapshotType = "waterfall";
         surface = "impact";
-      } else if (activeViewControl === "display_chart" && selectedSubTab === 1) {
+      } else if (isCostBenefit) {
         base64 = await captureChartBase64(costBenefitChartRef);
         snapshotType = "cost_benefit";
         surface = "adaptation";

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
-import { Box } from "@mui/material";
+import { Box, Button, Stack, Typography } from "@mui/material";
 
 import AdaptationMap from "../map/AdaptationMap";
 import AdaptationChartLayout from "../controls/AdaptationChartLayout";
@@ -41,11 +42,43 @@ const CONTROLS_ROW_SX = {
   gap: 2,
 };
 
+const AdaptationEmptyState = () => {
+  const { t } = useTranslation();
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
+  return (
+    <Box
+      data-testid="adaptation-empty-state-no-run"
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        p: 3,
+      }}
+    >
+      <Stack spacing={2} alignItems="center">
+        <Typography variant="body1">{t("adaptation_empty_state_no_run")}</Typography>
+        <Button
+          variant="contained"
+          onClick={() => setActiveSection("risk")}
+          sx={{ textTransform: "none" }}
+        >
+          {t("adaptation_empty_state_go_to_risk")}
+        </Button>
+      </Stack>
+    </Box>
+  );
+};
+
 const MainView = () => {
   const activeViewControl = useUIStore((s) => s.activeViewControl);
+  const selectedReport = useUIStore((s) => s.selectedReport);
   const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const selectedTab = useUIStore((s) => s.selectedTab);
   const credOutputData = useResultsStore((s) => s.credOutputData);
+  const isScenarioRunCompleted = useResultsStore((s) => s.isScenarioRunCompleted);
   const { loadCREDOutputData } = useMacroTools();
 
   // Lazy-load CRED output data when the Macro tab becomes active inside
@@ -95,6 +128,24 @@ const MainView = () => {
           <Box sx={STRETCH_SX}>
             {activeViewControl === "display_map" && <AdaptationMap />}
             {activeViewControl === "display_chart" && <AdaptationChartLayout />}
+          </Box>
+          <Box sx={CONTROLS_ROW_SX}>
+            <MainViewControls />
+            <MainViewToolbar />
+          </Box>
+        </>
+      )}
+      {selectedTab === TABS.ADAPTATION && (
+        <>
+          <Box sx={STRETCH_SX}>
+            {!isScenarioRunCompleted && !selectedReport ? (
+              <AdaptationEmptyState />
+            ) : (
+              <>
+                {activeViewControl === "display_map" && <AdaptationMap />}
+                {activeViewControl === "display_chart" && <AdaptationChartLayout />}
+              </>
+            )}
           </Box>
           <Box sx={CONTROLS_ROW_SX}>
             <MainViewControls />

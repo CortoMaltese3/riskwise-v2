@@ -13,6 +13,7 @@
 export const TABS = Object.freeze({
   PARAMETERS: "parameters",
   RISK: "risk",
+  ADAPTATION: "adaptation",
   MACRO: "macro",
   REPORTS: "reports",
 });
@@ -51,6 +52,20 @@ export const TAB_CONFIG = Object.freeze({
       { key: "risk", labelKey: "main_subsection_title_risk" },
       { key: "adaptation", labelKey: "main_subsection_title_adaptation" },
     ],
+  },
+  // Adaptation is a top-level section reached via the sidebar; the legacy
+  // MainTabs strip is not mounted in AppShell. ``order: 1.5`` keeps it
+  // sequenced between Risk and Macro for any consumer that walks
+  // ``ORDERED_TABS``, while leaving the integer slots for Macro (2) and
+  // Reports (3) untouched so ``tabIndex`` keeps its historical positions
+  // used by ResultsTypography's ERA i18n keys.
+  [TABS.ADAPTATION]: {
+    order: 1.5,
+    titleKey: "main_view_tab_adaptation_title",
+    resultsTitleKey: "results_view_tab_adaptation_title",
+    sectionTitleKey: "main_section_title_adaptation",
+    defaultView: "display_chart",
+    subTabs: [],
   },
   [TABS.MACRO]: {
     order: 2,

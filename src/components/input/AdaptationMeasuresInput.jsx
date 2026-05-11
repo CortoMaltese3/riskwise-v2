@@ -8,12 +8,11 @@ import RiskWiseClient from "../../lib/RiskWiseClient";
 import logger from "../../lib/logger.ts";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
-import { TABS, RISK_SUB_TABS } from "../main/tabs";
+import { TABS } from "../main/tabs";
 
 const AdaptationMeasuresInput = () => {
   const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
   const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
-  const selectedSubTab = useUIStore((s) => s.selectedSubTab);
   const selectedTab = useUIStore((s) => s.selectedTab);
   const { t } = useTranslation();
 
@@ -53,7 +52,8 @@ const AdaptationMeasuresInput = () => {
     }
   }, [selectedHazard, selectedCountry]);
 
-  if (!(selectedTab === TABS.RISK && selectedSubTab === RISK_SUB_TABS.ADAPTATION)) {
+  // Visible on Risk (legacy sub-tab, removed in #376) and top-level Adaptation.
+  if (selectedTab !== TABS.RISK && selectedTab !== TABS.ADAPTATION) {
     return null;
   }
 

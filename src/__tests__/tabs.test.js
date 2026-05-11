@@ -16,9 +16,10 @@ import {
 } from "../components/main/tabs";
 
 describe("TABS / TAB_CONFIG", () => {
-  it("exposes all four tab ids as strings", () => {
+  it("exposes all tab ids as strings", () => {
     expect(TABS.PARAMETERS).toBe("parameters");
     expect(TABS.RISK).toBe("risk");
+    expect(TABS.ADAPTATION).toBe("adaptation");
     expect(TABS.MACRO).toBe("macro");
     expect(TABS.REPORTS).toBe("reports");
   });
@@ -28,8 +29,14 @@ describe("TABS / TAB_CONFIG", () => {
     expect(Object.isFrozen(TAB_CONFIG)).toBe(true);
   });
 
-  it("orders tabs parameters → risk → macro → reports", () => {
-    expect(ORDERED_TABS).toEqual([TABS.PARAMETERS, TABS.RISK, TABS.MACRO, TABS.REPORTS]);
+  it("orders tabs parameters → risk → adaptation → macro → reports", () => {
+    expect(ORDERED_TABS).toEqual([
+      TABS.PARAMETERS,
+      TABS.RISK,
+      TABS.ADAPTATION,
+      TABS.MACRO,
+      TABS.REPORTS,
+    ]);
   });
 
   it("provides a config entry per tab with the keys consumers need", () => {
@@ -48,12 +55,14 @@ describe("TABS / TAB_CONFIG", () => {
   it("only marks the Risk tab with sub-tabs", () => {
     expect(TAB_CONFIG[TABS.PARAMETERS].subTabs).toHaveLength(0);
     expect(TAB_CONFIG[TABS.RISK].subTabs.length).toBeGreaterThan(0);
+    expect(TAB_CONFIG[TABS.ADAPTATION].subTabs).toHaveLength(0);
     expect(TAB_CONFIG[TABS.MACRO].subTabs).toHaveLength(0);
     expect(TAB_CONFIG[TABS.REPORTS].subTabs).toHaveLength(0);
   });
 
-  it("opens Risk on the map view and Macro on the chart frame", () => {
+  it("opens Risk on the map view, Adaptation on the chart, and Macro on the chart frame", () => {
     expect(TAB_CONFIG[TABS.RISK].defaultView).toBe("display_map");
+    expect(TAB_CONFIG[TABS.ADAPTATION].defaultView).toBe("display_chart");
     expect(TAB_CONFIG[TABS.MACRO].defaultView).toBe("display_macro_chart");
     expect(TAB_CONFIG[TABS.PARAMETERS].defaultView).toBe("");
     expect(TAB_CONFIG[TABS.REPORTS].defaultView).toBe("");

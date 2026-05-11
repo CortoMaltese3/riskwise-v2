@@ -27,7 +27,7 @@ const SubTabActions = () => {
   const { handleSaveImage, handleSaveMap, handleAddToOutput } = useMapTools();
   const { t } = useTranslation();
 
-  if (selectedTab !== TABS.RISK) return null;
+  if (selectedTab !== TABS.RISK && selectedTab !== TABS.ADAPTATION) return null;
 
   const onSaveMapOrChart = () => {
     if (activeViewControl === "display_map") return handleSaveMap();

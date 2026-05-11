@@ -10,6 +10,41 @@ import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 const STATUS_OK = 2000;
 
+const renderCostBenefitBody = ({
+  costBenefitData,
+  errorMessage,
+  scenarioRunCode,
+  setCostBenefitChartRef,
+  t,
+}) => {
+  if (!costBenefitData) {
+    return (
+      <Typography variant="body1">
+        {errorMessage || t("economic_non_economic_adaptation_display_chart_loading_error")}
+      </Typography>
+    );
+  }
+  if (Array.isArray(costBenefitData.measures) && costBenefitData.measures.length === 0) {
+    return (
+      <Typography
+        data-testid="adaptation-empty-state-no-measures"
+        variant="body1"
+        sx={{ fontStyle: "italic" }}
+      >
+        {t("adaptation_empty_state_no_measures")}
+      </Typography>
+    );
+  }
+  return (
+    <CostBenefitChart
+      key={scenarioRunCode}
+      ref={setCostBenefitChartRef}
+      data={costBenefitData}
+      errorMessage={errorMessage}
+    />
+  );
+};
+
 const AdaptationChartLayout = () => {
   const { t } = useTranslation();
   const setCostBenefitChartRef = useUIStore((state) => state.setCostBenefitChartRef);
@@ -71,18 +106,13 @@ const AdaptationChartLayout = () => {
           style={{ width: "100%", height: "100%" }}
           aria-label={t("economic_non_economic_adaptation_chart_title")}
         >
-          {costBenefitData ? (
-            <CostBenefitChart
-              key={scenarioRunCode}
-              ref={setCostBenefitChartRef}
-              data={costBenefitData}
-              errorMessage={errorMessage}
-            />
-          ) : (
-            <Typography variant="body1">
-              {errorMessage || t("economic_non_economic_adaptation_display_chart_loading_error")}
-            </Typography>
-          )}
+          {renderCostBenefitBody({
+            costBenefitData,
+            errorMessage,
+            scenarioRunCode,
+            setCostBenefitChartRef,
+            t,
+          })}
         </Box>
       </Paper>
     </div>
