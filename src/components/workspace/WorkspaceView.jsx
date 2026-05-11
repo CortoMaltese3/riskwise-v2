@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,6 +19,7 @@ import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { useReportTools } from "../../utils/reportTools";
 import { enqueueToast } from "../../hooks/useToast";
 import ScrollableRegion from "../layout/primitives/ScrollableRegion";
+import ExportPdfDialog from "./ExportPdfDialog";
 import ScenarioTable from "./ScenarioTable";
 import WorkspaceImportExport from "./WorkspaceImportExport";
 
@@ -96,6 +97,8 @@ const WorkspaceView = ({ initialScenarios }) => {
     deleteSelected,
   } = useWorkspaceStore();
 
+  const [exportTarget, setExportTarget] = useState(null);
+
   useEffect(() => {
     if (initialScenarios !== undefined) {
       setScenarios(initialScenarios);
@@ -117,16 +120,23 @@ const WorkspaceView = ({ initialScenarios }) => {
     return [...filtered].sort(compareBy(sortKey, sortDir));
   }, [scenarios, search, countryFilter, hazardFilter, sortKey, sortDir]);
 
+  const handleExportDialogClose = async (snapshotIds) => {
+    const target = exportTarget;
+    setExportTarget(null);
+    if (!target || snapshotIds === null) return;
+    const result = await window.electron.exportPdf(target.id, { snapshotIds });
+    if (result.success) {
+      enqueueToast({ severity: "success", message: "PDF saved successfully." });
+    } else if (result.reason !== "cancelled") {
+      enqueueToast({ severity: "error", message: `PDF export failed: ${result.reason}` });
+    }
+  };
+
   const handleAction = async (action, row) => {
     if (action === "delete") {
       await deleteScenario(row.id);
     } else if (action === "export-pdf") {
-      const result = await window.electron.exportPdf(row.id);
-      if (result.success) {
-        enqueueToast({ severity: "success", message: "PDF saved successfully." });
-      } else if (result.reason !== "cancelled") {
-        enqueueToast({ severity: "error", message: `PDF export failed: ${result.reason}` });
-      }
+      setExportTarget({ id: row.id, name: row.name });
     } else if (action === "restore") {
       const ok = await restoreScenario(row.id);
       if (ok) {
@@ -235,6 +245,12 @@ const WorkspaceView = ({ initialScenarios }) => {
           </>
         )}
       </Stack>
+      <ExportPdfDialog
+        open={Boolean(exportTarget)}
+        onClose={handleExportDialogClose}
+        scenarioId={exportTarget?.id}
+        scenarioName={exportTarget?.name}
+      />
     </ScrollableRegion>
   );
 };

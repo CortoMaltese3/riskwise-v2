@@ -117,7 +117,14 @@ const parseJsonResult = <T,>(json: string, setter: (v: T) => void) => {
   }
 };
 
-const ScenarioPrintView = ({ scenarioId }: { scenarioId: string }) => {
+const ScenarioPrintView = ({
+  scenarioId,
+}: {
+  scenarioId: string;
+  // Passed through from the `snapshots` URL param (issue #352). Not consumed
+  // yet — the follow-up issue will use this to render the user's selection.
+  snapshotIds?: string[];
+}) => {
   const { i18n, t } = useTranslation();
   const locale = i18n.language;
   const { formatNumber: formatNumberLocale } = useReportLocale();

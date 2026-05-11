@@ -125,7 +125,7 @@ describe("preload bridge surface", () => {
     exposed.electron.copyFile("a", "b");
     exposed.electron.copyFolder("a", "b");
     exposed.electron.openReport("/tmp/r.docx");
-    exposed.electron.exportPdf("scenario-id");
+    exposed.electron.exportPdf("scenario-id", { snapshotIds: ["snap-1", "snap-2"] });
     exposed.electron.exportWorkspace();
     exposed.electron.importWorkspace();
     exposed.electron.exportScenario("scenario-id");
@@ -210,5 +210,21 @@ describe("preload bridge surface", () => {
     expect(exposed.electron).not.toHaveProperty("on");
     expect(exposed.electron).not.toHaveProperty("send");
     expect(exposed.electron).not.toHaveProperty("remove");
+  });
+
+  it("forwards exportPdf snapshotIds and defaults to an empty list", () => {
+    const { exposed, ipc } = loadPreload();
+
+    exposed.electron.exportPdf("scn-a", { snapshotIds: ["s1", "s2"] });
+    exposed.electron.exportPdf("scn-b");
+
+    expect(ipc.invoke).toHaveBeenNthCalledWith(1, "export-pdf", {
+      scenarioId: "scn-a",
+      snapshotIds: ["s1", "s2"],
+    });
+    expect(ipc.invoke).toHaveBeenNthCalledWith(2, "export-pdf", {
+      scenarioId: "scn-b",
+      snapshotIds: [],
+    });
   });
 });
