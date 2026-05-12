@@ -33,6 +33,7 @@ from backend.constants import COUNTRIES_DIR, DATA_ENTITIES_DIR, DATA_HAZARDS_DIR
 from backend.costben.costben_handler import CostBenefitHandler
 from backend.countries.loader import CountryConfigError, load_country_config
 from backend.db import cache_store, insert_scenario, read_result_blobs
+from backend.db.scenario_store import RESULT_TYPE_TO_TEMP_FILE
 from backend.entity.entity_handler import EntityHandler
 from backend.exposure.exposure_handler import ExposureHandler
 from backend.hazard.hazard_handler import HazardHandler
@@ -582,16 +583,9 @@ class RunScenario:
         self.logger.info(f"Finished running scenario in {time() - initial_time}sec.")
         return response
 
-    # Source file names mirror ``db.scenario_store.read_result_blobs`` so a
-    # cache restore can hydrate the temp directory back to the exact shape
+    # Reuse the shared mapping so the cache restore writes the exact filenames
     # the downstream ``_persist_to_db`` / report steps expect.
-    _CACHE_TEMP_FILES = {
-        "hazard_geojson": "hazards_geodata.json",
-        "exposure_geojson": "exposures_geodata.json",
-        "impact_geojson": "risks_geodata.json",
-        "waterfall_data": "risks_waterfall_data.json",
-        "costben_data": "cost_benefit_data.json",
-    }
+    _CACHE_TEMP_FILES = RESULT_TYPE_TO_TEMP_FILE
 
     def _derive_computation_cache_key(self) -> str | None:
         """Hash the scenario-identity tuple for the computation cache.

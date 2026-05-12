@@ -459,6 +459,31 @@ export interface paths {
         patch: operations["patch_scenario_endpoint_api_v1_scenarios__scenario_id__patch"];
         trace?: never;
     };
+    "/api/v1/scenarios/{scenario_id}/hydrate-temp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hydrate Scenario Temp Endpoint
+         * @description Rewrite the saved scenario's blobs back into the temp dir.
+         *
+         *     Required by the Workspace ``Restore`` flow: the maps and the
+         *     waterfall/cost-benefit charts read from per-run JSON files, so the
+         *     renderer cannot show the restored state until those files exist on
+         *     disk again. See ``backend.run_hydrate_scenario_temp`` for details.
+         */
+        post: operations["hydrate_scenario_temp_endpoint_api_v1_scenarios__scenario_id__hydrate_temp_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/scenarios/{scenario_id}/save": {
         parameters: {
             query?: never;
@@ -874,6 +899,23 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /**
+         * HydrateScenarioData
+         * @description Payload returned by ``POST /api/v1/scenarios/{id}/hydrate-temp``.
+         *
+         *     ``written`` lists the result types that were rewritten to the temp
+         *     directory; absent types (e.g. ``costben_data`` on a historical scenario)
+         *     are silently skipped at the writer.
+         */
+        HydrateScenarioData: {
+            /** Written */
+            written: string[];
+        };
+        /** HydrateScenarioResponse */
+        HydrateScenarioResponse: {
+            data: components["schemas"]["HydrateScenarioData"];
+            status: components["schemas"]["Status"];
         };
         /** JobAcceptedResponse */
         JobAcceptedResponse: {
@@ -2213,6 +2255,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SaveScenarioResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hydrate_scenario_temp_endpoint_api_v1_scenarios__scenario_id__hydrate_temp_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HydrateScenarioResponse"];
                 };
             };
             /** @description Validation Error */

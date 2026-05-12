@@ -37,6 +37,7 @@ export type SaveScenarioRequest = Schema<"SaveScenarioRequest">;
 export type SaveScenarioResponse = Schema<"SaveScenarioResponse">;
 export type PatchScenarioRequest = Schema<"PatchScenarioRequest">;
 export type DeleteScenarioResponse = Schema<"DeleteScenarioResponse">;
+export type HydrateScenarioResponse = Schema<"HydrateScenarioResponse">;
 export type SnapshotItem = Schema<"SnapshotItem">;
 export type SnapshotListResponse = Schema<"SnapshotListResponse">;
 export type DeleteSnapshotResponse = Schema<"DeleteSnapshotResponse">;
@@ -170,6 +171,9 @@ const RiskWiseClient = {
 
   deleteScenario: (id: string) =>
     del<DeleteScenarioResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}`),
+
+  hydrateScenarioTemp: (id: string) =>
+    post<HydrateScenarioResponse>(`/api/v1/scenarios/${encodeURIComponent(id)}/hydrate-temp`, {}),
 
   listSnapshots: (scenarioId: string) =>
     get<SnapshotListResponse>(`/api/v1/scenarios/${encodeURIComponent(scenarioId)}/snapshots`),

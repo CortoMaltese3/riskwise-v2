@@ -5,11 +5,13 @@ import { renderHook } from "@testing-library/react";
 
 const getScenarioMock = vi.fn();
 const listScenariosMock = vi.fn();
+const hydrateScenarioTempMock = vi.fn();
 
 vi.mock("../lib/RiskWiseClient", () => ({
   default: {
     getScenario: (...args) => getScenarioMock(...args),
     listScenarios: (...args) => listScenariosMock(...args),
+    hydrateScenarioTemp: (...args) => hydrateScenarioTempMock(...args),
     deleteScenario: vi.fn(),
     patchScenario: vi.fn(),
     listSnapshots: vi.fn(),
@@ -19,14 +21,24 @@ vi.mock("../lib/RiskWiseClient", () => ({
 let useReportTools;
 let useWorkspaceStore;
 let useUIStore;
+let useResultsStore;
 let WorkspaceView;
 
 beforeAll(async () => {
   ({ useReportTools } = await import("../utils/reportTools"));
   ({ default: useWorkspaceStore } = await import("../store/useWorkspaceStore"));
   ({ default: useUIStore } = await import("../store/useUIStore"));
+  ({ default: useResultsStore } = await import("../store/useResultsStore"));
   ({ default: WorkspaceView } = await import("../components/workspace/WorkspaceView"));
 }, 60000);
+
+const buildHydrateResponse = (written = ["hazard_geojson"]) => ({
+  success: true,
+  result: {
+    status: { code: 2000, message: "Scenario hydrated." },
+    data: { written },
+  },
+});
 
 const buildScenarioResponse = (overrides = {}) => ({
   success: true,
@@ -54,6 +66,8 @@ const buildScenarioResponse = (overrides = {}) => ({
 beforeEach(() => {
   getScenarioMock.mockReset();
   listScenariosMock.mockReset();
+  hydrateScenarioTempMock.mockReset();
+  hydrateScenarioTempMock.mockResolvedValue(buildHydrateResponse());
   listScenariosMock.mockResolvedValue({
     success: true,
     result: { status: { code: 2000 }, data: [] },
@@ -75,6 +89,7 @@ beforeEach(() => {
     selectedIds: [],
   });
   useUIStore.setState({ activeSection: "home" });
+  useResultsStore.setState({ isScenarioRunCompleted: false });
 });
 
 describe("restoreScenario", () => {
@@ -119,6 +134,37 @@ describe("restoreScenario", () => {
     expect(after.scenarioRunCode).toBe(before.scenarioRunCode);
     expect(after.selectedScenarioRunCode).toBe(before.selectedScenarioRunCode);
   });
+
+  it("calls hydrateScenarioTemp before flipping isScenarioRunCompleted", async () => {
+    getScenarioMock.mockResolvedValue(buildScenarioResponse());
+    const callOrder = [];
+    hydrateScenarioTempMock.mockImplementation(async () => {
+      callOrder.push("hydrate");
+      return buildHydrateResponse();
+    });
+
+    const { result } = renderHook(() => useReportTools());
+    const ok = await result.current.restoreScenario("scn-7");
+
+    expect(ok).toBe(true);
+    expect(hydrateScenarioTempMock).toHaveBeenCalledWith("scn-7");
+    expect(callOrder[0]).toBe("hydrate");
+    expect(useResultsStore.getState().isScenarioRunCompleted).toBe(true);
+  });
+
+  it("returns false and leaves isScenarioRunCompleted unchanged when hydrate-temp fails", async () => {
+    getScenarioMock.mockResolvedValue(buildScenarioResponse());
+    hydrateScenarioTempMock.mockResolvedValue({
+      success: false,
+      result: { status: { code: 4000, message: "boom" }, data: null },
+    });
+
+    const { result } = renderHook(() => useReportTools());
+    const ok = await result.current.restoreScenario("scn-7");
+
+    expect(ok).toBe(false);
+    expect(useResultsStore.getState().isScenarioRunCompleted).toBe(false);
+  });
 });
 
 describe("WorkspaceView restore action", () => {
@@ -146,7 +192,10 @@ describe("WorkspaceView restore action", () => {
     await waitFor(() => expect(useUIStore.getState().activeSection).toBe("risk"));
 
     const ws = useWorkspaceStore.getState();
-    expect(ws.selectedCountry).toBe("Egypt");
+    // Backend returns the pycountry canonical title-case name ("Egypt"); the
+    // store everywhere else expects the lowercase slug ("egypt") so the i18n
+    // keys and the hazard map's country-coordinates lookup match.
+    expect(ws.selectedCountry).toBe("egypt");
     expect(ws.selectedHazard).toBe("flood");
     expect(ws.selectedScenario).toBe("rcp45");
     expect(ws.selectedExposure).toBe("buildings");
@@ -154,5 +203,34 @@ describe("WorkspaceView restore action", () => {
     expect(ws.selectedAnnualGrowth).toBe(1.5);
     expect(ws.scenarioRunCode).toBe("scn-7");
     expect(ws.selectedScenarioRunCode).toBe("scn-7");
+  });
+
+  it("lowercases the Thailand country name on restore", async () => {
+    const THAILAND_FIXTURE = [
+      {
+        id: "scn-8",
+        name: "Thailand drought era",
+        country: "Thailand",
+        hazard_type: "drought",
+        tags: null,
+        notes: null,
+        status: "completed",
+        created_at: "2026-04-21T10:00:00Z",
+      },
+    ];
+    getScenarioMock.mockResolvedValue(
+      buildScenarioResponse({
+        id: "scn-8",
+        country: "Thailand",
+        hazard_type: "drought",
+      })
+    );
+
+    render(<WorkspaceView initialScenarios={THAILAND_FIXTURE} />);
+
+    fireEvent.click(screen.getByLabelText("restore-scn-8"));
+
+    await waitFor(() => expect(getScenarioMock).toHaveBeenCalledWith("scn-8"));
+    await waitFor(() => expect(useWorkspaceStore.getState().selectedCountry).toBe("thailand"));
   });
 });

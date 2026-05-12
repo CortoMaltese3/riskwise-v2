@@ -269,6 +269,34 @@ class TestSynchronousEndpoints:
         assert response.status_code == 200
         m.assert_called_once_with("run_clear_temp_dir.py", None)
 
+    def test_hydrate_scenario_temp_success(self, client: TestClient) -> None:
+        envelope = {
+            "data": {"written": ["hazard_geojson", "exposure_geojson"]},
+            "status": {"code": 2000, "message": "Scenario hydrated."},
+        }
+        with patch.object(
+            app_module,
+            "_hydrate_scenario_temp_sync",
+            return_value=envelope,
+        ) as m:
+            response = client.post("/api/v1/scenarios/abc/hydrate-temp")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"]["code"] == 2000
+        assert body["data"]["written"] == ["hazard_geojson", "exposure_geojson"]
+        m.assert_called_once_with("abc")
+
+    def test_hydrate_scenario_temp_not_found(self, client: TestClient) -> None:
+        from backend.db import ScenarioNotFound
+
+        with patch.object(
+            app_module,
+            "_hydrate_scenario_temp_sync",
+            side_effect=ScenarioNotFound("ghost"),
+        ):
+            response = client.post("/api/v1/scenarios/ghost/hydrate-temp")
+        assert response.status_code == 404
+
 
 class TestScenarioFlow:
     def test_scenario_run_returns_job_id(self, client: TestClient) -> None:

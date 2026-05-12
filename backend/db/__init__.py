@@ -14,6 +14,7 @@ from backend.db.migrations import (
     run_startup_migrations,
 )
 from backend.db.scenario_store import (
+    RESULT_TYPE_TO_TEMP_FILE,
     RESULT_TYPES,
     ScenarioDetail,
     ScenarioNotFound,
@@ -45,6 +46,7 @@ __all__ = [
     "MIGRATIONS_DIR",
     "MigrationError",
     "RESULT_TYPES",
+    "RESULT_TYPE_TO_TEMP_FILE",
     "ScenarioDetail",
     "ScenarioNotFound",
     "ScenarioRow",

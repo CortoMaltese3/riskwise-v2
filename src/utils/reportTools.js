@@ -8,8 +8,14 @@ import useWorkspaceStore from "../store/useWorkspaceStore";
 import outputIconTha from "../assets/folder_grey_network_icon_512.png";
 import outputIconEgy from "../assets/folder_grey_cloud_icon_512.png";
 
+// Backend stores the pycountry canonical title-case name ("Egypt", "Thailand"),
+// but every other consumer of ``selectedCountry`` in the store (i18n keys, the
+// hazard map country-coordinates lookup, the per-country output icons) expects
+// the lowercase slug. Use this for any country value coming back from the API.
+const countrySlug = (value) => (value || "").toLowerCase();
+
 const toReport = (row) => {
-  const country = (row.country || "").toLowerCase();
+  const country = countrySlug(row.country);
   const fallbackTitle = [
     row.name || row.id,
     row.country,
@@ -117,12 +123,20 @@ export const useReportTools = () => {
       const scenario = data.scenario;
       setSelectedReport(toReport(scenario));
 
+      // Rehydrate the per-run temp directory *before* flipping the
+      // run-completed flag. The maps and the waterfall/cost-benefit charts
+      // re-fetch as soon as that flag flips, so the blobs must already be
+      // on disk or the renderer paints the empty state.
+      const hydrateResponse = await RiskWiseClient.hydrateScenarioTemp(id);
+      if (!hydrateResponse?.success || hydrateResponse?.result?.status?.code !== 2000) {
+        throw new Error(`Failed to hydrate temp dir for scenario ${id}`);
+      }
+
       setSelectedAppOption(scenario.is_era ? "era" : "custom");
       setScenarioRunCode(id);
       setScenarioRunSaved(true);
       setSelectedScenarioRunCode(id);
-      setIsScenarioRunCompleted(true);
-      setSelectedCountry(scenario.country);
+      setSelectedCountry(countrySlug(scenario.country));
       setSelectedHazard(scenario.hazard_type);
       setIsValidHazard(true);
       setSelectedScenario(scenario.scenario);
@@ -136,6 +150,7 @@ export const useReportTools = () => {
 
       setSelectedTimeHorizon([scenario.ref_year, scenario.future_year]);
       setSelectedAnnualGrowth(scenario.annual_growth ?? 0);
+      setIsScenarioRunCompleted(true);
       return true;
     } catch (error) {
       console.error("Error restoring scenario:", error);
