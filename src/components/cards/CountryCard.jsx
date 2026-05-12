@@ -88,7 +88,7 @@ const CountryCard = () => {
         >
           {t("card_country_title")}
         </Typography>
-        <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
+        <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center", gap: 2 }}>
           {countries.map((country) => (
             <Tooltip
               key={country.code}
@@ -104,8 +104,6 @@ const CountryCard = () => {
                       ? "secondary.main"
                       : "secondary.light",
                     borderRadius: (theme) => theme.spacing(1),
-                    margin: 2,
-                    marginLeft: 0,
                     textAlign: "center",
                     py: 1,
                     px: 0,
