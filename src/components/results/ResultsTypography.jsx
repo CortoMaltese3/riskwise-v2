@@ -7,6 +7,12 @@ import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { tabIndex } from "../main/tabs";
 
+// The ERA result-detail bundle only ships copy for the map and chart frames.
+// Other view controls (display_parameters, the macro frames) compose keys
+// that have no bundle entry, which would surface the raw key string in the
+// UI; the explicit allowlist keeps the body blank in those states instead.
+const RENDERED_VIEW_CONTROLS = new Set(["display_map", "display_chart"]);
+
 const ResultsTypography = () => {
   const activeMap = useUIStore((s) => s.activeMap);
   const activeViewControl = useUIStore((s) => s.activeViewControl);
@@ -28,6 +34,9 @@ const ResultsTypography = () => {
   const legacySubTabIdx = 0;
 
   const getText = () => {
+    if (!RENDERED_VIEW_CONTROLS.has(activeViewControl)) {
+      return "";
+    }
     if (selectedAppOption === "era") {
       if (!selectedAppOption || !selectedCountry || !selectedHazard || !selectedExposure) {
         return "";
