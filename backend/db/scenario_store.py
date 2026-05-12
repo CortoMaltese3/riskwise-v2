@@ -48,6 +48,18 @@ RESULT_TYPES = (
     "impact_summary",
 )
 
+# Single source of truth for ``result_type -> temp filename`` so the runner,
+# the read-from-temp path, and the workspace rehydration path stay in sync.
+# ``impact_summary`` is intentionally absent — it is computed from params
+# (not a file the runner drops into the temp dir).
+RESULT_TYPE_TO_TEMP_FILE: dict[str, str] = {
+    "hazard_geojson": "hazards_geodata.json",
+    "exposure_geojson": "exposures_geodata.json",
+    "impact_geojson": "risks_geodata.json",
+    "waterfall_data": "risks_waterfall_data.json",
+    "costben_data": "cost_benefit_data.json",
+}
+
 
 @dataclass
 class ScenarioRow:
@@ -556,15 +568,9 @@ def read_result_blobs(temp_dir: Path) -> dict[str, bytes]:
     every artifact (e.g. historical runs have no cost-benefit data). The
     caller decides whether a missing artifact warrants an error.
     """
-    sources = {
-        "hazard_geojson": temp_dir / "hazards_geodata.json",
-        "exposure_geojson": temp_dir / "exposures_geodata.json",
-        "impact_geojson": temp_dir / "risks_geodata.json",
-        "waterfall_data": temp_dir / "risks_waterfall_data.json",
-        "costben_data": temp_dir / "cost_benefit_data.json",
-    }
     blobs: dict[str, bytes] = {}
-    for result_type, source in sources.items():
+    for result_type, filename in RESULT_TYPE_TO_TEMP_FILE.items():
+        source = temp_dir / filename
         if source.is_file():
             blobs[result_type] = source.read_bytes()
     return blobs

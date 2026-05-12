@@ -726,6 +726,39 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "HydrateScenarioData": {
+        "description": "Payload returned by ``POST /api/v1/scenarios/{id}/hydrate-temp``.\n\n``written`` lists the result types that were rewritten to the temp\ndirectory; absent types (e.g. ``costben_data`` on a historical scenario)\nare silently skipped at the writer.",
+        "properties": {
+          "written": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Written",
+            "type": "array"
+          }
+        },
+        "required": [
+          "written"
+        ],
+        "title": "HydrateScenarioData",
+        "type": "object"
+      },
+      "HydrateScenarioResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HydrateScenarioData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "HydrateScenarioResponse",
+        "type": "object"
+      },
       "JobAcceptedResponse": {
         "properties": {
           "job_id": {
@@ -3309,6 +3342,46 @@
           }
         },
         "summary": "Patch Scenario Endpoint"
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}/hydrate-temp": {
+      "post": {
+        "description": "Rewrite the saved scenario's blobs back into the temp dir.\n\nRequired by the Workspace ``Restore`` flow: the maps and the\nwaterfall/cost-benefit charts read from per-run JSON files, so the\nrenderer cannot show the restored state until those files exist on\ndisk again. See ``backend.run_hydrate_scenario_temp`` for details.",
+        "operationId": "hydrate_scenario_temp_endpoint_api_v1_scenarios__scenario_id__hydrate_temp_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HydrateScenarioResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hydrate Scenario Temp Endpoint"
       }
     },
     "/api/v1/scenarios/{scenario_id}/save": {

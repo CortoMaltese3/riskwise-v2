@@ -82,6 +82,7 @@ from backend.models import (
     DeleteSnapshotResponse,
     ErrorResponse,
     HealthResponse,
+    HydrateScenarioResponse,
     JobAcceptedResponse,
     MacroChartDataRequest,
     MacroChartDataResponse,
@@ -795,6 +796,35 @@ async def delete_scenario_endpoint(scenario_id: str) -> dict:
     if not removed:
         raise HTTPException(status_code=404, detail="Scenario not found")
     return {"data": {"id": scenario_id}, "status": _status_ok()}
+
+
+def _hydrate_scenario_temp_sync(scenario_id: str) -> dict:
+    from backend.run_hydrate_scenario_temp import RunHydrateScenarioTemp
+
+    # Call ``execute`` directly (not ``run``) so ``ScenarioNotFound``
+    # propagates to the endpoint's 404 handler instead of being caught
+    # and converted to a generic error envelope.
+    return RunHydrateScenarioTemp({"scenario_id": scenario_id}).execute()
+
+
+@app.post(
+    f"{API_PREFIX}/scenarios/{{scenario_id}}/hydrate-temp",
+    response_model=HydrateScenarioResponse,
+)
+async def hydrate_scenario_temp_endpoint(scenario_id: str) -> dict:
+    """Rewrite the saved scenario's blobs back into the temp dir.
+
+    Required by the Workspace ``Restore`` flow: the maps and the
+    waterfall/cost-benefit charts read from per-run JSON files, so the
+    renderer cannot show the restored state until those files exist on
+    disk again. See ``backend.run_hydrate_scenario_temp`` for details.
+    """
+    from backend.db import ScenarioNotFound
+
+    try:
+        return await asyncio.to_thread(_hydrate_scenario_temp_sync, scenario_id)
+    except ScenarioNotFound as exc:
+        raise HTTPException(status_code=404, detail="Scenario not found") from exc
 
 
 # Two flavours of the scenario export endpoint live side by side:

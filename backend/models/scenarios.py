@@ -205,3 +205,19 @@ class ScenarioImportData(BaseModel):
 class ScenarioImportResponse(BaseModel):
     data: ScenarioImportData
     status: Status
+
+
+class HydrateScenarioData(BaseModel):
+    """Payload returned by ``POST /api/v1/scenarios/{id}/hydrate-temp``.
+
+    ``written`` lists the result types that were rewritten to the temp
+    directory; absent types (e.g. ``costben_data`` on a historical scenario)
+    are silently skipped at the writer.
+    """
+
+    written: list[str]
+
+
+class HydrateScenarioResponse(BaseModel):
+    data: HydrateScenarioData
+    status: Status
