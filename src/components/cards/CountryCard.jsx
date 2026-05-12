@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardActionArea, Typography, CardContent } from "@mui/material";
+import { Box, Card, CardActionArea, Tooltip, Typography, CardContent } from "@mui/material";
+import useResultsStore from "../../store/useResultsStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { selectCountry } from "../../store/orchestrators";
 import RiskWiseClient from "../../lib/RiskWiseClient";
@@ -20,6 +21,7 @@ const countryKey = (country) => country.name.toLowerCase();
 const CountryCard = () => {
   const { t } = useTranslation();
   const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
   const [countries, setCountries] = useState([]);
 
   useEffect(() => {
@@ -88,27 +90,37 @@ const CountryCard = () => {
         </Typography>
         <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
           {countries.map((country) => (
-            <CardActionArea
+            <Tooltip
               key={country.code}
-              onClick={() => handleSelect(country)}
-              sx={{
-                backgroundColor: isButtonSelected(country) ? "secondary.main" : "secondary.light",
-                borderRadius: (theme) => theme.spacing(1),
-                margin: 2,
-                marginLeft: 0,
-                textAlign: "center",
-                py: 1,
-                px: 0,
-                transition: layoutTransition(["transform"]),
-                "&:active": {
-                  transform: "scale(0.96)",
-                },
-              }}
+              title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
+              placement="top"
             >
-              <Typography variant="body1" color="text.primary">
-                {labelFor(country)}
-              </Typography>
-            </CardActionArea>
+              <span style={{ width: "100%" }}>
+                <CardActionArea
+                  onClick={() => handleSelect(country)}
+                  disabled={isScenarioRunning}
+                  sx={{
+                    backgroundColor: isButtonSelected(country)
+                      ? "secondary.main"
+                      : "secondary.light",
+                    borderRadius: (theme) => theme.spacing(1),
+                    margin: 2,
+                    marginLeft: 0,
+                    textAlign: "center",
+                    py: 1,
+                    px: 0,
+                    transition: layoutTransition(["transform"]),
+                    "&:active": {
+                      transform: "scale(0.96)",
+                    },
+                  }}
+                >
+                  <Typography variant="body1" color="text.primary">
+                    {labelFor(country)}
+                  </Typography>
+                </CardActionArea>
+              </span>
+            </Tooltip>
           ))}
         </Box>
         <Box

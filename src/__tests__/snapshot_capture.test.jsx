@@ -110,6 +110,24 @@ describe("snapshot capture button", () => {
     expect(button).toBeDisabled();
   });
 
+  it("is disabled while a scenario is running, even after a prior run completed", async () => {
+    stateRef.current = {
+      ...setStateBag,
+      scenarioRunCode: "scen-prev",
+      isScenarioRunCompleted: true,
+      isScenarioRunning: true,
+      activeViewControl: "display_map",
+    };
+    render(<MainViewToolbar />);
+    const button = screen.getByLabelText("workspace_snapshot_capture_aria");
+    expect(button).toBeDisabled();
+    // Tooltip title is wired off the gating key when a run is active.
+    const tooltipHost = button.closest("[aria-label]") ?? button.parentElement;
+    // The chip-running tooltip key should be present in the rendered tree.
+    expect(document.body.innerHTML).toContain("scenario_running_disabled_tooltip");
+    expect(tooltipHost).not.toBeNull();
+  });
+
   it("captures the active map and POSTs the bytes when run is complete", async () => {
     stateRef.current = {
       ...setStateBag,

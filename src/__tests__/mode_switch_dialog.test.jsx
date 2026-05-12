@@ -24,9 +24,6 @@ vi.mock("../components/nav/LanguageButton", () => ({
 vi.mock("../components/nav/MinimizeButton", () => ({
   default: () => <div data-testid="mock-minimize" />,
 }));
-vi.mock("../components/nav/ReloadButton", () => ({
-  default: () => <div data-testid="mock-reload" />,
-}));
 vi.mock("../components/nav/ShutdownButton", () => ({
   default: () => <div data-testid="mock-shutdown" />,
 }));

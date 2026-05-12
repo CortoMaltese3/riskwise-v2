@@ -1,7 +1,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, Slider, Typography } from "@mui/material";
+import { Box, Card, CardContent, Slider, Tooltip, Typography } from "@mui/material";
+import useResultsStore from "../../store/useResultsStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 // Inclusive range covering both monetary (GDP-like) and population-like
@@ -17,6 +18,7 @@ const valueText = (value) => `${value}`;
 const AnnualGrowthCard = () => {
   const selectedAnnualGrowth = useWorkspaceStore((s) => s.selectedAnnualGrowth);
   const setSelectedAnnualGrowth = useWorkspaceStore((s) => s.setSelectedAnnualGrowth);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
   const { t } = useTranslation();
 
   const handleGrowthCardSelect = (event, value) => {
@@ -77,46 +79,52 @@ const AnnualGrowthCard = () => {
           >
             {t("card_annualgrowth_subtitle")}
           </Typography>
-          <Slider
-            aria-label={t("input_annual_growth_selector_aria")}
-            defaultValue={0}
-            getAriaValueText={valueText}
-            onChange={handleGrowthCardSelect}
-            step={0.1}
-            marks={growthMarks}
-            min={growthMarks[0].value}
-            max={growthMarks[1].value}
-            valueLabelDisplay="on"
-            value={selectedAnnualGrowth ? parseFloat(selectedAnnualGrowth) : 0}
-            sx={{
-              color: "secondary.main",
-              marginTop: 6,
-              width: "90%",
-              "& .MuiSlider-thumb": {
-                height: 24,
-                width: 24,
-                backgroundColor: "common.white",
-                border: 2,
-                borderColor: "currentColor",
-                "&:focus, &:hover, &.Mui-active": { boxShadow: "inherit" },
-              },
-              "& .MuiSlider-valueLabel": {
-                color: "black",
-                variant: "body2",
-                fontWeight: "bold",
-                borderRadius: (theme) => theme.spacing(2),
-                borderColor: "black",
-                backgroundColor: "secondary.main",
-              },
-              "& .MuiSlider-track": { height: 16, borderRadius: 4 },
-              "& .MuiSlider-rail": {
-                color: "border.default",
-                opacity: 1,
-                height: 8,
-                borderRadius: 4,
-              },
-            }}
-          />
+          <Tooltip
+            title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
+            placement="top"
+          >
+            <Slider
+              aria-label={t("input_annual_growth_selector_aria")}
+              defaultValue={0}
+              getAriaValueText={valueText}
+              onChange={handleGrowthCardSelect}
+              disabled={isScenarioRunning}
+              step={0.1}
+              marks={growthMarks}
+              min={growthMarks[0].value}
+              max={growthMarks[1].value}
+              valueLabelDisplay="on"
+              value={selectedAnnualGrowth ? parseFloat(selectedAnnualGrowth) : 0}
+              sx={{
+                color: "secondary.main",
+                marginTop: 6,
+                width: "90%",
+                "& .MuiSlider-thumb": {
+                  height: 24,
+                  width: 24,
+                  backgroundColor: "common.white",
+                  border: 2,
+                  borderColor: "currentColor",
+                  "&:focus, &:hover, &.Mui-active": { boxShadow: "inherit" },
+                },
+                "& .MuiSlider-valueLabel": {
+                  color: "black",
+                  variant: "body2",
+                  fontWeight: "bold",
+                  borderRadius: (theme) => theme.spacing(2),
+                  borderColor: "black",
+                  backgroundColor: "secondary.main",
+                },
+                "& .MuiSlider-track": { height: 16, borderRadius: 4 },
+                "& .MuiSlider-rail": {
+                  color: "border.default",
+                  opacity: 1,
+                  height: 8,
+                  borderRadius: 4,
+                },
+              }}
+            />
+          </Tooltip>
         </Box>
         <Box
           sx={{

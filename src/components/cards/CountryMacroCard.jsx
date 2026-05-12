@@ -16,6 +16,10 @@ const BUILTIN_LABEL_KEYS = {
 
 const countryKey = (country) => country.name.toLowerCase();
 
+// Macroeconomic cards intentionally remain enabled while a scenario run is
+// in flight (#401): their selections drive a separate workflow and never
+// flow into ``runScenario``'s body, so changing them mid-run cannot
+// corrupt the active job. Revisit only if a corruption case surfaces.
 const CountryMacroCard = () => {
   const { t } = useTranslation();
   const selectedMacroCountry = useWorkspaceStore((s) => s.selectedMacroCountry);

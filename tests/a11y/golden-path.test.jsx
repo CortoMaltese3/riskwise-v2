@@ -27,13 +27,6 @@ vi.mock("../../src/components/nav/MinimizeButton", () => ({
     </button>
   ),
 }));
-vi.mock("../../src/components/nav/ReloadButton", () => ({
-  default: () => (
-    <button type="button" aria-label="reload">
-      reload
-    </button>
-  ),
-}));
 vi.mock("../../src/components/nav/ShutdownButton", () => ({
   default: () => (
     <button type="button" aria-label="shutdown">

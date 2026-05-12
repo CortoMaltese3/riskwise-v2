@@ -8,12 +8,14 @@ import {
   CardActionArea,
   CardContent,
   IconButton,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import logger from "../../lib/logger.ts";
+import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { selectHazard } from "../../store/orchestrators";
@@ -35,6 +37,7 @@ const HazardCard = () => {
   const setAlertMessage = useUIStore((s) => s.setAlertMessage);
   const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
   const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
 
   const [fetchHazardMessage, setFetchHazardMessage] = useState("");
 
@@ -149,51 +152,69 @@ const HazardCard = () => {
         {/* Hazard selection section */}
         <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
           {hazards.map((hazard) => (
-            <CardActionArea
+            <Tooltip
               key={hazard}
-              onClick={() => handleCardSelect(hazard)}
-              sx={{
-                backgroundColor: isButtonSelected(hazard) ? "secondary.main" : "secondary.light",
-                borderRadius: (theme) => theme.spacing(1),
-                margin: 2,
-                marginLeft: 0,
-                textAlign: "center",
-                py: 1,
-                px: 0,
-                transition: layoutTransition(["transform"]),
-                "&:active": {
-                  transform: "scale(0.96)", // Slightly scale down when clicked
-                },
-              }}
+              title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
+              placement="top"
             >
-              <Typography variant="body1" color="text.primary">
-                {t(`card_hazard_${hazard}`)}
-              </Typography>
-            </CardActionArea>
+              <span style={{ width: "100%" }}>
+                <CardActionArea
+                  onClick={() => handleCardSelect(hazard)}
+                  disabled={isScenarioRunning}
+                  sx={{
+                    backgroundColor: isButtonSelected(hazard)
+                      ? "secondary.main"
+                      : "secondary.light",
+                    borderRadius: (theme) => theme.spacing(1),
+                    margin: 2,
+                    marginLeft: 0,
+                    textAlign: "center",
+                    py: 1,
+                    px: 0,
+                    transition: layoutTransition(["transform"]),
+                    "&:active": {
+                      transform: "scale(0.96)", // Slightly scale down when clicked
+                    },
+                  }}
+                >
+                  <Typography variant="body1" color="text.primary">
+                    {t(`card_hazard_${hazard}`)}
+                  </Typography>
+                </CardActionArea>
+              </span>
+            </Tooltip>
           ))}
         </Box>
 
         {/* Load button section */}
         {selectedCountry && selectedAppOption === "explore" && (
           <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
-            <Button
-              component="span"
-              onClick={handleLoadButtonClick}
-              sx={{
-                bgcolor: "secondary.bg",
-                color: "common.black",
-                fontWeight: "bold",
-                margin: 2,
-                "&:hover": { bgcolor: "secondary.light" },
-                transition: layoutTransition(["transform"]),
-                "&:active": {
-                  transform: "scale(0.96)", // Slightly scale down when clicked
-                },
-              }}
-              variant="contained"
+            <Tooltip
+              title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
+              placement="top"
             >
-              {t("card_hazard_load_button")}
-            </Button>
+              <span>
+                <Button
+                  component="span"
+                  onClick={handleLoadButtonClick}
+                  disabled={isScenarioRunning}
+                  sx={{
+                    bgcolor: "secondary.bg",
+                    color: "common.black",
+                    fontWeight: "bold",
+                    margin: 2,
+                    "&:hover": { bgcolor: "secondary.light" },
+                    transition: layoutTransition(["transform"]),
+                    "&:active": {
+                      transform: "scale(0.96)", // Slightly scale down when clicked
+                    },
+                  }}
+                  variant="contained"
+                >
+                  {t("card_hazard_load_button")}
+                </Button>
+              </span>
+            </Tooltip>
             <input
               accept=".hdf5,.h5,.mat,.tif"
               hidden

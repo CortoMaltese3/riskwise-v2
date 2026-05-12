@@ -24,6 +24,7 @@ const UNSUPPORTED_CAPTURE_SURFACES = new Set(["display_chart"]);
 const MainViewToolbar = () => {
   const activeViewControl = useUIStore((s) => s.activeViewControl);
   const isScenarioRunCompleted = useResultsStore((s) => s.isScenarioRunCompleted);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
   const mapTitle = useUIStore((s) => s.mapTitle);
   const scenarioRunCode = useWorkspaceStore((s) => s.scenarioRunCode);
   const scenarioRunSaved = useWorkspaceStore((s) => s.scenarioRunSaved);
@@ -41,17 +42,21 @@ const MainViewToolbar = () => {
 
   const noScenarioRun = !scenarioRunCode || !isScenarioRunCompleted;
   const surfaceUnsupported = UNSUPPORTED_CAPTURE_SURFACES.has(activeViewControl);
-  const captureDisabled = snapshotBusy || noScenarioRun || surfaceUnsupported;
-  const saveScenarioDisabled = !isScenarioRunCompleted || !scenarioRunCode;
+  const captureDisabled = snapshotBusy || noScenarioRun || surfaceUnsupported || isScenarioRunning;
+  const saveScenarioDisabled = !isScenarioRunCompleted || !scenarioRunCode || isScenarioRunning;
 
   let captureTooltipKey = "workspace_snapshot_capture_tooltip";
   if (snapshotBusy) {
     captureTooltipKey = "workspace_snapshot_capturing_tooltip";
+  } else if (isScenarioRunning) {
+    captureTooltipKey = "scenario_running_disabled_tooltip";
   } else if (noScenarioRun) {
     captureTooltipKey = "workspace_snapshot_disabled_no_run_tooltip";
   } else if (surfaceUnsupported) {
     captureTooltipKey = "workspace_snapshot_disabled_chart_tooltip";
   }
+
+  const saveTooltipKey = isScenarioRunning ? "scenario_running_disabled_tooltip" : "";
 
   const onCapture = async () => {
     setSnapshotBusy(true);
@@ -92,23 +97,27 @@ const MainViewToolbar = () => {
           </IconButton>
         </span>
       </Tooltip>
-      <Button
-        size="small"
-        variant="contained"
-        disabled={saveScenarioDisabled}
-        onClick={onSaveClick}
-        aria-label={t("save_scenario_button_aria")}
-        sx={{
-          bgcolor: "secondary.light",
-          color: "text.primary",
-          transition: layoutTransition(["transform"]),
-          "&:active": { transform: "scale(0.96)" },
-          "&:hover": { bgcolor: "secondary.main" },
-          textTransform: "none",
-        }}
-      >
-        {t("save_scenario_button_label")}
-      </Button>
+      <Tooltip title={saveTooltipKey ? t(saveTooltipKey) : ""}>
+        <span>
+          <Button
+            size="small"
+            variant="contained"
+            disabled={saveScenarioDisabled}
+            onClick={onSaveClick}
+            aria-label={t("save_scenario_button_aria")}
+            sx={{
+              bgcolor: "secondary.light",
+              color: "text.primary",
+              transition: layoutTransition(["transform"]),
+              "&:active": { transform: "scale(0.96)" },
+              "&:hover": { bgcolor: "secondary.main" },
+              textTransform: "none",
+            }}
+          >
+            {t("save_scenario_button_label")}
+          </Button>
+        </span>
+      </Tooltip>
       <SaveScenarioDialog
         open={saveDialogOpen}
         scenarioId={scenarioRunCode}

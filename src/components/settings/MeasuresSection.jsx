@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Stack, Typography } from "@mui/material";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
+import useResultsStore from "../../store/useResultsStore";
 import { useListManager } from "../../hooks/useListManager";
 import DataList from "./measures/DataList";
 import DataUploadForm from "./measures/DataUploadForm";
@@ -11,6 +12,7 @@ import { useMeasuresUpload } from "./measures/useMeasuresUpload";
 
 const MeasuresSection = () => {
   const { t } = useTranslation();
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
 
   const fetchMeasureSets = useCallback(async () => {
     const res = await RiskWiseClient.listMeasureDatasets();
@@ -34,6 +36,10 @@ const MeasuresSection = () => {
 
   const upload = useMeasuresUpload({ refresh, setBusy });
 
+  // OR-merge ``isScenarioRunning`` into the existing ``busy`` value (see
+  // CustomDataSection for the same pattern).
+  const effectiveBusy = isScenarioRunning ? (busy ?? "scenario_running") : busy;
+
   return (
     <Stack spacing={3}>
       <Stack spacing={1}>
@@ -44,7 +50,7 @@ const MeasuresSection = () => {
       </Stack>
 
       <DataUploadForm
-        busy={busy}
+        busy={effectiveBusy}
         errors={upload.errors}
         pendingPath={upload.pendingPath}
         pendingName={upload.pendingName}
@@ -61,7 +67,7 @@ const MeasuresSection = () => {
       <DataList
         datasets={measureSets}
         onRequestDelete={setConfirmDelete}
-        deleteDisabled={busy !== null}
+        deleteDisabled={effectiveBusy !== null}
       />
 
       <DataDeleteConfirmation

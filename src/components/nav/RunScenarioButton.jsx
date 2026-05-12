@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Button } from "@mui/material";
+import { Box, Button, Tooltip } from "@mui/material";
 import LoadingButton from "@mui/lab/LoadingButton";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 
 import useRunScenario from "../../hooks/useRunScenario";
+import useResultsStore from "../../store/useResultsStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 const RunScenarioButton = () => {
@@ -21,6 +22,7 @@ const RunScenarioButton = () => {
   const selectedHazardFile = useWorkspaceStore((s) => s.selectedHazardFile);
   const selectedScenario = useWorkspaceStore((s) => s.selectedScenario);
   const selectedTimeHorizon = useWorkspaceStore((s) => s.selectedTimeHorizon);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
 
   const [isRunButtonLoading, setIsRunButtonLoading] = useState(false);
   const [isRunButtonDisabled, setIsRunButtonDisabled] = useState(true);
@@ -64,22 +66,34 @@ const RunScenarioButton = () => {
     });
   };
 
+  // ``isScenarioRunning`` is the source of truth for "another run is in
+  // flight"; OR-merge it into the local validation gate so a second click
+  // mid-run can never reach ``onRunHandler``.
+  const buttonDisabled = isRunButtonDisabled || isScenarioRunning;
+
   return (
     <Box sx={{ textAlign: "center", mt: 2 }} data-tour="run-button">
       {!isRunButtonLoading ? (
-        <Button
-          key="runButton"
-          disabled={isRunButtonDisabled}
-          onClick={onRunHandler}
-          startIcon={<PlayCircleIcon />}
-          sx={{
-            bgcolor: "secondary.main",
-            "&:hover": { bgcolor: "secondary.light" },
-          }}
-          variant="contained"
+        <Tooltip
+          title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
+          placement="top"
         >
-          {t("run_button")}
-        </Button>
+          <span>
+            <Button
+              key="runButton"
+              disabled={buttonDisabled}
+              onClick={onRunHandler}
+              startIcon={<PlayCircleIcon />}
+              sx={{
+                bgcolor: "secondary.main",
+                "&:hover": { bgcolor: "secondary.light" },
+              }}
+              variant="contained"
+            >
+              {t("run_button")}
+            </Button>
+          </span>
+        </Tooltip>
       ) : (
         <LoadingButton
           loading={isRunButtonLoading}

@@ -92,7 +92,7 @@ must be done in code with a comment linking to the tracking issue.
 
 | Element | Politeness | Why |
 |---|---|---|
-| `ProgressOverlay` step label | `polite` | Status updates during scenario run; do not interrupt |
+| `ScenarioProgressChip` step label | `polite` | Status updates during scenario run; do not interrupt |
 | Error `Snackbar` (severity `error`) | `assertive` | User must be notified immediately of failure |
 | Non-error `Snackbar` (info/success/warning) | `polite` | Background acknowledgement |
 
@@ -116,13 +116,14 @@ sidebar.
 1. **Page load** — first Tab moves focus to the sidebar collapse button.
 2. **Sidebar** — Tab cycles through Home → Risk Assessment → Macroeconomic →
    Workspace → Settings; Enter selects.
-3. **Top bar** — Tab continues through Reload → Language → Minimize → Shutdown.
+3. **Top bar** — Tab continues through Theme → Language → Minimize → Shutdown.
 4. **Country / Hazard / Scenario / TimeHorizon cards** — each card is now a
    `<Button>` (M-4 fix in baseline); Tab reaches every card; Enter/Space
    selects.
-5. **Run scenario** — Tab to the run button; Enter starts the run. Focus is
-   announced via the `ProgressOverlay` `aria-live="polite"` step label.
-6. **Cancel** — within the overlay, Tab reaches the Cancel button.
+5. **Run scenario** — Tab to the run button; Enter starts the run. Status is
+   announced via the `ScenarioProgressChip` `aria-live="polite"` step label.
+6. **Cancel** — focus the chip's Cancel button (two-stage confirm); the chip
+   does not trap focus, so Tab continues through the rest of the app.
 7. **Results panel** — once the run completes, Tab continues into the
    `complementary` results panel.
 
