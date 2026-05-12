@@ -150,7 +150,7 @@ const HazardCard = () => {
         </Typography>
 
         {/* Hazard selection section */}
-        <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
+        <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center", gap: 2 }}>
           {hazards.map((hazard) => (
             <Tooltip
               key={hazard}
@@ -166,8 +166,6 @@ const HazardCard = () => {
                       ? "secondary.main"
                       : "secondary.light",
                     borderRadius: (theme) => theme.spacing(1),
-                    margin: 2,
-                    marginLeft: 0,
                     textAlign: "center",
                     py: 1,
                     px: 0,
