@@ -150,14 +150,14 @@ const HazardCard = () => {
         </Typography>
 
         {/* Hazard selection section */}
-        <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center", gap: 2 }}>
+        <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
           {hazards.map((hazard) => (
             <Tooltip
               key={hazard}
               title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
               placement="top"
             >
-              <span style={{ width: "100%" }}>
+              <Box component="span" sx={{ width: "100%", margin: 2, marginLeft: 0 }}>
                 <CardActionArea
                   onClick={() => handleCardSelect(hazard)}
                   disabled={isScenarioRunning}
@@ -179,7 +179,7 @@ const HazardCard = () => {
                     {t(`card_hazard_${hazard}`)}
                   </Typography>
                 </CardActionArea>
-              </span>
+              </Box>
             </Tooltip>
           ))}
         </Box>

@@ -88,14 +88,14 @@ const CountryCard = () => {
         >
           {t("card_country_title")}
         </Typography>
-        <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center", gap: 2 }}>
+        <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
           {countries.map((country) => (
             <Tooltip
               key={country.code}
               title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
               placement="top"
             >
-              <span style={{ width: "100%" }}>
+              <Box component="span" sx={{ width: "100%", margin: 2, marginLeft: 0 }}>
                 <CardActionArea
                   onClick={() => handleSelect(country)}
                   disabled={isScenarioRunning}
@@ -117,7 +117,7 @@ const CountryCard = () => {
                     {labelFor(country)}
                   </Typography>
                 </CardActionArea>
-              </span>
+              </Box>
             </Tooltip>
           ))}
         </Box>
