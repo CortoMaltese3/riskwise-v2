@@ -665,6 +665,8 @@ export interface components {
             benefit_cost_ratio: number;
             /** Cost */
             cost: number;
+            /** Display Name */
+            display_name?: string | null;
             /** Name */
             name: string;
         };

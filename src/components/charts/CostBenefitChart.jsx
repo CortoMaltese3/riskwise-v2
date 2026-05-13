@@ -113,7 +113,14 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
   }
 
   const unit = data.currency_unit || "";
-  const labels = data.measures.map((m) => m.name);
+  // Engine output ships an opaque short code in ``measure_name`` ("GR",
+  // "TP", ...) which we surface as ``name`` on the payload. The backend
+  // also joins each code back to a catalog i18n key in ``display_name``
+  // (#429); when present, translate it and use it on the axis / tooltip
+  // / a11y label so users see the full measure name. Fall back to the
+  // raw name for codes that have no catalog mapping yet.
+  const labelFor = (m) => (m.display_name ? t(m.display_name) : m.name);
+  const labels = data.measures.map(labelFor);
   const ratios = data.measures.map((m) => m.benefit_cost_ratio);
   const colors = ratios.map((r) => colorForRatio(r, vizColors));
 
@@ -204,7 +211,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
   ];
 
   const ariaLabel = `${titleText}. ${data.measures
-    .map((m) => `${m.name}: ${formatRatio(m.benefit_cost_ratio, locale)}`)
+    .map((m) => `${labelFor(m)}: ${formatRatio(m.benefit_cost_ratio, locale)}`)
     .join(", ")}`;
 
   const tableHeaders = [
@@ -215,7 +222,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
     t("economic_non_economic_adaptation_chart_tooltip_ratio"),
   ];
   const tableRows = data.measures.map((m) => [
-    m.name,
+    labelFor(m),
     formatNumber(m.cost, locale),
     formatNumber(m.benefit, locale),
     formatRatio(m.benefit_cost_ratio, locale),
