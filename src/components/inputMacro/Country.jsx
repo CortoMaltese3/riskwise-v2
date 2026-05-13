@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Card, CardContent, TextField, Typography } from "@mui/material";
@@ -12,7 +12,7 @@ const Country = () => {
   const setSelectedMacroCard = useUIStore((s) => s.setSelectedMacroCard);
   const { t } = useTranslation();
   const [clicked, setClicked] = useState(false);
-  const [cardState, setCardState] = useState("default");
+  const cardState = selectedMacroCountry ? "valid" : "default";
 
   const handleMouseDown = () => {
     setClicked(true);
@@ -26,10 +26,6 @@ const Country = () => {
     setSelectedMacroCard("country");
     setActiveViewControl("display_macro_parameters");
   };
-
-  useEffect(() => {
-    setCardState(selectedMacroCountry ? "valid" : "default");
-  }, [selectedMacroCountry]);
 
   return (
     <Card
