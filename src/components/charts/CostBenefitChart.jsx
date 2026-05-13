@@ -16,6 +16,7 @@ import {
 
 import { isRtl } from "../../i18nConfig";
 import { formatNumber, formatNumberWithUnit } from "../../lib/formatNumber";
+import { buildChartThemeOptions } from "../../utils/chartTheme";
 import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
 import ChartInfoPopover from "../help/ChartInfoPopover";
@@ -86,6 +87,8 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
     marginal: alpha(theme.palette.viz.neutral, 0.85),
     unprofitable: alpha(theme.palette.viz.negative, 0.85),
   };
+  // Theme-aware axis / tooltip / gridline colours (issue #289).
+  const chartThemeOptions = buildChartThemeOptions(theme);
 
   useEffect(() => {
     return () => {
@@ -163,7 +166,9 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
     rtl,
     scales: {
       x: {
+        ...chartThemeOptions.scales.x,
         ticks: {
+          ...chartThemeOptions.scales.x.ticks,
           // Spelt-out measure names can be long ("Recharging wells"); rotate
           // up to 45° so the labels stay legible, and let Chart.js auto-skip
           // when even that won't fit rather than silently truncating
@@ -175,13 +180,16 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
         },
       },
       y: {
+        ...chartThemeOptions.scales.y,
         beginAtZero: true,
         suggestedMax,
         title: {
+          ...chartThemeOptions.scales.y.title,
           display: true,
           text: t("economic_non_economic_adaptation_chart_ratio_label"),
         },
         ticks: {
+          ...chartThemeOptions.scales.y.ticks,
           callback: (val) => formatNumber(Number(val), locale),
         },
       },
@@ -192,6 +200,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
       tooltip: {
         rtl,
         position: "average",
+        ...chartThemeOptions.plugins.tooltip,
         callbacks: {
           title: (items) => items[0]?.label ?? "",
           label: (ctx) => {

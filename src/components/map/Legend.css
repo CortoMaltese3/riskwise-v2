@@ -1,3 +1,8 @@
+/* Map legend overlay. The legend sits on top of OpenStreetMap raster tiles,
+   which stay light in both schemes (no dark tile variant is shipped), so the
+   legend itself stays light and uses a dark drop shadow for elevation. This
+   is an intentional opt-out from the app theme; see the rgba exceptions
+   block in src/theme/theme.ts for the audit trail (issue #289). */
 .legend-container {
   position: absolute;
   bottom: 25px;
