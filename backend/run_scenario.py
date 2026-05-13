@@ -348,11 +348,18 @@ class RunScenario:
 
         if cost_benefit:
             update_progress(50, "Computing cost-benefit chart data...")
+            # Engine ``measure_name`` arrives as an opaque short code
+            # ("GR", "TP", ...); ask the handler to join it back to the
+            # catalog's i18n key so the chart can render translated full
+            # names (#429). The handler resolves its own DB connection so
+            # this call site does not need to plumb one through.
+            display_name_lookup = self.costben_handler.build_display_name_lookup()
             self.costben_handler.compute_cost_benefit_data(
                 cost_benefit,
                 entity_present,
                 self.request_data.future_year,
                 entity_future,
+                display_name_lookup=display_name_lookup,
             )
         if is_future:
             update_progress(55, "Computing waterfall chart data...")

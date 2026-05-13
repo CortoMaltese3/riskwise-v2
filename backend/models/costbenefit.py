@@ -17,6 +17,10 @@ class CostBenefitMeasure(BaseModel):
     cost: float
     benefit: float
     benefit_cost_ratio: float
+    # Optional i18n key for the human-readable measure name. When set the
+    # frontend renders the translated full name on the chart axis instead
+    # of the raw engine code in ``name`` (#429).
+    display_name: str | None = None
 
 
 class CostBenefitPayload(BaseModel):

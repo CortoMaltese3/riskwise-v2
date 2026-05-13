@@ -110,12 +110,28 @@ def seed_builtin_measures(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> N
     seen: set[tuple] = set()
     enriched: list[dict] = []
 
+    has_code_column = "code" in df.columns
+
     for i, row in enumerate(rows):
         peril_id = str(row.get("peril_ID", ""))
         hazard_type = _PERIL_TO_HAZARD.get(peril_id, peril_id)
         row["hazard_type"] = hazard_type
         row["country"] = None
         _validate_row(row, i, seen)
+        # ``code`` aligns the catalog i18n key with the short code the
+        # engine echoes back from the entity xlsx (#429). NaN / empty
+        # cells are persisted as NULL so the join in the cost-benefit
+        # handler falls through to the raw engine name.
+        code_val: str | None = None
+        if has_code_column:
+            raw_code = row.get("code")
+            if isinstance(raw_code, str):
+                stripped = raw_code.strip()
+                code_val = stripped or None
+            elif raw_code is not None and not (
+                isinstance(raw_code, float) and math.isnan(raw_code)
+            ):
+                code_val = str(raw_code)
         enriched.append(
             {
                 "id": str(uuid.uuid4()),
@@ -129,6 +145,7 @@ def seed_builtin_measures(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> N
                 "description": None,
                 "source_reference": "TODO — source not yet cited",
                 "is_builtin": True,
+                "code": code_val,
             }
         )
 
@@ -143,8 +160,8 @@ def seed_builtin_measures(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> N
             INSERT INTO adaptation_measures
                 (id, measure_set_id, country, hazard_type, exposure_type,
                  name, cost_factor, hazard_reduction_percentage,
-                 description, source_reference, is_builtin)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 description, source_reference, is_builtin, code)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 (
@@ -159,6 +176,7 @@ def seed_builtin_measures(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> N
                     r["description"],
                     r["source_reference"],
                     r["is_builtin"],
+                    r["code"],
                 )
                 for r in enriched
             ],

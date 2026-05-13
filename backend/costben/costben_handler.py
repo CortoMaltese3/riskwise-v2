@@ -323,12 +323,41 @@ class CostBenefitHandler:
             logger.error(f"Failed to compute waterfall data. More info: {e}")
             raise EngineError(f"Failed to compute waterfall data: {e}") from e
 
+    def build_display_name_lookup(
+        self, conn: duckdb.DuckDBPyConnection | None = None
+    ) -> dict[str, str]:
+        """Return ``{code: name}`` for catalog rows with a non-empty code.
+
+        Used by :meth:`compute_cost_benefit_data` to translate the engine's
+        opaque ``measure_name`` (e.g. ``"GR"``) into the catalog's i18n key
+        (e.g. ``"adaptation_measures_green_roofs"``) so the chart can
+        render translated full names. See issue #429. When ``conn`` is
+        omitted the process-wide DuckDB connection is resolved on demand,
+        keeping the run_scenario caller free of DB-handle plumbing.
+        """
+        try:
+            if conn is None:
+                from backend.db.connection import get_connection
+
+                conn = get_connection()
+            rows = conn.execute(
+                "SELECT code, name FROM adaptation_measures "
+                "WHERE code IS NOT NULL AND code <> ''"
+            ).fetchall()
+        except (duckdb.Error, OSError) as exc:
+            logger.warning(f"Failed to load measure code lookup: {exc}")
+            return {}
+        # Multiple catalog rows can share the same code (different hazards);
+        # the i18n key is identical across them, so last-write wins is safe.
+        return {str(code): str(name) for code, name in rows if code and name}
+
     def compute_cost_benefit_data(
         self,
         cost_benefit_results: list[CostBenefitResult],
         entity_present: Any,
         future_year: int,
         entity_future: Any = None,
+        display_name_lookup: dict[str, str] | None = None,
     ) -> dict:
         """Compute the structured cost-benefit payload for the frontend.
 
@@ -343,17 +372,28 @@ class CostBenefitHandler:
         ``future_year`` is taken from the scenario request so the payload's
         time horizon reflects the user's selection even for historical runs,
         where no future :class:`EntityBundle` is constructed.
+
+        ``display_name_lookup`` is an optional ``{code: i18n_key}`` map
+        produced by :meth:`build_display_name_lookup`. When supplied, each
+        measure's ``display_name`` field is set to the matching i18n key
+        so the frontend can render the translated full measure name. Codes
+        with no entry fall through with ``display_name`` unset, and the
+        chart renders the raw engine name (#429).
         """
         try:
-            measures = [
-                {
+            lookup = display_name_lookup or {}
+            measures = []
+            for r in cost_benefit_results:
+                entry: dict[str, Any] = {
                     "name": r.name,
                     "cost": r.cost,
                     "benefit": r.benefit,
                     "benefit_cost_ratio": r.bcr,
                 }
-                for r in cost_benefit_results
-            ]
+                display = lookup.get(r.name)
+                if display:
+                    entry["display_name"] = display
+                measures.append(entry)
 
             future_year_int = (
                 int(entity_future.ref_year) if entity_future is not None else int(future_year)

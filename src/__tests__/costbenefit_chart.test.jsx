@@ -184,6 +184,54 @@ describe("CostBenefitChart", () => {
     expect(props.data.labels).toEqual(["Recharging wells", "Soil and water bunds"]);
   });
 
+  it("renders display_name through i18n when present, falling back to name otherwise (#429)", () => {
+    const FIXTURE_429 = {
+      currency_unit: "USD",
+      present_year: 2024,
+      future_year: 2050,
+      // ERA codes from #429 inventory: at least one of GR / TP / GBC plus a
+      // no-mapping fallback row to exercise both branches of ``labelFor``.
+      measures: [
+        {
+          name: "GR",
+          display_name: "adaptation_measures_green_roofs",
+          cost: 100,
+          benefit: 200,
+          benefit_cost_ratio: 2.0,
+        },
+        {
+          name: "TP",
+          display_name: "adaptation_measures_trees_planting",
+          cost: 100,
+          benefit: 150,
+          benefit_cost_ratio: 1.5,
+        },
+        {
+          name: "GBC",
+          display_name: "adaptation_measures_green_building_codes",
+          cost: 100,
+          benefit: 80,
+          benefit_cost_ratio: 0.8,
+        },
+        { name: "WSP", cost: 100, benefit: 100, benefit_cost_ratio: 1.0 },
+      ],
+    };
+    render(<CostBenefitChart data={FIXTURE_429} />);
+    const props = barSpy.mock.calls[0][0];
+    // The mocked t() in this file echoes the key; that's exactly what we
+    // need to assert that the chart routes display_name through i18n
+    // (a real bundle would map the key to "Green Roofs", "Trees planting",
+    // "Green building codes").
+    expect(props.data.labels).toEqual([
+      "adaptation_measures_green_roofs",
+      "adaptation_measures_trees_planting",
+      "adaptation_measures_green_building_codes",
+      "WSP",
+    ]);
+    expect(props["aria-label"]).toContain("adaptation_measures_green_roofs");
+    expect(props["aria-label"]).toContain("WSP");
+  });
+
   it("registers a break-even plugin that draws a dashed line at y=1 (#412 B2)", () => {
     render(<CostBenefitChart data={FIXTURE} />);
     const props = barSpy.mock.calls[0][0];

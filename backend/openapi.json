@@ -83,6 +83,17 @@
             "title": "Cost",
             "type": "number"
           },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
           "name": {
             "minLength": 1,
             "title": "Name",
