@@ -1,7 +1,9 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Button, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Button, Collapse, Stack, Typography } from "@mui/material";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
@@ -9,6 +11,10 @@ import { formatNumber, formatNumberWithUnit } from "../../lib/formatNumber";
 import { SummaryRow, SummaryRowSkeleton } from "./SummaryRow";
 
 const EM_DASH = "—";
+// At/above this magnitude we render values with compact notation
+// (e.g. "137.75M USD") so the summary card never wraps the unit onto its
+// own line (#412 B3).
+const COMPACT_NOTATION_THRESHOLD = 1_000_000;
 
 // `benefit_cost_ratio` can be `Infinity` when the engine sees a zero-cost
 // measure (engine `cost_benefit.py` returns `float("inf")`). Filter to finite
@@ -31,6 +37,14 @@ const formatBestRatio = (best, locale) => {
     minimumFractionDigits: 2,
   });
   return `${best.name}: ${ratio}`;
+};
+
+const formatTotalWithUnit = (value, unit, locale) => {
+  const options =
+    Math.abs(value) >= COMPACT_NOTATION_THRESHOLD
+      ? { notation: "compact", compactDisplay: "short", maximumFractionDigits: 2 }
+      : {};
+  return formatNumberWithUnit(value, unit, locale, options);
 };
 
 const emptyStats = () => ({
@@ -59,8 +73,8 @@ const computeStats = (data, locale) => {
     marginalCount: String(marginalCount),
     lossCount: String(lossCount),
     bestRatio: formatBestRatio(pickBestMeasure(measures), locale),
-    totalCost: formatNumberWithUnit(totalCost, unit, locale),
-    totalBenefit: formatNumberWithUnit(totalBenefit, unit, locale),
+    totalCost: formatTotalWithUnit(totalCost, unit, locale),
+    totalBenefit: formatTotalWithUnit(totalBenefit, unit, locale),
   };
 };
 
@@ -90,12 +104,11 @@ const PanelCard = ({ title, children, ...boxProps }) => (
 const AdaptationDisplayPanel = () => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
-  const activeViewControl = useUIStore((s) => s.activeViewControl);
-  const setActiveViewControl = useUIStore((s) => s.setActiveViewControl);
   const costBenefitData = useResultsStore((s) => s.costBenefitData);
   const isLoading = useResultsStore((s) => s.isCostBenefitLoading);
+  const resultDetailsOpen = useUIStore((s) => s.resultDetailsOpen);
+  const toggleResultDetails = useUIStore((s) => s.toggleResultDetails);
 
-  const isChartActive = activeViewControl === "display_chart";
   const stats = computeStats(costBenefitData, locale);
 
   const rows = [
@@ -116,33 +129,6 @@ const AdaptationDisplayPanel = () => {
       data-testid="adaptation-display-panel"
       sx={{ display: "flex", flexDirection: "column", gap: 2 }}
     >
-      <Stack spacing={1}>
-        <Button
-          variant="contained"
-          onClick={() => setActiveViewControl("display_chart")}
-          aria-pressed={isChartActive}
-          sx={{
-            bgcolor: isChartActive ? "secondary.main" : "secondary.light",
-            "&:hover": { bgcolor: "secondary.main" },
-          }}
-        >
-          {t("adaptation_display_chart_button")}
-        </Button>
-        <Tooltip title={t("adaptation_map_disabled_tooltip")}>
-          <span>
-            <Button
-              variant="contained"
-              disabled
-              fullWidth
-              data-testid="adaptation-display-map-button"
-              sx={{ bgcolor: "secondary.light" }}
-            >
-              {t("adaptation_display_map_button")}
-            </Button>
-          </span>
-        </Tooltip>
-      </Stack>
-
       <PanelCard title={t("adaptation_summary_title")} data-testid="adaptation-summary-card">
         <Stack spacing={0.5} sx={{ mt: 1 }}>
           {isLoading
@@ -160,9 +146,29 @@ const AdaptationDisplayPanel = () => {
       </PanelCard>
 
       <PanelCard title={t("adaptation_result_details_title")}>
-        <Typography variant="body2" sx={{ marginTop: 2, color: "text.secondary" }}>
-          {t("adaptation_result_details_body")}
-        </Typography>
+        <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
+          <Button
+            size="small"
+            variant="text"
+            onClick={toggleResultDetails}
+            aria-expanded={resultDetailsOpen}
+            aria-controls="adaptation-result-details-body"
+            data-testid="adaptation-result-details-toggle"
+            endIcon={resultDetailsOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          >
+            {resultDetailsOpen ? t("result_details_hide") : t("result_details_show")}
+          </Button>
+        </Box>
+        <Collapse in={resultDetailsOpen} unmountOnExit>
+          <Typography
+            id="adaptation-result-details-body"
+            data-testid="adaptation-result-details-body"
+            variant="body2"
+            sx={{ marginTop: 1, color: "text.secondary" }}
+          >
+            {t("adaptation_result_details_body")}
+          </Typography>
+        </Collapse>
       </PanelCard>
     </Box>
   );

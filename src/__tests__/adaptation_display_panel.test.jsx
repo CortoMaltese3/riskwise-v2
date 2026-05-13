@@ -38,7 +38,7 @@ beforeEach(() => {
     isCostBenefitLoading: false,
     costBenefitError: "",
   });
-  useUIStore.setState({ activeViewControl: "display_chart" });
+  useUIStore.setState({ activeViewControl: "display_chart", resultDetailsOpen: false });
 });
 
 describe("AdaptationDisplayPanel", () => {
@@ -66,20 +66,6 @@ describe("AdaptationDisplayPanel", () => {
     expect(dashCount).toBe(6);
   });
 
-  it("clicking Chart sets activeViewControl to display_chart and Map stays disabled", () => {
-    useUIStore.setState({ activeViewControl: "display_map" });
-    renderWithTheme(<AdaptationDisplayPanel />);
-
-    const chartButton = screen.getByRole("button", { name: "adaptation_display_chart_button" });
-    fireEvent.click(chartButton);
-    expect(useUIStore.getState().activeViewControl).toBe("display_chart");
-
-    const mapButton = screen.getByTestId("adaptation-display-map-button");
-    expect(mapButton).toBeDisabled();
-    fireEvent.click(mapButton);
-    expect(useUIStore.getState().activeViewControl).toBe("display_chart");
-  });
-
   it("renders skeleton placeholders for every summary row while loading", () => {
     useResultsStore.setState({ isCostBenefitLoading: true });
     renderWithTheme(<AdaptationDisplayPanel />);
@@ -103,5 +89,55 @@ describe("AdaptationDisplayPanel", () => {
     const card = screen.getByTestId("adaptation-summary-card");
     expect(card).toHaveTextContent("ZeroCostB");
     expect(card.textContent).not.toMatch(/Infinity/);
+  });
+
+  it("renders large totals with compact notation so the unit fits on one line (#412 B3)", () => {
+    useResultsStore.setState({
+      costBenefitData: {
+        currency_unit: "USD",
+        present_year: 2024,
+        future_year: 2050,
+        measures: [
+          {
+            name: "Megaproject",
+            cost: 100_000_000,
+            benefit: 137_753_958.38,
+            benefit_cost_ratio: 1.38,
+          },
+        ],
+      },
+    });
+    renderWithTheme(<AdaptationDisplayPanel />);
+    const card = screen.getByTestId("adaptation-summary-card");
+    // Compact notation collapses the eight-digit absolute value into "137.75M".
+    expect(card.textContent).toMatch(/137\.75M USD/);
+    // Make sure the un-compacted long form is no longer rendered.
+    expect(card.textContent).not.toMatch(/137,753,958/);
+  });
+
+  it("collapses the Result details body by default and toggles via the button (#412 C3)", () => {
+    renderWithTheme(<AdaptationDisplayPanel />);
+    expect(screen.queryByTestId("adaptation-result-details-body")).not.toBeInTheDocument();
+    const toggle = screen.getByTestId("adaptation-result-details-toggle");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveTextContent("result_details_show");
+
+    fireEvent.click(toggle);
+    expect(useUIStore.getState().resultDetailsOpen).toBe(true);
+    expect(screen.getByTestId("adaptation-result-details-body")).toBeInTheDocument();
+    expect(screen.getByTestId("adaptation-result-details-toggle")).toHaveTextContent(
+      "result_details_hide"
+    );
+
+    fireEvent.click(screen.getByTestId("adaptation-result-details-toggle"));
+    expect(useUIStore.getState().resultDetailsOpen).toBe(false);
+  });
+
+  it("no longer renders the duplicate chart/map switcher in the side panel (#412 D1)", () => {
+    renderWithTheme(<AdaptationDisplayPanel />);
+    expect(screen.queryByTestId("adaptation-display-map-button")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "adaptation_display_chart_button" })
+    ).not.toBeInTheDocument();
   });
 });

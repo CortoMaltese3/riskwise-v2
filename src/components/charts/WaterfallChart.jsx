@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Stack, Typography } from "@mui/material";
@@ -24,9 +24,25 @@ import ChartInfoPopover from "../help/ChartInfoPopover";
 ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend);
 
 const TOTAL_KEYS = new Set(["risk_present", "risk_future"]);
-const PATTERN_TOTAL = 0;
+const PRESENT_TOTAL_KEY = "risk_present";
 const PATTERN_INCREASE = 1;
 const PATTERN_DECREASE = 2;
+
+// Cap the rendered chart at this many pixels so the plot area stays
+// data-proportional instead of stretching to fill the available column
+// (#412 C2). Tunable in one place if a downstream layout wants to override.
+const MAX_CHART_HEIGHT = 520;
+
+// When max-bar / min-bar magnitude ratio crosses this threshold the smallest
+// bars become unreadable next to the largest — we then label every bar with
+// its formatted value (#412 A2).
+const VALUE_LABEL_RATIO_THRESHOLD = 10;
+
+// Linear y-axis tick budget (#412 A5). Chart.js's auto-tick can produce huge
+// 500k steps that hide small bars; we instead post-process the computed
+// min/max into evenly spaced ticks. Alternative considered: symlog scale
+// when the magnitude ratio exceeds 50 — kept linear-only for simplicity.
+const Y_AXIS_TICK_COUNT = 6;
 
 const formatValue = (value, unit, locale) => {
   const formatted = formatNumber(Number(value), locale);
@@ -43,6 +59,72 @@ const buildAriaLabel = (t, data, unit, locale) => {
     );
   }
   return parts.join(" — ");
+};
+
+// Plugin: draw connector lines between consecutive bar tops so the floating
+// waterfall reads as Risk-2024 → +delta → +delta → Risk-2050 (#412 A1).
+const buildConnectorPlugin = (barData, categories, color) => ({
+  id: "waterfall-connectors",
+  afterDatasetsDraw(chart) {
+    const meta = chart.getDatasetMeta(0);
+    if (!meta || !meta.data || meta.data.length < 2) return;
+    const yScale = chart.scales.y;
+    if (!yScale) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    for (let i = 0; i < meta.data.length - 1; i += 1) {
+      const bar = meta.data[i];
+      const nextBar = meta.data[i + 1];
+      if (!bar || !nextBar) continue;
+      const fromX = bar.x + bar.width / 2;
+      const fromY = yScale.getPixelForValue(barData[i][1]);
+      const toX = nextBar.x - nextBar.width / 2;
+      // For a final total bar (anchored at 0) the connector should land at
+      // the bar's top, not its zero baseline; for floating deltas the
+      // connector lands at their `start` so the steps read continuously.
+      const nextIsTotal = TOTAL_KEYS.has(categories[i + 1]?.key);
+      const toY = yScale.getPixelForValue(nextIsTotal ? barData[i + 1][1] : barData[i + 1][0]);
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+    }
+    ctx.restore();
+  },
+});
+
+// Plugin: render each bar's formatted value above the bar, used when the
+// magnitude ratio between the largest and smallest bars makes small bars
+// unreadable (#412 A2).
+const buildValueLabelsPlugin = (values, formatter, color, font) => ({
+  id: "waterfall-value-labels",
+  afterDatasetsDraw(chart) {
+    const meta = chart.getDatasetMeta(0);
+    if (!meta || !meta.data) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = font;
+    ctx.fillStyle = color;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    meta.data.forEach((bar, i) => {
+      if (!bar) return;
+      const value = values[i];
+      const label = formatter(value);
+      const topY = Math.min(bar.y, bar.base);
+      ctx.fillText(label, bar.x, topY - 4);
+    });
+    ctx.restore();
+  },
+});
+
+const computeMagnitudeRatio = (categories) => {
+  const magnitudes = categories.map((c) => Math.abs(c.value)).filter((m) => m > 0);
+  if (magnitudes.length < 2) return 1;
+  return Math.max(...magnitudes) / Math.min(...magnitudes);
 };
 
 const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMessage }, ref) {
@@ -81,7 +163,38 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
     chart.options.animation = false;
   }, [chartRef]);
 
-  if (!data || !Array.isArray(data.categories) || data.categories.length === 0) {
+  const hasData = Boolean(data && Array.isArray(data.categories) && data.categories.length > 0);
+
+  const memoised = useMemo(() => {
+    if (!hasData) return null;
+    const labels = data.categories.map((c) => c.label);
+    const unit = data.measurement_unit || "";
+    const barData = data.categories.map((c) => {
+      if (TOTAL_KEYS.has(c.key)) return [0, c.value];
+      return [c.base, c.base + c.value];
+    });
+    const colors = data.categories.map((c) => {
+      if (TOTAL_KEYS.has(c.key)) return COLOR_TOTAL;
+      return c.value >= 0 ? COLOR_INCREASE : COLOR_DECREASE;
+    });
+    // Hatching is reserved for projected / future-derived bars (#412 C1):
+    // Risk-2024 (the historical baseline) stays solid; the two contribution
+    // deltas and Risk-2050 all derive from future scenarios and carry the
+    // increase/decrease texture.
+    const backgrounds = data.categories.map((c, i) => {
+      if (c.key === PRESENT_TOTAL_KEY) return colors[i];
+      const patternIndex = c.value >= 0 ? PATTERN_INCREASE : PATTERN_DECREASE;
+      return patternForIndex(colors[i], patternIndex, patternStroke);
+    });
+    const presence = {
+      total: data.categories.some((c) => TOTAL_KEYS.has(c.key)),
+      increase: data.categories.some((c) => !TOTAL_KEYS.has(c.key) && c.value >= 0),
+      decrease: data.categories.some((c) => !TOTAL_KEYS.has(c.key) && c.value < 0),
+    };
+    return { labels, unit, barData, colors, backgrounds, presence };
+  }, [data, hasData, COLOR_TOTAL, COLOR_INCREASE, COLOR_DECREASE, patternStroke]);
+
+  if (!hasData) {
     return (
       <Box textAlign="center" p={3}>
         <Typography variant="body1">
@@ -91,29 +204,7 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
     );
   }
 
-  const labels = data.categories.map((c) => c.label);
-  const unit = data.measurement_unit || "";
-
-  const barData = data.categories.map((c) => {
-    if (TOTAL_KEYS.has(c.key)) {
-      return [0, c.value];
-    }
-    return [c.base, c.base + c.value];
-  });
-
-  const colors = data.categories.map((c) => {
-    if (TOTAL_KEYS.has(c.key)) return COLOR_TOTAL;
-    return c.value >= 0 ? COLOR_INCREASE : COLOR_DECREASE;
-  });
-
-  const patternIndices = data.categories.map((c) => {
-    if (TOTAL_KEYS.has(c.key)) return PATTERN_TOTAL;
-    return c.value >= 0 ? PATTERN_INCREASE : PATTERN_DECREASE;
-  });
-
-  const patterns = colors.map((color, i) =>
-    patternForIndex(color, patternIndices[i], patternStroke)
-  );
+  const { labels, unit, barData, colors, backgrounds, presence } = memoised;
 
   const chartData = {
     labels,
@@ -121,14 +212,51 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
       {
         label: t("economic_non_economic_risk_display_chart_title"),
         data: barData,
-        backgroundColor: patterns,
+        backgroundColor: backgrounds,
         borderColor: colors,
         borderWidth: 1,
       },
     ],
   };
 
-  const titleText = `${t("economic_non_economic_risk_display_chart_title")} ${data.present_year} - ${data.future_year}`;
+  const baseTitle = `${t("economic_non_economic_risk_display_chart_title")} ${data.present_year} - ${data.future_year}`;
+  // Inline the unit into the H3 instead of running it down a rotated y-axis
+  // (#412 A6); the y-axis title is suppressed in `options.scales.y` below.
+  const titleText = unit ? `${baseTitle} (${unit})` : baseTitle;
+
+  const magnitudeRatio = computeMagnitudeRatio(data.categories);
+  const showValueLabels = magnitudeRatio >= VALUE_LABEL_RATIO_THRESHOLD;
+
+  const valueLabelFormatter = (value) =>
+    formatNumber(Number(value), locale, { maximumFractionDigits: 0 });
+
+  // Custom legend entries — render only the swatches that match the bars in
+  // the current dataset (#412 A4).
+  const legendItems = [];
+  if (presence.total) {
+    legendItems.push({
+      text: t("chart_legend_total"),
+      fillStyle: COLOR_TOTAL,
+      strokeStyle: COLOR_TOTAL,
+      lineWidth: 1,
+    });
+  }
+  if (presence.increase) {
+    legendItems.push({
+      text: t("chart_legend_increases_risk"),
+      fillStyle: COLOR_INCREASE,
+      strokeStyle: COLOR_INCREASE,
+      lineWidth: 1,
+    });
+  }
+  if (presence.decrease) {
+    legendItems.push({
+      text: t("chart_legend_reduces_risk"),
+      fillStyle: COLOR_DECREASE,
+      strokeStyle: COLOR_DECREASE,
+      lineWidth: 1,
+    });
+  }
 
   const options = {
     responsive: true,
@@ -142,17 +270,45 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
     // directly on a bar.
     interaction: { mode: "index", intersect: false },
     rtl,
+    layout: {
+      // Reserve a bit of top padding so value labels (when shown) don't
+      // collide with the legend.
+      padding: { top: showValueLabels ? 24 : 8 },
+    },
     scales: {
       y: {
         beginAtZero: true,
-        title: { display: true, text: unit || "Impact" },
+        title: { display: false },
         ticks: {
+          maxTicksLimit: 8,
           callback: (val) => formatNumber(Number(val), locale, { maximumFractionDigits: 0 }),
+        },
+        // Replace Chart.js's default tick layout with a fixed 6-tick scale so
+        // the smallest bars stay distinguishable from the y-axis baseline at
+        // any magnitude (#412 A5).
+        afterBuildTicks: (axis) => {
+          const min = axis.min;
+          const max = axis.max;
+          if (!Number.isFinite(min) || !Number.isFinite(max) || max === min) return;
+          const step = (max - min) / (Y_AXIS_TICK_COUNT - 1);
+          axis.ticks = Array.from({ length: Y_AXIS_TICK_COUNT }, (_, i) => ({
+            value: min + step * i,
+          }));
         },
       },
     },
     plugins: {
-      legend: { display: false, rtl },
+      legend: {
+        display: legendItems.length > 0,
+        rtl,
+        position: "top",
+        align: "end",
+        onClick: () => {},
+        labels: {
+          boxWidth: 12,
+          generateLabels: () => legendItems,
+        },
+      },
       title: { display: false, text: titleText },
       tooltip: {
         rtl,
@@ -166,6 +322,22 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
       },
     },
   };
+
+  const valueLabelColor = theme.palette.text.primary;
+  const valueLabelFont = `${theme.typography.caption.fontSize} ${theme.typography.fontFamily}`;
+  const connectorColor = alpha(theme.palette.text.primary, 0.5);
+
+  const plugins = [buildConnectorPlugin(barData, data.categories, connectorColor)];
+  if (showValueLabels) {
+    plugins.push(
+      buildValueLabelsPlugin(
+        data.categories.map((c) => c.value),
+        valueLabelFormatter,
+        valueLabelColor,
+        valueLabelFont
+      )
+    );
+  }
 
   const tableHeaders = [
     t("chart_data_table_header_category"),
@@ -192,11 +364,14 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
           bodyKey="chart_info_waterfall_body"
         />
       </Stack>
-      <Box sx={{ position: "relative", flex: 2, minHeight: 240 }}>
+      <Box
+        sx={{ position: "relative", flex: "0 1 auto", minHeight: 240, maxHeight: MAX_CHART_HEIGHT }}
+      >
         <Bar
           ref={chartRef}
           data={chartData}
           options={options}
+          plugins={plugins}
           aria-label={buildAriaLabel(t, data, unit, locale)}
           role="img"
         />
@@ -207,7 +382,6 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
         rows={tableRows}
         summaryLabel={t("chart_data_table_summary")}
       />
-      <Box sx={{ flex: 1, minHeight: 0 }} aria-hidden />
     </Box>
   );
 });
