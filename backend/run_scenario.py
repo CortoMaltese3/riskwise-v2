@@ -346,21 +346,28 @@ class RunScenario:
             self.request_data.future_year,
         )
 
-        if cost_benefit:
-            update_progress(50, "Computing cost-benefit chart data...")
-            # Engine ``measure_name`` arrives as an opaque short code
-            # ("GR", "TP", ...); ask the handler to join it back to the
-            # catalog's i18n key so the chart can render translated full
-            # names (#429). The handler resolves its own DB connection so
-            # this call site does not need to plumb one through.
-            display_name_lookup = self.costben_handler.build_display_name_lookup()
-            self.costben_handler.compute_cost_benefit_data(
-                cost_benefit,
-                entity_present,
-                self.request_data.future_year,
-                entity_future,
-                display_name_lookup=display_name_lookup,
-            )
+        update_progress(50, "Computing cost-benefit chart data...")
+        # Always write the cost-benefit payload — even for zero-measure runs
+        # the engine returns ``[]`` and ``compute_cost_benefit_data`` writes a
+        # ``measures: []`` payload. This lets the renderer show the proper
+        # ``adaptation_empty_state_no_measures`` copy instead of the backend's
+        # generic "data not available" error (issue #428), and protects the
+        # restore-then-rerun race where a re-run dispatched with no measures
+        # would otherwise leave the previously-hydrated file in place after
+        # ``_clear`` wipes it.
+        # Engine ``measure_name`` arrives as an opaque short code ("GR",
+        # "TP", ...); ask the handler to join it back to the catalog's i18n
+        # key so the chart can render translated full names (#429). The
+        # handler resolves its own DB connection so this call site does not
+        # need to plumb one through.
+        display_name_lookup = self.costben_handler.build_display_name_lookup()
+        self.costben_handler.compute_cost_benefit_data(
+            cost_benefit,
+            entity_present,
+            self.request_data.future_year,
+            entity_future,
+            display_name_lookup=display_name_lookup,
+        )
         if is_future:
             update_progress(55, "Computing waterfall chart data...")
             self.costben_handler.compute_waterfall_data(

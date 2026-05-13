@@ -224,6 +224,36 @@ const useWorkspaceStore = create((set, get) => ({
   },
 
   setSelectedAppOption: (option) => set({ selectedAppOption: option }),
+  // One-shot setter for the Workspace ``Restore`` flow. Sets every active-
+  // scenario input from a persisted scenario row in a single ``set`` call so
+  // the per-field setters' wipe side-effects (``setSelectedCountry`` /
+  // ``setSelectedHazard`` clearing ``selectedMeasureIds`` and friends) do not
+  // fire. Measure-selection state is left untouched here so the caller can
+  // hydrate it from the restored ``cost_benefit_data.json`` blob after this
+  // returns (issue #428).
+  restoreScenarioInputs: (scenario) => {
+    if (!scenario || typeof scenario !== "object") return;
+    const country =
+      typeof scenario.country === "string" ? scenario.country.toLowerCase() : scenario.country;
+    const patch = {
+      selectedAppOption: scenario.is_era ? "era" : "custom",
+      scenarioRunCode: scenario.id,
+      scenarioRunSaved: true,
+      selectedScenarioRunCode: scenario.id,
+      selectedCountry: country,
+      selectedHazard: scenario.hazard_type,
+      isValidHazard: true,
+      selectedScenario: scenario.scenario,
+      selectedTimeHorizon: [scenario.ref_year, scenario.future_year],
+      selectedAnnualGrowth: scenario.annual_growth ?? 0,
+    };
+    if (scenario.exposure_type) {
+      patch.selectedExposure = scenario.exposure_type;
+      patch.selectedExposureCategory = scenario.asset_type ?? null;
+      patch.isValidExposure = true;
+    }
+    set(patch);
+  },
   setSelectedCountry: (country) =>
     set({
       selectedCountry: country,
