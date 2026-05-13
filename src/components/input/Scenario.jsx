@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
@@ -13,7 +13,7 @@ const Scenario = () => {
   const setSelectedCard = useUIStore((s) => s.setSelectedCard);
   const { t } = useTranslation();
   const [clicked, setClicked] = useState(false);
-  const [cardState, setCardState] = useState("default");
+  const cardState = selectedScenario ? "valid" : "default";
 
   const handleMouseDown = () => {
     setClicked(true);
@@ -27,10 +27,6 @@ const Scenario = () => {
     setSelectedCard("scenario");
     openInputEditor();
   };
-
-  useEffect(() => {
-    setCardState(selectedScenario ? "valid" : "default");
-  }, [selectedScenario]);
 
   return (
     <Card
