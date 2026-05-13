@@ -6,12 +6,16 @@ import { renderHook } from "@testing-library/react";
 const getScenarioMock = vi.fn();
 const listScenariosMock = vi.fn();
 const hydrateScenarioTempMock = vi.fn();
+const fetchCostBenefitDataMock = vi.fn();
+const runScenarioMock = vi.fn();
 
 vi.mock("../lib/RiskWiseClient", () => ({
   default: {
     getScenario: (...args) => getScenarioMock(...args),
     listScenarios: (...args) => listScenariosMock(...args),
     hydrateScenarioTemp: (...args) => hydrateScenarioTempMock(...args),
+    fetchCostBenefitData: (...args) => fetchCostBenefitDataMock(...args),
+    runScenario: (...args) => runScenarioMock(...args),
     deleteScenario: vi.fn(),
     patchScenario: vi.fn(),
     listSnapshots: vi.fn(),
@@ -63,11 +67,27 @@ const buildScenarioResponse = (overrides = {}) => ({
   },
 });
 
+const buildCostBenefitResponse = (measures = []) => ({
+  success: true,
+  result: {
+    status: { code: 2000, message: "Cost-benefit data fetched successfully." },
+    data: {
+      currency_unit: "USD",
+      present_year: 2020,
+      future_year: 2050,
+      measures,
+    },
+  },
+});
+
 beforeEach(() => {
   getScenarioMock.mockReset();
   listScenariosMock.mockReset();
   hydrateScenarioTempMock.mockReset();
+  fetchCostBenefitDataMock.mockReset();
+  runScenarioMock.mockReset();
   hydrateScenarioTempMock.mockResolvedValue(buildHydrateResponse());
+  fetchCostBenefitDataMock.mockResolvedValue(buildCostBenefitResponse());
   listScenariosMock.mockResolvedValue({
     success: true,
     result: { status: { code: 2000 }, data: [] },
@@ -85,6 +105,9 @@ beforeEach(() => {
     isValidHazard: false,
     scenarioRunCode: "",
     selectedScenarioRunCode: "",
+    selectedMeasureIds: [],
+    appliedMeasureIds: [],
+    isMeasureSelectionInitialized: false,
     scenarios: [],
     selectedIds: [],
   });
@@ -150,6 +173,75 @@ describe("restoreScenario", () => {
     expect(hydrateScenarioTempMock).toHaveBeenCalledWith("scn-7");
     expect(callOrder[0]).toBe("hydrate");
     expect(useResultsStore.getState().isScenarioRunCompleted).toBe(true);
+  });
+
+  it("hydrates measure selection from the restored cost-benefit blob so a re-run carries the saved measures (issue #428)", async () => {
+    getScenarioMock.mockResolvedValue(buildScenarioResponse());
+    fetchCostBenefitDataMock.mockResolvedValue(
+      buildCostBenefitResponse([
+        { name: "Levee", cost: 1, benefit: 2, benefit_cost_ratio: 2 },
+        { name: "Drainage", cost: 1, benefit: 3, benefit_cost_ratio: 3 },
+      ])
+    );
+
+    const { result } = renderHook(() => useReportTools());
+    const ok = await result.current.restoreScenario("scn-7");
+
+    expect(ok).toBe(true);
+    const ws = useWorkspaceStore.getState();
+    expect(ws.isMeasureSelectionInitialized).toBe(true);
+    expect(ws.selectedMeasureIds).toEqual(["Levee", "Drainage"]);
+    expect(ws.appliedMeasureIds).toEqual(["Levee", "Drainage"]);
+  });
+
+  it("does not wipe measure selection between setSelectedCountry/setSelectedHazard during restore (issue #428)", async () => {
+    // Seed the store as if measures were already populated to prove that the
+    // restore path does NOT clear them via the per-field setters' side-effects.
+    getScenarioMock.mockResolvedValue(buildScenarioResponse());
+    fetchCostBenefitDataMock.mockResolvedValue(
+      buildCostBenefitResponse([{ name: "Levee", cost: 1, benefit: 2, benefit_cost_ratio: 2 }])
+    );
+
+    const { result } = renderHook(() => useReportTools());
+    const ok = await result.current.restoreScenario("scn-7");
+
+    expect(ok).toBe(true);
+    // The saved measure survived; the country/hazard transition did not wipe.
+    expect(useWorkspaceStore.getState().selectedMeasureIds).toEqual(["Levee"]);
+    expect(useWorkspaceStore.getState().selectedCountry).toBe("egypt");
+    expect(useWorkspaceStore.getState().selectedHazard).toBe("flood");
+  });
+
+  it("dispatched RUN body after restore carries the saved measures (issue #428 acceptance criterion 4)", async () => {
+    // This guards the race: a user restores a scenario and clicks RUN before
+    // the Adaptation tab's catalog fetch resolves. The dispatch must still
+    // include the saved measure set.
+    getScenarioMock.mockResolvedValue(buildScenarioResponse());
+    fetchCostBenefitDataMock.mockResolvedValue(
+      buildCostBenefitResponse([
+        { name: "Levee", cost: 1, benefit: 2, benefit_cost_ratio: 2 },
+        { name: "Drainage", cost: 1, benefit: 3, benefit_cost_ratio: 3 },
+      ])
+    );
+    runScenarioMock.mockResolvedValue({
+      success: true,
+      result: {
+        status: { code: 2000, message: "ok" },
+        data: { scenarioId: "scn-new", mapTitle: "x" },
+      },
+    });
+
+    const { result } = renderHook(() => useReportTools());
+    await result.current.restoreScenario("scn-7");
+
+    // Now simulate clicking RUN without ever mounting the Adaptation tab.
+    const { default: useRunScenario } = await import("../hooks/useRunScenario");
+    const { result: runRes } = renderHook(() => useRunScenario());
+    await runRes.current.runScenario();
+
+    expect(runScenarioMock).toHaveBeenCalledTimes(1);
+    const body = runScenarioMock.mock.calls[0][0];
+    expect(body.selectedMeasureIds).toEqual(["Levee", "Drainage"]);
   });
 
   it("returns false and leaves isScenarioRunCompleted unchanged when hydrate-temp fails", async () => {
