@@ -50,6 +50,41 @@ const FIXTURE = {
   ],
 };
 
+// Fixture with long spelt-out measure names (#412 B1).
+const LONG_NAMES_FIXTURE = {
+  currency_unit: "USD",
+  present_year: 2024,
+  future_year: 2050,
+  measures: [
+    { name: "Recharging wells", cost: 100, benefit: 130, benefit_cost_ratio: 1.3 },
+    { name: "Soil and water bunds", cost: 100, benefit: 120, benefit_cost_ratio: 1.2 },
+  ],
+};
+
+// Fixture with a low-headroom max ratio (1.30) — used to verify the
+// suggestedMax floor of 1.5 (#412 B5).
+const LOW_HEADROOM_FIXTURE = {
+  currency_unit: "USD",
+  present_year: 2024,
+  future_year: 2050,
+  measures: [
+    { name: "Measure A", cost: 100, benefit: 130, benefit_cost_ratio: 1.3 },
+    { name: "Measure B", cost: 100, benefit: 100, benefit_cost_ratio: 1.0 },
+  ],
+};
+
+// Fixture with a tall max ratio (2.0) — used to verify the +0.2 headroom
+// (#412 B5).
+const TALL_FIXTURE = {
+  currency_unit: "USD",
+  present_year: 2024,
+  future_year: 2050,
+  measures: [
+    { name: "Measure A", cost: 100, benefit: 200, benefit_cost_ratio: 2.0 },
+    { name: "Measure B", cost: 100, benefit: 100, benefit_cost_ratio: 1.0 },
+  ],
+};
+
 let CostBenefitChart;
 
 beforeAll(async () => {
@@ -139,5 +174,87 @@ describe("CostBenefitChart", () => {
     expect(
       screen.queryByRole("button", { name: /show values|hide values/i })
     ).not.toBeInTheDocument();
+  });
+
+  it("rotates x-axis tick labels up to 45° and keeps Chart.js auto-skip on (#412 B1)", () => {
+    render(<CostBenefitChart data={LONG_NAMES_FIXTURE} />);
+    const props = barSpy.mock.calls[0][0];
+    expect(props.options.scales.x.ticks.maxRotation).toBe(45);
+    expect(props.options.scales.x.ticks.autoSkip).toBe(true);
+    expect(props.data.labels).toEqual(["Recharging wells", "Soil and water bunds"]);
+  });
+
+  it("registers a break-even plugin that draws a dashed line at y=1 (#412 B2)", () => {
+    render(<CostBenefitChart data={FIXTURE} />);
+    const props = barSpy.mock.calls[0][0];
+    const plugin = props.plugins.find((p) => p.id === "cost-benefit-break-even");
+    expect(plugin).toBeDefined();
+    expect(typeof plugin.afterDatasetsDraw).toBe("function");
+    // Smoke-test the draw path against a stubbed canvas.
+    const fillText = vi.fn();
+    const stroke = vi.fn();
+    const ctx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      setLineDash: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke,
+      fillText,
+      font: "",
+      fillStyle: "",
+      strokeStyle: "",
+      lineWidth: 0,
+      textAlign: "",
+      textBaseline: "",
+    };
+    plugin.afterDatasetsDraw({
+      ctx,
+      scales: {
+        y: { getPixelForValue: (v) => (v === 1 ? 100 : 0) },
+        x: { left: 0, right: 400 },
+      },
+    });
+    expect(stroke).toHaveBeenCalledTimes(1);
+    expect(fillText).toHaveBeenCalledWith(
+      "chart_break_even_label",
+      expect.any(Number),
+      expect.any(Number)
+    );
+  });
+
+  it("anchors the tooltip above its bar instead of tracking the cursor (#412 B4)", () => {
+    render(<CostBenefitChart data={FIXTURE} />);
+    const props = barSpy.mock.calls[0][0];
+    expect(props.options.plugins.tooltip.position).toBe("average");
+  });
+
+  it("reserves at least 0.2 of y-axis headroom above the tallest bar (#412 B5)", () => {
+    render(<CostBenefitChart data={LOW_HEADROOM_FIXTURE} />);
+    let props = barSpy.mock.calls[0][0];
+    expect(props.options.scales.y.suggestedMax).toBeGreaterThanOrEqual(1.5);
+
+    barSpy.mockClear();
+    render(<CostBenefitChart data={TALL_FIXTURE} />);
+    props = barSpy.mock.calls[0][0];
+    expect(props.options.scales.y.suggestedMax).toBeGreaterThanOrEqual(2.2);
+  });
+
+  it("renders bars as solid colors with no canvas-pattern fill (#412 C1)", () => {
+    render(<CostBenefitChart data={FIXTURE} />);
+    const props = barSpy.mock.calls[0][0];
+    const bgs = props.data.datasets[0].backgroundColor;
+    bgs.forEach((bg) => {
+      expect(typeof bg).toBe("string");
+    });
+  });
+
+  it("does not render a trailing aria-hidden spacer below the chart (#412 C2)", () => {
+    const { container } = render(<CostBenefitChart data={FIXTURE} />);
+    const ariaHiddenEmptyDivs = Array.from(
+      container.querySelectorAll('[aria-hidden="true"]')
+    ).filter((el) => el.tagName === "DIV" && el.children.length === 0 && !el.textContent.trim());
+    expect(ariaHiddenEmptyDivs).toHaveLength(0);
   });
 });
