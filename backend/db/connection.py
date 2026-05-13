@@ -5,13 +5,18 @@ from __future__ import annotations
 import os
 import sys
 import threading
+from datetime import UTC, datetime
 from pathlib import Path
 
 import duckdb
 
+from backend.logging_config import get_logger
+
 DB_FILE_NAME = "riskwise.db"
 DB_PATH_ENV_VAR = "RISKWISE_DB_PATH"
 _APP_DIR_NAME = "RISK WISE"
+
+_log = get_logger("db.connection")
 
 # DuckDB rejects a second ``duckdb.connect`` to the same file from the same
 # Python process — concurrent FastAPI handlers (e.g. parallel
@@ -68,9 +73,40 @@ def get_connection(path: Path | str | None = None) -> duckdb.DuckDBPyConnection:
         conn = _shared_connections.get(key)
         if conn is None:
             db_path.parent.mkdir(parents=True, exist_ok=True)
-            conn = duckdb.connect(key)
+            conn = _connect_with_wal_recovery(key)
             _shared_connections[key] = conn
     return conn.cursor()
+
+
+def _connect_with_wal_recovery(key: str) -> duckdb.DuckDBPyConnection:
+    """Open the DB, quarantining an unreplayable WAL and retrying on failure.
+
+    DuckDB can abort with ``INTERNAL Error: Failure while replaying WAL file``
+    when the WAL contains ATTACH ops whose target path no longer exists (e.g.
+    a workspace-import temp DB that was deleted before the WAL was
+    checkpointed). The committed pages in the main DB file are unaffected,
+    but the uncheckpointed writes in the WAL cannot be recovered. We rename
+    the WAL aside with a timestamp so the next ``connect`` succeeds, and log
+    loudly so the event is visible in production.
+    """
+    try:
+        return duckdb.connect(key)
+    except duckdb.InternalException as exc:
+        if "replaying WAL" not in str(exc):
+            raise
+        wal_path = Path(key + ".wal")
+        if not wal_path.is_file():
+            raise
+        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        quarantine = wal_path.with_name(f"{wal_path.name}.unreplayable.{stamp}")
+        wal_path.rename(quarantine)
+        _log.error(
+            "db.wal.unreplayable_quarantined",
+            db_path=key,
+            quarantined_to=str(quarantine),
+            error=str(exc),
+        )
+        return duckdb.connect(key)
 
 
 def close_all_connections() -> None:

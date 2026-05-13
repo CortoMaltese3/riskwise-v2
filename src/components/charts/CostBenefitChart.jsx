@@ -38,8 +38,11 @@ const colorForRatio = (ratio, colors) => {
 
 // Cap the rendered chart at this many pixels so the plot area stays
 // data-proportional instead of stretching to fill the available column
-// (#412 C2). Tunable in one place if a downstream layout wants to override.
-const MAX_CHART_HEIGHT = 520;
+// (#412 C2). The cap was raised from the original 520 once the layout
+// review (May 2026) showed the lower value left large empty bands on
+// 1080p+ screens; 720 keeps the bars from looking absurdly stretched
+// while reclaiming most of the wasted vertical space.
+const MAX_CHART_HEIGHT = 720;
 
 // Plugin: dashed horizontal line at y=1 with a "Break-even" label so the
 // Profitable / Marginal / Loss framing in the summary card matches the chart
@@ -250,7 +253,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
       <Box
         sx={{
           position: "relative",
-          flex: "0 1 auto",
+          flex: 1,
           minHeight: 240,
           maxHeight: MAX_CHART_HEIGHT,
         }}

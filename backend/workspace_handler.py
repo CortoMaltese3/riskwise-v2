@@ -193,6 +193,11 @@ def _merge_scenarios(imported_db: Path) -> dict[str, int]:
                     raise
         finally:
             conn.execute("DETACH imported")
+            # CHECKPOINT flushes ATTACH/DETACH (and INSERT) records out of
+            # the WAL. Without it, DuckDB's next-startup WAL replay can hit
+            # the now-deleted temp DB path and abort with
+            # ``DatabaseManager::GetDefaultDatabase with no default database set``.
+            conn.execute("CHECKPOINT")
     finally:
         conn.close()
 
