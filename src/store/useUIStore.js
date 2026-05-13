@@ -6,6 +6,7 @@ import { TABS, TAB_CONFIG, isValidTab } from "../components/main/tabs";
 const SIDEBAR_STORAGE_KEY = "riskwise.sidebarCollapsed";
 const WALKTHROUGH_STORAGE_KEY = "riskwise.hasSeenWalkthrough";
 const TOUR_STATE_STORAGE_KEY = "riskwise.tourState";
+const RESULT_DETAILS_OPEN_KEY = "riskwise.resultDetailsOpen";
 const VALID_SECTIONS = new Set(SECTION_IDS);
 
 const readBool = (key) => {
@@ -51,6 +52,7 @@ const writeTourState = (activeTour, tourStep) => {
 
 const initialTourState = readTourState();
 const initialHasSeenWalkthrough = readBool(WALKTHROUGH_STORAGE_KEY);
+const initialResultDetailsOpen = readBool(RESULT_DETAILS_OPEN_KEY);
 
 const useUIStore = create((set, get) => ({
   // Navigation / chrome
@@ -101,6 +103,11 @@ const useUIStore = create((set, get) => ({
   selectedCard: "country",
   selectedMacroCard: "country",
   selectedTab: TABS.PARAMETERS,
+
+  // Result-details panel collapse state (#412 C3). Defaults to closed so the
+  // multi-line reference copy doesn't crowd the right rail; the user's
+  // choice persists across view switches and reloads.
+  resultDetailsOpen: initialResultDetailsOpen,
 
   // Reports
   reports: [],
@@ -190,6 +197,17 @@ const useUIStore = create((set, get) => ({
     } else {
       get().setSelectedTab(TABS.PARAMETERS);
     }
+  },
+
+  setResultDetailsOpen: (open) => {
+    const next = Boolean(open);
+    writeBool(RESULT_DETAILS_OPEN_KEY, next);
+    set({ resultDetailsOpen: next });
+  },
+  toggleResultDetails: () => {
+    const next = !get().resultDetailsOpen;
+    writeBool(RESULT_DETAILS_OPEN_KEY, next);
+    set({ resultDetailsOpen: next });
   },
 
   setReports: (reports) => set({ reports }),
