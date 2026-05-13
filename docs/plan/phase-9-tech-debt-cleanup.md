@@ -89,6 +89,27 @@ Each sub-phase corresponds to one parent epic. The label convention is `phase-9/
 | 9.4.11 — Documentation gap closures | One docs PR: `docs/errors.md` cataloguing the 1000–6999 error-code taxonomy, `SECURITY.md` "Known accepted risks" subsection covering `style-src 'unsafe-inline'`, `// TODO(D24)` comments at offline-mode enforcement points (`public/electron.js:456`, `:572–574`). | `docs/errors.md` (new), `SECURITY.md`, `public/electron.js` | `phase-9/docs-gaps` | none |
 | 9.4.12 — Repository cleanup | One cleanup PR: orphan deps in `requirements/requirements.txt` (docx2pdf, docxtpl, python-docx), delete `scripts/build_engine_pyinstaller.ps1`, delete `src/components/nav/Header.module.css` and migrate styling, delete `src/App.css`. | as listed | `phase-9/repo-cleanup` | none (Header.module.css overlaps with phase-8/cleanup; coordinate with whichever lands first) |
 
+### 9.5 — Auto-update pipeline activation (parent [#414](https://github.com/CortoMaltese3/riskwise-v2/issues/414))
+
+The pipeline scaffolding (release-please, `release.yml`, `electron-updater`, signed `engine-manifest.json`) is already shipped but has never produced a working signed release. Sub-phase 9.5 closes the wiring gaps and verifies the chain end-to-end with a real `v2.0.0` cut. Diagnosis and full work items in the umbrella issue.
+
+| Child | Goal | Files in scope | Issue | Depends on |
+|---|---|---|---|---|
+| 9.5.1 — Bump release-please manifest to v2.0.0 | Make release-please's next proposed release `2.0.0` rather than `1.2.0`, either via manifest edit or a `feat!:` BREAKING CHANGE commit. | `.release-please-manifest.json`, possibly `release-please-config.json` | [#415](https://github.com/CortoMaltese3/riskwise-v2/issues/415) | none |
+| 9.5.2 — Remove phantom local v2.0.x tags (manual) | `v2.0.0`/`v2.0.1`/`v2.0.2`/`v2.0.3` exist in developer clones from the original v1 clone but are not on `origin`. Document the cleanup and add a CONTRIBUTING.md warning. | `CONTRIBUTING.md` | [#416](https://github.com/CortoMaltese3/riskwise-v2/issues/416) | none |
+| 9.5.3 — Wire RELEASE_PLEASE_PAT into release-please action | Pass `token: ${{ secrets.RELEASE_PLEASE_PAT }}` to `googleapis/release-please-action@v5` so its tag pushes actually trigger `release.yml`. Manual PAT-creation prereq for the repo admin. | `.github/workflows/release-please.yml` | [#417](https://github.com/CortoMaltese3/riskwise-v2/issues/417) | none |
+| 9.5.4 — Make verify-tests gate compatible with release-please-bot tags | After 9.5.3 fires a real release-please tag, observe whether the `verify-tests` gate passes on bot-authored PRs; add an explicit bypass for `github-actions[bot]` + `release-please--*` head ref if it doesn't. | `.github/workflows/release.yml` (possibly) | [#418](https://github.com/CortoMaltese3/riskwise-v2/issues/418) | 9.5.3 |
+| 9.5.5 — Restore azureSignOptions in electron-builder.cjs | Re-add the signing block removed in commit `309204a` (referenced in `1344d47`). Guard on `AZURE_CLIENT_ID`. Cert-less local builds still work unsigned. | `electron-builder.cjs` | [#419](https://github.com/CortoMaltese3/riskwise-v2/issues/419) | none |
+| 9.5.6 — Replace zip-based first-run engine install with Nuitka onefile flow | Rewrite `downloadAndInstallEngine` to download `riskwise-engine.exe` directly via `downloadEngineWithResume`. Remove `tar -xf` / `python.exe` / archive-zip paths. | `public/electron.js` | [#420](https://github.com/CortoMaltese3/riskwise-v2/issues/420) | none |
+| 9.5.7 — Make `engine:download-update` IPC actually install | Atomic-rename downloaded binary into place; stage at `.new` and swap on next launch if the running engine has the file locked on Windows. | `public/electron.js` | [#421](https://github.com/CortoMaltese3/riskwise-v2/issues/421) | 9.5.6 |
+| 9.5.8 — Engine-manifest minisign round-trip test | Vitest unit test signing a synthetic manifest with a fixture keypair and verifying via `verifyEngineManifest`. Tampering and unknown-key cases must throw. | `public/engineManifest.test.js` (new), `tests/fixtures/engine-manifest-test.{key,pub}` (new) | [#422](https://github.com/CortoMaltese3/riskwise-v2/issues/422) | none |
+| 9.5.9 — Wire update-downloaded toast | Non-modal snackbar after `update-downloaded` fires; "Restart now" secondary calls a new `updates:quit-and-install-now` IPC. Matches ADR §4.3. | `src/components/UpdateDownloadedToast.jsx` (new), `public/preload.js`, `public/electron.js` | [#423](https://github.com/CortoMaltese3/riskwise-v2/issues/423) | none |
+| 9.5.10 — Add Skip-this-version + inline release notes to UpdateDialog | Per-version skip persisted in `electron-store`; first 6 lines of release notes rendered in the dialog body. Higher semver clears the skip. | `src/components/UpdateDialog.jsx`, `public/preload.js`, `public/electron.js` | [#424](https://github.com/CortoMaltese3/riskwise-v2/issues/424) | none |
+| 9.5.11 — Sync signing.md and DECISIONS.md | Fix `electron-builder.js`→`.cjs` references after 9.5.5 lands; new DECISIONS.md entry recording the drift episode. | `docs/reference/signing.md`, `docs/DECISIONS.md` | [#425](https://github.com/CortoMaltese3/riskwise-v2/issues/425) | 9.5.5 |
+| 9.5.12 — End-to-end smoke release v2.0.0 → v2.0.1 (manual) | Cut `v2.0.0` via release-please, smoke on a clean Windows VM, cut a trivial `v2.0.1`, verify auto-update completes silently on quit. | none (verification only) | [#426](https://github.com/CortoMaltese3/riskwise-v2/issues/426) | 9.5.1, 9.5.3, 9.5.4, 9.5.5, 9.5.6 |
+
+**Sequencing within 9.5:** the quick wins (9.5.5 signing, 9.5.6 engine first-run, 9.5.8 round-trip test) can land in parallel with 9.5.1 (manifest bump) and 9.5.3 (PAT). 9.5.4 must wait for 9.5.3's first real tag. 9.5.7 needs 9.5.6 first. 9.5.11 needs 9.5.5. 9.5.12 is the verification gate at the end.
+
 ---
 
 ## Issue template for sub-phase issues
@@ -164,6 +185,16 @@ Architecture closures (parent #233):
 - [ ] Monthly SBOM-refresh workflow exists and has produced at least one no-op or PR run.
 - [ ] `docs/errors.md` exists with the 1000–6999 taxonomy; `SECURITY.md` covers the `style-src 'unsafe-inline'` trade-off; `// TODO(D24)` comments in place.
 - [ ] Repo cleanup landed: orphan Python deps removed, `scripts/build_engine_pyinstaller.ps1` deleted, `Header.module.css` and `App.css` removed.
+
+Auto-update activation (parent #414):
+
+- [ ] release-please cuts a `v2.0.0` tag; the resulting `release.yml` run completes green and publishes ≥5 assets (signed installer, `latest.yml`, `engine-manifest.json`, `riskwise-engine.exe`, `sbom.json`).
+- [ ] `electron-builder.cjs` carries the restored `azureSignOptions` block; produced installers pass `signtool verify /pa`.
+- [ ] `downloadAndInstallEngine` installs the Nuitka onefile directly (no `tar -xf`, no `python.exe` expectation).
+- [ ] `engine:download-update` atomically replaces the engine on disk (or stages a `.new` swap for next launch on Windows file-lock).
+- [ ] `engineManifest.test.js` round-trip test passes; tampered manifests are rejected.
+- [ ] `UpdateDialog` exposes Skip-this-version + inline notes; `UpdateDownloadedToast` renders after `update-downloaded` fires.
+- [ ] Manual smoke (#426) report posted: clean-VM install of `v2.0.0` succeeds without SmartScreen warning; in-app auto-update from `v2.0.0` → `v2.0.1` completes silently on quit.
 
 ---
 
