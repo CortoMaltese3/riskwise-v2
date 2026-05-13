@@ -20,6 +20,7 @@ import useResultsStore from "../../store/useResultsStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
+import { buildChartThemeOptions } from "../../utils/chartTheme";
 import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
 import ChartInfoPopover from "../help/ChartInfoPopover";
@@ -49,6 +50,8 @@ const MacroEconomicChart = () => {
   const theme = useTheme();
   const chartRef = useRef(null);
   const vizCategorical = theme.palette.viz.categorical;
+  // Theme-aware axis / tooltip / gridline colours (issue #289).
+  const chartThemeOptions = buildChartThemeOptions(theme);
 
   // First-mount animation only (#370). Disabling animation after the initial
   // paint means dropdown filter changes (country / scenario / sector /
@@ -153,29 +156,35 @@ const MacroEconomicChart = () => {
     interaction: { mode: "index", intersect: false },
     scales: {
       x: {
+        ...chartThemeOptions.scales.x,
         type: "category",
         title: {
+          ...chartThemeOptions.scales.x.title,
           display: true,
           text: t("macro_display_chart_x_axis_label"),
         },
       },
       y: {
+        ...chartThemeOptions.scales.y,
         beginAtZero: true,
         title: {
+          ...chartThemeOptions.scales.y.title,
           display: true,
           text: t("macro_display_chart_y_axis_label"),
         },
         ticks: {
+          ...chartThemeOptions.scales.y.ticks,
           callback: (val) =>
             `${formatNumber(Number(val), locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,
         },
       },
     },
     plugins: {
-      legend: { display: true, rtl },
+      legend: { display: true, rtl, labels: chartThemeOptions.plugins.legend.labels },
       title: { display: false, text: macroEconomicChartTitle },
       tooltip: {
         rtl,
+        ...chartThemeOptions.plugins.tooltip,
         callbacks: {
           label: (ctx) =>
             `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y, locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,

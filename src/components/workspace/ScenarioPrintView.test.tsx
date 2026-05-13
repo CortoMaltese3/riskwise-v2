@@ -210,6 +210,34 @@ const SECTION_TESTIDS_IN_ORDER = [
 ];
 
 describe("ScenarioPrintView", () => {
+  it("forces the light color scheme on the print root regardless of stored theme mode (#289)", async () => {
+    // The app exposes a stored theme mode via localStorage (`themeMode` key,
+    // set by `ThemeModeButton`). Pre-populate the dark mode and confirm the
+    // print view still scopes its subtree to `data-mui-color-scheme="light"`
+    // so PDF exports stay legible on light printer paper.
+    window.localStorage.setItem("themeMode", "dark");
+    document.documentElement.setAttribute("data-mui-color-scheme", "dark");
+
+    mockScenario({
+      scenario: meta,
+      results: {
+        waterfall_data: JSON.stringify(waterfall),
+        costben_data: JSON.stringify(costben),
+      },
+    });
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("print-root")).toBeInTheDocument());
+    const root = screen.getByTestId("print-root");
+    expect(root.getAttribute("data-mui-color-scheme")).toBe("light");
+
+    // Clean up the document attribute and storage so it doesn't bleed into
+    // subsequent tests.
+    document.documentElement.removeAttribute("data-mui-color-scheme");
+    window.localStorage.removeItem("themeMode");
+  });
+
   it("renders all ten sections with a fully populated fixture, in the correct order", async () => {
     mockScenario({
       scenario: meta,

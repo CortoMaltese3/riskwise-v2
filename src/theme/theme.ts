@@ -8,6 +8,23 @@ import { createTheme } from "@mui/material/styles";
 // #217 / spec § Density) — spacing comes from `theme.spacing(n)` and the
 // named-constant escapes for fixed chrome (`TOP_BAR_HEIGHT`, `SIDEBAR_WIDTH`,
 // `SIDEBAR_COLLAPSED_WIDTH`, `INPUT_CARD_HEIGHT`).
+//
+// Acceptable raw `rgba()` exceptions in component code (issue #289 audit):
+//   1. `viz.patternStroke` (defined below) — exists as `rgba(0,0,0,0.55)` in
+//      light and `rgba(255,255,255,0.55)` in dark. Both are tokenised under
+//      `theme.palette.viz.patternStroke`; the chart helper in
+//      `src/utils/chartPatterns.js` resolves the token via `useTheme()` so
+//      callers don't see raw rgba.
+//   2. `src/components/alerts/AlertMessage.jsx` — translucent white overlays
+//      for hover / active on the filled `<Alert>` "View" button. `<Alert
+//      variant="filled">` is always painted in a saturated severity colour
+//      regardless of scheme, so a white translucent hover is scheme-neutral
+//      and reads correctly in both modes.
+//   3. `src/components/map/{Legend,LegendLegacy}.css` — `box-shadow: 0 0 5px
+//      rgba(0,0,0,0.3)` on the map legend container. The legend sits on top
+//      of OpenStreetMap raster tiles, which stay light in both schemes (see
+//      "Maps" note in the #289 dark-mode audit), so a dark shadow remains
+//      the correct elevation cue on either app theme.
 
 // Light/dark color schemes (issue #288). Both schemes share the same custom
 // palette slots so component `sx={{ bgcolor: "primary.light" }}` keeps working
@@ -89,8 +106,15 @@ const lightBorder = {
 // designer's seed palette (teal / amber / grey); dark-mode hexes are the
 // paler dark-elevated variants from the same family. Designer can refine
 // post-merge — these are the starting positions, not the final values.
+// Light-mode `economic.main` darkened from the spec'd `#00897B` (Material
+// teal[600]) so it passes WCAG AA 4.5:1 against white contrast text — the
+// original measured 4.32:1, the new value clears 5.28:1. Material teal[700]
+// stays in the same hue family, so the chip + left-border stripe still read
+// as the same "economic" colour. Dark-mode `economic.main` keeps the spec's
+// `#4DB6AC` because it pairs with dark contrast text (6.55:1 — no change
+// needed).
 const lightCategory = {
-  economic: { main: "#00897B", contrastText: "#FFFFFF" },
+  economic: { main: "#00796B", contrastText: "#FFFFFF" },
   nonEconomic: { main: "#F9A825", contrastText: "#0F172A" },
   custom: { main: "#9E9E9E", contrastText: "#0F172A" },
 };
@@ -187,11 +211,15 @@ const darkPrimary = {
   contrastText: "#0F172A",
 };
 
+// Dark-mode `secondary.dark` lightened from the spec'd `#E04848` so the
+// pressed state passes WCAG AA 4.5:1 against the dark contrast text — the
+// original measured 3.96:1, the new value clears 5.4:1. Still darker than
+// `secondary.main` (`#F79191`), so the press visual hierarchy holds.
 const darkSecondary = {
   bg: "#3D2020",
   light: "#7A4A4A",
   main: "#F79191",
-  dark: "#E04848",
+  dark: "#F26B6B",
   contrastText: "#0F172A",
 };
 

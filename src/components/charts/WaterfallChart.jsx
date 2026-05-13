@@ -17,6 +17,7 @@ import {
 import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
 import { patternForIndex } from "../../utils/chartPatterns";
+import { buildChartThemeOptions } from "../../utils/chartTheme";
 import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
 import ChartInfoPopover from "../help/ChartInfoPopover";
@@ -146,6 +147,9 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
   // Theme-aware pattern stroke keeps the diagonal / increase / decrease
   // textures visible in both light and dark mode (issue #367).
   const patternStroke = theme.palette.viz.patternStroke;
+  // Theme-aware axis / tooltip / gridline colours (issue #289). Chart.js's
+  // hardcoded grey defaults are invisible against the dark scheme's bg.
+  const chartThemeOptions = buildChartThemeOptions(theme);
 
   useEffect(() => {
     return () => {
@@ -279,10 +283,13 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
       padding: { top: showValueLabels ? 24 : 8 },
     },
     scales: {
+      x: chartThemeOptions.scales.x,
       y: {
+        ...chartThemeOptions.scales.y,
         beginAtZero: true,
         title: { display: false },
         ticks: {
+          ...chartThemeOptions.scales.y.ticks,
           maxTicksLimit: 8,
           callback: (val) => formatNumber(Number(val), locale, { maximumFractionDigits: 0 }),
         },
@@ -315,6 +322,7 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
       title: { display: false, text: titleText },
       tooltip: {
         rtl,
+        ...chartThemeOptions.plugins.tooltip,
         callbacks: {
           title: (items) => items[0]?.label ?? "",
           label: (ctx) => {

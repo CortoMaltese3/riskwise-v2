@@ -55,6 +55,12 @@ const AlertMessage = () => {
                 textOverflow: "ellipsis",
                 py: 0.5,
                 px: 1,
+                // Translucent white overlays for the "View" button hover /
+                // active states. `<Alert variant="filled">` is always painted
+                // in a saturated severity colour regardless of scheme, so a
+                // white translucent overlay reads correctly in both light
+                // and dark mode — see the rgba exceptions block in
+                // src/theme/theme.ts (issue #289).
                 "&:hover": {
                   backgroundColor: "rgba(255, 255, 255, 0.1)",
                 },

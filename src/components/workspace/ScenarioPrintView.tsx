@@ -578,11 +578,21 @@ const ScenarioPrintView = ({
     return null;
   };
 
+  // Print view is forced to the light scheme regardless of the stored app
+  // theme mode (issue #289). PDF rendering is for human consumption on
+  // typically-light printed pages; rendering chart axes and table borders
+  // in dark-mode colours would produce illegible exports. Setting
+  // `data-mui-color-scheme="light"` on the outer Box scopes MUI's CSS
+  // variables to the light scheme within this subtree, so every nested
+  // component reads light-scheme palette values even when `<html>` is set
+  // to dark.
   return (
     <>
       <style>{`@media print { button { display: none !important; } }`}</style>
 
       <Box
+        data-testid="print-root"
+        data-mui-color-scheme="light"
         sx={{
           p: "24px",
           maxWidth: 960,

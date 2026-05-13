@@ -1,4 +1,15 @@
 <!DOCTYPE html>
+<!--
+  Splash loader. The main process selects a theme via the URL hash
+  (`loader.html#<theme>`) and the matching stylesheet is loaded from
+  `loader-themes/<theme>/theme.css` by `loader.js`. The splash is intentionally
+  branded and does NOT follow the user's saved `themeMode` preference (issue
+  #289 audit): it appears before any React/MUI bundle initialises and
+  represents the product, not the user's in-app theme choice. If a future
+  product decision requires the splash to respect dark mode, the main process
+  can read the persisted `themeMode` from electron-store and pass a different
+  theme name through the URL hash — no change to this file is required.
+-->
 <html>
   <head>
     <meta charset="UTF-8" />
