@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { act, fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material/styles";
 import theme from "../theme/theme";
 
@@ -40,8 +40,6 @@ vi.mock("chart.js", () => ({
   Legend: {},
 }));
 
-vi.mock("chartjs-plugin-datalabels", () => ({ default: {} }));
-
 const FIXTURE = {
   currency_unit: "USD",
   present_year: 2024,
@@ -53,17 +51,13 @@ const FIXTURE = {
 };
 
 let CostBenefitChart;
-let useStore;
 
 beforeAll(async () => {
   ({ default: CostBenefitChart } = await import("../components/charts/CostBenefitChart"));
-  ({ default: useStore } = await import("../store/useUIStore"));
 });
 
 beforeEach(() => {
   barSpy.mockClear();
-  globalThis.localStorage?.removeItem("riskwise.showChartValues");
-  useStore.setState({ showChartValues: false });
 });
 
 describe("CostBenefitChart", () => {
@@ -140,15 +134,10 @@ describe("CostBenefitChart", () => {
     expect(serious).toHaveLength(0);
   });
 
-  it("exposes a Show values toggle that gates datalabels display", () => {
+  it("does not render a show/hide values toggle", () => {
     render(<CostBenefitChart data={FIXTURE} />);
-    const initial = barSpy.mock.calls.at(-1)[0];
-    expect(initial.options.plugins.datalabels.display).toBe(false);
-    const toggle = screen.getByRole("button", { name: /chart_show_values/i });
-    act(() => {
-      fireEvent.click(toggle);
-    });
-    const afterToggle = barSpy.mock.calls.at(-1)[0];
-    expect(afterToggle.options.plugins.datalabels.display).toBe(true);
+    expect(
+      screen.queryByRole("button", { name: /show values|hide values/i })
+    ).not.toBeInTheDocument();
   });
 });

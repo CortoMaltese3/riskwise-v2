@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { act, fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material/styles";
 import theme from "../theme/theme";
 
@@ -40,8 +40,6 @@ vi.mock("chart.js", () => ({
   Legend: {},
 }));
 
-vi.mock("chartjs-plugin-datalabels", () => ({ default: {} }));
-
 // Spy on `patternForIndex` so we can assert the theme stroke is wired
 // through from `theme.palette.viz.patternStroke`. We still let the real
 // implementation run (it returns the colour string in jsdom, which is the
@@ -76,18 +74,14 @@ const FIXTURE = {
 };
 
 let WaterfallChart;
-let useStore;
 
 beforeAll(async () => {
   ({ default: WaterfallChart } = await import("../components/charts/WaterfallChart"));
-  ({ default: useStore } = await import("../store/useUIStore"));
 });
 
 beforeEach(() => {
   barSpy.mockClear();
   patternForIndexSpy.mockClear();
-  globalThis.localStorage?.removeItem("riskwise.showChartValues");
-  useStore.setState({ showChartValues: false });
 });
 
 describe("WaterfallChart", () => {
@@ -188,15 +182,10 @@ describe("WaterfallChart", () => {
     }
   });
 
-  it("exposes a Show values toggle that gates datalabels display", () => {
+  it("does not render a show/hide values toggle", () => {
     render(<WaterfallChart data={FIXTURE} />);
-    const initial = barSpy.mock.calls.at(-1)[0];
-    expect(initial.options.plugins.datalabels.display).toBe(false);
-    const toggle = screen.getByRole("button", { name: /chart_show_values/i });
-    act(() => {
-      fireEvent.click(toggle);
-    });
-    const afterToggle = barSpy.mock.calls.at(-1)[0];
-    expect(afterToggle.options.plugins.datalabels.display).toBe(true);
+    expect(
+      screen.queryByRole("button", { name: /show values|hide values/i })
+    ).not.toBeInTheDocument();
   });
 });

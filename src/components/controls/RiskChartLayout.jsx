@@ -96,25 +96,32 @@ const RiskChartLayout = () => {
           overflow: "hidden",
         }}
       >
-        {isScenarioRunCompleted && (
-          <Stack direction="row" justifyContent="flex-end" sx={{ px: 2, pt: 1 }}>
-            <Button
-              variant="text"
-              size="small"
-              aria-label={t("risk_view_link_to_adaptation_aria")}
-              onClick={() => setActiveSection("adaptation")}
-            >
-              {t("risk_view_link_to_adaptation")}
-            </Button>
-          </Stack>
-        )}
         <Box
-          textAlign="center"
-          p={3}
-          sx={{ flex: 1, minHeight: 0, width: "100%" }}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            width: "100%",
+            p: 3,
+            display: "flex",
+            flexDirection: "column",
+          }}
           aria-label={t("economic_non_economic_risk_display_chart_title")}
         >
-          {renderContent()}
+          {isScenarioRunCompleted && (
+            <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+              <Button
+                variant="text"
+                size="small"
+                aria-label={t("risk_view_link_to_adaptation_aria")}
+                onClick={() => setActiveSection("adaptation")}
+              >
+                {t("risk_view_link_to_adaptation")}
+              </Button>
+            </Stack>
+          )}
+          <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            {renderContent()}
+          </Box>
         </Box>
       </Paper>
     </div>

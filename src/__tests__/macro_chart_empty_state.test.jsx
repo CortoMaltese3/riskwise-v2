@@ -41,10 +41,7 @@ vi.mock("chart.js", () => ({
   Filler: {},
 }));
 
-vi.mock("chartjs-plugin-datalabels", () => ({ default: {} }));
-
 let MacroEconomicChart;
-let useUIStore;
 let useResultsStore;
 let useWorkspaceStore;
 
@@ -89,7 +86,6 @@ const SAMPLE_ROWS = [
 
 beforeAll(async () => {
   ({ default: MacroEconomicChart } = await import("../components/charts/MacroEconomicChart"));
-  ({ default: useUIStore } = await import("../store/useUIStore"));
   ({ default: useResultsStore } = await import("../store/useResultsStore"));
   ({ default: useWorkspaceStore } = await import("../store/useWorkspaceStore"));
 });
@@ -106,7 +102,6 @@ beforeEach(() => {
     selectedMacroSector: "",
     selectedMacroVariable: "",
   });
-  useUIStore.setState({ showChartValues: false });
 });
 
 describe("MacroEconomicChart empty + progressive states", () => {
@@ -127,10 +122,9 @@ describe("MacroEconomicChart empty + progressive states", () => {
     expect(props.options.plugins.legend.display).toBe(true);
   });
 
-  it("does not render the title bar or values toggle in the empty state", () => {
+  it("does not render the title bar or data table in the empty state", () => {
     render(<MacroEconomicChart />);
 
-    expect(screen.queryByRole("button", { name: /chart_show_values/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
@@ -164,7 +158,6 @@ describe("MacroEconomicChart empty + progressive states", () => {
     render(<MacroEconomicChart />);
 
     expect(screen.queryByTestId("macro-chart-empty-hint")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /chart_show_values/i })).toBeInTheDocument();
     expect(screen.getByRole("table")).toBeInTheDocument();
 
     const props = lineSpy.mock.calls.at(-1)[0];

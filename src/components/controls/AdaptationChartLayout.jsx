@@ -1,10 +1,13 @@
 import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper } from "@mui/material";
+import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import CostBenefitChart from "../charts/CostBenefitChart";
+import EmptyChartState from "../layout/EmptyChartState";
+import LoadingSkeleton from "../layout/LoadingSkeleton";
 import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
@@ -12,28 +15,32 @@ import useWorkspaceStore from "../../store/useWorkspaceStore";
 const STATUS_OK = 2000;
 
 const renderCostBenefitBody = ({
+  isLoading,
   costBenefitData,
   errorMessage,
   scenarioRunCode,
   setCostBenefitChartRef,
   t,
 }) => {
+  if (isLoading) {
+    return <LoadingSkeleton variant="chart" data-testid="cost-benefit-skeleton" />;
+  }
   if (!costBenefitData) {
     return (
-      <Typography variant="body1">
-        {errorMessage || t("economic_non_economic_adaptation_display_chart_loading_error")}
-      </Typography>
+      <EmptyChartState
+        data-testid="adaptation-empty-state-no-data"
+        icon={BarChartOutlinedIcon}
+        message={errorMessage || t("economic_non_economic_adaptation_display_chart_loading_error")}
+      />
     );
   }
   if (Array.isArray(costBenefitData.measures) && costBenefitData.measures.length === 0) {
     return (
-      <Typography
+      <EmptyChartState
         data-testid="adaptation-empty-state-no-measures"
-        variant="body1"
-        sx={{ fontStyle: "italic" }}
-      >
-        {t("adaptation_empty_state_no_measures")}
-      </Typography>
+        icon={BarChartOutlinedIcon}
+        message={t("adaptation_empty_state_no_measures")}
+      />
     );
   }
   return (
@@ -55,6 +62,7 @@ const AdaptationChartLayout = () => {
   const scenarioRunCode = useWorkspaceStore((state) => state.scenarioRunCode);
   const costBenefitData = useResultsStore((state) => state.costBenefitData);
   const errorMessage = useResultsStore((state) => state.costBenefitError);
+  const isLoading = useResultsStore((state) => state.isCostBenefitLoading);
   const beginCostBenefitFetch = useResultsStore((state) => state.beginCostBenefitFetch);
   const endCostBenefitFetch = useResultsStore((state) => state.endCostBenefitFetch);
 
@@ -102,12 +110,18 @@ const AdaptationChartLayout = () => {
         }}
       >
         <Box
-          textAlign="center"
-          p={3}
-          style={{ width: "100%", height: "100%" }}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            width: "100%",
+            p: 3,
+            display: "flex",
+            flexDirection: "column",
+          }}
           aria-label={t("economic_non_economic_adaptation_chart_title")}
         >
           {renderCostBenefitBody({
+            isLoading,
             costBenefitData,
             errorMessage,
             scenarioRunCode,

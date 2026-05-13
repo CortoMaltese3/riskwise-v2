@@ -82,12 +82,9 @@ vi.mock("chart.js", () => ({
   Filler: {},
 }));
 
-vi.mock("chartjs-plugin-datalabels", () => ({ default: {} }));
-
 let WaterfallChart;
 let CostBenefitChart;
 let MacroEconomicChart;
-let useUIStore;
 let useResultsStore;
 let useWorkspaceStore;
 
@@ -134,7 +131,6 @@ beforeAll(async () => {
   ({ default: WaterfallChart } = await import("../components/charts/WaterfallChart"));
   ({ default: CostBenefitChart } = await import("../components/charts/CostBenefitChart"));
   ({ default: MacroEconomicChart } = await import("../components/charts/MacroEconomicChart"));
-  ({ default: useUIStore } = await import("../store/useUIStore"));
   ({ default: useResultsStore } = await import("../store/useResultsStore"));
   ({ default: useWorkspaceStore } = await import("../store/useWorkspaceStore"));
 });
@@ -158,7 +154,6 @@ beforeEach(() => {
   barSpy.mockClear();
   lineSpy.mockClear();
   installMatchMedia(false);
-  useUIStore.setState({ showChartValues: false });
   useResultsStore.setState({
     credOutputData: MACRO_ROWS,
     macroEconomicChartTitle: "ESP · agriculture · gdp",

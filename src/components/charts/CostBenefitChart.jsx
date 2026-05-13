@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { Bar } from "react-chartjs-2";
 import {
@@ -13,9 +13,7 @@ import {
   Title,
   Tooltip,
 } from "chart.js";
-import ChartDataLabels from "chartjs-plugin-datalabels";
 
-import useUIStore from "../../store/useUIStore";
 import { isRtl } from "../../i18nConfig";
 import { formatNumber, formatNumberWithUnit } from "../../lib/formatNumber";
 import { patternForIndex } from "../../utils/chartPatterns";
@@ -23,7 +21,7 @@ import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
 import ChartInfoPopover from "../help/ChartInfoPopover";
 
-ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend, ChartDataLabels);
+ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend);
 
 const PATTERN_PROFITABLE = 0;
 const PATTERN_MARGINAL = 1;
@@ -47,8 +45,6 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
   const rtl = isRtl(locale);
   const internalRef = useRef(null);
   const chartRef = ref ?? internalRef;
-  const showChartValues = useUIStore((state) => state.showChartValues);
-  const toggleShowChartValues = useUIStore((state) => state.toggleShowChartValues);
   const theme = useTheme();
   const vizColors = {
     profitable: alpha(theme.palette.viz.positive, 0.85),
@@ -149,14 +145,6 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
           },
         },
       },
-      datalabels: {
-        display: showChartValues,
-        anchor: "end",
-        align: "end",
-        color: alpha(theme.palette.text.primary, 0.9),
-        font: { size: 11, weight: 600 },
-        formatter: (value) => formatNumber(value, locale),
-      },
     },
   };
 
@@ -182,32 +170,22 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
     <Box
       sx={{
         width: "100%",
-        height: "100%",
+        flex: 1,
         minHeight: 320,
         display: "flex",
         flexDirection: "column",
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-        <Stack direction="row" alignItems="center" spacing={0.5}>
-          <Typography variant="subtitle1" component="h3" sx={{ m: 0 }}>
-            {titleText}
-          </Typography>
-          <ChartInfoPopover
-            titleKey="chart_info_cost_benefit_title"
-            bodyKey="chart_info_cost_benefit_body"
-          />
-        </Stack>
-        <Button
-          size="small"
-          variant={showChartValues ? "contained" : "outlined"}
-          onClick={toggleShowChartValues}
-          aria-pressed={showChartValues}
-        >
-          {showChartValues ? t("chart_hide_values") : t("chart_show_values")}
-        </Button>
+      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+        <Typography variant="subtitle1" component="h3" sx={{ m: 0 }}>
+          {titleText}
+        </Typography>
+        <ChartInfoPopover
+          titleKey="chart_info_cost_benefit_title"
+          bodyKey="chart_info_cost_benefit_body"
+        />
       </Stack>
-      <Box sx={{ flex: 1, minHeight: 240 }}>
+      <Box sx={{ position: "relative", flex: 2, minHeight: 240 }}>
         <Bar ref={chartRef} data={chartData} options={options} aria-label={ariaLabel} role="img" />
       </Box>
       <ChartDataTable
@@ -216,6 +194,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
         rows={tableRows}
         summaryLabel={t("chart_data_table_summary")}
       />
+      <Box sx={{ flex: 1, minHeight: 0 }} aria-hidden />
     </Box>
   );
 });

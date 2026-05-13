@@ -4,7 +4,6 @@ import { SECTION_IDS } from "../constants/sections";
 import { TABS, TAB_CONFIG, isValidTab } from "../components/main/tabs";
 
 const SIDEBAR_STORAGE_KEY = "riskwise.sidebarCollapsed";
-const SHOW_CHART_VALUES_STORAGE_KEY = "riskwise.showChartValues";
 const WALKTHROUGH_STORAGE_KEY = "riskwise.hasSeenWalkthrough";
 const TOUR_STATE_STORAGE_KEY = "riskwise.tourState";
 const VALID_SECTIONS = new Set(SECTION_IDS);
@@ -57,7 +56,6 @@ const useUIStore = create((set, get) => ({
   // Navigation / chrome
   activeSection: "risk",
   sidebarCollapsed: readBool(SIDEBAR_STORAGE_KEY),
-  showChartValues: readBool(SHOW_CHART_VALUES_STORAGE_KEY),
 
   // Offline mode. Source of truth is electron-store on the main side; the
   // renderer mirrors it via the `electron.offline` IPC bridge.
@@ -115,15 +113,6 @@ const useUIStore = create((set, get) => ({
   setSidebarCollapsed: (collapsed) => {
     writeBool(SIDEBAR_STORAGE_KEY, collapsed);
     set({ sidebarCollapsed: collapsed });
-  },
-  setShowChartValues: (show) => {
-    writeBool(SHOW_CHART_VALUES_STORAGE_KEY, show);
-    set({ showChartValues: show });
-  },
-  toggleShowChartValues: () => {
-    const next = !get().showChartValues;
-    writeBool(SHOW_CHART_VALUES_STORAGE_KEY, next);
-    set({ showChartValues: next });
   },
 
   // Apply an offline-status payload from the main process. Skips the `set`

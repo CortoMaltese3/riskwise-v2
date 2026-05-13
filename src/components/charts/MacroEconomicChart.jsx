@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { Line } from "react-chartjs-2";
 import {
@@ -15,10 +15,8 @@ import {
   Title,
   Tooltip,
 } from "chart.js";
-import ChartDataLabels from "chartjs-plugin-datalabels";
 
 import useResultsStore from "../../store/useResultsStore";
-import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
@@ -35,8 +33,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler,
-  ChartDataLabels
+  Filler
 );
 
 // Adaptation values render in a fixed order — None (no adaptation) is the
@@ -73,8 +70,6 @@ const MacroEconomicChart = () => {
   const selectedMacroScenario = useWorkspaceStore((s) => s.selectedMacroScenario);
   const selectedMacroSector = useWorkspaceStore((s) => s.selectedMacroSector);
   const selectedMacroVariable = useWorkspaceStore((s) => s.selectedMacroVariable);
-  const showChartValues = useUIStore((s) => s.showChartValues);
-  const toggleShowChartValues = useUIStore((s) => s.toggleShowChartValues);
 
   // Filter data based on selected filters
   const filteredData = credOutputData.filter(
@@ -186,14 +181,6 @@ const MacroEconomicChart = () => {
             `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y, locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,
         },
       },
-      datalabels: {
-        display: showChartValues,
-        align: "top",
-        color: alpha(theme.palette.text.primary, 0.9),
-        font: { size: 10, weight: 600 },
-        formatter: (value) =>
-          `${formatNumber(Number(value), locale, { maximumFractionDigits: 1, minimumFractionDigits: 1 })}%`,
-      },
     },
   };
 
@@ -238,21 +225,11 @@ const MacroEconomicChart = () => {
         sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflowY: "auto" }}
       >
         {hasData && (
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-            <Stack direction="row" alignItems="center" spacing={0.5}>
-              <Typography variant="subtitle1" component="h3" sx={{ m: 0 }}>
-                {macroEconomicChartTitle}
-              </Typography>
-              <ChartInfoPopover titleKey="chart_info_macro_title" bodyKey="chart_info_macro_body" />
-            </Stack>
-            <Button
-              size="small"
-              variant={showChartValues ? "contained" : "outlined"}
-              onClick={toggleShowChartValues}
-              aria-pressed={showChartValues}
-            >
-              {showChartValues ? t("chart_hide_values") : t("chart_show_values")}
-            </Button>
+          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+            <Typography variant="subtitle1" component="h3" sx={{ m: 0 }}>
+              {macroEconomicChartTitle}
+            </Typography>
+            <ChartInfoPopover titleKey="chart_info_macro_title" bodyKey="chart_info_macro_body" />
           </Stack>
         )}
         <Box sx={{ position: "relative", flex: 1, minHeight: 320, mb: 1 }}>
