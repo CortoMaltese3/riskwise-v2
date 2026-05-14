@@ -29,13 +29,17 @@ const sortByCreated = (a, b) => {
   return tb - ta;
 };
 
-const RecentRow = ({ row, locale }) => {
+const RecentRow = ({ row, locale, onActivate }) => {
   const subtitleParts = [row.hazard_type, row.country, row.status].filter(Boolean);
   const relative = formatRelativeTime(row.created_at, locale);
   const subtitle = [subtitleParts.join(" / "), relative].filter(Boolean).join(" · ");
   return (
     <ListItem disablePadding dense>
-      <ListItemButton sx={{ borderRadius: 1 }}>
+      <ListItemButton
+        sx={{ borderRadius: 1 }}
+        onClick={onActivate ? () => onActivate(row) : undefined}
+        data-testid={`home-recent-row-${row.id}`}
+      >
         <ListItemText
           primary={row.name || row.id}
           secondary={subtitle}
@@ -52,9 +56,10 @@ const RecentRow = ({ row, locale }) => {
 RecentRow.propTypes = {
   row: PropTypes.object.isRequired,
   locale: PropTypes.string,
+  onActivate: PropTypes.func,
 };
 
-const RecentProjectsCard = ({ scenarios, loading, error }) => {
+const RecentProjectsCard = ({ scenarios, loading, error, onActivate }) => {
   const { t, i18n } = useTranslation();
   const setActiveSection = useUIStore((s) => s.setActiveSection);
   const rtl = isRtl(i18n.language);
@@ -118,7 +123,7 @@ const RecentProjectsCard = ({ scenarios, loading, error }) => {
       ) : (
         <List dense disablePadding>
           {recent.map((row) => (
-            <RecentRow key={row.id} row={row} locale={i18n.language} />
+            <RecentRow key={row.id} row={row} locale={i18n.language} onActivate={onActivate} />
           ))}
         </List>
       )}
@@ -130,6 +135,7 @@ RecentProjectsCard.propTypes = {
   scenarios: PropTypes.array.isRequired,
   loading: PropTypes.bool,
   error: PropTypes.string,
+  onActivate: PropTypes.func,
 };
 
 export default RecentProjectsCard;

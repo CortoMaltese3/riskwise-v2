@@ -56,7 +56,7 @@ const initialResultDetailsOpen = readBool(RESULT_DETAILS_OPEN_KEY);
 
 const useUIStore = create((set, get) => ({
   // Navigation / chrome
-  activeSection: "risk",
+  activeSection: "home",
   sidebarCollapsed: readBool(SIDEBAR_STORAGE_KEY),
 
   // Offline mode. Source of truth is electron-store on the main side; the

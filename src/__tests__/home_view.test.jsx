@@ -17,6 +17,19 @@ vi.mock("../lib/RiskWiseClient", () => ({
   },
 }));
 
+const { restoreScenarioMock, enqueueToastMock } = vi.hoisted(() => ({
+  restoreScenarioMock: vi.fn(),
+  enqueueToastMock: vi.fn(),
+}));
+
+vi.mock("../utils/reportTools", () => ({
+  useReportTools: () => ({ restoreScenario: restoreScenarioMock }),
+}));
+
+vi.mock("../hooks/useToast", () => ({
+  enqueueToast: enqueueToastMock,
+}));
+
 vi.mock("../../CHANGELOG.md?raw", () => ({
   default: [
     "# Changelog",
@@ -71,6 +84,8 @@ beforeEach(() => {
       downloadUpdate: vi.fn(),
     },
   };
+  restoreScenarioMock.mockReset();
+  enqueueToastMock.mockReset();
   useStore.setState({ activeSection: "home", modalMessage: "", progress: 0 });
   useResultsStore.setState({
     scenarioPhase: null,
@@ -207,5 +222,50 @@ describe("HomeView", () => {
     });
     render(<HomeView />);
     expect(screen.queryByTestId("home-recent-last-completed")).toBeNull();
+  });
+
+  it("clicking a recent row opens the restore-confirm dialog with the row name", () => {
+    render(<HomeView />);
+    fireEvent.click(screen.getByTestId("home-recent-row-s-1"));
+    const dialog = screen.getByTestId("home-restore-confirm-dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(dialog.textContent).toContain("Egypt flood run");
+    expect(restoreScenarioMock).not.toHaveBeenCalled();
+  });
+
+  it("cancelling the dialog does not call restoreScenario and leaves the section unchanged", () => {
+    render(<HomeView />);
+    fireEvent.click(screen.getByTestId("home-recent-row-s-1"));
+    fireEvent.click(screen.getByTestId("home-restore-confirm-cancel"));
+    expect(restoreScenarioMock).not.toHaveBeenCalled();
+    expect(useStore.getState().activeSection).toBe("home");
+  });
+
+  it("confirming the dialog restores the scenario and switches to the risk section", async () => {
+    restoreScenarioMock.mockResolvedValue(true);
+    render(<HomeView />);
+    fireEvent.click(screen.getByTestId("home-recent-row-s-1"));
+    fireEvent.click(screen.getByTestId("home-restore-confirm-action"));
+    await screen.findByTestId("home-view");
+    // Allow the await inside handleConfirmRestore to flush.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(restoreScenarioMock).toHaveBeenCalledWith("s-1");
+    expect(useStore.getState().activeSection).toBe("risk");
+    expect(enqueueToastMock).toHaveBeenCalledWith(expect.objectContaining({ severity: "success" }));
+  });
+
+  it("clicking a pinned tile opens the restore-confirm dialog", () => {
+    useWorkspaceStore.setState({ pinnedIds: ["s-1"] });
+    render(<HomeView />);
+    fireEvent.click(screen.getByTestId("home-pinned-s-1"));
+    expect(screen.getByTestId("home-restore-confirm-dialog")).toBeInTheDocument();
+  });
+
+  it("clicking the pinned unpin icon does not open the restore-confirm dialog", () => {
+    useWorkspaceStore.setState({ pinnedIds: ["s-1"] });
+    render(<HomeView />);
+    fireEvent.click(screen.getByTestId("home-pinned-unpin-s-1"));
+    expect(screen.queryByTestId("home-restore-confirm-dialog")).toBeNull();
   });
 });

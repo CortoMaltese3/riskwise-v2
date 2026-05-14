@@ -18,36 +18,55 @@ const TILE_SX = {
   bgcolor: "background.default",
 };
 
-const PinnedTile = ({ row, onUnpin, label }) => (
-  <Paper variant="outlined" sx={TILE_SX} data-testid={`home-pinned-${row.id}`}>
-    <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
-      <Typography variant="body1" sx={{ fontWeight: 500 }} noWrap>
-        {row.name || row.id}
-      </Typography>
-      <IconButton
-        size="small"
-        onClick={() => onUnpin(row.id)}
-        aria-label={label}
-        data-testid={`home-pinned-unpin-${row.id}`}
-      >
-        <StarIcon fontSize="small" color="primary" />
-      </IconButton>
-    </Stack>
-    {(row.country || row.hazard_type) && (
-      <Typography variant="body2" color="text.secondary" noWrap>
-        {[row.hazard_type, row.country].filter(Boolean).join(" / ")}
-      </Typography>
-    )}
-  </Paper>
-);
+const TILE_CLICKABLE_SX = {
+  ...TILE_SX,
+  cursor: "pointer",
+  transition: "background-color 120ms",
+  "&:hover": { bgcolor: "action.hover" },
+};
+
+const PinnedTile = ({ row, onUnpin, label, onActivate }) => {
+  const handleUnpin = (event) => {
+    event.stopPropagation();
+    onUnpin(row.id);
+  };
+  return (
+    <Paper
+      variant="outlined"
+      sx={onActivate ? TILE_CLICKABLE_SX : TILE_SX}
+      data-testid={`home-pinned-${row.id}`}
+      onClick={onActivate ? () => onActivate(row) : undefined}
+    >
+      <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
+        <Typography variant="body1" sx={{ fontWeight: 500 }} noWrap>
+          {row.name || row.id}
+        </Typography>
+        <IconButton
+          size="small"
+          onClick={handleUnpin}
+          aria-label={label}
+          data-testid={`home-pinned-unpin-${row.id}`}
+        >
+          <StarIcon fontSize="small" color="primary" />
+        </IconButton>
+      </Stack>
+      {(row.country || row.hazard_type) && (
+        <Typography variant="body2" color="text.secondary" noWrap>
+          {[row.hazard_type, row.country].filter(Boolean).join(" / ")}
+        </Typography>
+      )}
+    </Paper>
+  );
+};
 
 PinnedTile.propTypes = {
   row: PropTypes.object.isRequired,
   onUnpin: PropTypes.func.isRequired,
   label: PropTypes.string.isRequired,
+  onActivate: PropTypes.func,
 };
 
-const PinnedCard = ({ scenarios, pinnedIds, loading, error, onUnpin }) => {
+const PinnedCard = ({ scenarios, pinnedIds, loading, error, onUnpin, onActivate }) => {
   const { t } = useTranslation();
   const pinned = useMemo(() => {
     const byId = new Map(scenarios.map((row) => [row.id, row]));
@@ -94,6 +113,7 @@ const PinnedCard = ({ scenarios, pinnedIds, loading, error, onUnpin }) => {
               row={row}
               onUnpin={onUnpin}
               label={t("workspace_unpin_aria", { id: row.id })}
+              onActivate={onActivate}
             />
           ))}
         </Box>
@@ -108,6 +128,7 @@ PinnedCard.propTypes = {
   loading: PropTypes.bool,
   error: PropTypes.string,
   onUnpin: PropTypes.func.isRequired,
+  onActivate: PropTypes.func,
 };
 
 export default PinnedCard;
