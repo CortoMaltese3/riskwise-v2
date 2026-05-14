@@ -1,28 +1,22 @@
-// Regression coverage for issue #448. Country and hazard setters already
-// cleared the adaptation measure-selection trio; exposure and app option
-// silently leaked stale selections into the next scenario run. Each setter
-// must now wipe `selectedMeasureIds`, `appliedMeasureIds`, and
-// `isMeasureSelectionInitialized` so the next picker initialization re-seeds
-// from the catalog matching the new entity.
+// Regression coverage for issues #448 / #451. Every setter that mutates a
+// scenario input (country / hazard / exposure / app option) must wipe
+// ``selectedMeasureIds`` so a stale selection never rides into the next
+// scenario run for a different entity.
 
 import { beforeEach, describe, expect, it } from "vitest";
 
 import useWorkspaceStore from "../store/useWorkspaceStore";
 import { switchAppMode } from "../store/orchestrators";
 
-const seedAppliedSelection = () => {
+const seedSelection = () => {
   useWorkspaceStore.setState({
     selectedMeasureIds: ["seawall", "early_warning"],
-    appliedMeasureIds: ["seawall", "early_warning"],
-    isMeasureSelectionInitialized: true,
   });
 };
 
 const expectMeasureStateCleared = () => {
   const state = useWorkspaceStore.getState();
   expect(state.selectedMeasureIds).toEqual([]);
-  expect(state.appliedMeasureIds).toEqual([]);
-  expect(state.isMeasureSelectionInitialized).toBe(false);
 };
 
 describe("measure-selection reset triggers", () => {
@@ -33,7 +27,7 @@ describe("measure-selection reset triggers", () => {
       selectedHazard: "flood",
       selectedExposure: "economic_assets",
     });
-    seedAppliedSelection();
+    seedSelection();
   });
 
   it("clears measure state when the country changes", () => {

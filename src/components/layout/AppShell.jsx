@@ -8,7 +8,6 @@ import Sidebar, { SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from "./Sidebar";
 import TopBar from "./TopBar";
 import ActiveScenarioCard from "../adaptation/ActiveScenarioCard";
 import AdaptationDisplayPanel from "../adaptation/AdaptationDisplayPanel";
-import AdaptationMeasuresInput from "../input/AdaptationMeasuresInput";
 import DataInput from "../input/DataInput";
 import MacroEconomicInput from "../inputMacro/MacroEconomicInput";
 import MainView from "../main/MainView";
@@ -40,7 +39,6 @@ const sectionToTab = {
 const RISK_LEFT_PANEL_WIDTH = 280;
 const RISK_RESULTS_PANEL_WIDTH = 260;
 const MACRO_LEFT_PANEL_WIDTH = 280;
-const ADAPTATION_LEFT_PANEL_WIDTH = 280;
 const ADAPTATION_RESULTS_PANEL_WIDTH = 260;
 
 export const RiskAssessmentView = () => {
@@ -186,24 +184,6 @@ export const AdaptationView = () => {
   const { t } = useTranslation();
   return (
     <HorizontalSplit>
-      <FixedColumn width={ADAPTATION_LEFT_PANEL_WIDTH}>
-        <Box
-          sx={{
-            height: "100%",
-            borderRight: 1,
-            borderColor: "divider",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <ScrollableRegion>
-            <Box sx={{ pt: 2, px: 1, pb: 1 }}>
-              <AdaptationMeasuresInput />
-              <ActiveScenarioCard />
-            </Box>
-          </ScrollableRegion>
-        </Box>
-      </FixedColumn>
       <ScrollableRegion>
         <Box
           sx={{
@@ -233,6 +213,7 @@ export const AdaptationView = () => {
         >
           <ScrollableRegion>
             <Box sx={{ pt: 2, px: 1, pb: 1 }}>
+              <ActiveScenarioCard />
               <AdaptationDisplayPanel />
             </Box>
           </ScrollableRegion>
