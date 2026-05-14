@@ -770,6 +770,80 @@
         "title": "HydrateScenarioResponse",
         "type": "object"
       },
+      "ImpactFunctionPayload": {
+        "description": "The full curve plus metadata for one impact function.",
+        "properties": {
+          "exp_type": {
+            "title": "Exp Type",
+            "type": "string"
+          },
+          "haz_type": {
+            "title": "Haz Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "intensity": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Intensity",
+            "type": "array"
+          },
+          "intensity_unit": {
+            "title": "Intensity Unit",
+            "type": "string"
+          },
+          "mdd": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Mdd",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "paa": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Paa",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "haz_type",
+          "exp_type",
+          "intensity_unit",
+          "intensity",
+          "mdd",
+          "paa"
+        ],
+        "title": "ImpactFunctionPayload",
+        "type": "object"
+      },
+      "ImpactFunctionResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ImpactFunctionPayload"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "ImpactFunctionResponse",
+        "type": "object"
+      },
       "JobAcceptedResponse": {
         "properties": {
           "job_id": {
@@ -2617,6 +2691,83 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/api/v1/impact-function": {
+      "get": {
+        "description": "Return the impact-function spec the engine would apply for this selection.\n\nRead-only viewer backing the Risk-input Impact Function panel (issue #452).\nThe spec is parsed from the same entity XLSX the scenario runner consumes\nso the viewer cannot drift from the engine's resolution. ``entityFile``\noverrides canonical-filename derivation for custom-mode uploads.",
+        "operationId": "impact_function_endpoint_api_v1_impact_function_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "country",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Country",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hazard",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Hazard",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "exposure",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Exposure",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entityFile",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entityfile"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpactFunctionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Impact Function Endpoint"
       }
     },
     "/api/v1/macro/chart-data": {

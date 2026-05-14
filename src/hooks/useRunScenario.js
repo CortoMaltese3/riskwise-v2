@@ -37,6 +37,7 @@ const useRunScenario = () => {
   const setIsScenarioRunCompleted = useResultsStore((s) => s.setIsScenarioRunCompleted);
   const setScenarioPhase = useResultsStore((s) => s.setScenarioPhase);
   const setActiveRunSummary = useResultsStore((s) => s.setActiveRunSummary);
+  const setActiveRunImpactFunction = useResultsStore((s) => s.setActiveRunImpactFunction);
 
   const { t } = useTranslation();
 
@@ -68,9 +69,29 @@ const useRunScenario = () => {
       setActiveRunSummary({
         country: selectedCountry,
         hazard: selectedHazard,
+        exposure: selectedExposure,
+        mode: selectedAppOption,
+        exposureFile: selectedExposureFile,
         timeHorizonStart,
         timeHorizonEnd,
         landingTab,
+        // Filled in below once the impact-function lookup returns. Kept on
+        // the summary so the ``ResultsView`` secondary entry point can open
+        // the impact-function dialog for the run that just completed (#452).
+        impactFunction: null,
+      });
+      // Fire-and-forget IF lookup so the ``ResultsView`` secondary entry
+      // point can open the dialog without a re-fetch. A failed lookup is
+      // non-fatal — the button hides when ``impactFunction`` is missing —
+      // so we don't gate the run on it. ``?.`` defends against the older
+      // mocks across the suite that only stub ``runScenario``.
+      RiskWiseClient.fetchImpactFunction?.(
+        selectedCountry,
+        selectedHazard,
+        selectedExposure,
+        selectedAppOption === "explore" ? selectedExposureFile : null
+      )?.then((response) => {
+        if (response?.success) setActiveRunImpactFunction(response.result.data);
       });
       setIsScenarioRunning(true);
       setScenarioPhase(SCENARIO_PHASES.RUNNING);
@@ -143,6 +164,7 @@ const useRunScenario = () => {
       selectedMeasureIds,
       setLastRunSkippedMeasures,
       setActiveRunSummary,
+      setActiveRunImpactFunction,
       setAlertMessage,
       setAlertSeverity,
       setAlertShowMessage,

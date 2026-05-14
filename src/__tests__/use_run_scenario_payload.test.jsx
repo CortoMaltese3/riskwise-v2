@@ -8,10 +8,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 
 const runScenarioMock = vi.fn();
+const fetchImpactFunctionMock = vi.fn();
 
 vi.mock("../lib/RiskWiseClient", () => ({
   default: {
     runScenario: (...args) => runScenarioMock(...args),
+    fetchImpactFunction: (...args) => fetchImpactFunctionMock(...args),
   },
 }));
 
@@ -31,6 +33,23 @@ const ok = () => ({
 beforeEach(() => {
   runScenarioMock.mockReset();
   runScenarioMock.mockResolvedValue(ok());
+  fetchImpactFunctionMock.mockReset();
+  fetchImpactFunctionMock.mockResolvedValue({
+    success: true,
+    result: {
+      status: { code: 2000, message: "ok" },
+      data: {
+        id: 50,
+        name: "Crops",
+        haz_type: "FL",
+        exp_type: "Crops",
+        intensity_unit: "m",
+        intensity: [0, 1, 2],
+        mdd: [0, 0.5, 1],
+        paa: [1, 1, 1],
+      },
+    },
+  });
   useWorkspaceStore.setState({
     selectedCountry: "Thailand",
     selectedHazard: "flood",
@@ -96,5 +115,49 @@ describe("useRunScenario selectedMeasureIds wire format (#449 / #451)", () => {
 
     const body = runScenarioMock.mock.calls[0][0];
     expect(body.selectedMeasureIds).toEqual(["Levee"]);
+  });
+});
+
+describe("useRunScenario impact-function lookup (#452)", () => {
+  it("snapshots the active impact function onto activeRunSummary", async () => {
+    const { result } = renderHook(() => useRunScenario());
+    await result.current.runScenario();
+
+    expect(fetchImpactFunctionMock).toHaveBeenCalledWith("Thailand", "flood", "crops", null);
+    const summary = useResultsStore.getState().activeRunSummary;
+    expect(summary).not.toBeNull();
+    expect(summary.impactFunction?.id).toBe(50);
+    expect(summary.impactFunction?.name).toBe("Crops");
+    expect(summary.exposure).toBe("crops");
+  });
+
+  it("forwards the uploaded entityFile in custom mode", async () => {
+    useWorkspaceStore.setState({
+      selectedAppOption: "explore",
+      selectedExposureFile: "custom.xlsx",
+    });
+
+    const { result } = renderHook(() => useRunScenario());
+    await result.current.runScenario();
+
+    expect(fetchImpactFunctionMock).toHaveBeenCalledWith(
+      "Thailand",
+      "flood",
+      "crops",
+      "custom.xlsx"
+    );
+  });
+
+  it("leaves impactFunction null when the lookup fails — non-fatal", async () => {
+    fetchImpactFunctionMock.mockResolvedValue({
+      success: false,
+      error: { code: "x", message: "missing", detail: null, error_id: "e", request_id: "r" },
+    });
+
+    const { result } = renderHook(() => useRunScenario());
+    await result.current.runScenario();
+
+    const summary = useResultsStore.getState().activeRunSummary;
+    expect(summary.impactFunction).toBeNull();
   });
 });

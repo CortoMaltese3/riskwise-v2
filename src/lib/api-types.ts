@@ -155,6 +155,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/impact-function": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Impact Function Endpoint
+         * @description Return the impact-function spec the engine would apply for this selection.
+         *
+         *     Read-only viewer backing the Risk-input Impact Function panel (issue #452).
+         *     The spec is parsed from the same entity XLSX the scenario runner consumes
+         *     so the viewer cannot drift from the engine's resolution. ``entityFile``
+         *     overrides canonical-filename derivation for custom-mode uploads.
+         */
+        get: operations["impact_function_endpoint_api_v1_impact_function_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/macro/chart-data": {
         parameters: {
             query?: never;
@@ -919,6 +944,33 @@ export interface components {
             data: components["schemas"]["HydrateScenarioData"];
             status: components["schemas"]["Status"];
         };
+        /**
+         * ImpactFunctionPayload
+         * @description The full curve plus metadata for one impact function.
+         */
+        ImpactFunctionPayload: {
+            /** Exp Type */
+            exp_type: string;
+            /** Haz Type */
+            haz_type: string;
+            /** Id */
+            id: number;
+            /** Intensity */
+            intensity: number[];
+            /** Intensity Unit */
+            intensity_unit: string;
+            /** Mdd */
+            mdd: number[];
+            /** Name */
+            name: string;
+            /** Paa */
+            paa: number[];
+        };
+        /** ImpactFunctionResponse */
+        ImpactFunctionResponse: {
+            data: components["schemas"]["ImpactFunctionPayload"];
+            status: components["schemas"]["Status"];
+        };
         /** JobAcceptedResponse */
         JobAcceptedResponse: {
             /**
@@ -1653,6 +1705,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    impact_function_endpoint_api_v1_impact_function_get: {
+        parameters: {
+            query?: {
+                country?: string;
+                hazard?: string;
+                exposure?: string;
+                entityFile?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpactFunctionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

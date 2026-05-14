@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Button, Typography } from "@mui/material";
+import { Box, Button, Stack, Typography } from "@mui/material";
 
+import ImpactFunctionDialog from "../dialogs/ImpactFunctionDialog";
 import ResultsTypography from "./ResultsTypography";
+import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import { layoutTransition } from "../../theme/theme";
 
@@ -11,7 +13,10 @@ const EconomicResultsCard = () => {
   const activeMap = useUIStore((s) => s.activeMap);
   const activeViewControl = useUIStore((s) => s.activeViewControl);
   const setActiveMap = useUIStore((s) => s.setActiveMap);
+  const activeRunSummary = useResultsStore((s) => s.activeRunSummary);
   const { t } = useTranslation();
+  const [impactFunctionDialogOpen, setImpactFunctionDialogOpen] = useState(false);
+  const runImpactFunction = activeRunSummary?.impactFunction ?? null;
 
   const handleButtonClick = (type) => {
     setActiveMap(type);
@@ -68,7 +73,25 @@ const EconomicResultsCard = () => {
         </Typography>
 
         <ResultsTypography />
+        {runImpactFunction && (
+          <Stack direction="row" justifyContent="center" sx={{ mt: 2 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              color="inherit"
+              onClick={() => setImpactFunctionDialogOpen(true)}
+              data-testid="results-view-impact-function"
+            >
+              {t("results_view_impact_function")}
+            </Button>
+          </Stack>
+        )}
       </Box>
+      <ImpactFunctionDialog
+        open={impactFunctionDialogOpen}
+        onClose={() => setImpactFunctionDialogOpen(false)}
+        impactFunction={runImpactFunction}
+      />
     </Box>
   );
 };

@@ -15,6 +15,20 @@ const DRIFT_ALLOWLIST = new Set([
   "export_pdf_dialog_group_count", // "{{label}} ({{count}})"
   "scenario_chip_summary", // "{{country}} · {{hazard}} · {{from}}–{{to}}"
   "home_active_run_summary", // "{{country}} · {{hazard}} · {{from}}–{{to}}"
+  // Impact-function viewer (issue #452): English values are intentional
+  // placeholders pending translation per the issue's i18n acceptance criterion.
+  "impact_function_card_title",
+  "impact_function_card_placeholder",
+  "impact_function_card_loading",
+  "impact_function_card_error",
+  "impact_function_card_summary",
+  "impact_function_card_unit",
+  "impact_function_dialog_title",
+  "impact_function_dialog_intensity_unit",
+  "impact_function_dialog_intensity_axis",
+  "impact_function_dialog_mdd",
+  "impact_function_dialog_paa",
+  "results_view_impact_function",
 ]);
 
 const DRIFT_MIN_LENGTH = 15;

@@ -67,6 +67,8 @@ export type CustomDataImportResponse = Schema<"CustomDataImportResponse">;
 export type CustomDataListResponse = Schema<"CustomDataListResponse">;
 export type CustomDataDeleteResponse = Schema<"CustomDataDeleteResponse">;
 export type CustomCountryEntry = Schema<"CustomCountryEntry">;
+export type ImpactFunctionPayload = Schema<"ImpactFunctionPayload">;
+export type ImpactFunctionResponse = Schema<"ImpactFunctionResponse">;
 
 const http = () => window.api.http;
 
@@ -142,6 +144,20 @@ const RiskWiseClient = {
     const base = `/api/v1/measures/${encodeURIComponent(countryName)}/${encodeURIComponent(hazardType)}`;
     const qs = exposureFile ? `?exposure_file=${encodeURIComponent(exposureFile)}` : "";
     return get<MeasuresResponse>(`${base}${qs}`);
+  },
+
+  // Read-only impact-function viewer (issue #452). ``entityFile`` is supplied
+  // in custom mode to override the canonical ``entity_TODAY_*.xlsx`` lookup
+  // with the user's uploaded workbook.
+  fetchImpactFunction: (
+    country: string,
+    hazard: string,
+    exposure: string,
+    entityFile?: string | null
+  ) => {
+    const params = new URLSearchParams({ country, hazard, exposure });
+    if (entityFile) params.set("entityFile", entityFile);
+    return get<ImpactFunctionResponse>(`/api/v1/impact-function?${params.toString()}`);
   },
 
   listScenarios: () => get<ScenarioListResponse>("/api/v1/scenarios"),
