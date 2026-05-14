@@ -8,7 +8,7 @@
 ## Current state (as of 2026-05-05)
 
 **Active phase**: **Phase 8 — UI Layout Architecture Refinement** (view migrations landing; input-card uniformity in flight on `refactor/216-input-card-uniformity`).
-**Progress snapshot**: Phases 0–4 and Phase 6 are complete. Phase 6 (engine migration, #150–#168) landed `climate-lama-engine` as the runtime compute backend, removed `climada==6.1.0` from runtime deps, refreshed the bundle benchmark, and closed the documentation loop. Phase 8 view migrations have shipped for MacroeconomicView (#227), WorkspaceView (#230), HomeView (#231), and SettingsView (#232); 8.5 input-card uniformity is the current branch. Phase 7 and Phase 9 are unstarted; Phase 9 captures four parent technical-debt epics (#226, #228, #229, #233) that will be split into `/build`-sized child issues.
+**Progress snapshot**: Phases 0–4 and Phase 6 are complete. Phase 6 (engine migration, #150–#168) landed `climate-lama-engine` as the runtime compute backend, removed `climada==6.1.0` from runtime deps, refreshed the bundle benchmark, and closed the documentation loop. Phase 8 view migrations have shipped for MacroeconomicView (#227), WorkspaceView (#230), HomeView (#231), and SettingsView (#232); 8.5 input-card uniformity is the current branch. Phase 7 and Phase 9 are unstarted; Phase 9 captures four parent technical-debt epics (#226, #228, #229, #233) that will be split into `/build`-sized child issues. Phase 10 (UI & Logic Enhancements) is scoped for adaptation-measures, impact-function visibility, and PDF-report enrichments; 10.1 (Adaptation Measures) is actively split into six `/build`-sized child issues, the other sub-phases are stubbed.
 
 For per-phase exit-criteria status see each phase file's `Exit criteria` section.
 
@@ -27,6 +27,7 @@ For per-phase exit-criteria status see each phase file's `Exit criteria` section
 | 7 — Optional / Later | [phase-7-optional.md](phase-7-optional.md) | post-v2.0 | ⏳ Unstarted (non-blocking) |
 | 8 — UI Layout Architecture Refinement | [phase-8-ui-layout.md](phase-8-ui-layout.md) | post-v2.0 | 🔄 In progress |
 | 9 — Technical-Debt Cleanup | [phase-9-tech-debt-cleanup.md](phase-9-tech-debt-cleanup.md) | post-v2.0 | ⏳ Unstarted |
+| 10 — UI & Logic Enhancements | [phase-10-ui-logic-enhancements.md](phase-10-ui-logic-enhancements.md) | post-v2.0 | 🔄 In progress (10.1 scoped) |
 
 Status legend: 🔄 in progress · ✅ done · ⏳ pending · 🔲 not started · ❌ blocked.
 
@@ -75,6 +76,7 @@ For quick navigation without reading every file:
 - **Phase 7 is independent** of Phase 6; both may run in parallel post-v2.0.
 - **Phase 8 is independent** of Phase 6 and Phase 7. Hard predecessors: v2.0 release tag and Phase 6 documentation closure ([#205](https://github.com/CortoMaltese3/riskwise-v2/pull/205)). Phase 7's dark-mode candidate, if pursued, depends on Phase 8 layout primitives and theme polish landing first.
 - **Phase 9 is independent** of Phase 6 and Phase 7. Hard predecessors: v2.0 release tag and Phase 8 view migrations merged so frontend sub-phases (9.1, 9.3) don't conflict with layout-primitive churn. Phase 8 sub-phases 8.6 / 8.7 may run in parallel with Phase 9. Phase 9 sub-phase 9.4.12 (repo cleanup) overlaps with `phase-8/cleanup` on `Header.module.css` — coordinate ownership at split time.
+- **Phase 10 is independent** of Phase 6 and Phase 7. Hard predecessors: v2.0 release tag and Phase 8 view migrations merged so 10.1 / 10.4 frontend work doesn't conflict with layout-primitive churn. May run in parallel with Phase 9; coordinate `useWorkspaceStore` ownership with Phase 9.1 (frontend simplification) at split time, since both touch the store.
 
 ---
 
