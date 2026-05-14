@@ -1,11 +1,8 @@
-// Issue #449: ``selectedMeasureIds`` is always sent as an array.
-//
-// Before the fix, ``useRunScenario`` omitted the field when the
-// Adaptation picker had never been initialized — so a Run from the
-// fresh Risk view and an Apply from the Adaptation view produced
-// divergent payloads for the same logical selection. The fix is to
-// always include the field; ``[]`` means "no filter, run every entity
-// measure".
+// Issue #449 / #451: ``selectedMeasureIds`` is always sent as an array. The
+// Adaptation view's Apply gesture is gone (#451) — the global Run button is
+// now the only dispatcher — but the wire-format invariant established in
+// #449 still holds: every dispatch carries the field, and ``[]`` means "no
+// filter, run every entity measure".
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
@@ -46,15 +43,13 @@ beforeEach(() => {
     selectedTimeHorizon: [2024, 2050],
     selectedAnnualGrowth: 0,
     selectedMeasureIds: [],
-    appliedMeasureIds: [],
-    isMeasureSelectionInitialized: false,
   });
   useUIStore.setState({});
   useResultsStore.setState({ isScenarioRunning: false });
 });
 
-describe("useRunScenario selectedMeasureIds wire format (#449)", () => {
-  it("sends an empty array for a fresh Risk-view run (no Adaptation visit yet)", async () => {
+describe("useRunScenario selectedMeasureIds wire format (#449 / #451)", () => {
+  it("sends an empty array for a fresh Risk-view run (no measure selection seeded)", async () => {
     const { result } = renderHook(() => useRunScenario());
     await result.current.runScenario();
 
@@ -64,13 +59,9 @@ describe("useRunScenario selectedMeasureIds wire format (#449)", () => {
     expect(body.selectedMeasureIds).toEqual([]);
   });
 
-  it("sends an empty array when the Adaptation picker has been initialized with everything unchecked", async () => {
-    // Same logical selection ("no measures"), now reached from the
-    // Adaptation view's Apply gesture instead of the Risk view's Run.
-    // The wire format must be identical.
+  it("sends an empty array when the user has explicitly cleared every measure", async () => {
     useWorkspaceStore.setState({
       selectedMeasureIds: [],
-      isMeasureSelectionInitialized: true,
     });
 
     const { result } = renderHook(() => useRunScenario());
@@ -83,7 +74,6 @@ describe("useRunScenario selectedMeasureIds wire format (#449)", () => {
   it("sends the non-empty selection verbatim when measures are picked", async () => {
     useWorkspaceStore.setState({
       selectedMeasureIds: ["Levee", "Drainage"],
-      isMeasureSelectionInitialized: true,
     });
 
     const { result } = renderHook(() => useRunScenario());
@@ -96,7 +86,6 @@ describe("useRunScenario selectedMeasureIds wire format (#449)", () => {
   it("snapshots the current selection so the field is independent of post-dispatch store edits", async () => {
     useWorkspaceStore.setState({
       selectedMeasureIds: ["Levee"],
-      isMeasureSelectionInitialized: true,
     });
 
     const { result } = renderHook(() => useRunScenario());

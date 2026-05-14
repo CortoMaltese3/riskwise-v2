@@ -7,6 +7,7 @@ import Country from "./Country";
 import DataInputViewTitle from "../title/DataInputViewTitle";
 import Exposure from "./Exposure";
 import Hazard from "./Hazard";
+import MeasuresPanel from "./MeasuresPanel";
 import Scenario from "./Scenario";
 import TimeHorizon from "./TimeHorizon";
 import useUIStore from "../../store/useUIStore";
@@ -47,6 +48,9 @@ const DataInput = () => {
           </Grid>
           <Grid item xs={12}>
             <AnnualGrowth />
+          </Grid>
+          <Grid item xs={12} data-tour="measures-panel">
+            <MeasuresPanel />
           </Grid>
         </Grid>
       </Box>

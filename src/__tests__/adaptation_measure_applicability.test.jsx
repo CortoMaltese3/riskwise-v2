@@ -1,5 +1,6 @@
-// Coverage for #450: applicability tagging on AdaptationMeasuresInput cards
-// and the skipped-measures snackbar wired through useRunScenario.
+// Coverage for #450: applicability tagging on MeasuresPanel cards and the
+// skipped-measures snackbar wired through useRunScenario. Re-anchored on the
+// post-#451 layout where the picker lives inside the Risk inputs.
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -31,11 +32,7 @@ vi.mock("../lib/RiskWiseClient", () => ({
   },
 }));
 
-vi.mock("../components/title/AdaptationMeasuresViewTitle", () => ({
-  default: () => <div data-testid="adaptation-title" />,
-}));
-
-import AdaptationMeasuresInput from "../components/input/AdaptationMeasuresInput";
+import MeasuresPanel from "../components/input/MeasuresPanel";
 import useRunScenario from "../hooks/useRunScenario";
 import useResultsStore from "../store/useResultsStore";
 import useUIStore from "../store/useUIStore";
@@ -76,18 +73,18 @@ beforeEach(() => {
     selectedTimeHorizon: [2024, 2050],
     selectedAnnualGrowth: 0,
     selectedMeasureIds: [],
-    appliedMeasureIds: [],
-    isMeasureSelectionInitialized: false,
     lastRunSkippedMeasures: [],
   });
-  useUIStore.setState({ selectedTab: TABS.ADAPTATION });
+  useUIStore.setState({ selectedTab: TABS.RISK });
   useResultsStore.setState({ isScenarioRunning: false });
 });
 
-describe("AdaptationMeasuresInput applicability tag (#450)", () => {
+describe("MeasuresPanel applicability tag (#450)", () => {
   it("does not tag any card when entityMeasureNames is null (applicability unknown)", async () => {
     fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(fakeMeasures, null));
-    renderWithTheme(<AdaptationMeasuresInput />);
+    renderWithTheme(<MeasuresPanel />);
+    await waitFor(() => screen.getByTestId("adaptation-measures-panel-summary"));
+    fireEvent.click(screen.getByTestId("adaptation-measures-panel-summary"));
     await waitFor(() => screen.getByTestId("measure-checkbox-uuid-levee"));
     expect(screen.queryByTestId("measure-applicability-not-in-scenario-uuid-levee")).toBeNull();
     expect(
@@ -97,7 +94,9 @@ describe("AdaptationMeasuresInput applicability tag (#450)", () => {
 
   it("tags catalog cards absent from entityMeasureNames as not-in-scenario", async () => {
     fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(fakeMeasures, ["Levee"]));
-    renderWithTheme(<AdaptationMeasuresInput />);
+    renderWithTheme(<MeasuresPanel />);
+    await waitFor(() => screen.getByTestId("adaptation-measures-panel-summary"));
+    fireEvent.click(screen.getByTestId("adaptation-measures-panel-summary"));
     await waitFor(() => screen.getByTestId("measure-checkbox-uuid-levee"));
     expect(screen.queryByTestId("measure-applicability-not-in-scenario-uuid-levee")).toBeNull();
     expect(
@@ -107,8 +106,8 @@ describe("AdaptationMeasuresInput applicability tag (#450)", () => {
 
   it("threads selectedExposureFile through to the measures fetch", async () => {
     fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(fakeMeasures, ["Levee"]));
-    renderWithTheme(<AdaptationMeasuresInput />);
-    await waitFor(() => screen.getByTestId("measure-checkbox-uuid-levee"));
+    renderWithTheme(<MeasuresPanel />);
+    await waitFor(() => expect(fetchAdaptationMeasuresMock).toHaveBeenCalled());
     const call = fetchAdaptationMeasuresMock.mock.calls[0];
     expect(call[0]).toBe("Thailand");
     expect(call[1]).toBe("flood");
@@ -146,7 +145,6 @@ describe("useRunScenario skipped-measures snackbar (#450)", () => {
   it("fires a warning snackbar and records skipped names when the backend dropped some", async () => {
     useWorkspaceStore.setState({
       selectedMeasureIds: ["Levee", "Crop switching"],
-      appliedMeasureIds: [],
     });
     runScenarioMock.mockResolvedValue(successResponse(["Crop switching"]));
 
@@ -164,7 +162,6 @@ describe("useRunScenario skipped-measures snackbar (#450)", () => {
   it("keeps the success snackbar when no measures were skipped", async () => {
     useWorkspaceStore.setState({
       selectedMeasureIds: ["Levee"],
-      appliedMeasureIds: [],
     });
     runScenarioMock.mockResolvedValue(successResponse([]));
 
@@ -180,7 +177,6 @@ describe("useRunScenario skipped-measures snackbar (#450)", () => {
   it("treats a missing skippedMeasures field as no skip", async () => {
     useWorkspaceStore.setState({
       selectedMeasureIds: ["Levee"],
-      appliedMeasureIds: [],
     });
     runScenarioMock.mockResolvedValue({
       success: true,

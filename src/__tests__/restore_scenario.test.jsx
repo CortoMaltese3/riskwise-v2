@@ -106,8 +106,6 @@ beforeEach(() => {
     scenarioRunCode: "",
     selectedScenarioRunCode: "",
     selectedMeasureIds: [],
-    appliedMeasureIds: [],
-    isMeasureSelectionInitialized: false,
     scenarios: [],
     selectedIds: [],
   });
@@ -189,9 +187,7 @@ describe("restoreScenario", () => {
 
     expect(ok).toBe(true);
     const ws = useWorkspaceStore.getState();
-    expect(ws.isMeasureSelectionInitialized).toBe(true);
     expect(ws.selectedMeasureIds).toEqual(["Levee", "Drainage"]);
-    expect(ws.appliedMeasureIds).toEqual(["Levee", "Drainage"]);
   });
 
   it("does not wipe measure selection between setSelectedCountry/setSelectedHazard during restore (issue #428)", async () => {

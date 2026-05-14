@@ -54,8 +54,7 @@ export const switchAppMode = (option) => {
     isValidExposure: false,
     isValidHazard: false,
     selectedMeasureIds: [],
-    appliedMeasureIds: [],
-    isMeasureSelectionInitialized: false,
+    lastRunSkippedMeasures: [],
   });
   useUIStore.setState({ mapTitle: "" });
   useResultsStore.setState({ isScenarioRunCompleted: false });

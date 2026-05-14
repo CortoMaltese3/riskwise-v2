@@ -64,7 +64,7 @@ const AdaptationChartLayout = () => {
   // first-mount intro animation replays. The macro chart deliberately does
   // NOT get this key — dropdown changes should update silently.
   const scenarioRunCode = useWorkspaceStore((state) => state.scenarioRunCode);
-  const appliedMeasureIds = useWorkspaceStore((state) => state.appliedMeasureIds);
+  const selectedMeasureIds = useWorkspaceStore((state) => state.selectedMeasureIds);
   const lastRunSkippedMeasures = useWorkspaceStore((state) => state.lastRunSkippedMeasures);
   const costBenefitData = useResultsStore((state) => state.costBenefitData);
   const errorMessage = useResultsStore((state) => state.costBenefitError);
@@ -127,14 +127,11 @@ const AdaptationChartLayout = () => {
           aria-label={t("economic_non_economic_adaptation_chart_title")}
         >
           {(() => {
-            // Selected = what the user picked on the last applied run
-            // (appliedMeasureIds is the dispatch snapshot, kept in sync
-            // by useRunScenario.markMeasureSelectionApplied).
             // Applied = selected minus the names the backend silently
             // filtered out. The chart subtitle reads both to render
             // "Cost-benefit for {applied}/{selected} measures" when
             // applied < selected (issue #450).
-            const selectedCount = appliedMeasureIds.length;
+            const selectedCount = selectedMeasureIds.length;
             const skippedCount = lastRunSkippedMeasures.length;
             const appliedCount = Math.max(0, selectedCount - skippedCount);
             return renderCostBenefitBody({
