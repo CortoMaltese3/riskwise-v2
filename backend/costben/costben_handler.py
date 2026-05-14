@@ -166,7 +166,7 @@ class CostBenefitHandler:
         measure_set_id: str | None = None,
         country_name: str | None = None,
     ) -> list[dict]:
-        """Return full measure rows for *hazard_code*.
+        """Return full measure rows for *hazard_code*, one per measure name.
 
         Default (``measure_set_id`` omitted) merges the built-in set with
         every custom set whose measures apply to the hazard — and optionally
@@ -174,6 +174,16 @@ class CostBenefitHandler:
         column is NULL (set-wide) or a case-insensitive match. Each returned
         dict also carries the owning set's id, name, and ``is_builtin`` so
         the UI can render badges and tooltips without a second query.
+
+        Rows are deduplicated by ``name`` via ``DISTINCT ON``: when the same
+        name appears in multiple sets (e.g. a re-seeded built-in plus a
+        legacy built-in, or a custom override of a built-in entry) or
+        multiple times within one set (the source xlsx legitimately ships
+        cost variants under one name), the catalog response keeps one row
+        per name — preferring built-in over custom, then most recent set,
+        then most recent row. The collapsed ``measure_set_name`` and
+        ``is_builtin`` fields stay on the surviving row so the UI can still
+        badge it without a second query.
         """
         hazard_type = hazard_handler.get_hazard_name(hazard_code) or hazard_code
         try:
@@ -188,23 +198,31 @@ class CostBenefitHandler:
 
             rows = conn.execute(
                 f"""
-                SELECT
-                    am.id,
-                    am.measure_set_id,
-                    ms.name  AS measure_set_name,
-                    ms.is_builtin,
-                    am.country,
-                    am.hazard_type,
-                    am.exposure_type,
-                    am.name,
-                    am.cost_factor,
-                    am.hazard_reduction_percentage,
-                    am.description,
-                    am.source_reference
-                FROM adaptation_measures am
-                JOIN measure_sets ms ON ms.id = am.measure_set_id
-                WHERE {" AND ".join(clauses)}
-                ORDER BY ms.is_builtin DESC, ms.name, am.name
+                SELECT * FROM (
+                    SELECT DISTINCT ON (am.name)
+                        am.id,
+                        am.measure_set_id,
+                        ms.name  AS measure_set_name,
+                        ms.is_builtin,
+                        am.country,
+                        am.hazard_type,
+                        am.exposure_type,
+                        am.name,
+                        am.cost_factor,
+                        am.hazard_reduction_percentage,
+                        am.description,
+                        am.source_reference
+                    FROM adaptation_measures am
+                    JOIN measure_sets ms ON ms.id = am.measure_set_id
+                    WHERE {" AND ".join(clauses)}
+                    ORDER BY
+                        am.name,
+                        ms.is_builtin DESC,
+                        ms.uploaded_at DESC,
+                        am.created_at DESC,
+                        am.id
+                ) d
+                ORDER BY d.is_builtin DESC, d.measure_set_name, d.name
                 """,
                 params,
             ).fetchall()
@@ -341,8 +359,7 @@ class CostBenefitHandler:
 
                 conn = get_connection()
             rows = conn.execute(
-                "SELECT code, name FROM adaptation_measures "
-                "WHERE code IS NOT NULL AND code <> ''"
+                "SELECT code, name FROM adaptation_measures WHERE code IS NOT NULL AND code <> ''"
             ).fetchall()
         except (duckdb.Error, OSError) as exc:
             logger.warning(f"Failed to load measure code lookup: {exc}")
