@@ -72,16 +72,19 @@ def _resolve_country_config_path(country_code: str) -> Path:
 def _filter_entity_measures(entity: Any, selected_ids: list[str], logger: Any) -> Any:
     """Return ``entity`` with its ``measures`` scoped to ``selected_ids``.
 
-    Matching is by ``MeasureSpec.name`` because xlsx-loaded measures only
-    carry a name; the catalog's row ``id`` is a per-seed UUID and would not
-    match anything on the entity side. Missing IDs are ignored silently —
-    they may belong to a different hazard. An empty post-filter list is
-    valid: the cost-benefit handler returns ``[]`` for zero measures.
+    An empty ``selected_ids`` means "no filter — run every measure on the
+    entity"; the entity is returned unchanged. Matching is by
+    ``MeasureSpec.name`` because xlsx-loaded measures only carry a name;
+    the catalog's row ``id`` is a per-seed UUID and would not match
+    anything on the entity side. Unknown IDs are ignored silently — they
+    may belong to a different hazard.
     """
+    if not selected_ids:
+        return entity
     selected = set(selected_ids)
     measures = list(getattr(entity, "measures", []) or [])
     filtered = [m for m in measures if getattr(m, "name", None) in selected]
-    if not filtered and selected:
+    if not filtered:
         logger.warning(
             "selected_measure_ids matched no measures on the entity; "
             "cost-benefit will be empty for this run."
@@ -122,9 +125,7 @@ class RequestData:
     is_era: bool
     scenario: str
     time_horizon: tuple[int, int]
-    # ``None`` means "no filter — use every measure on the entity"; an
-    # explicit list (including ``[]``) scopes the run to that subset.
-    selected_measure_ids: list[str] | None = None
+    selected_measure_ids: list[str] = field(default_factory=list)
     ref_year: int = field(init=False)
     future_year: int = field(init=False)
 
@@ -141,12 +142,8 @@ class RequestData:
         """Build a ``RequestData`` from the raw UI payload plus the hazard
         handler needed to derive the engine hazard code."""
         country_name = sanitize_country_name(request.get("countryName", ""))
-        raw_selected = request.get("selectedMeasureIds")
-        selected_measure_ids: list[str] | None
-        if raw_selected is None:
-            selected_measure_ids = None
-        else:
-            selected_measure_ids = [str(x) for x in raw_selected]
+        raw_selected = request.get("selectedMeasureIds") or []
+        selected_measure_ids = [str(x) for x in raw_selected]
         return cls(
             adaptation_measures=request.get("adaptationMeasures", []),
             annual_growth=request.get("annualGrowth", 0),
@@ -299,23 +296,19 @@ class RunScenario:
                 entity_present, self.request_data.future_year, aag
             )
 
-        # Scope cost-benefit to the user's measure selection before any
-        # downstream step sees the entity. CLIMADA requires the present and
-        # future entities to carry identical measure sets, so the filter is
-        # applied to both — or to neither, when ``selected_measure_ids`` is
-        # ``None`` (the default, preserving prior behaviour).
-        if self.request_data.selected_measure_ids is not None:
-            entity_present = _filter_entity_measures(
-                entity_present,
+        # CLIMADA requires the present and future entities to carry
+        # identical measure sets, so any filter is applied to both.
+        entity_present = _filter_entity_measures(
+            entity_present,
+            self.request_data.selected_measure_ids,
+            self.logger,
+        )
+        if entity_future is not None:
+            entity_future = _filter_entity_measures(
+                entity_future,
                 self.request_data.selected_measure_ids,
                 self.logger,
             )
-            if entity_future is not None:
-                entity_future = _filter_entity_measures(
-                    entity_future,
-                    self.request_data.selected_measure_ids,
-                    self.logger,
-                )
 
         # --- Exposure ---
         update_progress(20, strategy.exposure_progress_message)

@@ -1528,18 +1528,11 @@
             "title": "Scenario"
           },
           "selectedMeasureIds": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Selectedmeasureids"
+            "items": {
+              "type": "string"
+            },
+            "title": "Selectedmeasureids",
+            "type": "array"
           },
           "timeHorizon": {
             "anyOf": [

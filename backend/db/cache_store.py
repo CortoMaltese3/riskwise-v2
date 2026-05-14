@@ -42,9 +42,11 @@ def derive_cache_key(
     key and therefore a cache miss. ``asset_type`` is intentionally
     excluded — ``exposure_type`` already uniquely identifies the asset.
 
-    ``selected_measure_ids`` participates in the key when set so two runs
-    with different measure subsets do not collide. ``None`` keeps the
-    legacy "use every measure" key shape for backwards-compatibility.
+    ``selected_measure_ids`` participates in the key when non-empty so
+    two runs with different measure subsets do not collide. An empty
+    selection keeps the "no measures clause" key shape so pre-#449
+    cache entries (written under ``None``) stay reachable on the
+    no-filter path.
     """
     parts = [
         country,
@@ -57,7 +59,7 @@ def derive_cache_key(
         entity_sha256,
         hazard_sha256,
     ]
-    if selected_measure_ids is not None:
+    if selected_measure_ids:
         # Sort for order-independence; the selection is a set, not a list.
         parts.append("measures=" + ",".join(sorted(selected_measure_ids)))
     payload = "|".join(parts)
