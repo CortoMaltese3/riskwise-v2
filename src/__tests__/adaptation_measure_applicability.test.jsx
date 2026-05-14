@@ -1,10 +1,12 @@
-// Coverage for #450: applicability tagging on MeasuresPanel cards and the
-// skipped-measures snackbar wired through useRunScenario. Re-anchored on the
-// post-#451 layout where the picker lives inside the Risk inputs.
+// Coverage for #450: applicability tagging on the adaptation-measure viewer
+// and the skipped-measures snackbar wired through useRunScenario. Re-anchored
+// on the post-#461 layout where the picker is split into a left-column
+// summary (``Measures``, owns the fetch) and a middle-pane viewer
+// (``MeasuresCard``, renders the chip).
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material/styles";
 
 import theme from "../theme/theme";
@@ -32,7 +34,8 @@ vi.mock("../lib/RiskWiseClient", () => ({
   },
 }));
 
-import MeasuresPanel from "../components/input/MeasuresPanel";
+import Measures from "../components/input/Measures";
+import MeasuresCard from "../components/cards/MeasuresCard";
 import useRunScenario from "../hooks/useRunScenario";
 import useResultsStore from "../store/useResultsStore";
 import useUIStore from "../store/useUIStore";
@@ -73,31 +76,35 @@ beforeEach(() => {
     selectedTimeHorizon: [2024, 2050],
     selectedAnnualGrowth: 0,
     selectedMeasureIds: [],
+    adaptationMeasures: [],
+    entityMeasureNames: null,
     lastRunSkippedMeasures: [],
   });
   useUIStore.setState({ selectedTab: TABS.RISK });
   useResultsStore.setState({ isScenarioRunning: false });
 });
 
-describe("MeasuresPanel applicability tag (#450)", () => {
-  it("does not tag any card when entityMeasureNames is null (applicability unknown)", async () => {
-    fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(fakeMeasures, null));
-    renderWithTheme(<MeasuresPanel />);
-    await waitFor(() => screen.getByTestId("adaptation-measures-panel-summary"));
-    fireEvent.click(screen.getByTestId("adaptation-measures-panel-summary"));
-    await waitFor(() => screen.getByTestId("measure-checkbox-uuid-levee"));
+describe("MeasuresCard applicability tag (#450)", () => {
+  it("does not tag any card when entityMeasureNames is null (applicability unknown)", () => {
+    useWorkspaceStore.setState({
+      adaptationMeasures: fakeMeasures,
+      entityMeasureNames: null,
+      selectedMeasureIds: ["Levee", "Crop switching"],
+    });
+    renderWithTheme(<MeasuresCard />);
     expect(screen.queryByTestId("measure-applicability-not-in-scenario-uuid-levee")).toBeNull();
     expect(
       screen.queryByTestId("measure-applicability-not-in-scenario-uuid-cropswitch")
     ).toBeNull();
   });
 
-  it("tags catalog cards absent from entityMeasureNames as not-in-scenario", async () => {
-    fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(fakeMeasures, ["Levee"]));
-    renderWithTheme(<MeasuresPanel />);
-    await waitFor(() => screen.getByTestId("adaptation-measures-panel-summary"));
-    fireEvent.click(screen.getByTestId("adaptation-measures-panel-summary"));
-    await waitFor(() => screen.getByTestId("measure-checkbox-uuid-levee"));
+  it("tags catalog cards absent from entityMeasureNames as not-in-scenario", () => {
+    useWorkspaceStore.setState({
+      adaptationMeasures: fakeMeasures,
+      entityMeasureNames: ["Levee"],
+      selectedMeasureIds: ["Levee", "Crop switching"],
+    });
+    renderWithTheme(<MeasuresCard />);
     expect(screen.queryByTestId("measure-applicability-not-in-scenario-uuid-levee")).toBeNull();
     expect(
       screen.getByTestId("measure-applicability-not-in-scenario-uuid-cropswitch")
@@ -106,12 +113,18 @@ describe("MeasuresPanel applicability tag (#450)", () => {
 
   it("threads selectedExposureFile through to the measures fetch", async () => {
     fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(fakeMeasures, ["Levee"]));
-    renderWithTheme(<MeasuresPanel />);
+    renderWithTheme(<Measures />);
     await waitFor(() => expect(fetchAdaptationMeasuresMock).toHaveBeenCalled());
     const call = fetchAdaptationMeasuresMock.mock.calls[0];
     expect(call[0]).toBe("Thailand");
     expect(call[1]).toBe("flood");
     expect(call[2]).toBe("entity_TODAY_THA_FL_crops.xlsx");
+  });
+
+  it("hoists entityMeasureNames into the workspace store after fetch", async () => {
+    fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(fakeMeasures, ["Levee"]));
+    renderWithTheme(<Measures />);
+    await waitFor(() => expect(useWorkspaceStore.getState().entityMeasureNames).toEqual(["Levee"]));
   });
 });
 

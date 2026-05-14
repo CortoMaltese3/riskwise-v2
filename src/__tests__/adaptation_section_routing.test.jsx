@@ -111,5 +111,8 @@ describe("Adaptation sidebar entry (#371)", () => {
     // on the Adaptation route. The route is now a pure results view.
     expect(screen.queryByTestId("adaptation-measures-panel")).toBeNull();
     expect(screen.queryByTestId("adaptation-measures-panel-summary")).toBeNull();
+    // Post-#461: the summary lives in the Risk inputs; the Adaptation route
+    // must not mount it either.
+    expect(screen.queryByTestId("adaptation-measures-summary")).toBeNull();
   });
 });
