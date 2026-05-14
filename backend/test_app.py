@@ -75,7 +75,11 @@ class TestSynchronousEndpoints:
 
     def test_measures_passes_path_params(self, client: TestClient) -> None:
         envelope = {
-            "data": {"adaptationMeasures": [], "measures": []},
+            "data": {
+                "adaptationMeasures": [],
+                "measures": [],
+                "entityMeasureNames": None,
+            },
             "status": {"code": 2000, "message": "ok"},
         }
         with patch.object(app_module, "_dispatch_sync", return_value=envelope) as m:
@@ -85,6 +89,32 @@ class TestSynchronousEndpoints:
         m.assert_called_once_with(
             "run_fetch_measures.py",
             {"countryName": "Egypt", "hazardType": "Flood"},
+        )
+
+    def test_measures_forwards_exposure_file_query_param(self, client: TestClient) -> None:
+        # ``exposure_file`` rides into the dispatch payload as
+        # ``exposureFile`` so the renderer can opt into the
+        # entity-measure-names side channel (issue #450).
+        envelope = {
+            "data": {
+                "adaptationMeasures": [],
+                "measures": [],
+                "entityMeasureNames": ["m_levee"],
+            },
+            "status": {"code": 2000, "message": "ok"},
+        }
+        with patch.object(app_module, "_dispatch_sync", return_value=envelope) as m:
+            response = client.get(
+                "/api/v1/measures/Egypt/Flood?exposure_file=entity_TODAY_EGY_FL_crops.xlsx"
+            )
+        assert response.status_code == 200
+        m.assert_called_once_with(
+            "run_fetch_measures.py",
+            {
+                "countryName": "Egypt",
+                "hazardType": "Flood",
+                "exposureFile": "entity_TODAY_EGY_FL_crops.xlsx",
+            },
         )
 
     def test_list_scenarios(self, client: TestClient) -> None:

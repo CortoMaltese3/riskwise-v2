@@ -83,6 +83,13 @@ const useWorkspaceStore = create((set, get) => ({
   selectedMeasureIds: [],
   appliedMeasureIds: [],
   isMeasureSelectionInitialized: false,
+  // Names of selected measures the backend silently dropped on the most
+  // recent run because the entity did not carry them (issue #450). The
+  // chart subtitle reads ``length`` to render
+  // "Cost-benefit for {applied}/{selected} measures". Reset by the same
+  // setters that wipe the measure selection so a stale run's skip list
+  // never lingers into a new scenario.
+  lastRunSkippedMeasures: [],
 
   // --- Macro inputs ---
   selectedMacroCountry: "",
@@ -231,6 +238,7 @@ const useWorkspaceStore = create((set, get) => ({
       selectedMeasureIds: [],
       appliedMeasureIds: [],
       isMeasureSelectionInitialized: false,
+      lastRunSkippedMeasures: [],
     }),
   // One-shot setter for the Workspace ``Restore`` flow. Sets every active-
   // scenario input from a persisted scenario row in a single ``set`` call so
@@ -268,6 +276,7 @@ const useWorkspaceStore = create((set, get) => ({
       selectedMeasureIds: [],
       appliedMeasureIds: [],
       isMeasureSelectionInitialized: false,
+      lastRunSkippedMeasures: [],
     }),
   setSelectedExposure: (exposure) => {
     set({
@@ -276,6 +285,7 @@ const useWorkspaceStore = create((set, get) => ({
       selectedMeasureIds: [],
       appliedMeasureIds: [],
       isMeasureSelectionInitialized: false,
+      lastRunSkippedMeasures: [],
     });
   },
   setSelectedExposureCategory: (category) => set({ selectedExposureCategory: category }),
@@ -286,6 +296,7 @@ const useWorkspaceStore = create((set, get) => ({
       selectedMeasureIds: [],
       appliedMeasureIds: [],
       isMeasureSelectionInitialized: false,
+      lastRunSkippedMeasures: [],
     }),
   setSelectedHazardFile: (hazardFile) => set({ selectedHazardFile: hazardFile }),
   setSelectedScenario: (scenario) => set({ selectedScenario: scenario }),
@@ -330,6 +341,10 @@ const useWorkspaceStore = create((set, get) => ({
     // user toggles something else while the request is in flight.
     const next = Array.isArray(ids) ? ids.filter((x) => typeof x === "string") : [];
     set({ appliedMeasureIds: next });
+  },
+  setLastRunSkippedMeasures: (names) => {
+    const next = Array.isArray(names) ? names.filter((x) => typeof x === "string") : [];
+    set({ lastRunSkippedMeasures: next });
   },
   setSelectedAnnualGrowth: (annualGrowth) => set({ selectedAnnualGrowth: annualGrowth }),
   setIsValidExposure: (isValid = null) => {

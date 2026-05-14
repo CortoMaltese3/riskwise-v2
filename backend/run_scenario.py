@@ -69,28 +69,37 @@ def _resolve_country_config_path(country_code: str) -> Path:
     return COUNTRIES_DIR / iso3 / "config.json"
 
 
-def _filter_entity_measures(entity: Any, selected_ids: list[str], logger: Any) -> Any:
+def _filter_entity_measures(
+    entity: Any, selected_ids: list[str], logger: Any
+) -> tuple[Any, list[str]]:
     """Return ``entity`` with its ``measures`` scoped to ``selected_ids``.
 
+    The second element of the tuple is the list of selected names that
+    were dropped (selected by the user but absent on the entity), so the
+    runner can surface them to the UI via ``skippedMeasures`` rather than
+    only logging the silent backend filter (issue #450).
+
     An empty ``selected_ids`` means "no filter — run every measure on the
-    entity"; the entity is returned unchanged. Matching is by
-    ``MeasureSpec.name`` because xlsx-loaded measures only carry a name;
-    the catalog's row ``id`` is a per-seed UUID and would not match
-    anything on the entity side. Unknown IDs are ignored silently — they
-    may belong to a different hazard.
+    entity"; the entity is returned unchanged with an empty skip list.
+    Matching is by ``MeasureSpec.name`` because xlsx-loaded measures only
+    carry a name; the catalog's row ``id`` is a per-seed UUID and would
+    not match anything on the entity side. Unknown IDs do not crash the
+    run — they are accumulated in the returned skip list instead.
     """
     if not selected_ids:
-        return entity
+        return entity, []
     selected = set(selected_ids)
     measures = list(getattr(entity, "measures", []) or [])
+    available_names = {getattr(m, "name", None) for m in measures}
     filtered = [m for m in measures if getattr(m, "name", None) in selected]
+    skipped = [name for name in selected_ids if name not in available_names]
     if not filtered:
         logger.warning(
             "selected_measure_ids matched no measures on the entity; "
             "cost-benefit will be empty for this run."
         )
     if is_dataclass(entity):
-        return replace(entity, measures=filtered)
+        return replace(entity, measures=filtered), skipped
     # Non-dataclass entities (test stubs / mocks) get the attribute mutated
     # in place; this avoids forcing every test fixture to be a dataclass.
     try:
@@ -99,7 +108,7 @@ def _filter_entity_measures(entity: Any, selected_ids: list[str], logger: Any) -
         # Read-only stub — log and leave untouched so the pipeline keeps
         # progressing and the test failure (if any) surfaces downstream.
         logger.warning("Could not filter measures on entity; attribute is read-only.")
-    return entity
+    return entity, skipped
 
 
 @dataclass
@@ -192,6 +201,11 @@ class RunScenario:
         # the scenario row so the run is reproducible from the DB alone.
         self.random_seed: int = new_random_seed()
         self.rng: np.random.Generator = np.random.default_rng(self.random_seed)
+        # Names of selected measures dropped by ``_filter_entity_measures``
+        # across the present + future passes — surfaced to the renderer in
+        # the run response so the UI can warn the user that some of their
+        # picks did not apply to this scenario (issue #450).
+        self.skipped_measures: list[str] = []
         self._clear()
 
     def _initialize_handlers(self):
@@ -297,14 +311,18 @@ class RunScenario:
             )
 
         # CLIMADA requires the present and future entities to carry
-        # identical measure sets, so any filter is applied to both.
-        entity_present = _filter_entity_measures(
+        # identical measure sets, so any filter is applied to both. The
+        # set of "selected but not on the entity" names is identical
+        # across both passes (same selection, same entity-measure schema),
+        # so the present-pass result is what we surface.
+        entity_present, skipped = _filter_entity_measures(
             entity_present,
             self.request_data.selected_measure_ids,
             self.logger,
         )
+        self.skipped_measures = skipped
         if entity_future is not None:
-            entity_future = _filter_entity_measures(
+            entity_future, _ = _filter_entity_measures(
                 entity_future,
                 self.request_data.selected_measure_ids,
                 self.logger,
@@ -584,6 +602,12 @@ class RunScenario:
             "data": {
                 "mapTitle": map_title,
                 "scenarioId": scenario_id,
+                # Names of catalog measures the user selected but the
+                # entity does not carry — the renderer uses this list to
+                # raise a non-blocking snackbar and tag the cost-benefit
+                # chart so the silent backend filter is no longer
+                # invisible (issue #450).
+                "skippedMeasures": list(self.skipped_measures),
             },
             "status": self.status.get_status(),
         }
