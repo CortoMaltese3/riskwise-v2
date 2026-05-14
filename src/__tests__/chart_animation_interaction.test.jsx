@@ -249,6 +249,51 @@ describe("Chart animation + interaction polish (#370)", () => {
     });
   });
 
+  // The PDF print path captures whatever frame Chart.js is on at the moment
+  // `printToPDF` fires, so any in-flight intro animation produces a chart
+  // with bars near 0 and static plugin elements (waterfall connectors, the
+  // break-even line) drawn at their final positions (#439). The print view
+  // passes `animate={false}` to force a deterministic, animation-free render.
+  describe("animate={false} forces animation off (PDF print path, #439)", () => {
+    it("waterfall sets options.animation to false at render time when animate={false}", () => {
+      render(<WaterfallChart data={WATERFALL_FIXTURE} animate={false} />);
+      const props = barSpy.mock.calls.at(-1)[0];
+      expect(props.options.animation).toBe(false);
+    });
+
+    it("cost-benefit sets options.animation to false at render time when animate={false}", () => {
+      render(<CostBenefitChart data={COSTBENEFIT_FIXTURE} animate={false} />);
+      const props = barSpy.mock.calls.at(-1)[0];
+      expect(props.options.animation).toBe(false);
+    });
+
+    it("waterfall animate={false} overrides reduced-motion off (explicit caller wins)", () => {
+      installMatchMedia(false);
+      render(<WaterfallChart data={WATERFALL_FIXTURE} animate={false} />);
+      const props = barSpy.mock.calls.at(-1)[0];
+      expect(props.options.animation).toBe(false);
+    });
+
+    it("cost-benefit animate={false} overrides reduced-motion off (explicit caller wins)", () => {
+      installMatchMedia(false);
+      render(<CostBenefitChart data={COSTBENEFIT_FIXTURE} animate={false} />);
+      const props = barSpy.mock.calls.at(-1)[0];
+      expect(props.options.animation).toBe(false);
+    });
+
+    it("waterfall default (no animate prop) still produces the animated options", () => {
+      render(<WaterfallChart data={WATERFALL_FIXTURE} />);
+      const props = barSpy.mock.calls.at(-1)[0];
+      expect(props.options.animation).toEqual({ duration: 600, easing: "easeOutQuart" });
+    });
+
+    it("cost-benefit default (no animate prop) still produces the animated options", () => {
+      render(<CostBenefitChart data={COSTBENEFIT_FIXTURE} />);
+      const props = barSpy.mock.calls.at(-1)[0];
+      expect(props.options.animation).toEqual({ duration: 600, easing: "easeOutQuart" });
+    });
+  });
+
   describe("macro chart point sizing", () => {
     it("emits pointRadius / pointHoverRadius / pointHitRadius on every dataset", () => {
       render(<MacroEconomicChart />);
