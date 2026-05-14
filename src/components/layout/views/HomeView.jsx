@@ -1,14 +1,18 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Box, Stack } from "@mui/material";
 
+import useUIStore from "../../../store/useUIStore";
 import useWorkspaceStore from "../../../store/useWorkspaceStore";
 import { parseChangelog } from "../../../utils/changelog";
+import { useReportTools } from "../../../utils/reportTools";
+import { enqueueToast } from "../../../hooks/useToast";
 import ScrollableRegion from "../primitives/ScrollableRegion";
 import ActiveRunCard from "../../home/ActiveRunCard";
 import GetStartedCards from "../../home/GetStartedCards";
 import RecentProjectsCard from "../../home/RecentProjectsCard";
 import PinnedCard from "../../home/PinnedCard";
+import RestoreScenarioConfirmDialog from "../../home/RestoreScenarioConfirmDialog";
 import SystemStatusCard from "../../home/SystemStatusCard";
 import WhatsNewCard from "../../home/WhatsNewCard";
 import ResourcesCard from "../../home/ResourcesCard";
@@ -31,7 +35,7 @@ const GRID_SX = {
 const COLUMN_SX = { display: "flex", flexDirection: "column", gap: 3, minWidth: 0 };
 
 const HomeView = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const lastSyncAt = useWorkspaceStore((s) => s.lastSyncAt);
   const scenarios = useWorkspaceStore((s) => s.scenarios);
   const loading = useWorkspaceStore((s) => s.loading);
@@ -39,6 +43,11 @@ const HomeView = () => {
   const pinnedIds = useWorkspaceStore((s) => s.pinnedIds);
   const togglePinned = useWorkspaceStore((s) => s.togglePinned);
   const loadScenarios = useWorkspaceStore((s) => s.loadScenarios);
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
+  const { restoreScenario } = useReportTools();
+
+  const [pendingRestore, setPendingRestore] = useState(null);
+  const [restoring, setRestoring] = useState(false);
 
   useEffect(() => {
     loadScenarios();
@@ -48,6 +57,20 @@ const HomeView = () => {
     message: error || null,
   };
   const isFirstRun = !loading && !error && scenarios.length === 0;
+
+  const handleConfirmRestore = async (row) => {
+    setRestoring(true);
+    const ok = await restoreScenario(row.id);
+    setRestoring(false);
+    setPendingRestore(null);
+    if (ok) {
+      setActiveSection("risk");
+      enqueueToast({
+        severity: "success",
+        message: t("alert_message_report_card_successful_restore"),
+      });
+    }
+  };
 
   return (
     <ScrollableRegion>
@@ -60,13 +83,19 @@ const HomeView = () => {
               <FirstRunCard />
             ) : (
               <Stack spacing={3}>
-                <RecentProjectsCard scenarios={scenarios} loading={loading} error={error} />
+                <RecentProjectsCard
+                  scenarios={scenarios}
+                  loading={loading}
+                  error={error}
+                  onActivate={setPendingRestore}
+                />
                 <PinnedCard
                   scenarios={scenarios}
                   pinnedIds={pinnedIds}
                   loading={loading}
                   error={error}
                   onUnpin={togglePinned}
+                  onActivate={setPendingRestore}
                 />
               </Stack>
             )}
@@ -85,6 +114,12 @@ const HomeView = () => {
           </Box>
         </Box>
       </Box>
+      <RestoreScenarioConfirmDialog
+        row={pendingRestore}
+        busy={restoring}
+        onCancel={() => setPendingRestore(null)}
+        onConfirm={handleConfirmRestore}
+      />
     </ScrollableRegion>
   );
 };
