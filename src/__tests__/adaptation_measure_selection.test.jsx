@@ -94,9 +94,9 @@ describe("AdaptationMeasuresInput selection UX (#373)", () => {
   it("toggling a checkbox updates selectedMeasureIds without touching applied", async () => {
     fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(fakeMeasures));
     renderWithTheme(<AdaptationMeasuresInput />);
-    await waitFor(() => screen.getByTestId("measure-checkbox-Levee"));
+    await waitFor(() => screen.getByTestId("measure-checkbox-uuid-levee"));
 
-    fireEvent.click(screen.getByTestId("measure-checkbox-Levee"));
+    fireEvent.click(screen.getByTestId("measure-checkbox-uuid-levee"));
 
     expect(useWorkspaceStore.getState().selectedMeasureIds).toEqual(["Drainage", "Pumps"]);
     expect(useWorkspaceStore.getState().appliedMeasureIds).toEqual(["Levee", "Drainage", "Pumps"]);
@@ -110,7 +110,7 @@ describe("AdaptationMeasuresInput selection UX (#373)", () => {
     const button = screen.getByTestId("adaptation-measure-apply-button");
     expect(button).toBeDisabled();
 
-    fireEvent.click(screen.getByTestId("measure-checkbox-Pumps"));
+    fireEvent.click(screen.getByTestId("measure-checkbox-uuid-pumps"));
     expect(button).not.toBeDisabled();
   });
 
@@ -119,7 +119,7 @@ describe("AdaptationMeasuresInput selection UX (#373)", () => {
     renderWithTheme(<AdaptationMeasuresInput />);
     await waitFor(() => screen.getByTestId("adaptation-measure-apply-button"));
 
-    fireEvent.click(screen.getByTestId("measure-checkbox-Pumps"));
+    fireEvent.click(screen.getByTestId("measure-checkbox-uuid-pumps"));
     useResultsStore.setState({ isScenarioRunning: true });
 
     await waitFor(() =>
@@ -139,7 +139,7 @@ describe("AdaptationMeasuresInput selection UX (#373)", () => {
     renderWithTheme(<AdaptationMeasuresInput />);
     await waitFor(() => screen.getByTestId("adaptation-measure-apply-button"));
 
-    fireEvent.click(screen.getByTestId("measure-checkbox-Pumps"));
+    fireEvent.click(screen.getByTestId("measure-checkbox-uuid-pumps"));
     fireEvent.click(screen.getByTestId("adaptation-measure-apply-button"));
 
     await waitFor(() => expect(runScenarioMock).toHaveBeenCalledTimes(1));
@@ -159,12 +159,91 @@ describe("AdaptationMeasuresInput selection UX (#373)", () => {
     renderWithTheme(<AdaptationMeasuresInput />);
     await waitFor(() => screen.getByTestId("adaptation-measure-reset-link"));
 
-    fireEvent.click(screen.getByTestId("measure-checkbox-Pumps"));
-    fireEvent.click(screen.getByTestId("measure-checkbox-Levee"));
+    fireEvent.click(screen.getByTestId("measure-checkbox-uuid-pumps"));
+    fireEvent.click(screen.getByTestId("measure-checkbox-uuid-levee"));
     expect(useWorkspaceStore.getState().selectedMeasureIds).toEqual(["Drainage"]);
 
     fireEvent.click(screen.getByTestId("adaptation-measure-reset-link"));
     expect(useWorkspaceStore.getState().selectedMeasureIds).toEqual(["Levee", "Drainage", "Pumps"]);
+  });
+});
+
+describe("AdaptationMeasuresInput duplicate-name UI isolation (#447)", () => {
+  // Defense in depth against #443: even if a future regression of #455
+  // reintroduces duplicate-name catalog rows, clicking one card must only
+  // flip that card visually — the per-card checkbox state is keyed by row
+  // id, not by name.
+  const dupeMeasures = [
+    { id: "row-ews-1", name: "Early warning system", is_builtin: true, source_reference: null },
+    { id: "row-ews-2", name: "Early warning system", is_builtin: true, source_reference: null },
+    { id: "row-ews-3", name: "Early warning system", is_builtin: true, source_reference: null },
+    { id: "row-levee", name: "Levee", is_builtin: true, source_reference: null },
+  ];
+
+  it("clicking one card with a duplicate name flips only that card's checkbox", async () => {
+    fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(dupeMeasures));
+    renderWithTheme(<AdaptationMeasuresInput />);
+    await waitFor(() => screen.getByTestId("measure-checkbox-row-ews-1"));
+
+    const c1 = screen.getByTestId("measure-checkbox-row-ews-1");
+    const c2 = screen.getByTestId("measure-checkbox-row-ews-2");
+    const c3 = screen.getByTestId("measure-checkbox-row-ews-3");
+    const cL = screen.getByTestId("measure-checkbox-row-levee");
+
+    expect(c1.checked).toBe(true);
+    expect(c2.checked).toBe(true);
+    expect(c3.checked).toBe(true);
+    expect(cL.checked).toBe(true);
+
+    fireEvent.click(c2);
+
+    expect(c1.checked).toBe(true);
+    expect(c2.checked).toBe(false);
+    expect(c3.checked).toBe(true);
+    expect(cL.checked).toBe(true);
+  });
+
+  it("seeds the store's selectedMeasureIds with deduplicated names", async () => {
+    fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(dupeMeasures));
+    renderWithTheme(<AdaptationMeasuresInput />);
+    await waitFor(() =>
+      expect(useWorkspaceStore.getState().isMeasureSelectionInitialized).toBe(true)
+    );
+    expect(useWorkspaceStore.getState().selectedMeasureIds).toEqual([
+      "Early warning system",
+      "Levee",
+    ]);
+    expect(useWorkspaceStore.getState().appliedMeasureIds).toEqual([
+      "Early warning system",
+      "Levee",
+    ]);
+  });
+
+  it("renders one card per row even when names duplicate", async () => {
+    fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(dupeMeasures));
+    renderWithTheme(<AdaptationMeasuresInput />);
+    await waitFor(() => screen.getByTestId("measure-checkbox-row-ews-3"));
+    expect(screen.getByTestId("measure-checkbox-row-ews-1")).toBeInTheDocument();
+    expect(screen.getByTestId("measure-checkbox-row-ews-2")).toBeInTheDocument();
+    expect(screen.getByTestId("measure-checkbox-row-ews-3")).toBeInTheDocument();
+    expect(screen.getByTestId("measure-checkbox-row-levee")).toBeInTheDocument();
+  });
+
+  it("Reset restores every duplicate-named card to the applied state", async () => {
+    fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(dupeMeasures));
+    renderWithTheme(<AdaptationMeasuresInput />);
+    await waitFor(() => screen.getByTestId("adaptation-measure-reset-link"));
+
+    const c2 = screen.getByTestId("measure-checkbox-row-ews-2");
+    fireEvent.click(c2);
+    expect(c2.checked).toBe(false);
+
+    fireEvent.click(screen.getByTestId("adaptation-measure-reset-link"));
+
+    expect(screen.getByTestId("measure-checkbox-row-ews-1").checked).toBe(true);
+    expect(screen.getByTestId("measure-checkbox-row-ews-2").checked).toBe(true);
+    expect(screen.getByTestId("measure-checkbox-row-ews-3").checked).toBe(true);
+    expect(screen.getByTestId("measure-checkbox-row-levee").checked).toBe(true);
   });
 });
 

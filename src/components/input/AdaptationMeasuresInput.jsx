@@ -44,11 +44,17 @@ const AdaptationMeasuresInput = () => {
   const { runScenario } = useRunScenario();
 
   const [measures, setMeasures] = useState([]);
+  // Per-card checkbox state, keyed by row id. Decoupled from the store's
+  // name-keyed `selectedMeasureIds` so that duplicate-name catalog rows do
+  // not visually flip together (issue #447 — defense in depth against #443).
+  // The store and wire payload stay name-keyed because the catalog → entity
+  // join runs through name; see `_filter_entity_measures` in
+  // `backend/run_scenario.py`.
+  const [selectedRowIds, setSelectedRowIds] = useState(() => new Set());
 
-  // Match the existing key-fallback pattern at the render site: catalog
-  // measures have both id and name, but the join with entity measures runs
-  // through name, so it must be the value we put into the store.
-  const measureValueOf = (m) => m.name;
+  // Legacy responses synthesize entries from the name list with no id; the
+  // name fallback keeps that path keyed per row.
+  const rowIdOf = (m) => m.id ?? m.name;
 
   const onFetchAdaptationMeasuresHandler = async () => {
     RiskWiseClient.fetchAdaptationMeasures(selectedCountry ?? "", selectedHazard)
@@ -69,13 +75,17 @@ const AdaptationMeasuresInput = () => {
           }));
         }
         setMeasures(fetched);
-        initializeMeasureSelection(fetched.map(measureValueOf));
+        setSelectedRowIds(new Set(fetched.map(rowIdOf)));
+        // Dedupe names so the wire payload doesn't carry duplicate entries.
+        const uniqueNames = Array.from(new Set(fetched.map((m) => m.name)));
+        initializeMeasureSelection(uniqueNames);
       })
       .catch((error) => {
         logger.error("AdaptationMeasuresInput: fetchAdaptationMeasures failed", {
           error: error?.message ?? String(error),
         });
         setMeasures([]);
+        setSelectedRowIds(new Set());
       });
   };
 
@@ -94,6 +104,12 @@ const AdaptationMeasuresInput = () => {
 
   const onApply = () => {
     runScenario({ landingTab: TABS.ADAPTATION });
+  };
+
+  const onResetSelection = () => {
+    resetMeasureSelectionToApplied();
+    const appliedSet = new Set(appliedMeasureIds);
+    setSelectedRowIds(new Set(measures.filter((m) => appliedSet.has(m.name)).map(rowIdOf)));
   };
 
   if (selectedTab !== TABS.ADAPTATION) {
@@ -117,15 +133,19 @@ const AdaptationMeasuresInput = () => {
               : t("adaptation_measure_badge_custom");
             const tooltipText =
               measure.source_reference ?? t("adaptation_measure_source_reference_missing");
-            const value = measureValueOf(measure);
-            const checked = selectedMeasureIds.includes(value);
+            const rowId = rowIdOf(measure);
+            const checked = selectedRowIds.has(rowId);
+            const onToggle = () => {
+              setSelectedRowIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(rowId)) next.delete(rowId);
+                else next.add(rowId);
+                return next;
+              });
+              toggleMeasureId(measure.name);
+            };
             return (
-              <Tooltip
-                key={measure.id ?? measure.name}
-                title={tooltipText}
-                placement="top-start"
-                arrow
-              >
+              <Tooltip key={rowId} title={tooltipText} placement="top-start" arrow>
                 <Card
                   variant="outlined"
                   sx={{
@@ -145,11 +165,11 @@ const AdaptationMeasuresInput = () => {
                         <Checkbox
                           size="small"
                           checked={checked}
-                          onChange={() => toggleMeasureId(value)}
+                          onChange={onToggle}
                           slotProps={{
                             input: {
                               "aria-label": t(measure.name),
-                              "data-testid": `measure-checkbox-${value}`,
+                              "data-testid": `measure-checkbox-${rowId}`,
                             },
                           }}
                         />
@@ -195,7 +215,7 @@ const AdaptationMeasuresInput = () => {
               component="button"
               type="button"
               variant="body2"
-              onClick={resetMeasureSelectionToApplied}
+              onClick={onResetSelection}
               disabled={!selectionDiffersFromApplied || isScenarioRunning}
               sx={{
                 cursor: selectionDiffersFromApplied ? "pointer" : "default",
