@@ -14,11 +14,12 @@ import {
 import HomeIcon from "@mui/icons-material/Home";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import PublicIcon from "@mui/icons-material/Public";
+import ShieldIcon from "@mui/icons-material/Shield";
 import FolderIcon from "@mui/icons-material/Folder";
 import SettingsIcon from "@mui/icons-material/Settings";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutlined";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import { SECTION_IDS } from "../../constants/sections";
 import { layoutTransition } from "../../theme/theme";
 
@@ -33,6 +34,7 @@ const ITEM_META = {
   home: { labelKey: "sidebar_home", icon: HomeIcon },
   risk: { labelKey: "sidebar_risk_assessment", icon: AssessmentIcon },
   macro: { labelKey: "sidebar_macroeconomic", icon: PublicIcon },
+  adaptation: { labelKey: "sidebar_adaptation", icon: ShieldIcon },
   workspace: { labelKey: "sidebar_workspace", icon: FolderIcon },
   settings: { labelKey: "sidebar_settings", icon: SettingsIcon },
 };
@@ -41,8 +43,10 @@ const items = SECTION_IDS.map((id) => ({ id, ...ITEM_META[id] }));
 
 const Sidebar = ({ width }) => {
   const { t } = useTranslation();
-  const { activeSection, setActiveSection, sidebarCollapsed } = useStore();
-  const setGlossaryOpen = useStore((s) => s.setGlossaryOpen);
+  const activeSection = useUIStore((s) => s.activeSection);
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const setGlossaryOpen = useUIStore((s) => s.setGlossaryOpen);
 
   return (
     <Box

@@ -5,7 +5,8 @@ import { ThemeProvider } from "@mui/material/styles";
 
 import theme from "../../theme/theme";
 import AppShell from "./AppShell";
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -16,7 +17,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../nav/LanguageButton", () => ({ default: () => <div data-testid="lang" /> }));
 vi.mock("../nav/MinimizeButton", () => ({ default: () => <div data-testid="minimize" /> }));
-vi.mock("../nav/ReloadButton", () => ({ default: () => <div data-testid="reload" /> }));
 vi.mock("../nav/ShutdownButton", () => ({ default: () => <div data-testid="shutdown" /> }));
 vi.mock("../input/DataInput", () => ({ default: () => <div data-testid="data-input" /> }));
 vi.mock("../input/AdaptationMeasuresInput", () => ({
@@ -73,22 +73,23 @@ describe("AppShell", () => {
     renderShell();
     const macroItems = screen.getAllByLabelText("sidebar_macroeconomic");
     fireEvent.click(macroItems[0]);
-    expect(useStore.getState().activeSection).toBe("macro");
+    expect(useUIStore.getState().activeSection).toBe("macro");
   });
 
   it("toggles sidebar collapsed state and persists to localStorage", () => {
-    useStore.setState({ sidebarCollapsed: false });
+    useUIStore.setState({ sidebarCollapsed: false });
     renderShell();
     const toggle = screen.getByLabelText("sidebar_toggle");
     fireEvent.click(toggle);
-    expect(useStore.getState().sidebarCollapsed).toBe(true);
+    expect(useUIStore.getState().sidebarCollapsed).toBe(true);
     expect(localStorage.getItem("riskwise.sidebarCollapsed")).toBe("true");
   });
 
   it("renders MainView (no MacroEmptyState substitute) when entering Macro with no data", () => {
-    useStore.setState({ activeSection: "macro", credOutputData: [] });
+    useUIStore.setState({ activeSection: "macro" });
+    useResultsStore.setState({ credOutputData: [] });
     renderShell();
     expect(screen.getByTestId("main-view")).toBeInTheDocument();
-    expect(useStore.getState().activeViewControl).toBe("display_macro_chart");
+    expect(useUIStore.getState().activeViewControl).toBe("display_macro_chart");
   });
 });

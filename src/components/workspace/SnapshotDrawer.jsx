@@ -1,11 +1,29 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
-import { Box, IconButton, Stack, TextField, Typography } from "@mui/material";
+import { Box, Chip, IconButton, Stack, TextField, Typography } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { formatDateTime } from "../../lib/formatDate";
+
+// Map each surface tag to a MUI semantic color (#362). The four domains map
+// 1:1 to existing palette slots, so the chips stay readable in both light
+// and dark themes without a custom palette extension. Unknown / NULL falls
+// back to a default-colored chip via the caller's omit-when-null branch.
+const SURFACE_CHIP_COLOR = {
+  hazard: "warning",
+  exposure: "info",
+  impact: "error",
+  adaptation: "success",
+};
+
+const SURFACE_I18N_KEY = {
+  hazard: "snapshot_surface_hazard",
+  exposure: "snapshot_surface_exposure",
+  impact: "snapshot_surface_impact",
+  adaptation: "snapshot_surface_adaptation",
+};
 
 const formatCreatedAt = (value, locale) => {
   if (!value) return "";
@@ -79,23 +97,27 @@ const SnapshotDrawer = ({ scenarioId }) => {
     }
   };
 
-  const handleCaptionCommit = async (snap, nextCaption) => {
-    const trimmed = nextCaption.trim();
+  // Generic single-field PATCH for the snapshot drawer. The title and caption
+  // fields commit independently (per #350) so each blur sends only the field
+  // it owns — the backend reads ``model_fields_set`` and leaves untouched
+  // columns alone, so this cannot accidentally null out the other value.
+  const handleFieldCommit = async (snap, field, nextValue) => {
+    const trimmed = nextValue.trim();
     const value = trimmed.length === 0 ? null : trimmed;
-    if ((snap.caption ?? null) === value) return;
+    if ((snap[field] ?? null) === value) return;
     const previous = snapshots;
     setSnapshots((current) =>
-      current.map((s) => (s.id === snap.id ? { ...s, caption: value } : s))
+      current.map((s) => (s.id === snap.id ? { ...s, [field]: value } : s))
     );
     try {
-      const response = await RiskWiseClient.updateSnapshot(snap.id, { caption: value });
+      const response = await RiskWiseClient.updateSnapshot(snap.id, { [field]: value });
       if (!(response?.success && response.result?.status?.code === 2000)) {
         setSnapshots(previous);
-        setError(response?.error?.message || "Caption update failed");
+        setError(response?.error?.message || `${field} update failed`);
       }
     } catch (err) {
       setSnapshots(previous);
-      setError(err?.message || "Caption update failed");
+      setError(err?.message || `${field} update failed`);
     }
   };
 
@@ -141,14 +163,35 @@ const SnapshotDrawer = ({ scenarioId }) => {
             />
           ) : null}
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <SnapshotCaptionField
-              snapshot={snap}
-              onCommit={(value) => handleCaptionCommit(snap, value)}
-              placeholder={t("workspace_snapshot_caption_placeholder")}
+            <SnapshotTextField
+              value={snap.title}
+              onCommit={(value) => handleFieldCommit(snap, "title", value)}
+              placeholder={t("snapshot_title_helper")}
+              ariaLabel={`title-${snap.id}`}
+              maxLength={120}
+              labelText={t("snapshot_title_label")}
             />
-            <Typography variant="caption" color="text.secondary">
-              {snap.snapshot_type} · {formatCreatedAt(snap.created_at, locale)}
-            </Typography>
+            <SnapshotTextField
+              value={snap.caption}
+              onCommit={(value) => handleFieldCommit(snap, "caption", value)}
+              placeholder={t("workspace_snapshot_caption_placeholder")}
+              ariaLabel={`caption-${snap.id}`}
+              maxLength={500}
+            />
+            <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.25 }}>
+              <Typography variant="caption" color="text.secondary">
+                {snap.snapshot_type} · {formatCreatedAt(snap.created_at, locale)}
+              </Typography>
+              {snap.surface && SURFACE_I18N_KEY[snap.surface] ? (
+                <Chip
+                  size="small"
+                  data-testid={`snapshot-surface-${snap.id}`}
+                  color={SURFACE_CHIP_COLOR[snap.surface]}
+                  variant="outlined"
+                  label={t(SURFACE_I18N_KEY[snap.surface])}
+                />
+              ) : null}
+            </Stack>
           </Box>
           <IconButton
             size="small"
@@ -163,22 +206,26 @@ const SnapshotDrawer = ({ scenarioId }) => {
   );
 };
 
-const SnapshotCaptionField = ({ snapshot, onCommit, placeholder }) => {
-  const [value, setValue] = useState(snapshot.caption || "");
+// Shared inline-edit input for title and caption. A single component keeps
+// the commit-on-blur, Enter-to-blur, and controlled-input behaviour identical
+// across both fields; the parent only varies the aria-label and length cap.
+const SnapshotTextField = ({ value, onCommit, placeholder, ariaLabel, maxLength, labelText }) => {
+  const [internal, setInternal] = useState(value || "");
 
   useEffect(() => {
-    setValue(snapshot.caption || "");
-  }, [snapshot.caption]);
+    setInternal(value || "");
+  }, [value]);
 
   return (
     <TextField
       variant="standard"
       size="small"
       fullWidth
-      value={value}
+      label={labelText}
+      value={internal}
       placeholder={placeholder}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={() => onCommit(value)}
+      onChange={(e) => setInternal(e.target.value)}
+      onBlur={(e) => onCommit(e.target.value)}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -187,21 +234,21 @@ const SnapshotCaptionField = ({ snapshot, onCommit, placeholder }) => {
       }}
       slotProps={{
         htmlInput: {
-          "aria-label": `caption-${snapshot.id}`,
-          maxLength: 500,
+          "aria-label": ariaLabel,
+          maxLength,
         },
       }}
     />
   );
 };
 
-SnapshotCaptionField.propTypes = {
-  snapshot: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    caption: PropTypes.string,
-  }).isRequired,
+SnapshotTextField.propTypes = {
+  value: PropTypes.string,
   onCommit: PropTypes.func.isRequired,
   placeholder: PropTypes.string.isRequired,
+  ariaLabel: PropTypes.string.isRequired,
+  maxLength: PropTypes.number.isRequired,
+  labelText: PropTypes.string,
 };
 
 SnapshotDrawer.propTypes = {

@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { Line } from "react-chartjs-2";
 import {
@@ -15,11 +15,13 @@ import {
   Title,
   Tooltip,
 } from "chart.js";
-import ChartDataLabels from "chartjs-plugin-datalabels";
 
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { isRtl } from "../../i18nConfig";
 import { formatNumber } from "../../lib/formatNumber";
+import { buildChartThemeOptions } from "../../utils/chartTheme";
+import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
 import ChartInfoPopover from "../help/ChartInfoPopover";
 
@@ -32,8 +34,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler,
-  ChartDataLabels
+  Filler
 );
 
 // Adaptation values render in a fixed order — None (no adaptation) is the
@@ -47,22 +48,31 @@ const MacroEconomicChart = () => {
   const locale = i18n.language;
   const rtl = isRtl(locale);
   const theme = useTheme();
+  const chartRef = useRef(null);
   const vizCategorical = theme.palette.viz.categorical;
+  // Theme-aware axis / tooltip / gridline colours (issue #289).
+  const chartThemeOptions = buildChartThemeOptions(theme);
+
+  // First-mount animation only (#370). Disabling animation after the initial
+  // paint means dropdown filter changes (country / scenario / sector /
+  // variable) update the chart silently. Unlike the waterfall / cost-benefit
+  // charts, this component is NOT remounted by the parent on scenario runs.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    chart.options.animation = false;
+  }, []);
   const colorForAdaptationKey = (key) => {
     const idx = ADAPTATION_KEY_ORDER.indexOf(key);
     // Unknown adaptation values fall through to the last categorical hue.
     return vizCategorical[idx >= 0 ? idx : vizCategorical.length - 1];
   };
-  const {
-    credOutputData,
-    selectedMacroCountry,
-    selectedMacroScenario,
-    selectedMacroSector,
-    selectedMacroVariable,
-    macroEconomicChartTitle,
-    showChartValues,
-    toggleShowChartValues,
-  } = useStore();
+  const credOutputData = useResultsStore((s) => s.credOutputData);
+  const macroEconomicChartTitle = useResultsStore((s) => s.macroEconomicChartTitle);
+  const selectedMacroCountry = useWorkspaceStore((s) => s.selectedMacroCountry);
+  const selectedMacroScenario = useWorkspaceStore((s) => s.selectedMacroScenario);
+  const selectedMacroSector = useWorkspaceStore((s) => s.selectedMacroSector);
+  const selectedMacroVariable = useWorkspaceStore((s) => s.selectedMacroVariable);
 
   // Filter data based on selected filters
   const filteredData = credOutputData.filter(
@@ -110,6 +120,13 @@ const MacroEconomicChart = () => {
       backgroundColor,
       fill: true,
       tension: 0.4,
+      // Bigger visible markers + a forgiving invisible hover hit area (#370).
+      // `pointHitRadius` extends the hover target ~16px beyond each point so
+      // tooltips fire from the surrounding plot area, not only when the
+      // cursor lands precisely on a data point.
+      pointRadius: 4,
+      pointHoverRadius: 7,
+      pointHitRadius: 16,
     };
   });
 
@@ -129,43 +146,49 @@ const MacroEconomicChart = () => {
     // the controls bar past the viewport, triggering a scrollbar in the parent
     // ScrollableRegion. Pair with the fixed-height wrapper below.
     maintainAspectRatio: false,
+    // Mount-only intro animation (#370). The post-mount effect disables
+    // animation after the first paint so dropdown filter changes update
+    // silently. `prefersReducedMotion()` honours the OS-level opt-out.
+    animation: prefersReducedMotion() ? false : { duration: 600, easing: "easeOutQuart" },
+    // `mode: "index"` + `intersect: false` lets users hover anywhere in the
+    // plot area to see the tooltip for the nearest x-value — small markers
+    // no longer need a pixel-perfect cursor position.
+    interaction: { mode: "index", intersect: false },
     scales: {
       x: {
+        ...chartThemeOptions.scales.x,
         type: "category",
         title: {
+          ...chartThemeOptions.scales.x.title,
           display: true,
           text: t("macro_display_chart_x_axis_label"),
         },
       },
       y: {
+        ...chartThemeOptions.scales.y,
         beginAtZero: true,
         title: {
+          ...chartThemeOptions.scales.y.title,
           display: true,
           text: t("macro_display_chart_y_axis_label"),
         },
         ticks: {
+          ...chartThemeOptions.scales.y.ticks,
           callback: (val) =>
             `${formatNumber(Number(val), locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,
         },
       },
     },
     plugins: {
-      legend: { display: true, rtl },
+      legend: { display: true, rtl, labels: chartThemeOptions.plugins.legend.labels },
       title: { display: false, text: macroEconomicChartTitle },
       tooltip: {
         rtl,
+        ...chartThemeOptions.plugins.tooltip,
         callbacks: {
           label: (ctx) =>
             `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y, locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,
         },
-      },
-      datalabels: {
-        display: showChartValues,
-        align: "top",
-        color: alpha(theme.palette.text.primary, 0.9),
-        font: { size: 10, weight: 600 },
-        formatter: (value) =>
-          `${formatNumber(Number(value), locale, { maximumFractionDigits: 1, minimumFractionDigits: 1 })}%`,
       },
     },
   };
@@ -211,25 +234,21 @@ const MacroEconomicChart = () => {
         sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflowY: "auto" }}
       >
         {hasData && (
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-            <Stack direction="row" alignItems="center" spacing={0.5}>
-              <Typography variant="subtitle1" component="h3" sx={{ m: 0 }}>
-                {macroEconomicChartTitle}
-              </Typography>
-              <ChartInfoPopover titleKey="chart_info_macro_title" bodyKey="chart_info_macro_body" />
-            </Stack>
-            <Button
-              size="small"
-              variant={showChartValues ? "contained" : "outlined"}
-              onClick={toggleShowChartValues}
-              aria-pressed={showChartValues}
-            >
-              {showChartValues ? t("chart_hide_values") : t("chart_show_values")}
-            </Button>
+          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+            <Typography variant="subtitle1" component="h3" sx={{ m: 0 }}>
+              {macroEconomicChartTitle}
+            </Typography>
+            <ChartInfoPopover titleKey="chart_info_macro_title" bodyKey="chart_info_macro_body" />
           </Stack>
         )}
         <Box sx={{ position: "relative", flex: 1, minHeight: 320, mb: 1 }}>
-          <Line data={transformedData} options={options} aria-label={ariaLabel} role="img" />
+          <Line
+            ref={chartRef}
+            data={transformedData}
+            options={options}
+            aria-label={ariaLabel}
+            role="img"
+          />
         </Box>
         {hasData ? (
           <ChartDataTable

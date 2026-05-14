@@ -2,15 +2,14 @@ import React from "react";
 
 import AnnualGrowthCard from "./AnnualGrowthCard";
 import CountryCard from "./CountryCard";
-import ExposureEconomicCard from "./ExposureEconomicCard";
-import ExposureNonEconomicCard from "./ExposureNonEconomicCard";
+import ExposureCard from "./ExposureCard";
 import HazardCard from "./HazardCard";
 import ScenarioCard from "./ScenarioCard";
 import TimeHorizonCard from "./TimeHorizonCard";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const ViewCard = () => {
-  const { selectedCard } = useStore();
+  const selectedCard = useUIStore((s) => s.selectedCard);
 
   return (
     <>
@@ -19,8 +18,7 @@ const ViewCard = () => {
       {selectedCard === "scenario" && <ScenarioCard />}
       {selectedCard === "timeHorizon" && <TimeHorizonCard />}
       {selectedCard === "annualGrowth" && <AnnualGrowthCard />}
-      {selectedCard === "exposureEconomic" && <ExposureEconomicCard />}
-      {selectedCard === "exposureNonEconomic" && <ExposureNonEconomicCard />}
+      {selectedCard === "exposure" && <ExposureCard />}
     </>
   );
 };

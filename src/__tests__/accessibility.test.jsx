@@ -2,13 +2,6 @@ import { describe, it, expect, vi, beforeAll } from "vitest";
 import { render } from "@testing-library/react";
 import axe from "axe-core";
 
-vi.mock("../store", () => ({
-  default: vi.fn(() => ({
-    selectedAppOption: "",
-    setSelectedAppOption: vi.fn(),
-  })),
-}));
-
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key) => key,
@@ -26,15 +19,23 @@ async function runAxe(container) {
   return results.violations;
 }
 
-describe("Accessibility baseline — NavigateAlert (launch screen)", () => {
-  let NavigateAlert;
+describe("Accessibility baseline — ModeSwitchConfirmDialog", () => {
+  let ModeSwitchConfirmDialog;
 
   beforeAll(async () => {
-    ({ default: NavigateAlert } = await import("../components/alerts/NavigateAlert"));
+    ({ default: ModeSwitchConfirmDialog } =
+      await import("../components/alerts/ModeSwitchConfirmDialog"));
   });
 
   it("records the WCAG 2.1 AA violation baseline", async () => {
-    const { container } = render(<NavigateAlert />);
+    const { container } = render(
+      <ModeSwitchConfirmDialog
+        open
+        pendingMode="explore"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />
+    );
     const violations = await runAxe(container);
 
     // Log violation table so the baseline is visible in CI output.

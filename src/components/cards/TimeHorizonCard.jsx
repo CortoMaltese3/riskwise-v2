@@ -1,11 +1,13 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, Slider, Typography } from "@mui/material";
-import useStore from "../../store";
+import { Box, Card, CardContent, Slider, Tooltip, Typography } from "@mui/material";
+import useResultsStore from "../../store/useResultsStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 const TimeHorizonCard = () => {
-  const { setSelectedTimeHorizon } = useStore();
+  const setSelectedTimeHorizon = useWorkspaceStore((s) => s.setSelectedTimeHorizon);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
   const { t } = useTranslation();
 
   // Initial range state
@@ -67,53 +69,59 @@ const TimeHorizonCard = () => {
           >
             {t("card_timehorizon_subtitle")}
           </Typography>
-          <Slider
-            aria-label={t("input_time_horizon_selector_aria")}
-            defaultValue={[2024, 2050]}
-            value={value}
-            onChange={handleChange}
-            valueLabelDisplay="on"
-            min={2024}
-            max={2075}
-            marks={[
-              { value: 2024, label: "2024" },
-              { value: 2050, label: "2050" },
-              { value: 2075, label: "2075" },
-            ]}
-            sx={{
-              color: "secondary.main", // Slider track and thumb color
-              marginTop: 6,
-              width: "90%", // Adjust width to be less than container to center properly
-              "& .MuiSlider-thumb": {
-                height: 24,
-                width: 24,
-                backgroundColor: "common.white",
-                border: 2,
-                borderColor: "currentColor",
-                "&:focus, &:hover, &.Mui-active": {
-                  boxShadow: "inherit",
+          <Tooltip
+            title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
+            placement="top"
+          >
+            <Slider
+              aria-label={t("input_time_horizon_selector_aria")}
+              defaultValue={[2024, 2050]}
+              value={value}
+              onChange={handleChange}
+              disabled={isScenarioRunning}
+              valueLabelDisplay="on"
+              min={2024}
+              max={2075}
+              marks={[
+                { value: 2024, label: "2024" },
+                { value: 2050, label: "2050" },
+                { value: 2075, label: "2075" },
+              ]}
+              sx={{
+                color: "secondary.main", // Slider track and thumb color
+                marginTop: 6,
+                width: "90%", // Adjust width to be less than container to center properly
+                "& .MuiSlider-thumb": {
+                  height: 24,
+                  width: 24,
+                  backgroundColor: "common.white",
+                  border: 2,
+                  borderColor: "currentColor",
+                  "&:focus, &:hover, &.Mui-active": {
+                    boxShadow: "inherit",
+                  },
                 },
-              },
-              "& .MuiSlider-valueLabel": {
-                color: "black",
-                variant: "body2",
-                fontWeight: "bold",
-                borderRadius: (theme) => theme.spacing(2),
-                borderColor: "black",
-                backgroundColor: "secondary.main",
-              },
-              "& .MuiSlider-track": {
-                height: 16,
-                borderRadius: 4,
-              },
-              "& .MuiSlider-rail": {
-                color: "border.default",
-                opacity: 1,
-                height: 8,
-                borderRadius: 4,
-              },
-            }}
-          />
+                "& .MuiSlider-valueLabel": {
+                  color: "black",
+                  variant: "body2",
+                  fontWeight: "bold",
+                  borderRadius: (theme) => theme.spacing(2),
+                  borderColor: "black",
+                  backgroundColor: "secondary.main",
+                },
+                "& .MuiSlider-track": {
+                  height: 16,
+                  borderRadius: 4,
+                },
+                "& .MuiSlider-rail": {
+                  color: "border.default",
+                  opacity: 1,
+                  height: 8,
+                  borderRadius: 4,
+                },
+              }}
+            />
+          </Tooltip>
         </Box>
         <Box
           sx={{

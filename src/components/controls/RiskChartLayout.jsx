@@ -1,22 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Paper } from "@mui/material";
+import { Box, Button, Paper, Stack } from "@mui/material";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import WaterfallChart from "../charts/WaterfallChart";
 import EmptyChartState from "../layout/EmptyChartState";
 import LoadingSkeleton from "../layout/LoadingSkeleton";
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 const STATUS_OK = 2000;
 
 const RiskChartLayout = () => {
   const { t } = useTranslation();
-  const setWaterfallChartRef = useStore((state) => state.setWaterfallChartRef);
-  const isScenarioRunning = useStore((state) => state.isScenarioRunning);
-  const isScenarioRunCompleted = useStore((state) => state.isScenarioRunCompleted);
+  const setWaterfallChartRef = useUIStore((state) => state.setWaterfallChartRef);
+  const setActiveSection = useUIStore((state) => state.setActiveSection);
+  const isScenarioRunning = useResultsStore((state) => state.isScenarioRunning);
+  const isScenarioRunCompleted = useResultsStore((state) => state.isScenarioRunCompleted);
+  // Re-keying on `scenarioRunCode` re-mounts the chart on each new run (#370),
+  // triggering a fresh first-mount animation. Without the key, the existing
+  // instance would just swap datasets and skip the intro.
+  const scenarioRunCode = useWorkspaceStore((state) => state.scenarioRunCode);
   const [waterfallData, setWaterfallData] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -59,7 +66,12 @@ const RiskChartLayout = () => {
       );
     }
     return (
-      <WaterfallChart ref={setWaterfallChartRef} data={waterfallData} errorMessage={errorMessage} />
+      <WaterfallChart
+        key={scenarioRunCode}
+        ref={setWaterfallChartRef}
+        data={waterfallData}
+        errorMessage={errorMessage}
+      />
     );
   };
 
@@ -81,18 +93,35 @@ const RiskChartLayout = () => {
           marginBottom: 2,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
           overflow: "hidden",
         }}
       >
         <Box
-          textAlign="center"
-          p={3}
-          style={{ width: "100%", height: "100%" }}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            width: "100%",
+            p: 3,
+            display: "flex",
+            flexDirection: "column",
+          }}
           aria-label={t("economic_non_economic_risk_display_chart_title")}
         >
-          {renderContent()}
+          {isScenarioRunCompleted && (
+            <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+              <Button
+                variant="text"
+                size="small"
+                aria-label={t("risk_view_link_to_adaptation_aria")}
+                onClick={() => setActiveSection("adaptation")}
+              >
+                {t("risk_view_link_to_adaptation")}
+              </Button>
+            </Stack>
+          )}
+          <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            {renderContent()}
+          </Box>
         </Box>
       </Paper>
     </div>

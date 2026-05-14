@@ -4,10 +4,10 @@ import CountryMacroCard from "./CountryMacroCard";
 import MacroEconomicVariableCard from "./MacroEconomicVariableCard";
 import ScenarioMacroCard from "./ScenarioMacroCard";
 import SectorMacroCard from "./SectorMacroCard";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 
 const ViewMacroCard = () => {
-  const { selectedMacroCard } = useStore();
+  const selectedMacroCard = useUIStore((s) => s.selectedMacroCard);
 
   return (
     <>

@@ -5,15 +5,16 @@ import { Box } from "@mui/material";
 import ResultsViewTitle from "../title/ResultsViewTitle";
 import EconomicResultsCard from "./EconomicResultsCard";
 import MacroEconomicResultsCard from "./MacroEconomicResultsCard";
-import OutputResultsCard from "./OutputResultsCard";
 import LoadingSkeleton from "../layout/LoadingSkeleton";
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
+import { TABS } from "../main/tabs";
 
 const ResultsView = () => {
-  const selectedTab = useStore((state) => state.selectedTab);
-  const isScenarioRunning = useStore((state) => state.isScenarioRunning);
+  const selectedTab = useUIStore((state) => state.selectedTab);
+  const isScenarioRunning = useResultsStore((state) => state.isScenarioRunning);
 
-  if (selectedTab === 0) {
+  if (selectedTab === TABS.PARAMETERS) {
     return null;
   }
 
@@ -25,9 +26,8 @@ const ResultsView = () => {
           <LoadingSkeleton data-testid="results-skeleton" />
         ) : (
           <>
-            {selectedTab === 1 && <EconomicResultsCard />}
-            {selectedTab === 2 && <MacroEconomicResultsCard />}
-            {selectedTab === 3 && <OutputResultsCard />}
+            {selectedTab === TABS.RISK && <EconomicResultsCard />}
+            {selectedTab === TABS.MACRO && <MacroEconomicResultsCard />}
           </>
         )}
       </Box>

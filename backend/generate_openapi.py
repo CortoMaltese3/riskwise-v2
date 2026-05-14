@@ -20,11 +20,11 @@ from backend.app import app  # noqa: E402
 OUT_PATH = HERE / "openapi.json"
 
 
-def main() -> None:
+def main() -> str:
     schema = app.openapi()
     OUT_PATH.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n")
-    print(f"wrote {OUT_PATH.relative_to(HERE.parent)}")
+    return f"wrote {OUT_PATH.relative_to(HERE.parent)}"
 
 
 if __name__ == "__main__":
-    main()
+    print(main())

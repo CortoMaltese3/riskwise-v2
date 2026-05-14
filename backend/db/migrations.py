@@ -22,6 +22,13 @@ MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 
 _MIGRATION_FILENAME_RE = re.compile(r"^(\d{4})_[A-Za-z0-9_]+\.sql$")
 
+# Migrations may opt out of the runner's BEGIN/COMMIT wrap by including this
+# directive on a comment line in the file header. Required for migrations
+# that combine DELETE with ALTER TABLE DROP/ADD COLUMN on Windows: DuckDB
+# 1.5.2 crashes the process with STATUS_STACK_BUFFER_OVERRUN (0xC0000409)
+# at COMMIT in that combination, even though every statement succeeds.
+_NO_TRANSACTION_DIRECTIVE = "@no-transaction"
+
 _log = get_logger("db.migrations")
 
 
@@ -135,17 +142,26 @@ def _check_unique_versions(migrations: list[_Migration]) -> None:
 
 def _apply_migration(conn: duckdb.DuckDBPyConnection, migration: _Migration) -> None:
     sql = migration.path.read_text(encoding="utf-8")
-    _log.info("db.migrations.applying", version=migration.version, file=migration.name)
-    conn.execute("BEGIN TRANSACTION")
+    transactional = _NO_TRANSACTION_DIRECTIVE not in sql
+    _log.info(
+        "db.migrations.applying",
+        version=migration.version,
+        file=migration.name,
+        transactional=transactional,
+    )
+    if transactional:
+        conn.execute("BEGIN TRANSACTION")
     try:
         conn.execute(sql)
         conn.execute(
             "INSERT INTO schema_version (version) VALUES (?)",
             [migration.version],
         )
-        conn.execute("COMMIT")
-    except Exception as exc:
-        conn.execute("ROLLBACK")
+        if transactional:
+            conn.execute("COMMIT")
+    except (duckdb.Error, OSError) as exc:
+        if transactional:
+            conn.execute("ROLLBACK")
         _log.error(
             "db.migrations.failed",
             version=migration.version,

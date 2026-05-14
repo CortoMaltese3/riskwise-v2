@@ -2,12 +2,16 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Card, CardContent, Stack, TextField, Typography } from "@mui/material";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import ContextualTooltip from "../help/ContextualTooltip";
 import { cardTitleSx, disabledFieldSx, getInputCardSx } from "./inputCardStyles";
 
 const Hazard = () => {
-  const { isValidHazard, selectedHazard, setSelectedCard, setSelectedTab } = useStore();
+  const isValidHazard = useWorkspaceStore((s) => s.isValidHazard);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const openInputEditor = useUIStore((s) => s.openInputEditor);
+  const setSelectedCard = useUIStore((s) => s.setSelectedCard);
   const { t } = useTranslation();
   const [clicked, setClicked] = useState(false);
   const [cardState, setCardState] = useState("default");
@@ -22,7 +26,7 @@ const Hazard = () => {
 
   const handleClick = () => {
     setSelectedCard("hazard");
-    setSelectedTab(0);
+    openInputEditor();
   };
 
   useEffect(() => {

@@ -7,7 +7,8 @@ import HazardMap from "./HazardMap";
 import RiskMap from "./RiskMap";
 import MapEmptyState from "./MapEmptyState";
 import LoadingSkeleton from "../layout/LoadingSkeleton";
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
 
 const CenteredPlaceholder = ({ children }) => (
   <Box
@@ -26,9 +27,9 @@ const CenteredPlaceholder = ({ children }) => (
 );
 
 const MapLayout = () => {
-  const activeMap = useStore((state) => state.activeMap);
-  const isScenarioRunning = useStore((state) => state.isScenarioRunning);
-  const isScenarioRunCompleted = useStore((state) => state.isScenarioRunCompleted);
+  const activeMap = useUIStore((state) => state.activeMap);
+  const isScenarioRunning = useResultsStore((state) => state.isScenarioRunning);
+  const isScenarioRunCompleted = useResultsStore((state) => state.isScenarioRunCompleted);
 
   const renderContent = () => {
     if (isScenarioRunning) {

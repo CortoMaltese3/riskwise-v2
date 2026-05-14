@@ -174,6 +174,37 @@ Resolves #42
 
 ---
 
+## Release gating
+
+`release.yml` will not produce or publish any artifact unless `tests.yml`
+has already run and concluded `success` for the **exact commit** the tag
+points at. The first job in the release workflow (`verify-tests`) calls
+the GitHub Actions API for that SHA and fails the entire release run if
+no green `tests.yml` run is found. All downstream jobs (`build`,
+`build-engine`, `sign-engine-manifest`, `sbom`) declare `needs:
+verify-tests`, so a missing or failing test run halts the pipeline before
+any installer, engine binary, signed manifest, or SBOM is published.
+
+In practice this means:
+
+- The tag must point at a commit that landed on `main` via the normal
+  pull-request flow (where `tests.yml` runs and must pass before merge).
+- `git tag v2.0.x && git push --tags` against a commit that bypassed PR
+  CI — for example a direct push to a feature branch that never opened a
+  PR, or a commit whose `tests.yml` run was cancelled — will still fire
+  `release.yml`, but the workflow will exit on the first job with an
+  error pointing at the missing or red `tests.yml` run.
+- If you are tagging a fresh merge commit, wait for the post-merge
+  `tests.yml` push run on `main` to go green before pushing the tag;
+  otherwise `verify-tests` may race and find the run still in progress.
+
+The gate is enforced in workflow YAML rather than via a branch-protection
+rule because tag pushes do not go through branch protection, and we want
+the same enforcement whether the tag is pushed locally or created via
+release-please.
+
+---
+
 ## Regenerating NOTICES.txt
 
 `NOTICES.txt` is auto-generated from the project SBOM (`sbom.json`) by

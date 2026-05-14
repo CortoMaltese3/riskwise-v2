@@ -4,8 +4,10 @@ import L from "leaflet";
 import "leaflet-simple-map-screenshoter";
 
 import RiskWiseClient from "../lib/RiskWiseClient";
-import useStore from "../store";
-import useWorkspaceStore from "../store/workspaceSlice";
+import useResultsStore from "../store/useResultsStore";
+import useUIStore from "../store/useUIStore";
+import useWorkspaceStore from "../store/useWorkspaceStore";
+import { TABS } from "../components/main/tabs";
 
 const captureMapBase64 = (map) =>
   new Promise((resolve, reject) => {
@@ -28,11 +30,20 @@ const captureChartBase64 = (chartInstance) => {
   return Promise.resolve(chartInstance.toBase64Image("image/png", 1).split(",")[1]);
 };
 
-const captureToScenario = async ({ scenarioId, snapshotType, base64 }) => {
-  const response = await RiskWiseClient.createSnapshot(scenarioId, {
+const captureToScenario = async ({ scenarioId, snapshotType, base64, surface }) => {
+  // ``surface`` is the originating UI domain (#362). The backend accepts it
+  // as optional so legacy callers stay valid, but every code path in this
+  // module now passes it so the snapshot can be routed into the correct
+  // PDF section later. Undefined surfaces are dropped from the body to keep
+  // the JSON minimal and avoid sending ``surface: undefined``.
+  const body = {
     snapshot_type: snapshotType,
     image_base64: base64,
-  });
+  };
+  if (surface) {
+    body.surface = surface;
+  }
+  const response = await RiskWiseClient.createSnapshot(scenarioId, body);
   if (!(response?.success && response.result?.status?.code === 2000)) {
     throw new Error(response?.error?.message || "Snapshot save failed");
   }
@@ -43,29 +54,26 @@ export { captureMapBase64, captureChartBase64, captureToScenario };
 
 export const useMapTools = () => {
   const { t } = useTranslation();
-  const {
-    activeMap,
-    activeMapRef,
-    activeViewControl,
-    addReport,
-    isScenarioRunCompleted,
-    reports,
-    scenarioRunCode,
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-    selectedAnnualGrowth,
-    selectedCountry,
-    selectedExposureEconomic,
-    selectedExposureNonEconomic,
-    selectedHazard,
-    selectedReport,
-    selectedScenario,
-    selectedSubTab,
-    selectedTimeHorizon,
-    waterfallChartRef,
-    costBenefitChartRef,
-  } = useStore();
+  const activeMap = useUIStore((s) => s.activeMap);
+  const activeMapRef = useUIStore((s) => s.activeMapRef);
+  const activeViewControl = useUIStore((s) => s.activeViewControl);
+  const addReport = useUIStore((s) => s.addReport);
+  const reports = useUIStore((s) => s.reports);
+  const selectedReport = useUIStore((s) => s.selectedReport);
+  const selectedTab = useUIStore((s) => s.selectedTab);
+  const setAlertMessage = useUIStore((s) => s.setAlertMessage);
+  const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
+  const waterfallChartRef = useUIStore((s) => s.waterfallChartRef);
+  const costBenefitChartRef = useUIStore((s) => s.costBenefitChartRef);
+  const isScenarioRunCompleted = useResultsStore((s) => s.isScenarioRunCompleted);
+  const scenarioRunCode = useWorkspaceStore((s) => s.scenarioRunCode);
+  const selectedAnnualGrowth = useWorkspaceStore((s) => s.selectedAnnualGrowth);
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedExposure = useWorkspaceStore((s) => s.selectedExposure);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const selectedScenario = useWorkspaceStore((s) => s.selectedScenario);
+  const selectedTimeHorizon = useWorkspaceStore((s) => s.selectedTimeHorizon);
 
   const saveBase64Screenshot = (base64data, filePath) => {
     return new Promise((resolve, reject) => {
@@ -145,11 +153,9 @@ export const useMapTools = () => {
     } else if (activeMap === "exposure") {
       title = `${t(`results_report_card_hazard_type_${activeMap}`)} ${t(
         "map_legend_legacy_title_map_suffix"
-      )} ${t("map_legend_legacy_title_of_suffix")} ${
-        selectedExposureEconomic
-          ? t(`results_report_card_exposure_${selectedExposureEconomic}`)
-          : t(`results_report_card_exposure_${selectedExposureNonEconomic}`)
-      } ${t("map_legend_legacy_title_in_suffix")} ${t(
+      )} ${t("map_legend_legacy_title_of_suffix")} ${t(
+        `results_report_card_exposure_${selectedExposure}`
+      )} ${t("map_legend_legacy_title_in_suffix")} ${t(
         `results_report_card_country_${selectedCountry}`
       )}`;
     } else {
@@ -157,11 +163,9 @@ export const useMapTools = () => {
         "map_legend_legacy_title_map_suffix"
       )} ${t("map_legend_legacy_title_of_suffix")} ${t(
         `results_report_card_hazard_${selectedHazard}`
-      )} ${t("map_legend_legacy_title_on_suffix")} ${
-        selectedExposureEconomic
-          ? t(`results_report_card_exposure_${selectedExposureEconomic}`)
-          : t(`results_report_card_exposure_${selectedExposureNonEconomic}`)
-      } ${t("map_legend_legacy_title_in_suffix")} ${t(
+      )} ${t("map_legend_legacy_title_on_suffix")} ${t(
+        `results_report_card_exposure_${selectedExposure}`
+      )} ${t("map_legend_legacy_title_in_suffix")} ${t(
         `results_report_card_country_${selectedCountry}`
       )}`;
     }
@@ -185,9 +189,7 @@ export const useMapTools = () => {
           const outputData = {
             id: id,
             scenarioId: `${scenarioRunCode}`,
-            data: `${selectedCountry} - ${selectedHazard} - ${selectedScenario} - ${
-              selectedExposureEconomic ? selectedExposureEconomic : selectedExposureNonEconomic
-            } - ${selectedTimeHorizon} - ${selectedAnnualGrowth}`,
+            data: `${selectedCountry} - ${selectedHazard} - ${selectedScenario} - ${selectedExposure} - ${selectedTimeHorizon} - ${selectedAnnualGrowth}`,
             image: filepath,
             title: getSaveMapTitle(),
             type: `${activeMap}_map_data`,
@@ -234,13 +236,11 @@ export const useMapTools = () => {
       setAlertShowMessage(true);
     }
 
-    // Checks if the scenario has finished running, the selected sub tab is Risk
-    // and the selected view control is the display chart
-    if (
-      (isScenarioRunCompleted || selectedReport) &&
-      activeViewControl === "display_chart" &&
-      selectedSubTab === 0
-    ) {
+    const onChart = activeViewControl === "display_chart";
+    const isWaterfall = onChart && selectedTab === TABS.RISK;
+    const isCostBenefit = onChart && selectedTab === TABS.ADAPTATION;
+
+    if ((isScenarioRunCompleted || selectedReport) && isWaterfall) {
       const id = new Date().getTime().toString();
       const destinationFile = `${reportPath}\\${scenarioRunCode}\\snapshot_risk_plot_data_${id}.png`;
 
@@ -249,17 +249,13 @@ export const useMapTools = () => {
           const outputData = {
             id: id,
             scenarioId: `${scenarioRunCode}`,
-            data: `${selectedCountry} - ${selectedHazard} - ${selectedScenario} - ${
-              selectedExposureEconomic ? selectedExposureEconomic : selectedExposureNonEconomic
-            } - ${selectedTimeHorizon} - ${selectedAnnualGrowth}`,
+            data: `${selectedCountry} - ${selectedHazard} - ${selectedScenario} - ${selectedExposure} - ${selectedTimeHorizon} - ${selectedAnnualGrowth}`,
             image: destinationFile,
             title: `${t("results_report_card_risk_plot_title")} ${t(
               `results_report_card_hazard_${selectedHazard}`
-            )}${t("map_legend_legacy_title_on_suffix")} ${
-              selectedExposureEconomic
-                ? t(`results_report_card_exposure_${selectedExposureEconomic}`)
-                : t(`results_report_card_exposure_${selectedExposureNonEconomic}`)
-            } - ${t(`results_report_card_country_${selectedCountry}`)}`,
+            )}${t("map_legend_legacy_title_on_suffix")} ${t(
+              `results_report_card_exposure_${selectedExposure}`
+            )} - ${t(`results_report_card_country_${selectedCountry}`)}`,
             type: "risk_plot_data",
           };
           addReport(outputData);
@@ -269,13 +265,7 @@ export const useMapTools = () => {
         });
     }
 
-    // Checks if the scenario has finished running, the selected sub tab is Adaptation
-    // and the selected view control is the display chart
-    if (
-      (isScenarioRunCompleted || selectedReport) &&
-      activeViewControl === "display_chart" &&
-      selectedSubTab === 1
-    ) {
+    if ((isScenarioRunCompleted || selectedReport) && isCostBenefit) {
       const id = new Date().getTime().toString();
       const destinationFile = `${reportPath}\\${scenarioRunCode}\\snapshot_adaptation_plot_data_${id}.png`;
 
@@ -284,9 +274,7 @@ export const useMapTools = () => {
           const outputData = {
             id: id,
             scenarioId: `${scenarioRunCode}`,
-            data: `${selectedCountry} - ${selectedHazard} - ${selectedScenario} - ${
-              selectedExposureEconomic ? selectedExposureEconomic : selectedExposureNonEconomic
-            } - ${selectedTimeHorizon} - ${selectedAnnualGrowth}`,
+            data: `${selectedCountry} - ${selectedHazard} - ${selectedScenario} - ${selectedExposure} - ${selectedTimeHorizon} - ${selectedAnnualGrowth}`,
             image: destinationFile,
             title: `${t("results_report_card_adaptation_plot_title")} ${t(
               `results_report_card_hazard_${selectedHazard}`
@@ -315,15 +303,27 @@ export const useMapTools = () => {
     try {
       let base64;
       let snapshotType;
+      // ``surface`` records the originating UI domain (#362) so the PDF
+      // report can route each snapshot into the right section. For maps we
+      // read ``activeMap`` (hazard / exposure / impact); the two chart
+      // surfaces map to fixed domains (waterfall -> impact, cost-benefit ->
+      // adaptation) so we do not need a UI state lookup for them.
+      let surface;
+      const onChart = activeViewControl === "display_chart";
+      const isWaterfall = onChart && selectedTab === TABS.RISK;
+      const isCostBenefit = onChart && selectedTab === TABS.ADAPTATION;
       if (activeViewControl === "display_map") {
         base64 = await captureMapBase64(activeMapRef);
         snapshotType = "map";
-      } else if (activeViewControl === "display_chart" && selectedSubTab === 0) {
+        surface = activeMap;
+      } else if (isWaterfall) {
         base64 = await captureChartBase64(waterfallChartRef);
         snapshotType = "waterfall";
-      } else if (activeViewControl === "display_chart" && selectedSubTab === 1) {
+        surface = "impact";
+      } else if (isCostBenefit) {
         base64 = await captureChartBase64(costBenefitChartRef);
         snapshotType = "cost_benefit";
+        surface = "adaptation";
       } else {
         return null;
       }
@@ -331,6 +331,7 @@ export const useMapTools = () => {
         scenarioId: scenarioRunCode,
         snapshotType,
         base64,
+        surface,
       });
       setAlertMessage(t("alert_message_snapshot_saved"));
       setAlertSeverity("success");

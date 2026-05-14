@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Removed
+
+- **Excel scenario report export** (#355) — superseded by the enriched PDF
+  report (#350–#354, #377–#380). The
+  `POST /api/v1/scenarios/{scenario_id}/export` endpoint,
+  `backend/run_export_report.py`, `backend/report/report_handler.py`, the
+  matching "Export Excel" workspace row action, and the `xlsxwriter` runtime
+  dependency are all gone.
+
 ### Phase 6 — Engine Migration (CLIMADA → `climate-lama-engine`)
 
 Operationalises [DECISIONS.md D26](docs/DECISIONS.md#d26--adopt-climate-lama-engine-as-the-runtime-compute-layer-post-v20)

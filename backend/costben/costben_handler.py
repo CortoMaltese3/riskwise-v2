@@ -30,20 +30,20 @@ import duckdb
 from backend.constants import DATA_TEMP_DIR
 from backend.engine.types import CostBenefitResult
 from backend.hazard.hazard_handler import HazardHandler
-from backend.logger_config import LoggerConfig
+from backend.logging_config import get_logger
+from backend.models.errors import EngineError
 
 WATERFALL_DATA_FILENAME = "risks_waterfall_data.json"
 COSTBEN_DATA_FILENAME = "cost_benefit_data.json"
 
 hazard_handler = HazardHandler()
-logger = LoggerConfig(logger_types=["file"])
+logger = get_logger("backend.costben.costben_handler")
 
 
 def _calculate_via_engine(
     hazard_present: Any,
     entity_present: Any,
     hazard_future: Any,
-    entity_future: Any,
     future_year: int | None,
 ) -> list[CostBenefitResult]:
     """Run ``cc.calc_cost_benefit`` via the engine adapter and normalise the output.
@@ -53,15 +53,17 @@ def _calculate_via_engine(
     ``EntityBundle.measures`` as ``list[MeasureSpec]`` and stores the
     discount rate as a scalar, so no per-call conversion is needed.
 
-    Returns an empty list when there is no future projection to compare
-    against (historical runs pass ``hazard_future=None``). The engine's
-    ``calc_cost_benefit`` divides by the present-vs-future risk delta,
-    which collapses to zero when the same hazard stands in for both —
-    and the runner discards the result for historical runs anyway.
+    Returns an empty list only when the present entity carries no measures —
+    no measures, no cost-benefit. Historical runs (``hazard_future=None``)
+    still produce non-zero benefits: ``cc_hazard_present`` is substituted for
+    the future hazard below, the engine's per-year benefit collapses to
+    ``avoided_present + (avoided_future − avoided_present) × time_dep =
+    avoided_present`` (because ``avoided_future = avoided_present`` when the
+    hazards are identical), and the total benefit becomes
+    ``avoided_present × Σ (1+g)^i × (1+r)^(−i)`` over the run's time horizon —
+    a finite, positive number whenever a measure reduces today's risk.
     """
     if not _has_measures(entity_present):
-        return []
-    if hazard_future is None or entity_future is None:
         return []
 
     from backend.engine.adapter import (
@@ -96,8 +98,8 @@ def _calculate_via_engine(
             present_year=present_year,
             future_year=future_year_int,
         )
-    except Exception as exc:
-        raise Exception(f"Failed to calculate cost-benefit via engine: {exc}") from exc
+    except (AttributeError, TypeError, ValueError, RuntimeError, ImportError) as exc:
+        raise EngineError(f"Failed to calculate cost-benefit via engine: {exc}") from exc
 
     return [
         CostBenefitResult(
@@ -221,8 +223,8 @@ class CostBenefitHandler:
                 "source_reference",
             ]
             return [dict(zip(cols, r, strict=True)) for r in rows]
-        except Exception as exc:
-            logger.log("error", f"Failed to fetch measures from DB. More info: {exc}")
+        except duckdb.Error as exc:
+            logger.error(f"Failed to fetch measures from DB. More info: {exc}")
             return []
 
     def calculate_cost_benefit(
@@ -230,7 +232,6 @@ class CostBenefitHandler:
         hazard_present: Any,
         entity_present: Any,
         hazard_future: Any = None,
-        entity_future: Any = None,
         future_year: int = None,
     ) -> list[CostBenefitResult]:
         """Calculate per-measure cost-benefit results via the climate-lama-engine adapter.
@@ -238,11 +239,11 @@ class CostBenefitHandler:
         Returns a normalised ``list[CostBenefitResult]`` — one entry per measure,
         with ``cost`` / ``benefit`` / ``bcr`` plus the no-measure baseline risks
         needed by the waterfall payload. With zero measures, returns an empty list
-        without raising.
+        without raising. Historical runs (``hazard_future=None``) reuse
+        ``hazard_present`` as the future hazard so the engine still produces
+        per-measure benefits — see :func:`_calculate_via_engine` for the math.
         """
-        return _calculate_via_engine(
-            hazard_present, entity_present, hazard_future, entity_future, future_year
-        )
+        return _calculate_via_engine(hazard_present, entity_present, hazard_future, future_year)
 
     def compute_waterfall_data(
         self,
@@ -318,15 +319,45 @@ class CostBenefitHandler:
             with open(filename, "w", encoding="utf-8") as fh:
                 json.dump(payload, fh)
             return payload
-        except Exception as e:
-            logger.log("error", f"Failed to compute waterfall data. More info: {e}")
-            raise Exception(f"Failed to compute waterfall data: {e}") from e
+        except (AttributeError, KeyError, TypeError, ValueError, OSError, RuntimeError) as e:
+            logger.error(f"Failed to compute waterfall data. More info: {e}")
+            raise EngineError(f"Failed to compute waterfall data: {e}") from e
+
+    def build_display_name_lookup(
+        self, conn: duckdb.DuckDBPyConnection | None = None
+    ) -> dict[str, str]:
+        """Return ``{code: name}`` for catalog rows with a non-empty code.
+
+        Used by :meth:`compute_cost_benefit_data` to translate the engine's
+        opaque ``measure_name`` (e.g. ``"GR"``) into the catalog's i18n key
+        (e.g. ``"adaptation_measures_green_roofs"``) so the chart can
+        render translated full names. See issue #429. When ``conn`` is
+        omitted the process-wide DuckDB connection is resolved on demand,
+        keeping the run_scenario caller free of DB-handle plumbing.
+        """
+        try:
+            if conn is None:
+                from backend.db.connection import get_connection
+
+                conn = get_connection()
+            rows = conn.execute(
+                "SELECT code, name FROM adaptation_measures "
+                "WHERE code IS NOT NULL AND code <> ''"
+            ).fetchall()
+        except (duckdb.Error, OSError) as exc:
+            logger.warning(f"Failed to load measure code lookup: {exc}")
+            return {}
+        # Multiple catalog rows can share the same code (different hazards);
+        # the i18n key is identical across them, so last-write wins is safe.
+        return {str(code): str(name) for code, name in rows if code and name}
 
     def compute_cost_benefit_data(
         self,
         cost_benefit_results: list[CostBenefitResult],
         entity_present: Any,
-        entity_future: Any,
+        future_year: int,
+        entity_future: Any = None,
+        display_name_lookup: dict[str, str] | None = None,
     ) -> dict:
         """Compute the structured cost-benefit payload for the frontend.
 
@@ -337,22 +368,40 @@ class CostBenefitHandler:
         CLIMADA branch produced it. The result is persisted as JSON in
         ``DATA_TEMP_DIR`` so ``run_fetch_costbenefit.py`` can serve it
         through the FastAPI endpoint after the scenario run completes.
+
+        ``future_year`` is taken from the scenario request so the payload's
+        time horizon reflects the user's selection even for historical runs,
+        where no future :class:`EntityBundle` is constructed.
+
+        ``display_name_lookup`` is an optional ``{code: i18n_key}`` map
+        produced by :meth:`build_display_name_lookup`. When supplied, each
+        measure's ``display_name`` field is set to the matching i18n key
+        so the frontend can render the translated full measure name. Codes
+        with no entry fall through with ``display_name`` unset, and the
+        chart renders the raw engine name (#429).
         """
         try:
-            measures = [
-                {
+            lookup = display_name_lookup or {}
+            measures = []
+            for r in cost_benefit_results:
+                entry: dict[str, Any] = {
                     "name": r.name,
                     "cost": r.cost,
                     "benefit": r.benefit,
                     "benefit_cost_ratio": r.bcr,
                 }
-                for r in cost_benefit_results
-            ]
+                display = lookup.get(r.name)
+                if display:
+                    entry["display_name"] = display
+                measures.append(entry)
 
+            future_year_int = (
+                int(entity_future.ref_year) if entity_future is not None else int(future_year)
+            )
             payload = {
                 "currency_unit": str(entity_present.exposures.value_unit or ""),
                 "present_year": int(entity_present.ref_year),
-                "future_year": int(entity_future.ref_year),
+                "future_year": future_year_int,
                 "measures": measures,
             }
 
@@ -360,6 +409,6 @@ class CostBenefitHandler:
             with open(filename, "w", encoding="utf-8") as fh:
                 json.dump(payload, fh)
             return payload
-        except Exception as e:
-            logger.log("error", f"Failed to compute cost-benefit data. More info: {e}")
-            raise Exception(f"Failed to compute cost-benefit data: {e}") from e
+        except (AttributeError, KeyError, TypeError, ValueError, OSError) as e:
+            logger.error(f"Failed to compute cost-benefit data. More info: {e}")
+            raise EngineError(f"Failed to compute cost-benefit data: {e}") from e

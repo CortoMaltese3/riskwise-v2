@@ -1,14 +1,12 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
-  Drawer,
   List,
   ListItem,
   ListItemButton,
@@ -25,7 +23,7 @@ import BugReportIcon from "@mui/icons-material/BugReport";
 import InfoIcon from "@mui/icons-material/Info";
 import KeyboardIcon from "@mui/icons-material/Keyboard";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import packageJson from "../../../package.json";
 
 const SHORTCUTS = [
@@ -34,14 +32,14 @@ const SHORTCUTS = [
   { keys: "Esc", actionKey: "help_shortcut_close" },
 ];
 
-// Help menu (issue #88). Drawer surfaced from the top-bar Help icon or the
+// Help menu (issue #88). Dialog surfaced from the top-bar Help icon or the
 // F1 / Shift+? keybinding mounted in App.jsx. Keeps four entry points:
 // tour list, walkthrough restart, shortcuts dialog, and version info.
 const HelpMenu = () => {
   const { t } = useTranslation();
-  const helpMenuOpen = useStore((s) => s.helpMenuOpen);
-  const setHelpMenuOpen = useStore((s) => s.setHelpMenuOpen);
-  const setGlossaryOpen = useStore((s) => s.setGlossaryOpen);
+  const helpMenuOpen = useUIStore((s) => s.helpMenuOpen);
+  const setHelpMenuOpen = useUIStore((s) => s.setHelpMenuOpen);
+  const setGlossaryOpen = useUIStore((s) => s.setGlossaryOpen);
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
@@ -54,16 +52,15 @@ const HelpMenu = () => {
 
   return (
     <>
-      <Drawer
-        anchor="right"
+      <Dialog
         open={helpMenuOpen}
         onClose={close}
-        PaperProps={{ sx: { width: 320 } }}
+        maxWidth="sm"
+        fullWidth
+        aria-labelledby="help-menu-dialog-title"
       >
-        <Box role="presentation" sx={{ p: 2 }}>
-          <Typography variant="h6" component="h2" gutterBottom>
-            {t("help_menu_title")}
-          </Typography>
+        <DialogTitle id="help-menu-dialog-title">{t("help_menu_title")}</DialogTitle>
+        <DialogContent dividers>
           <List>
             <ListItemButton onClick={handleOpenGlossary}>
               <ListItemIcon>
@@ -101,8 +98,8 @@ const HelpMenu = () => {
               />
             </ListItem>
           </List>
-        </Box>
-      </Drawer>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={shortcutsOpen}

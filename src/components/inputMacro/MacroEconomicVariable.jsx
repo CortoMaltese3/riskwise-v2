@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Card, CardContent, TextField, Typography } from "@mui/material";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { cardTitleSx, disabledFieldSx, getInputCardSx } from "../input/inputCardStyles";
 
 const MacroEconomicVariable = () => {
-  const { setSelectedMacroCard, setActiveViewControl, selectedMacroVariable } = useStore();
+  const setSelectedMacroCard = useUIStore((s) => s.setSelectedMacroCard);
+  const setActiveViewControl = useUIStore((s) => s.setActiveViewControl);
+  const selectedMacroVariable = useWorkspaceStore((s) => s.selectedMacroVariable);
   const { t } = useTranslation();
   const [clicked, setClicked] = useState(false);
-  const [cardState, setCardState] = useState("default");
+  const cardState = selectedMacroVariable ? "valid" : "default";
 
   const handleMouseDown = () => {
     setClicked(true);
@@ -23,10 +26,6 @@ const MacroEconomicVariable = () => {
     setSelectedMacroCard("macroVariable");
     setActiveViewControl("display_macro_parameters");
   };
-
-  useEffect(() => {
-    setCardState(selectedMacroVariable ? "valid" : "default");
-  }, [selectedMacroVariable]);
 
   return (
     <Card

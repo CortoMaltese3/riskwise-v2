@@ -104,7 +104,6 @@ def _make_runner(entity, hazard):
     from backend.run_scenario import RequestData, RunScenario
 
     runner = RunScenario.__new__(RunScenario)
-    runner.base_handler = MagicMock()
     runner.costben_handler = MagicMock()  # no measures → no real costben call
     runner.entity_handler = EntityHandler()
     runner.exposure_handler = MagicMock()  # no geojson I/O in the smoke
@@ -118,8 +117,8 @@ def _make_runner(entity, hazard):
         country_name="Egypt",
         country_code="EGY",
         entity_filename="",
-        exposure_economic="generic",
-        exposure_non_economic="",
+        exposure_type="generic",
+        asset_type="economic",
         hazard_filename="",
         hazard_type="flood",
         hazard_code="FL",
@@ -135,7 +134,15 @@ def _make_runner(entity, hazard):
     return runner
 
 
-def test_execute_runs_without_setting_error_status() -> None:
+def test_execute_runs_without_setting_error_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # ``save_parquet_file`` is a module-level helper now (#246). The smoke
+    # test does not exercise the parquet pipeline and the unit-test env
+    # may not ship pyarrow, so swap it out for a no-op.
+    from backend import run_scenario
+
+    monkeypatch.setattr(run_scenario, "save_parquet_file", lambda *a, **k: None)
     runner = _make_runner(_make_entity(), _make_hazard())
     strategy = _StubStrategy(_make_entity(), _make_hazard())
 

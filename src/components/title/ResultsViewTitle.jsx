@@ -2,10 +2,11 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Typography } from "@mui/material";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import { TAB_CONFIG } from "../main/tabs";
 
 const ResultsViewTitle = () => {
-  const { selectedTab } = useStore();
+  const selectedTab = useUIStore((s) => s.selectedTab);
   const { t } = useTranslation();
 
   return (
@@ -24,7 +25,7 @@ const ResultsViewTitle = () => {
           borderRadius: (theme) => theme.spacing(0.5),
         }}
       >
-        {t(`results_view_tab_${selectedTab}_title`)}
+        {t(TAB_CONFIG[selectedTab]?.resultsTitleKey ?? "")}
       </Typography>
     </Box>
   );

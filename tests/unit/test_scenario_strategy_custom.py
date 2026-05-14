@@ -80,17 +80,20 @@ class TestCustomLoadEntityAndExposure:
 
 
 class TestCustomLoadHazardPresent:
-    def test_historical_with_uploaded_file_uses_that_file(self, strategy) -> None:
+    def test_historical_with_uploaded_file_uses_that_file(
+        self, strategy, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from backend import scenario_strategy
+
+        monkeypatch.setattr(scenario_strategy, "check_file_type", lambda _path: "raster")
         request_data = _request_data(
             scenario="historical",
             hazard_filename="user_hist.tif",
         )
         hazard_handler = MagicMock()
-        base_handler = MagicMock()
-        base_handler.check_file_type.return_value = "raster"
         hazard_handler.get_hazard.return_value = _hazard_arrays()
 
-        result = strategy.load_hazard_present(request_data, hazard_handler, base_handler, "mm")
+        result = strategy.load_hazard_present(request_data, hazard_handler, "mm")
 
         hazard_handler.get_hazard.assert_called_once_with(
             hazard_type="flood",
@@ -100,10 +103,15 @@ class TestCustomLoadHazardPresent:
         assert isinstance(result, HazardArrays)
         assert result.intensity_unit == "mm"
 
-    def test_future_with_uploaded_file_falls_back_to_era_historical(self, strategy) -> None:
+    def test_future_with_uploaded_file_falls_back_to_era_historical(
+        self, strategy, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """When the user uploads only a future hazard file, the historical
         hazard is resolved from the ERA seed for that country — matching
         pre-refactor behaviour."""
+        from backend import scenario_strategy
+
+        monkeypatch.setattr(scenario_strategy, "check_file_type", lambda _path: "raster")
         request_data = _request_data(
             scenario="rcp85",
             hazard_filename="user_future.tif",
@@ -112,7 +120,7 @@ class TestCustomLoadHazardPresent:
         hazard_handler.get_hazard_filename.return_value = "tha_fl_hist.h5"
         hazard_handler.get_hazard.return_value = _hazard_arrays()
 
-        result = strategy.load_hazard_present(request_data, hazard_handler, MagicMock(), "m")
+        result = strategy.load_hazard_present(request_data, hazard_handler, "m")
 
         hazard_handler.get_hazard_filename.assert_called_once_with("FL", "THA", "historical")
         hazard_handler.get_hazard.assert_called_once_with(
@@ -128,23 +136,26 @@ class TestCustomLoadHazardPresent:
         hazard_handler = MagicMock()
 
         with pytest.raises(ValueError, match="custom-data import flow"):
-            strategy.load_hazard_present(request_data, hazard_handler, MagicMock(), "m")
+            strategy.load_hazard_present(request_data, hazard_handler, "m")
 
         hazard_handler.get_hazard.assert_not_called()
 
 
 class TestCustomLoadHazardFuture:
-    def test_with_uploaded_file_loads_future_from_user_file(self, strategy) -> None:
+    def test_with_uploaded_file_loads_future_from_user_file(
+        self, strategy, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from backend import scenario_strategy
+
+        monkeypatch.setattr(scenario_strategy, "check_file_type", lambda _path: "hdf5")
         request_data = _request_data(
             scenario="rcp85",
             hazard_filename="user_future.h5",
         )
         hazard_handler = MagicMock()
-        base_handler = MagicMock()
-        base_handler.check_file_type.return_value = "hdf5"
         hazard_handler.get_hazard.return_value = _hazard_arrays()
 
-        result = strategy.load_hazard_future(request_data, hazard_handler, base_handler, "m")
+        result = strategy.load_hazard_future(request_data, hazard_handler, "m")
 
         hazard_handler.get_hazard.assert_called_once_with(
             hazard_type="flood",
@@ -160,7 +171,7 @@ class TestCustomLoadHazardFuture:
         hazard_handler = MagicMock()
 
         with pytest.raises(ValueError, match="custom-data import flow"):
-            strategy.load_hazard_future(request_data, hazard_handler, MagicMock(), "m")
+            strategy.load_hazard_future(request_data, hazard_handler, "m")
 
         hazard_handler.get_hazard.assert_not_called()
 

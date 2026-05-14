@@ -47,6 +47,7 @@ from typing import Any
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from starlette.background import BackgroundTask
 
@@ -80,9 +81,8 @@ from backend.models import (
     DeleteScenarioResponse,
     DeleteSnapshotResponse,
     ErrorResponse,
-    ExportReportRequest,
-    ExportReportResponse,
     HealthResponse,
+    HydrateScenarioResponse,
     JobAcceptedResponse,
     MacroChartDataRequest,
     MacroChartDataResponse,
@@ -105,13 +105,17 @@ from backend.models import (
     TempClearResponse,
     UpdateSnapshotRequest,
     UpdateSnapshotResponse,
+    UpdateUserSettingsRequest,
+    UserSettingsResponse,
     WaterfallResponse,
     WorkspaceExportResponse,
     WorkspaceImportRequest,
     WorkspaceImportResponse,
 )
+from backend.models.errors import RiskWiseError
 from backend.progress import ProgressEvent, progress_callback_var
 from backend.provenance import ManifestError, verify_manifest
+from backend.uploads import enforce_upload_size_limit
 
 API_PREFIX = "/api/v1"
 
@@ -221,10 +225,6 @@ def _dispatch_sync(script_name: str, data: Any) -> dict:
         from backend.run_clear_temp_dir import RunClearTempDir
 
         return RunClearTempDir().run_clear_temp_dir()
-    if script_name == "run_export_report.py":
-        from backend.run_export_report import RunExportReport
-
-        return RunExportReport(data).run_export_report()
     if script_name == "run_fetch_macro_chart_data.py":
         from backend.run_fetch_macro_chart_data import RunFetchMacroChartData
 
@@ -326,6 +326,17 @@ async def _lifespan(_app: FastAPI):
 
 app = FastAPI(title="RISK WISE Backend", version="2.0.0-dev", lifespan=_lifespan)
 
+# The renderer's print BrowserWindow (origin ``app://.``) cross-origin
+# ``fetch()``es snapshot image bytes so ``printToPDF`` can gate on real load
+# completion via blob URLs (see ``src/components/workspace/ScenarioPrintView``).
+# Every other backend call routes through preload IPC in the main process, so
+# this is the only path that needs CORS — scope it accordingly.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["app://."],
+    allow_methods=["GET"],
+)
+
 
 @app.middleware("http")
 async def _request_id_middleware(request: Request, call_next):
@@ -389,6 +400,18 @@ async def _validation_exception_handler(
     )
 
 
+@app.exception_handler(RiskWiseError)
+async def _domain_exception_handler(_request: Request, exc: RiskWiseError) -> JSONResponse:
+    # Boundary translation for the project's domain exception taxonomy
+    # (architecture rule #7): every ``RiskWiseError`` subclass advertises
+    # a ``code`` and ``http_status`` so the frontend switches on a stable
+    # snake_case identifier instead of parsing free-form Python messages.
+    return JSONResponse(
+        status_code=exc.http_status,
+        content=_make_error(exc.code, exc.message, str(exc) if str(exc) != exc.message else None),
+    )
+
+
 @app.exception_handler(Exception)
 async def _unhandled_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
     # Scenario 5 (job isolation): any unhandled exception from a handler
@@ -402,6 +425,35 @@ async def _unhandled_exception_handler(_request: Request, exc: Exception) -> JSO
 @app.get(f"{API_PREFIX}/health", response_model=HealthResponse)
 async def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get(f"{API_PREFIX}/settings", response_model=UserSettingsResponse)
+async def get_settings_endpoint() -> dict:
+    from dataclasses import asdict
+
+    from backend.db import get_user_settings
+
+    row = await asyncio.to_thread(get_user_settings)
+    return {"data": asdict(row), "status": _status_ok()}
+
+
+@app.patch(f"{API_PREFIX}/settings", response_model=UserSettingsResponse)
+async def patch_settings_endpoint(payload: UpdateUserSettingsRequest) -> dict:
+    from dataclasses import asdict
+
+    from backend.db import update_user_settings
+
+    # ``model_fields_set`` lets us distinguish "the client omitted this key"
+    # from "the client explicitly sent null"; the store treats _UNSET as
+    # "leave column untouched" so a PATCH that only touches the locale never
+    # blanks the currency (mirrors the snapshot title/caption pattern in #350).
+    kwargs: dict = {}
+    if "report_locale" in payload.model_fields_set and payload.report_locale is not None:
+        kwargs["report_locale"] = payload.report_locale
+    if "report_currency" in payload.model_fields_set and payload.report_currency is not None:
+        kwargs["report_currency"] = payload.report_currency
+    row = await asyncio.to_thread(update_user_settings, **kwargs)
+    return {"data": asdict(row), "status": _status_ok()}
 
 
 @app.post(f"{API_PREFIX}/scenario/run", response_model=JobAcceptedResponse)
@@ -495,7 +547,7 @@ async def _execute_scenario(
                     **_make_error("cancelled", "Scenario run was cancelled"),
                 }
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - SSE stream isolation boundary
             # Scenario 5: CLIMADA blew up but FastAPI must stay alive. The
             # structured error goes out on the SSE stream; no other job is
             # affected because we never share state across jobs.
@@ -537,6 +589,11 @@ async def measure_datasets() -> dict:
 async def measure_datasets_upload(payload: MeasureSetUploadRequest) -> dict:
     from backend.measures.measure_dataset_handler import MeasureDatasetError, import_dataset
 
+    # Area-18 zip-bomb defence: cap upload size before the xlsx parser
+    # touches the file. ``enforce_upload_size_limit`` raises
+    # ``UploadTooLargeError`` (413 ``upload_too_large``) which the global
+    # ``RiskWiseError`` handler translates to a structured envelope.
+    enforce_upload_size_limit(Path(payload.xlsx_path), label="measures workbook")
     try:
         metadata = await asyncio.to_thread(import_dataset, payload.name, Path(payload.xlsx_path))
     except MeasureDatasetError as exc:
@@ -601,14 +658,6 @@ async def get_scenario_endpoint(scenario_id: str) -> dict:
     }
 
 
-@app.post(f"{API_PREFIX}/scenarios/{{scenario_id}}/export", response_model=ExportReportResponse)
-async def export_scenario(scenario_id: str, payload: ExportReportRequest) -> dict:
-    if payload.exportType == "excel":
-        body = {**payload.model_dump(exclude_none=True), "scenarioRunCode": scenario_id}
-        return await _dispatch("run_export_report.py", body)
-    return {"data": {"status": "delegated_to_electron"}, "status": _status_ok()}
-
-
 @app.patch(f"{API_PREFIX}/scenarios/{{scenario_id}}", response_model=SaveScenarioResponse)
 async def patch_scenario_endpoint(scenario_id: str, payload: PatchScenarioRequest) -> dict:
     from backend.db import patch_scenario_metadata
@@ -665,7 +714,9 @@ async def create_snapshot_endpoint(scenario_id: str, payload: CreateSnapshotRequ
             scenario_id=scenario_id,
             snapshot_type=payload.snapshot_type,
             image=image_bytes,
+            title=payload.title,
             caption=payload.caption,
+            surface=payload.surface,
         )
     except ScenarioNotFound as exc:
         raise HTTPException(status_code=404, detail="Scenario not found") from exc
@@ -692,9 +743,20 @@ async def get_snapshot_image_endpoint(snapshot_id: str):
 async def update_snapshot_endpoint(snapshot_id: str, payload: UpdateSnapshotRequest) -> dict:
     from dataclasses import asdict
 
-    from backend.db import update_snapshot_caption
+    from backend.db import update_snapshot
 
-    row = await asyncio.to_thread(update_snapshot_caption, snapshot_id, payload.caption)
+    # ``model_fields_set`` lets us distinguish "the client omitted this key"
+    # from "the client explicitly sent null". Forwarding only the explicit
+    # fields means a PATCH that touches only the title leaves the caption
+    # untouched (and vice versa) — required by #350 for independent editing.
+    kwargs: dict = {}
+    if "title" in payload.model_fields_set:
+        kwargs["title"] = payload.title
+    if "caption" in payload.model_fields_set:
+        kwargs["caption"] = payload.caption
+    if "surface" in payload.model_fields_set:
+        kwargs["surface"] = payload.surface
+    row = await asyncio.to_thread(update_snapshot, snapshot_id, **kwargs)
     if row is None:
         raise HTTPException(status_code=404, detail="Snapshot not found")
     return {"data": asdict(row), "status": _status_ok()}
@@ -734,6 +796,35 @@ async def delete_scenario_endpoint(scenario_id: str) -> dict:
     if not removed:
         raise HTTPException(status_code=404, detail="Scenario not found")
     return {"data": {"id": scenario_id}, "status": _status_ok()}
+
+
+def _hydrate_scenario_temp_sync(scenario_id: str) -> dict:
+    from backend.run_hydrate_scenario_temp import RunHydrateScenarioTemp
+
+    # Call ``execute`` directly (not ``run``) so ``ScenarioNotFound``
+    # propagates to the endpoint's 404 handler instead of being caught
+    # and converted to a generic error envelope.
+    return RunHydrateScenarioTemp({"scenario_id": scenario_id}).execute()
+
+
+@app.post(
+    f"{API_PREFIX}/scenarios/{{scenario_id}}/hydrate-temp",
+    response_model=HydrateScenarioResponse,
+)
+async def hydrate_scenario_temp_endpoint(scenario_id: str) -> dict:
+    """Rewrite the saved scenario's blobs back into the temp dir.
+
+    Required by the Workspace ``Restore`` flow: the maps and the
+    waterfall/cost-benefit charts read from per-run JSON files, so the
+    renderer cannot show the restored state until those files exist on
+    disk again. See ``backend.run_hydrate_scenario_temp`` for details.
+    """
+    from backend.db import ScenarioNotFound
+
+    try:
+        return await asyncio.to_thread(_hydrate_scenario_temp_sync, scenario_id)
+    except ScenarioNotFound as exc:
+        raise HTTPException(status_code=404, detail="Scenario not found") from exc
 
 
 # Two flavours of the scenario export endpoint live side by side:
@@ -816,6 +907,9 @@ async def macro_datasets() -> dict:
 async def macro_datasets_upload(payload: CredDatasetUploadRequest) -> dict:
     from backend.macroeconomic.cred_dataset_handler import CredDatasetError, import_dataset
 
+    # See ``measure_datasets_upload`` for the rationale; same Area-18 cap
+    # applied before the openpyxl reader is given the file.
+    enforce_upload_size_limit(Path(payload.xlsx_path), label="CRED dataset")
     try:
         metadata = await asyncio.to_thread(import_dataset, payload.name, Path(payload.xlsx_path))
     except CredDatasetError as exc:
@@ -899,6 +993,10 @@ async def custom_data_validate(payload: CustomDataValidateRequest) -> dict:
 async def custom_data_import(payload: CustomDataImportRequest) -> dict:
     from backend.custom_data_handler import CustomDataError, import_pack
 
+    # Same Area-18 cap as the dataset uploads — applied here because the
+    # ZIP gets unpacked into ``user-data/countries/<ISO3>/`` and a 200 MiB
+    # archive of zeros would explode regardless of the layout checks.
+    enforce_upload_size_limit(Path(payload.zip_path), label="custom-data pack")
     try:
         data = await asyncio.to_thread(import_pack, Path(payload.zip_path))
     except CustomDataError as exc:

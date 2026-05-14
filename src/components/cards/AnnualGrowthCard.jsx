@@ -1,29 +1,24 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Card, CardContent, Slider, Typography } from "@mui/material";
-import useStore from "../../store";
+import { Box, Card, CardContent, Slider, Tooltip, Typography } from "@mui/material";
+import useResultsStore from "../../store/useResultsStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
-const populationMarks = [
+// Inclusive range covering both monetary (GDP-like) and population-like
+// growth — the unified slider serves both, with the remarks copy clarifying
+// the dual interpretation.
+const growthMarks = [
   { value: -2, label: "-2%" },
-  { value: 4, label: "4%" },
-];
-const gdpMarks = [
-  { value: 0, label: "0%" },
   { value: 6, label: "6%" },
 ];
 
-const valueText = (value) => {
-  return `${value}`;
-};
+const valueText = (value) => `${value}`;
 
 const AnnualGrowthCard = () => {
-  const {
-    selectedAnnualGrowth,
-    selectedExposureEconomic,
-    selectedExposureNonEconomic,
-    setSelectedAnnualGrowth,
-  } = useStore();
+  const selectedAnnualGrowth = useWorkspaceStore((s) => s.selectedAnnualGrowth);
+  const setSelectedAnnualGrowth = useWorkspaceStore((s) => s.setSelectedAnnualGrowth);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
   const { t } = useTranslation();
 
   const handleGrowthCardSelect = (event, value) => {
@@ -58,178 +53,79 @@ const AnnualGrowthCard = () => {
         >
           {t("card_annualgrowth_title")}
         </Typography>
-        {selectedExposureEconomic && (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center", // Center children horizontally
-              backgroundColor: "secondary.light",
-              borderRadius: (theme) => theme.spacing(1),
-              marginBottom: 2,
-            }}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "secondary.light",
+            borderRadius: (theme) => theme.spacing(1),
+            py: 2.5,
+            px: 0,
+            width: "80%",
+            paddingRight: 2,
+            marginX: "auto",
+            marginBottom: 2,
+          }}
+        >
+          <Typography
+            id="annual-growth-slider"
+            gutterBottom
+            variant="body1"
+            component="div"
+            textAlign="center"
+            color="text.primary"
           >
-            {/* GDP Box */}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center", // Center children horizontally
-                backgroundColor: "secondary.light",
-                borderRadius: (theme) => theme.spacing(1),
-                py: 2.5,
-                px: 0,
-                width: "80%", // Take up half of the parent container
-                paddingRight: 2,
-                marginRight: 2,
-              }}
-            >
-              <Typography
-                id="gdp-slider"
-                gutterBottom
-                variant="body1"
-                component="div"
-                textAlign="center"
-                color="text.primary"
-              >
-                {t("card_annualgrowth_gdp_subtitle")}
-              </Typography>
-              <Slider
-                aria-label={t("input_gdp_selector_aria")}
-                defaultValue={0}
-                getAriaValueText={valueText}
-                onChange={handleGrowthCardSelect} // Updated to the handleSelect function
-                step={0.1}
-                marks={gdpMarks}
-                min={gdpMarks[0].value}
-                max={gdpMarks[1].value}
-                valueLabelDisplay="on" // Changed to "on" to always show the value label
-                value={selectedAnnualGrowth ? parseFloat(selectedAnnualGrowth) : 0}
-                sx={{
-                  color: "secondary.main", // Slider track and thumb color
-                  marginTop: 6,
-                  width: "90%", // Adjust width to be less than container to center properly
-                  "& .MuiSlider-thumb": {
-                    height: 24,
-                    width: 24,
-                    backgroundColor: "common.white",
-                    border: 2,
-                    borderColor: "currentColor",
-                    "&:focus, &:hover, &.Mui-active": {
-                      boxShadow: "inherit",
-                    },
-                  },
-                  "& .MuiSlider-valueLabel": {
-                    color: "black",
-                    variant: "body2",
-                    fontWeight: "bold",
-                    borderRadius: (theme) => theme.spacing(2),
-                    borderColor: "black",
-                    backgroundColor: "secondary.main",
-                  },
-                  "& .MuiSlider-track": {
-                    height: 16,
-                    borderRadius: 4,
-                  },
-                  "& .MuiSlider-rail": {
-                    color: "border.default",
-                    opacity: 1,
-                    height: 8,
-                    borderRadius: 4,
-                  },
-                }}
-              />
-            </Box>
-          </Box>
-        )}
-        {selectedExposureNonEconomic && (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center", // Center children horizontally
-              backgroundColor: "secondary.light",
-              borderRadius: (theme) => theme.spacing(1),
-              marginBottom: 2,
-            }}
+            {t("card_annualgrowth_subtitle")}
+          </Typography>
+          <Tooltip
+            title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
+            placement="top"
           >
-            {/* Population Box */}
-            <Box
+            <Slider
+              aria-label={t("input_annual_growth_selector_aria")}
+              defaultValue={0}
+              getAriaValueText={valueText}
+              onChange={handleGrowthCardSelect}
+              disabled={isScenarioRunning}
+              step={0.1}
+              marks={growthMarks}
+              min={growthMarks[0].value}
+              max={growthMarks[1].value}
+              valueLabelDisplay="on"
+              value={selectedAnnualGrowth ? parseFloat(selectedAnnualGrowth) : 0}
               sx={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center", // Center children horizontally
-                backgroundColor: "secondary.light",
-                borderRadius: (theme) => theme.spacing(1),
-                py: 2.5,
-                px: 0,
-                width: "80%", // Take up half of the parent container
-                paddingRight: 2,
-                marginRight: 2,
+                color: "secondary.main",
+                marginTop: 6,
+                width: "90%",
+                "& .MuiSlider-thumb": {
+                  height: 24,
+                  width: 24,
+                  backgroundColor: "common.white",
+                  border: 2,
+                  borderColor: "currentColor",
+                  "&:focus, &:hover, &.Mui-active": { boxShadow: "inherit" },
+                },
+                "& .MuiSlider-valueLabel": {
+                  color: "black",
+                  variant: "body2",
+                  fontWeight: "bold",
+                  borderRadius: (theme) => theme.spacing(2),
+                  borderColor: "black",
+                  backgroundColor: "secondary.main",
+                },
+                "& .MuiSlider-track": { height: 16, borderRadius: 4 },
+                "& .MuiSlider-rail": {
+                  color: "border.default",
+                  opacity: 1,
+                  height: 8,
+                  borderRadius: 4,
+                },
               }}
-            >
-              <Typography
-                id="population-slider"
-                gutterBottom
-                variant="body1"
-                component="div"
-                textAlign="center"
-                color="text.primary"
-              >
-                {t("card_annualgrowth_population_subtitle")}
-              </Typography>
-              <Slider
-                aria-label={t("input_population_selector_aria")}
-                defaultValue={0}
-                getAriaValueText={valueText}
-                onChange={handleGrowthCardSelect} // Updated to the handleSelect function
-                step={0.1}
-                marks={populationMarks}
-                min={populationMarks[0].value}
-                max={populationMarks[1].value}
-                valueLabelDisplay="on" // Changed to "on" to always show the value label
-                value={selectedAnnualGrowth ? parseFloat(selectedAnnualGrowth) : 0}
-                sx={{
-                  color: "secondary.main", // Slider track and thumb color
-                  marginTop: 6,
-                  width: "90%", // Adjust width to be less than container to center properly
-                  "& .MuiSlider-thumb": {
-                    height: 24,
-                    width: 24,
-                    backgroundColor: "common.white",
-                    border: 2,
-                    borderColor: "currentColor",
-                    "&:focus, &:hover, &.Mui-active": {
-                      boxShadow: "inherit",
-                    },
-                  },
-                  "& .MuiSlider-valueLabel": {
-                    color: "black",
-                    variant: "body2",
-                    fontWeight: "bold",
-                    borderRadius: (theme) => theme.spacing(2),
-                    borderColor: "black",
-                    backgroundColor: "secondary.main",
-                  },
-                  "& .MuiSlider-track": {
-                    height: 16,
-                    borderRadius: 4,
-                  },
-                  "& .MuiSlider-rail": {
-                    color: "border.default",
-                    opacity: 1,
-                    height: 8,
-                    borderRadius: 4,
-                  },
-                }}
-              />
-            </Box>
-          </Box>
-        )}
+            />
+          </Tooltip>
+        </Box>
         <Box
           sx={{
             padding: 2,

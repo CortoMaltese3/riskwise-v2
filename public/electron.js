@@ -36,6 +36,17 @@ const {
 const os = require("node:os");
 const treeKill = require("tree-kill");
 
+// PDF footer: only "page N / total" on the right, no header. Chromium
+// requires both header and footer templates when displayHeaderFooter is
+// true — an empty div suppresses the header. Bottom margin widened so the
+// footer does not collide with content.
+const PDF_FOOTER_TEMPLATE =
+  '<div style="width:100%; font-size:9px; padding:0 12mm; text-align:right; color:#666;">' +
+  '<span class="pageNumber"></span> / <span class="totalPages"></span>' +
+  "</div>";
+const PDF_HEADER_TEMPLATE = "<div></div>";
+const PDF_MARGINS = { top: 0.4, bottom: 0.6, left: 0.4, right: 0.4 };
+
 global.pythonProcess = null;
 
 // `connect-src` is locked to loopback (any port — supervisor picks an
@@ -502,6 +513,28 @@ const downloadAndInstallEngine = async (loaderWindow) => {
       );
     }
 
+    // Defense-in-depth: the manifest signature was already verified above by
+    // `fetchVerifiedEngineManifest`, so `manifest.sha256` is trusted. Hashing
+    // the on-disk archive here closes the gap between "signed manifest" and
+    // "trusted bytes on disk" — a compromised CDN or TLS-inspecting proxy
+    // corrupting the download is caught before we shell out to `tar -xf`.
+    // Mirrors the resumable downloader's pattern (see `downloadEngineWithResume`).
+    updateLoaderMessage("Verifying engine archive integrity...");
+    const expectedSha256 = String(manifest.sha256 || "").toLowerCase();
+    const actualSha256 = (await sha256File(archivePath)).toLowerCase();
+    if (!expectedSha256 || actualSha256 !== expectedSha256) {
+      log.error(
+        `[electron] engine archive SHA-256 mismatch expected=${expectedSha256} actual=${actualSha256}`
+      );
+      try {
+        fs.unlinkSync(archivePath);
+      } catch (unlinkErr) {
+        log.warn(`[electron] failed to delete tampered archive: ${unlinkErr.message}`);
+      }
+      throw new Error("engine download integrity check failed");
+    }
+    log.info("[electron] engine archive SHA-256 matches manifest");
+
     updateLoaderMessage("Extracting engine files...");
     log.info("[electron] Starting extraction...");
 
@@ -628,6 +661,16 @@ app.whenReady().then(async () => {
   // request cannot escape the temp dir.
   const buildRoot = path.join(basePath, "build");
   const TEMP_PATH_PREFIX = "/__temp/";
+  // Carto tile proxy. The renderer cannot read tiles from
+  // ``basemaps.cartocdn.com`` via XHR/fetch because the response combines
+  // ``Access-Control-Allow-Origin: *`` with ``Access-Control-Allow-Credentials:
+  // true``, which Chromium rejects per spec — so ``dom-to-image-more`` (used
+  // by ``leaflet-simple-map-screenshoter``) silently drops every tile when it
+  // captures a map snapshot. Proxying through ``app://`` makes the tiles
+  // same-origin, which sidesteps CORS entirely.
+  const TILES_PATH_PREFIX = "/__tiles/";
+  const CARTO_TILE_BASE = "https://a.basemaps.cartocdn.com/rastertiles/voyager/";
+  const TILES_PATH_RE = /^\d+\/\d+\/\d+(?:@\dx)?\.png$/;
   protocol.handle("app", (request) => {
     const url = new URL(request.url);
     if (url.pathname.startsWith(TEMP_PATH_PREFIX)) {
@@ -639,6 +682,14 @@ app.whenReady().then(async () => {
         return new Response("Forbidden", { status: 403 });
       }
       return net.fetch(`file://${resolved}`);
+    }
+    if (url.pathname.startsWith(TILES_PATH_PREFIX)) {
+      const requested = url.pathname.slice(TILES_PATH_PREFIX.length);
+      if (!TILES_PATH_RE.test(requested)) {
+        log.warn(`[electron] blocked app://./__tiles/ malformed path: ${requested}`);
+        return new Response("Bad Request", { status: 400 });
+      }
+      return net.fetch(`${CARTO_TILE_BASE}${requested}`);
     }
     const filePath = path.join(buildRoot, url.pathname === "/" ? "index.html" : url.pathname);
     return net.fetch(`file://${filePath}`);
@@ -672,6 +723,7 @@ app.whenReady().then(async () => {
   // didn't reject the call as too late; here we just refresh the status
   // reason now that updateStore + offline mode are known. Runtime gates
   // (DSN present, opted in, not offline) are enforced inside `beforeSend`.
+  // TODO(D24): gate on isOfflineMode() when un-deferred
   initializeSentry();
 
   // Configure auto-updater BEFORE any other startup logic
@@ -804,6 +856,7 @@ app.whenReady().then(async () => {
   // Check for updates AFTER main window is created, then poll every 4 h.
   // The renderer-side dialog (src/components/UpdateDialog.jsx) decides what
   // to show — the check itself just fires off an electron-updater probe.
+  // TODO(D24): gate on isOfflineMode() when un-deferred
   if (!isDevelopmentEnv()) {
     checkForAppUpdates("startup").catch(() => {});
     startUpdateCheckTimer();
@@ -1439,7 +1492,19 @@ const waitForPrintReady = (webContents) =>
     check();
   });
 
-ipcMain.handle("export-pdf", async (_event, { scenarioId }) => {
+// Returns null on failure so the renderer can fall back to a placeholder
+// without throwing.
+ipcMain.handle("get-current-user", () => {
+  try {
+    return os.userInfo().username;
+  } catch (error) {
+    log.warn("[electron] get-current-user failed:", error);
+    return null;
+  }
+});
+
+ipcMain.handle("export-pdf", async (_event, payload) => {
+  const { scenarioId, snapshotIds, includeWaterfall, includeCostBenefit } = payload;
   let printWin = null;
   try {
     printWin = new BrowserWindow({
@@ -1452,12 +1517,22 @@ ipcMain.handle("export-pdf", async (_event, { scenarioId }) => {
       },
     });
 
+    const snapshotsQuery =
+      Array.isArray(snapshotIds) && snapshotIds.length > 0
+        ? `&snapshots=${encodeURIComponent(snapshotIds.join(","))}`
+        : "";
+    // Default-true flags are encoded implicitly so the print URL stays clean.
+    const waterfallQuery = includeWaterfall === false ? "&waterfall=0" : "";
+    const costbenQuery = includeCostBenefit === false ? "&costben=0" : "";
+
     await new Promise((resolve, reject) => {
       printWin.webContents.once("did-finish-load", resolve);
       printWin.webContents.once("did-fail-load", (_e, code, desc) =>
         reject(new Error(`Print view failed to load: ${desc} (${code})`))
       );
-      printWin.loadURL(`app://./index.html?view=print&scenarioId=${encodeURIComponent(scenarioId)}`);
+      printWin.loadURL(
+        `app://./index.html?view=print&scenarioId=${encodeURIComponent(scenarioId)}${snapshotsQuery}${waterfallQuery}${costbenQuery}`
+      );
     });
 
     await waitForPrintReady(printWin.webContents);
@@ -1465,6 +1540,10 @@ ipcMain.handle("export-pdf", async (_event, { scenarioId }) => {
     const pdfBuffer = await printWin.webContents.printToPDF({
       printBackground: true,
       pageSize: "A4",
+      displayHeaderFooter: true,
+      headerTemplate: PDF_HEADER_TEMPLATE,
+      footerTemplate: PDF_FOOTER_TEMPLATE,
+      margins: PDF_MARGINS,
     });
 
     printWin.destroy();

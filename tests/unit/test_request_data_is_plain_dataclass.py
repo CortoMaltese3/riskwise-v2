@@ -27,8 +27,8 @@ def _make_request_data(**overrides: Any):
         "country_name": "Thailand",
         "country_code": "THA",
         "entity_filename": "",
-        "exposure_economic": "crops",
-        "exposure_non_economic": "",
+        "exposure_type": "crops",
+        "asset_type": "economic",
         "hazard_filename": "",
         "hazard_type": "flood",
         "hazard_code": "FL",
@@ -48,8 +48,8 @@ class TestRequestDataPlainDataclass:
 
     def test_derived_fields_come_from_primary_inputs(self) -> None:
         data = _make_request_data(
-            exposure_economic="crops",
-            exposure_non_economic="",
+            exposure_type="crops",
+            asset_type="economic",
             time_horizon=(2020, 2060),
         )
         assert data.exposure_type == "crops"
@@ -57,10 +57,10 @@ class TestRequestDataPlainDataclass:
         assert data.ref_year == 2020
         assert data.future_year == 2060
 
-    def test_non_economic_exposure_flips_asset_type(self) -> None:
+    def test_non_economic_asset_type_propagates(self) -> None:
         data = _make_request_data(
-            exposure_economic="",
-            exposure_non_economic="students",
+            exposure_type="students",
+            asset_type="non_economic",
         )
         assert data.exposure_type == "students"
         assert data.asset_type == "non_economic"
@@ -74,22 +74,21 @@ class TestRequestDataPlainDataclass:
             f"RequestData must not carry handler fields; found: {field_names & forbidden}"
         )
 
-    def test_from_request_uses_injected_handlers_and_never_instantiates_them(self) -> None:
-        """``from_request`` takes handlers as arguments — no hidden ``BaseHandler()``.
+    def test_from_request_uses_injected_hazard_handler(self, monkeypatch: Any) -> None:
+        """``from_request`` takes a hazard handler as an argument and routes
+        country sanitization through the ``utils.country`` module functions.
 
-        The test provides stubs that would blow up if the classmethod secretly
-        instantiated its own defaults; passing means the request sanitization
-        is routed through the injected handlers.
+        The test patches the country helpers and provides a stub hazard
+        handler; passing means the request sanitization happens via the
+        module-level functions and the injected hazard handler.
         """
+        from backend import run_scenario
         from backend.run_scenario import RequestData
 
-        class _BaseStub:
-            def sanitize_country_name(self, name: str) -> str:
-                return f"sanitized::{name}"
-
-            def get_iso3_country_code(self, name: str) -> str:
-                assert name == "sanitized::Egypt"
-                return "EGY"
+        monkeypatch.setattr(
+            run_scenario, "sanitize_country_name", lambda name: f"sanitized::{name}"
+        )
+        monkeypatch.setattr(run_scenario, "get_iso3_country_code", lambda _name: "EGY")
 
         class _HazardStub:
             def get_hazard_code(self, hazard_type: str) -> str:
@@ -99,13 +98,16 @@ class TestRequestDataPlainDataclass:
         request = {
             "countryName": "Egypt",
             "hazardType": "drought",
-            "exposureEconomic": "crops",
+            "exposureType": "crops",
+            "assetType": "economic",
             "timeHorizon": [2024, 2050],
             "isEra": True,
             "scenario": "historical",
         }
-        data = RequestData.from_request(request, _BaseStub(), _HazardStub())
+        data = RequestData.from_request(request, _HazardStub())
         assert data.country_name == "sanitized::Egypt"
         assert data.country_code == "EGY"
         assert data.hazard_code == "D"
         assert data.is_era is True
+        assert data.exposure_type == "crops"
+        assert data.asset_type == "economic"

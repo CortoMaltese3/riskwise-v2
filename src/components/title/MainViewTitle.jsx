@@ -1,12 +1,14 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import { TABS, TAB_CONFIG } from "../main/tabs";
 
 import { Box, Typography } from "@mui/material";
 
 const MainViewTitle = () => {
-  const { mapTitle, selectedTab } = useStore();
+  const mapTitle = useUIStore((s) => s.mapTitle);
+  const selectedTab = useUIStore((s) => s.selectedTab);
   const { t } = useTranslation();
 
   return (
@@ -25,7 +27,9 @@ const MainViewTitle = () => {
           borderRadius: (theme) => theme.spacing(0.5),
         }}
       >
-        {mapTitle && selectedTab === 1 ? `${mapTitle}` : t(`main_view_tab_${selectedTab}_title`)}
+        {mapTitle && selectedTab === TABS.RISK
+          ? `${mapTitle}`
+          : t(TAB_CONFIG[selectedTab]?.titleKey ?? "")}
       </Typography>
     </Box>
   );

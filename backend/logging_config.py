@@ -7,10 +7,10 @@ from a :class:`~contextvars.ContextVar` set by the request-ID middleware in
 request with the same UUID in the Electron main log and the user-facing
 error toast.
 
-Keeping this module structlog-only (no stdlib ``logging`` interop) avoids
-competing handler configuration with the legacy
-:class:`~logger_config.LoggerConfig`, which the CLIMADA-era handlers still
-use. The two coexist until the legacy loggers are migrated in a follow-up.
+Keeping this module structlog-only (no stdlib ``logging`` interop) keeps
+the JSON pipeline as the single source of truth for backend log lines:
+the legacy stdlib-based logger module was retired in #245 and every
+handler now binds a ``get_logger(__name__)`` at import time.
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ def configure_logging(
     for handle in _owned_files:
         try:
             handle.close()
-        except Exception:
+        except OSError:
             pass
     _owned_files.clear()
 
@@ -131,14 +131,15 @@ class _MultiStream:
         for stream in self._streams:
             try:
                 stream.write(message)
-            except Exception:
-                # A broken stream (closed file, detached stderr during
-                # shutdown) must not break the remaining sinks.
+            except (OSError, ValueError):
+                # A broken stream (closed file -> ValueError, detached
+                # stderr during shutdown -> OSError/BrokenPipeError) must
+                # not break the remaining sinks.
                 pass
 
     def flush(self) -> None:
         for stream in self._streams:
             try:
                 stream.flush()
-            except Exception:
+            except (OSError, ValueError):
                 pass

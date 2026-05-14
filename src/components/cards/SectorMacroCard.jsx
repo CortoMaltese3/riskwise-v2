@@ -2,17 +2,16 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardActionArea, Typography, CardContent } from "@mui/material";
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { layoutTransition } from "../../theme/theme";
 
 const SectorMacroCard = () => {
-  const {
-    credOutputData,
-    selectedMacroCountry,
-    selectedMacroSector,
-    selectedMacroVariable,
-    setSelectedMacroSector,
-  } = useStore();
+  const credOutputData = useResultsStore((s) => s.credOutputData);
+  const selectedMacroCountry = useWorkspaceStore((s) => s.selectedMacroCountry);
+  const selectedMacroSector = useWorkspaceStore((s) => s.selectedMacroSector);
+  const selectedMacroVariable = useWorkspaceStore((s) => s.selectedMacroVariable);
+  const setSelectedMacroSector = useWorkspaceStore((s) => s.setSelectedMacroSector);
   const { t } = useTranslation();
 
   // Extract distinct economic sectors

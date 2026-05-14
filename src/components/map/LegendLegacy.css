@@ -1,4 +1,6 @@
-/* Legend.css */
+/* Legacy map legend overlay (kept alongside Legend.css for older map views).
+   Stays light over the light OpenStreetMap tiles in both schemes — see the
+   rgba exceptions block in src/theme/theme.ts (issue #289). */
 .legend-container {
   position: absolute;
   bottom: 25px;

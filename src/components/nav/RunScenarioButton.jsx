@@ -1,58 +1,41 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Button } from "@mui/material";
+import { Box, Button, Tooltip } from "@mui/material";
 import LoadingButton from "@mui/lab/LoadingButton";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 
-import RiskWiseClient from "../../lib/RiskWiseClient";
-import SaveScenarioDialog from "../workspace/SaveScenarioDialog";
-import { useReportTools } from "../../utils/reportTools";
-import useStore from "../../store";
-import useWorkspaceStore from "../../store/workspaceSlice";
+import useRunScenario from "../../hooks/useRunScenario";
+import useResultsStore from "../../store/useResultsStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 const RunScenarioButton = () => {
   const { t } = useTranslation();
-  const {
-    isValidExposureEconomic,
-    isValidExposureNonEconomic,
-    isValidHazard,
-    setMapTitle,
-    setIsScenarioRunning,
-    selectedCountry,
-    selectedAnnualGrowth,
-    selectedAppOption,
-    selectedExposureEconomic,
-    selectedExposureFile,
-    selectedExposureNonEconomic,
-    selectedHazard,
-    selectedHazardFile,
-    selectedScenario,
-    selectedTimeHorizon,
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-    setError,
-    setIsScenarioRunCompleted,
-    setScenarioRunCode,
-    setSelectedReport,
-    setSelectedTab,
-  } = useStore();
+  const isValidExposure = useWorkspaceStore((s) => s.isValidExposure);
+  const isValidHazard = useWorkspaceStore((s) => s.isValidHazard);
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedAnnualGrowth = useWorkspaceStore((s) => s.selectedAnnualGrowth);
+  const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
+  const selectedExposure = useWorkspaceStore((s) => s.selectedExposure);
+  const selectedExposureFile = useWorkspaceStore((s) => s.selectedExposureFile);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const selectedHazardFile = useWorkspaceStore((s) => s.selectedHazardFile);
+  const selectedScenario = useWorkspaceStore((s) => s.selectedScenario);
+  const selectedTimeHorizon = useWorkspaceStore((s) => s.selectedTimeHorizon);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
 
   const [isRunButtonLoading, setIsRunButtonLoading] = useState(false);
   const [isRunButtonDisabled, setIsRunButtonDisabled] = useState(true);
-  const [saveDialog, setSaveDialog] = useState({ open: false, id: null, name: "" });
-  const { fetchReports } = useReportTools();
-  const reloadWorkspaceScenarios = useWorkspaceStore((s) => s.loadScenarios);
+  const { runScenario } = useRunScenario();
 
   const handleRunButton = () => {
     if (
       selectedCountry &&
       selectedHazard &&
       selectedScenario &&
-      (selectedExposureEconomic || selectedExposureNonEconomic) &&
+      selectedExposure &&
       isValidHazard &&
-      (isValidExposureEconomic || isValidExposureNonEconomic)
+      isValidExposure
     ) {
       setIsRunButtonDisabled(false);
     } else {
@@ -66,9 +49,8 @@ const RunScenarioButton = () => {
     selectedCountry,
     selectedAnnualGrowth,
     selectedAppOption,
-    selectedExposureEconomic,
+    selectedExposure,
     selectedExposureFile,
-    selectedExposureNonEconomic,
     selectedHazard,
     selectedHazardFile,
     selectedScenario,
@@ -76,91 +58,42 @@ const RunScenarioButton = () => {
   ]);
 
   const onRunHandler = () => {
-    const body = {
-      annualGrowth: selectedAnnualGrowth,
-      countryName: selectedCountry,
-      exposureEconomic: selectedExposureEconomic,
-      exposureFile: selectedExposureFile,
-      exposureNonEconomic: selectedExposureNonEconomic,
-      hazardType: selectedHazard,
-      isEra: selectedAppOption === "era" ? true : false,
-      hazardFile: selectedHazardFile,
-      scenario: selectedScenario,
-      timeHorizon: selectedTimeHorizon,
-    };
     setIsRunButtonDisabled(true);
     setIsRunButtonLoading(true);
-    setIsScenarioRunning(true);
-    setSelectedReport(null);
-    RiskWiseClient.runScenario(body)
-      .then((response) => {
-        setIsRunButtonLoading(false);
-        setIsRunButtonDisabled(false);
-        setIsScenarioRunning(false);
-        if (!response.success) {
-          setError(response.error);
-          return;
-        }
-        setAlertMessage(response.result.status.message);
-        response.result.status.code === 2000
-          ? setAlertSeverity("success")
-          : setAlertSeverity("error");
-        setAlertShowMessage(true);
-        setMapTitle(response.result.data.mapTitle);
-        setScenarioRunCode(response.result.data.scenarioId);
-        setIsScenarioRunCompleted(true);
-        // Land the user on the analysis tab so the map/chart toggle and the
-        // newly-generated geodata are visible the moment the save dialog
-        // closes. Without this they stay on selectedTab=0 (Input Selection)
-        // and only see the toggle after navigating away and back.
-        setSelectedTab(1);
-        if (response.result.data.scenarioId) {
-          setSaveDialog({
-            open: true,
-            id: response.result.data.scenarioId,
-            name: response.result.data.mapTitle || "",
-          });
-        }
-      })
-      .catch((error) => {
-        setIsRunButtonLoading(false);
-        setIsRunButtonDisabled(false);
-        setIsScenarioRunning(false);
-        setError({
-          code: "renderer_error",
-          message: error?.message || "Unexpected failure in renderer",
-          detail: null,
-          error_id: crypto.randomUUID(),
-        });
-      });
+    runScenario().finally(() => {
+      setIsRunButtonLoading(false);
+      setIsRunButtonDisabled(false);
+    });
   };
+
+  // ``isScenarioRunning`` is the source of truth for "another run is in
+  // flight"; OR-merge it into the local validation gate so a second click
+  // mid-run can never reach ``onRunHandler``.
+  const buttonDisabled = isRunButtonDisabled || isScenarioRunning;
 
   return (
     <Box sx={{ textAlign: "center", mt: 2 }} data-tour="run-button">
-      <SaveScenarioDialog
-        open={saveDialog.open}
-        scenarioId={saveDialog.id}
-        defaultName={saveDialog.name}
-        onClose={() => setSaveDialog((s) => ({ ...s, open: false }))}
-        onSaved={() => {
-          fetchReports();
-          reloadWorkspaceScenarios({ force: true });
-        }}
-      />
       {!isRunButtonLoading ? (
-        <Button
-          key="runButton"
-          disabled={isRunButtonDisabled}
-          onClick={onRunHandler}
-          startIcon={<PlayCircleIcon />}
-          sx={{
-            bgcolor: "secondary.main",
-            "&:hover": { bgcolor: "secondary.light" },
-          }}
-          variant="contained"
+        <Tooltip
+          title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}
+          placement="top"
         >
-          {t("run_button")}
-        </Button>
+          <span>
+            <Button
+              key="runButton"
+              disabled={buttonDisabled}
+              onClick={onRunHandler}
+              startIcon={<PlayCircleIcon />}
+              sx={{
+                bgcolor: "secondary.main",
+                "&:hover": { bgcolor: "secondary.light" },
+              }}
+              variant="contained"
+            >
+              {t("run_button")}
+            </Button>
+          </span>
+        </Tooltip>
       ) : (
         <LoadingButton
           loading={isRunButtonLoading}

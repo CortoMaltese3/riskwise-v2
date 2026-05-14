@@ -83,6 +83,17 @@
             "title": "Cost",
             "type": "number"
           },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
           "name": {
             "minLength": 1,
             "title": "Name",
@@ -216,6 +227,35 @@
             "minLength": 1,
             "title": "Snapshot Type",
             "type": "string"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hazard",
+                  "exposure",
+                  "impact",
+                  "adaptation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           }
         },
         "required": [
@@ -670,77 +710,6 @@
         "title": "DeleteSnapshotResponse",
         "type": "object"
       },
-      "ExportReportData": {
-        "properties": {
-          "report_path": {
-            "default": "",
-            "title": "Report Path",
-            "type": "string"
-          },
-          "status": {
-            "default": "delegated_to_electron",
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "title": "ExportReportData",
-        "type": "object"
-      },
-      "ExportReportRequest": {
-        "additionalProperties": true,
-        "description": "Body posted to ``POST /api/v1/scenarios/{id}/export``.\n\n``scenarioRunCode`` is overwritten by the FastAPI handler with the path\nparameter, so the field is optional in the body.",
-        "properties": {
-          "exportType": {
-            "minLength": 1,
-            "title": "Exporttype",
-            "type": "string"
-          },
-          "report": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Report"
-          },
-          "scenarioRunCode": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Scenarioruncode"
-          }
-        },
-        "required": [
-          "exportType"
-        ],
-        "title": "ExportReportRequest",
-        "type": "object"
-      },
-      "ExportReportResponse": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ExportReportData"
-          },
-          "status": {
-            "$ref": "#/components/schemas/Status"
-          }
-        },
-        "required": [
-          "data",
-          "status"
-        ],
-        "title": "ExportReportResponse",
-        "type": "object"
-      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -766,6 +735,39 @@
           "status"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "HydrateScenarioData": {
+        "description": "Payload returned by ``POST /api/v1/scenarios/{id}/hydrate-temp``.\n\n``written`` lists the result types that were rewritten to the temp\ndirectory; absent types (e.g. ``costben_data`` on a historical scenario)\nare silently skipped at the writer.",
+        "properties": {
+          "written": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Written",
+            "type": "array"
+          }
+        },
+        "required": [
+          "written"
+        ],
+        "title": "HydrateScenarioData",
+        "type": "object"
+      },
+      "HydrateScenarioResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HydrateScenarioData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "HydrateScenarioResponse",
         "type": "object"
       },
       "JobAcceptedResponse": {
@@ -1433,6 +1435,21 @@
             ],
             "title": "Annualgrowth"
           },
+          "assetType": {
+            "anyOf": [
+              {
+                "enum": [
+                  "economic",
+                  "non_economic"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assettype"
+          },
           "countryName": {
             "anyOf": [
               {
@@ -1443,17 +1460,6 @@
               }
             ],
             "title": "Countryname"
-          },
-          "exposureEconomic": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Exposureeconomic"
           },
           "exposureFile": {
             "anyOf": [
@@ -1466,7 +1472,7 @@
             ],
             "title": "Exposurefile"
           },
-          "exposureNonEconomic": {
+          "exposureType": {
             "anyOf": [
               {
                 "type": "string"
@@ -1475,7 +1481,7 @@
                 "type": "null"
               }
             ],
-            "title": "Exposurenoneconomic"
+            "title": "Exposuretype"
           },
           "hazardFile": {
             "anyOf": [
@@ -1520,6 +1526,20 @@
               }
             ],
             "title": "Scenario"
+          },
+          "selectedMeasureIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selectedmeasureids"
           },
           "timeHorizon": {
             "anyOf": [
@@ -1574,6 +1594,17 @@
               }
             ],
             "title": "App Version"
+          },
+          "asset_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Type"
           },
           "climada_version": {
             "anyOf": [
@@ -1665,7 +1696,7 @@
             ],
             "title": "Entity Data Sha256"
           },
-          "exposure_economic": {
+          "exposure_type": {
             "anyOf": [
               {
                 "type": "string"
@@ -1674,18 +1705,7 @@
                 "type": "null"
               }
             ],
-            "title": "Exposure Economic"
-          },
-          "exposure_non_economic": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Exposure Non Economic"
+            "title": "Exposure Type"
           },
           "future_year": {
             "anyOf": [
@@ -1865,6 +1885,35 @@
           "snapshot_type": {
             "title": "Snapshot Type",
             "type": "string"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hazard",
+                  "exposure",
+                  "impact",
+                  "adaptation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           }
         },
         "required": [
@@ -1962,6 +2011,35 @@
               }
             ],
             "title": "Caption"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hazard",
+                  "exposure",
+                  "impact",
+                  "adaptation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           }
         },
         "title": "UpdateSnapshotRequest",
@@ -1981,6 +2059,100 @@
           "status"
         ],
         "title": "UpdateSnapshotResponse",
+        "type": "object"
+      },
+      "UpdateUserSettingsRequest": {
+        "properties": {
+          "report_currency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "EUR",
+                  "USD",
+                  "GBP",
+                  "CHF",
+                  "THB",
+                  "EGP"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Currency"
+          },
+          "report_locale": {
+            "anyOf": [
+              {
+                "enum": [
+                  "en-US",
+                  "en-GB",
+                  "de-DE",
+                  "fr-FR",
+                  "es-ES",
+                  "th-TH",
+                  "ar-EG"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Locale"
+          }
+        },
+        "title": "UpdateUserSettingsRequest",
+        "type": "object"
+      },
+      "UserSettings": {
+        "properties": {
+          "report_currency": {
+            "default": "EUR",
+            "enum": [
+              "EUR",
+              "USD",
+              "GBP",
+              "CHF",
+              "THB",
+              "EGP"
+            ],
+            "title": "Report Currency",
+            "type": "string"
+          },
+          "report_locale": {
+            "default": "en-US",
+            "enum": [
+              "en-US",
+              "en-GB",
+              "de-DE",
+              "fr-FR",
+              "es-ES",
+              "th-TH",
+              "ar-EG"
+            ],
+            "title": "Report Locale",
+            "type": "string"
+          }
+        },
+        "title": "UserSettings",
+        "type": "object"
+      },
+      "UserSettingsResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UserSettings"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "UserSettingsResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -3183,9 +3355,10 @@
         "summary": "Patch Scenario Endpoint"
       }
     },
-    "/api/v1/scenarios/{scenario_id}/export": {
+    "/api/v1/scenarios/{scenario_id}/hydrate-temp": {
       "post": {
-        "operationId": "export_scenario_api_v1_scenarios__scenario_id__export_post",
+        "description": "Rewrite the saved scenario's blobs back into the temp dir.\n\nRequired by the Workspace ``Restore`` flow: the maps and the\nwaterfall/cost-benefit charts read from per-run JSON files, so the\nrenderer cannot show the restored state until those files exist on\ndisk again. See ``backend.run_hydrate_scenario_temp`` for details.",
+        "operationId": "hydrate_scenario_temp_endpoint_api_v1_scenarios__scenario_id__hydrate_temp_post",
         "parameters": [
           {
             "in": "path",
@@ -3197,22 +3370,12 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ExportReportRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExportReportResponse"
+                  "$ref": "#/components/schemas/HydrateScenarioResponse"
                 }
               }
             },
@@ -3229,7 +3392,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Export Scenario"
+        "summary": "Hydrate Scenario Temp Endpoint"
       }
     },
     "/api/v1/scenarios/{scenario_id}/save": {
@@ -3365,6 +3528,60 @@
           }
         },
         "summary": "Create Snapshot Endpoint"
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "operationId": "get_settings_endpoint_api_v1_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Settings Endpoint"
+      },
+      "patch": {
+        "operationId": "patch_settings_endpoint_api_v1_settings_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Settings Endpoint"
       }
     },
     "/api/v1/snapshots/{snapshot_id}": {

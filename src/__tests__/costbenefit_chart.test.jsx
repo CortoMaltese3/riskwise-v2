@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { act, fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material/styles";
 import theme from "../theme/theme";
 
@@ -40,8 +40,6 @@ vi.mock("chart.js", () => ({
   Legend: {},
 }));
 
-vi.mock("chartjs-plugin-datalabels", () => ({ default: {} }));
-
 const FIXTURE = {
   currency_unit: "USD",
   present_year: 2024,
@@ -52,18 +50,49 @@ const FIXTURE = {
   ],
 };
 
+// Fixture with long spelt-out measure names (#412 B1).
+const LONG_NAMES_FIXTURE = {
+  currency_unit: "USD",
+  present_year: 2024,
+  future_year: 2050,
+  measures: [
+    { name: "Recharging wells", cost: 100, benefit: 130, benefit_cost_ratio: 1.3 },
+    { name: "Soil and water bunds", cost: 100, benefit: 120, benefit_cost_ratio: 1.2 },
+  ],
+};
+
+// Fixture with a low-headroom max ratio (1.30) — used to verify the
+// suggestedMax floor of 1.5 (#412 B5).
+const LOW_HEADROOM_FIXTURE = {
+  currency_unit: "USD",
+  present_year: 2024,
+  future_year: 2050,
+  measures: [
+    { name: "Measure A", cost: 100, benefit: 130, benefit_cost_ratio: 1.3 },
+    { name: "Measure B", cost: 100, benefit: 100, benefit_cost_ratio: 1.0 },
+  ],
+};
+
+// Fixture with a tall max ratio (2.0) — used to verify the +0.2 headroom
+// (#412 B5).
+const TALL_FIXTURE = {
+  currency_unit: "USD",
+  present_year: 2024,
+  future_year: 2050,
+  measures: [
+    { name: "Measure A", cost: 100, benefit: 200, benefit_cost_ratio: 2.0 },
+    { name: "Measure B", cost: 100, benefit: 100, benefit_cost_ratio: 1.0 },
+  ],
+};
+
 let CostBenefitChart;
-let useStore;
 
 beforeAll(async () => {
   ({ default: CostBenefitChart } = await import("../components/charts/CostBenefitChart"));
-  ({ default: useStore } = await import("../store"));
 });
 
 beforeEach(() => {
   barSpy.mockClear();
-  globalThis.localStorage?.removeItem("riskwise.showChartValues");
-  useStore.setState({ showChartValues: false });
 });
 
 describe("CostBenefitChart", () => {
@@ -140,15 +169,140 @@ describe("CostBenefitChart", () => {
     expect(serious).toHaveLength(0);
   });
 
-  it("exposes a Show values toggle that gates datalabels display", () => {
+  it("does not render a show/hide values toggle", () => {
     render(<CostBenefitChart data={FIXTURE} />);
-    const initial = barSpy.mock.calls.at(-1)[0];
-    expect(initial.options.plugins.datalabels.display).toBe(false);
-    const toggle = screen.getByRole("button", { name: /chart_show_values/i });
-    act(() => {
-      fireEvent.click(toggle);
+    expect(
+      screen.queryByRole("button", { name: /show values|hide values/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("rotates x-axis tick labels up to 45° and keeps Chart.js auto-skip on (#412 B1)", () => {
+    render(<CostBenefitChart data={LONG_NAMES_FIXTURE} />);
+    const props = barSpy.mock.calls[0][0];
+    expect(props.options.scales.x.ticks.maxRotation).toBe(45);
+    expect(props.options.scales.x.ticks.autoSkip).toBe(true);
+    expect(props.data.labels).toEqual(["Recharging wells", "Soil and water bunds"]);
+  });
+
+  it("renders display_name through i18n when present, falling back to name otherwise (#429)", () => {
+    const FIXTURE_429 = {
+      currency_unit: "USD",
+      present_year: 2024,
+      future_year: 2050,
+      // ERA codes from #429 inventory: at least one of GR / TP / GBC plus a
+      // no-mapping fallback row to exercise both branches of ``labelFor``.
+      measures: [
+        {
+          name: "GR",
+          display_name: "adaptation_measures_green_roofs",
+          cost: 100,
+          benefit: 200,
+          benefit_cost_ratio: 2.0,
+        },
+        {
+          name: "TP",
+          display_name: "adaptation_measures_trees_planting",
+          cost: 100,
+          benefit: 150,
+          benefit_cost_ratio: 1.5,
+        },
+        {
+          name: "GBC",
+          display_name: "adaptation_measures_green_building_codes",
+          cost: 100,
+          benefit: 80,
+          benefit_cost_ratio: 0.8,
+        },
+        { name: "WSP", cost: 100, benefit: 100, benefit_cost_ratio: 1.0 },
+      ],
+    };
+    render(<CostBenefitChart data={FIXTURE_429} />);
+    const props = barSpy.mock.calls[0][0];
+    // The mocked t() in this file echoes the key; that's exactly what we
+    // need to assert that the chart routes display_name through i18n
+    // (a real bundle would map the key to "Green Roofs", "Trees planting",
+    // "Green building codes").
+    expect(props.data.labels).toEqual([
+      "adaptation_measures_green_roofs",
+      "adaptation_measures_trees_planting",
+      "adaptation_measures_green_building_codes",
+      "WSP",
+    ]);
+    expect(props["aria-label"]).toContain("adaptation_measures_green_roofs");
+    expect(props["aria-label"]).toContain("WSP");
+  });
+
+  it("registers a break-even plugin that draws a dashed line at y=1 (#412 B2)", () => {
+    render(<CostBenefitChart data={FIXTURE} />);
+    const props = barSpy.mock.calls[0][0];
+    const plugin = props.plugins.find((p) => p.id === "cost-benefit-break-even");
+    expect(plugin).toBeDefined();
+    expect(typeof plugin.afterDatasetsDraw).toBe("function");
+    // Smoke-test the draw path against a stubbed canvas.
+    const fillText = vi.fn();
+    const stroke = vi.fn();
+    const ctx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      setLineDash: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke,
+      fillText,
+      font: "",
+      fillStyle: "",
+      strokeStyle: "",
+      lineWidth: 0,
+      textAlign: "",
+      textBaseline: "",
+    };
+    plugin.afterDatasetsDraw({
+      ctx,
+      scales: {
+        y: { getPixelForValue: (v) => (v === 1 ? 100 : 0) },
+        x: { left: 0, right: 400 },
+      },
     });
-    const afterToggle = barSpy.mock.calls.at(-1)[0];
-    expect(afterToggle.options.plugins.datalabels.display).toBe(true);
+    expect(stroke).toHaveBeenCalledTimes(1);
+    expect(fillText).toHaveBeenCalledWith(
+      "chart_break_even_label",
+      expect.any(Number),
+      expect.any(Number)
+    );
+  });
+
+  it("anchors the tooltip above its bar instead of tracking the cursor (#412 B4)", () => {
+    render(<CostBenefitChart data={FIXTURE} />);
+    const props = barSpy.mock.calls[0][0];
+    expect(props.options.plugins.tooltip.position).toBe("average");
+  });
+
+  it("reserves at least 0.2 of y-axis headroom above the tallest bar (#412 B5)", () => {
+    render(<CostBenefitChart data={LOW_HEADROOM_FIXTURE} />);
+    let props = barSpy.mock.calls[0][0];
+    expect(props.options.scales.y.suggestedMax).toBeGreaterThanOrEqual(1.5);
+
+    barSpy.mockClear();
+    render(<CostBenefitChart data={TALL_FIXTURE} />);
+    props = barSpy.mock.calls[0][0];
+    expect(props.options.scales.y.suggestedMax).toBeGreaterThanOrEqual(2.2);
+  });
+
+  it("renders bars as solid colors with no canvas-pattern fill (#412 C1)", () => {
+    render(<CostBenefitChart data={FIXTURE} />);
+    const props = barSpy.mock.calls[0][0];
+    const bgs = props.data.datasets[0].backgroundColor;
+    bgs.forEach((bg) => {
+      expect(typeof bg).toBe("string");
+    });
+  });
+
+  it("does not render a trailing aria-hidden spacer below the chart (#412 C2)", () => {
+    const { container } = render(<CostBenefitChart data={FIXTURE} />);
+    const ariaHiddenEmptyDivs = Array.from(
+      container.querySelectorAll('[aria-hidden="true"]')
+    ).filter((el) => el.tagName === "DIV" && el.children.length === 0 && !el.textContent.trim());
+    expect(ariaHiddenEmptyDivs).toHaveLength(0);
   });
 });

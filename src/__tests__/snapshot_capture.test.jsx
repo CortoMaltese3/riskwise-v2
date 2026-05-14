@@ -31,14 +31,15 @@ vi.mock("leaflet-simple-map-screenshoter", () => ({}));
 
 const setStateBag = {
   // Defaults match an unfinished run — the camera should be disabled.
-  activeMap: "risk",
+  // ``activeMap`` mirrors the live UI state (#362): map captures forward
+  // the domain through ``surface`` so the PDF report can route the figure
+  // into the right per-domain section.
+  activeMap: "hazard",
   activeMapRef: { _fake: "map" },
   activeViewControl: "display_map",
   isScenarioRunCompleted: false,
   scenarioRunCode: "",
-  selectedSubTab: 0,
-  selectedTab: 1,
-  setSelectedSubTab: vi.fn(),
+  selectedTab: "risk",
   setActiveViewControl: vi.fn(),
   setAlertMessage: vi.fn(),
   setAlertSeverity: vi.fn(),
@@ -49,8 +50,8 @@ const setStateBag = {
   selectedReport: null,
   selectedAnnualGrowth: 0,
   selectedCountry: "Egypt",
-  selectedExposureEconomic: "assets",
-  selectedExposureNonEconomic: "",
+  selectedExposure: "assets",
+  selectedExposureCategory: "economic",
   selectedHazard: "flood",
   selectedScenario: "rcp85",
   selectedTimeHorizon: 2050,
@@ -59,14 +60,24 @@ const setStateBag = {
 
 const stateRef = { current: { ...setStateBag } };
 
-vi.mock("../store", () => ({
-  default: () => stateRef.current,
-}));
+const makeSelectorStore = () => {
+  const fn = (selector) => selector(stateRef.current);
+  fn.getState = () => stateRef.current;
+  fn.setState = (patch) => {
+    stateRef.current = { ...stateRef.current, ...patch };
+  };
+  return fn;
+};
 
-vi.mock("../store/workspaceSlice", () => {
-  const useWorkspaceStore = (selector) => selector({ loadScenarios: loadScenariosMock });
-  useWorkspaceStore.getState = () => ({ loadScenarios: loadScenariosMock });
-  return { default: useWorkspaceStore };
+vi.mock("../store/useUIStore", () => ({ default: makeSelectorStore() }));
+vi.mock("../store/useResultsStore", () => ({ default: makeSelectorStore() }));
+vi.mock("../store/useWorkspaceStore", () => {
+  const fn = (selector) => selector({ ...stateRef.current, loadScenarios: loadScenariosMock });
+  fn.getState = () => ({ ...stateRef.current, loadScenarios: loadScenariosMock });
+  fn.setState = (patch) => {
+    stateRef.current = { ...stateRef.current, ...patch };
+  };
+  return { default: fn };
 });
 
 vi.mock("../utils/reportTools", () => ({
@@ -99,6 +110,24 @@ describe("snapshot capture button", () => {
     expect(button).toBeDisabled();
   });
 
+  it("is disabled while a scenario is running, even after a prior run completed", async () => {
+    stateRef.current = {
+      ...setStateBag,
+      scenarioRunCode: "scen-prev",
+      isScenarioRunCompleted: true,
+      isScenarioRunning: true,
+      activeViewControl: "display_map",
+    };
+    render(<MainViewToolbar />);
+    const button = screen.getByLabelText("workspace_snapshot_capture_aria");
+    expect(button).toBeDisabled();
+    // Tooltip title is wired off the gating key when a run is active.
+    const tooltipHost = button.closest("[aria-label]") ?? button.parentElement;
+    // The chip-running tooltip key should be present in the rendered tree.
+    expect(document.body.innerHTML).toContain("scenario_running_disabled_tooltip");
+    expect(tooltipHost).not.toBeNull();
+  });
+
   it("captures the active map and POSTs the bytes when run is complete", async () => {
     stateRef.current = {
       ...setStateBag,
@@ -120,6 +149,9 @@ describe("snapshot capture button", () => {
     expect(createSnapshotMock).toHaveBeenCalledWith("scen-1", {
       snapshot_type: "map",
       image_base64: "YWFh",
+      // #362: ``activeMap`` propagates as ``surface`` so the snapshot can
+      // be routed to the hazard/exposure/impact section in the PDF report.
+      surface: "hazard",
     });
     expect(loadScenariosMock).toHaveBeenCalledWith({ force: true });
   });

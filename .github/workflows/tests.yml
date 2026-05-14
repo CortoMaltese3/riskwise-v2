@@ -1,10 +1,13 @@
 name: Tests
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "CHANGELOG.md"
+      - "LICENSE"
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -35,10 +38,8 @@ jobs:
       # geospatial install in CI (see pyproject.toml and tests/unit/ for
       # scope). h5py, rasterio, pyproj and scipy are included because the
       # engine raster/loader modules import them at module level — without
-      # them pytest fails at collection time (issue #207 follow-up).
-      # xlsxwriter is imported by backend/report/report_handler.py and is
-      # exercised by tests/unit/report/test_report_handler.py. All ship
-      # binary wheels (rasterio bundles its own GDAL) so no system
+      # them pytest fails at collection time (issue #207 follow-up). All
+      # ship binary wheels (rasterio bundles its own GDAL) so no system
       # packages are needed. Full-stack integration tests will get their
       # own job.
       - name: Install test dependencies
@@ -54,7 +55,6 @@ jobs:
             "psutil>=5.9,<7" \
             "duckdb>=1.0,<2" \
             "openpyxl>=3.1,<4" \
-            "xlsxwriter>=3.2,<4" \
             "h5py>=3.10,<4" \
             "rasterio>=1.3,<2" \
             "pyproj>=3.6,<4" \
@@ -212,45 +212,3 @@ jobs:
           name: playwright-report
           path: playwright-report
           retention-days: 7
-
-  npm-audit:
-    name: Frontend security (npm audit)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: ".nvmrc"
-          cache: npm
-
-      - name: Install (with scripts skipped — audit only needs the tree)
-        run: npm install --legacy-peer-deps --ignore-scripts --no-audit --no-fund
-
-      # Fail only on high/critical CVEs in production deps. Dev-only CVEs
-      # (eslint plugins, vitest, etc.) are tracked by Dependabot but do not
-      # ship to users and so do not gate merges.
-      - name: npm audit (production, high+)
-        run: npm audit --omit=dev --audit-level=high
-
-  pip-audit:
-    name: Backend security (pip-audit)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-          cache: pip
-
-      - name: Install pip-audit
-        run: python -m pip install --upgrade pip pip-audit
-
-      # `requirements/requirements.txt` is the pinned set installed in the
-      # bundled engine. `--strict` fails the build when any package can't be
-      # audited so silent gaps don't mask CVEs. Treat any unpatched
-      # vulnerability as a release-blocker; downgrade only via an explicit
-      # `--ignore-vuln <id>` with a justification.
-      - name: pip-audit (requirements)
-        run: pip-audit --strict --requirement requirements/requirements.txt

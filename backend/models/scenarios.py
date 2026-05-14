@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.models.common import Status
+
+# Domain that produced a snapshot — used by the PDF report to route each
+# selected snapshot into the right per-domain section (#362). The literal
+# union doubles as both the boundary validator and the source of truth
+# for the four i18n chip labels in :file:`SnapshotDrawer.jsx`.
+SnapshotSurface = Literal["hazard", "exposure", "impact", "adaptation"]
 
 
 class ScenarioWorkspaceItem(BaseModel):
@@ -19,8 +26,8 @@ class ScenarioWorkspaceItem(BaseModel):
     country: str | None = None
     hazard_type: str | None = None
     scenario: str | None = None
-    exposure_economic: str | None = None
-    exposure_non_economic: str | None = None
+    exposure_type: str | None = None
+    asset_type: str | None = None
     ref_year: int | None = None
     future_year: int | None = None
     annual_growth: float | None = None
@@ -101,7 +108,15 @@ class SnapshotItem(BaseModel):
     scenario_id: str
     snapshot_type: str
     created_at: datetime | None = None
+    # PDF reports render ``title`` as the figure heading above the image and
+    # ``caption`` as the descriptive text below (#350); both are independently
+    # optional so legacy snapshots without either still serialise.
+    title: str | None = Field(default=None, max_length=120)
     caption: str | None = None
+    # Domain that produced the snapshot (#362). NULL means "uncategorized"
+    # for pre-#362 rows; new captures always set this from the active UI
+    # surface so the PDF report can route the figure into the right section.
+    surface: SnapshotSurface | None = Field(default=None)
 
 
 class SnapshotListResponse(BaseModel):
@@ -116,7 +131,12 @@ class CreateSnapshotRequest(BaseModel):
 
     snapshot_type: str = Field(..., min_length=1)
     image_base64: str = Field(..., min_length=1)
+    title: str | None = Field(default=None, max_length=120)
     caption: str | None = Field(default=None, max_length=500)
+    # ``surface`` is the originating UI domain (#362). The :data:`SnapshotSurface`
+    # ``Literal`` restricts non-null values to the four known sections so a
+    # typo at the boundary trips a 422 rather than persisting a junk tag.
+    surface: SnapshotSurface | None = Field(default=None)
 
 
 class CreateSnapshotResponse(BaseModel):
@@ -127,7 +147,12 @@ class CreateSnapshotResponse(BaseModel):
 class UpdateSnapshotRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    title: str | None = Field(default=None, max_length=120)
     caption: str | None = Field(default=None, max_length=500)
+    # PATCH respects ``model_fields_set`` in the handler, so omitting
+    # ``surface`` from the body leaves the column untouched while passing
+    # ``null`` explicitly clears it (#362).
+    surface: SnapshotSurface | None = Field(default=None)
 
 
 class UpdateSnapshotResponse(BaseModel):
@@ -137,30 +162,6 @@ class UpdateSnapshotResponse(BaseModel):
 
 class DeleteSnapshotResponse(BaseModel):
     data: dict
-    status: Status
-
-
-class ExportReportRequest(BaseModel):
-    """Body posted to ``POST /api/v1/scenarios/{id}/export``.
-
-    ``scenarioRunCode`` is overwritten by the FastAPI handler with the path
-    parameter, so the field is optional in the body.
-    """
-
-    model_config = ConfigDict(extra="allow")
-
-    exportType: str = Field(..., min_length=1)
-    scenarioRunCode: str | None = None
-    report: dict | None = None
-
-
-class ExportReportData(BaseModel):
-    status: str = "delegated_to_electron"
-    report_path: str = ""
-
-
-class ExportReportResponse(BaseModel):
-    data: ExportReportData
     status: Status
 
 
@@ -203,4 +204,20 @@ class ScenarioImportData(BaseModel):
 
 class ScenarioImportResponse(BaseModel):
     data: ScenarioImportData
+    status: Status
+
+
+class HydrateScenarioData(BaseModel):
+    """Payload returned by ``POST /api/v1/scenarios/{id}/hydrate-temp``.
+
+    ``written`` lists the result types that were rewritten to the temp
+    directory; absent types (e.g. ``costben_data`` on a historical scenario)
+    are silently skipped at the writer.
+    """
+
+    written: list[str]
+
+
+class HydrateScenarioResponse(BaseModel):
+    data: HydrateScenarioData
     status: Status

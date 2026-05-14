@@ -15,22 +15,23 @@ vi.mock("../components/map/RiskMap", () => ({
 }));
 
 import MapLayout from "../components/map/MapLayout";
-import useStore from "../store";
+import useResultsStore from "../store/useResultsStore";
+import useUIStore from "../store/useUIStore";
 
 describe("MapLayout state coverage", () => {
-  let snapshot;
+  let uiSnapshot;
+  let resultsSnapshot;
 
   beforeEach(() => {
-    snapshot = useStore.getState();
-    useStore.setState({
-      isScenarioRunning: false,
-      isScenarioRunCompleted: false,
-      activeMap: "hazard",
-    });
+    uiSnapshot = useUIStore.getState();
+    resultsSnapshot = useResultsStore.getState();
+    useResultsStore.setState({ isScenarioRunning: false, isScenarioRunCompleted: false });
+    useUIStore.setState({ activeMap: "hazard" });
   });
 
   afterEach(() => {
-    useStore.setState(snapshot, true);
+    useUIStore.setState(uiSnapshot, true);
+    useResultsStore.setState(resultsSnapshot, true);
   });
 
   it("renders the empty-state placeholder pre-run", () => {
@@ -45,7 +46,7 @@ describe("MapLayout state coverage", () => {
   });
 
   it("loading state takes precedence over the empty state", () => {
-    useStore.setState({ isScenarioRunning: true });
+    useResultsStore.setState({ isScenarioRunning: true });
     render(<MapLayout />);
 
     expect(screen.getByTestId("map-skeleton")).toBeInTheDocument();
@@ -53,7 +54,8 @@ describe("MapLayout state coverage", () => {
   });
 
   it("renders the populated map once a scenario has completed", () => {
-    useStore.setState({ isScenarioRunCompleted: true, activeMap: "hazard" });
+    useResultsStore.setState({ isScenarioRunCompleted: true });
+    useUIStore.setState({ activeMap: "hazard" });
     render(<MapLayout />);
 
     expect(screen.getByTestId("hazard-map")).toBeInTheDocument();

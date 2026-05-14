@@ -4,11 +4,13 @@ import { useTranslation } from "react-i18next";
 import { Box, Button, Typography } from "@mui/material";
 
 import ResultsTypography from "./ResultsTypography";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import { layoutTransition } from "../../theme/theme";
 
 const EconomicResultsCard = () => {
-  const { activeMap, activeViewControl, setActiveMap } = useStore();
+  const activeMap = useUIStore((s) => s.activeMap);
+  const activeViewControl = useUIStore((s) => s.activeViewControl);
+  const setActiveMap = useUIStore((s) => s.setActiveMap);
   const { t } = useTranslation();
 
   const handleButtonClick = (type) => {

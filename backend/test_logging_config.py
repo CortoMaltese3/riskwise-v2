@@ -138,3 +138,39 @@ class TestRequestIdMiddleware:
                 ]
         error_events = [e for e in events if e["type"] == "error"]
         assert error_events and error_events[0]["request_id"] == "scenario-trace"
+
+
+class TestHandlerEmittedLogsCarryRequestId:
+    """Issue #245: every handler module binds a structlog logger at import.
+
+    The legacy stdlib-based logger silently dropped the
+    ``request_id`` ContextVar; the structlog
+    pipeline must propagate it through any ``get_logger(name)`` call so
+    operator-side log scraping can correlate handler-emitted lines with
+    the request that caused them.
+    """
+
+    def test_handler_module_logger_picks_up_bound_request_id(self) -> None:
+        """A handler-bound logger must read the live ContextVar at emit time.
+
+        Structlog's :class:`WriteLoggerFactory` captures the current output
+        stream when ``configure_logging`` runs, so we configure first, then
+        ask the production module for a fresh ``get_logger`` handle. The
+        production code itself binds at import (e.g.
+        ``backend/utils/country.py``); this test mirrors that bind path
+        through the same ``get_logger`` factory so the assertion exercises
+        the contract every handler relies on.
+        """
+        stream = io.StringIO()
+        configure_logging(stream=stream)
+        handler_log = get_logger("backend.utils.country")
+        token = bind_request_id("handler-trace")
+        try:
+            handler_log.error("simulated handler failure")
+        finally:
+            reset_request_id(token)
+
+        record = json.loads(stream.getvalue().strip().splitlines()[-1])
+        assert record["request_id"] == "handler-trace"
+        assert record["event"] == "simulated handler failure"
+        assert record["logger"] == "backend.utils.country"

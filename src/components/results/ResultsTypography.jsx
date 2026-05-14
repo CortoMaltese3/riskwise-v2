@@ -3,53 +3,62 @@ import { useTranslation } from "react-i18next";
 
 import { Typography } from "@mui/material";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
+import { tabIndex } from "../main/tabs";
+
+// The ERA result-detail bundle only ships copy for the map and chart frames.
+// Other view controls (display_parameters, the macro frames) compose keys
+// that have no bundle entry, which would surface the raw key string in the
+// UI; the explicit allowlist keeps the body blank in those states instead.
+const RENDERED_VIEW_CONTROLS = new Set(["display_map", "display_chart"]);
 
 const ResultsTypography = () => {
-  const {
-    activeMap,
-    activeViewControl,
-    selectedAppOption,
-    selectedCountry,
-    selectedHazard,
-    selectedExposureEconomic,
-    selectedExposureNonEconomic,
-    selectedTab,
-    selectedSubTab,
-  } = useStore();
+  const activeMap = useUIStore((s) => s.activeMap);
+  const activeViewControl = useUIStore((s) => s.activeViewControl);
+  const selectedTab = useUIStore((s) => s.selectedTab);
+  const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const selectedExposure = useWorkspaceStore((s) => s.selectedExposure);
   const { t } = useTranslation();
 
+  // The ERA/Explore explanatory copy bundle is keyed by the legacy numeric
+  // tab index (e.g. ``..._1_0_display_map_hazard``). Renaming all ~350
+  // keys per locale is out of scope for #247, so we translate the enum
+  // back to its historical position before composing the lookup key.
+  // The legacy keys also carried a numeric sub-tab segment; that index is
+  // pinned to ``0`` (the only Risk surface left) so the existing key
+  // shape stays intact without reviving the dead sub-tab state.
+  const tabIdx = tabIndex(selectedTab);
+  const legacySubTabIdx = 0;
+
   const getText = () => {
+    if (!RENDERED_VIEW_CONTROLS.has(activeViewControl)) {
+      return "";
+    }
     if (selectedAppOption === "era") {
-      const selectedExposure = selectedExposureEconomic || selectedExposureNonEconomic;
-      if (
-        !selectedAppOption ||
-        !selectedCountry ||
-        !selectedHazard ||
-        (!selectedExposureEconomic && !selectedExposureNonEconomic)
-      ) {
+      if (!selectedAppOption || !selectedCountry || !selectedHazard || !selectedExposure) {
         return "";
-      } else {
-        return t(
-          `results_${selectedAppOption}_` +
-            `${selectedCountry}_` +
-            `${selectedHazard}_` +
-            `${selectedExposure}_` +
-            `${selectedTab}_` +
-            `${selectedSubTab}_` +
-            `${activeViewControl}_` +
-            `${activeMap}`
-        );
       }
-    } else {
       return t(
         `results_${selectedAppOption}_` +
-          `${selectedTab}_` +
-          `${selectedSubTab}_` +
+          `${selectedCountry}_` +
+          `${selectedHazard}_` +
+          `${selectedExposure}_` +
+          `${tabIdx}_` +
+          `${legacySubTabIdx}_` +
           `${activeViewControl}_` +
           `${activeMap}`
       );
     }
+    return t(
+      `results_${selectedAppOption}_` +
+        `${tabIdx}_` +
+        `${legacySubTabIdx}_` +
+        `${activeViewControl}_` +
+        `${activeMap}`
+    );
   };
 
   return (

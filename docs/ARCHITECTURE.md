@@ -71,9 +71,11 @@ A cold-start reader needs this to understand what the product actually does befo
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-**App-option modes** (selector in header, persisted in store as `selectedAppOption`):
-- `"era"` — ERA project mode: entity files, hazard files, and validation all use pre-shipped data; validation flags are force-set to `true`.
-- `""` (custom) — user supplies own entity/hazard files or pulls from CLIMADA Client API.
+**App-option modes** (segmented `ERA` / `Custom` toggle in `TopBar.jsx`, store key `selectedAppOption`):
+- `"era"` — default on first launch. Entity files, hazard files, and validation all use pre-shipped ERA data; validation flags are force-set to `true`, the time horizon is pinned to 2050, annual growth is country-pinned, and upload UI is hidden.
+- `"explore"` — Custom mode. User supplies own entity/hazard files or pulls from the CLIMADA Client API; the Macro tab is disabled.
+
+Switching modes goes through `setSelectedAppOptionWithReset` (in `store.js`), which atomically clears mode-bound inputs (`selectedExposureFile`, `selectedHazardFile`, `selectedTimeHorizon`, `selectedAnnualGrowth`), the `isValid*` flags, and cached scenario results (`isScenarioRunCompleted`, `mapTitle`). The action is a no-op when the requested mode equals the current one. The `ModeSwitchConfirmDialog` always confirms before applying — there is no skip-when-empty heuristic — and cancelling leaves mode and inputs untouched.
 
 ---
 
@@ -240,7 +242,7 @@ schema_version (version INTEGER, applied_at TIMESTAMP)
 -- Breaking schema changes bump version; migration scripts live in backend/db/migrations/.
 
 scenarios (id, name TEXT, tags TEXT, notes TEXT,
-           country, hazard_type, scenario, exposure_economic, exposure_non_economic,
+           country, hazard_type, scenario, exposure_type, asset_type,
            ref_year, future_year, annual_growth, is_era, app_option, status, created_at)
 -- name/tags/notes: user-facing annotation (see Area 11 and Scenario Naming section)
 
@@ -274,9 +276,9 @@ Original v1 baseline: ~500MB conda env with unused packages (Flask, Selenium, fo
 - **Track B** (shipped Phase 6): `climate-lama-engine` (NumPy+SciPy only) replaces CLIMADA as the runtime compute layer; HDF5/GeoTIFF/XLSX file I/O lives in `backend/engine/loaders/` and a local catalog (`data/catalog.json` + `backend/engine/catalog.py`) replaces `climada.util.api_client.Client`.
 - **Track C**: Remote backend (rejected — breaks offline use).
 
-**Keep**: climate-lama-engine, geopandas, numpy, pandas, scipy, shapely, pycountry, openpyxl, pyarrow, h5py, rasterio, xlsxwriter, duckdb, fastapi, uvicorn, pyproj
+**Keep**: climate-lama-engine, geopandas, numpy, pandas, scipy, shapely, pycountry, openpyxl, pyarrow, h5py, rasterio, duckdb, fastapi, uvicorn, pyproj
 
-**Removed**: climada (Phase 6 #166), matplotlib, Flask, Flask-CORS, Flask-SocketIO, Selenium, Werkzeug, folium, geocoder, ipykernel, cartopy, python-docx, docxtpl, docx2pdf
+**Removed**: climada (Phase 6 #166), matplotlib, Flask, Flask-CORS, Flask-SocketIO, Selenium, Werkzeug, folium, geocoder, ipykernel, cartopy, python-docx, docxtpl, docx2pdf, xlsxwriter (#355, superseded by enriched PDF export)
 
 **Files**: `pyproject.toml`, `requirements/requirements.txt`, `requirements/environment.yml`, `backend/engine/`
 

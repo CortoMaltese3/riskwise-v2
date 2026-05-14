@@ -4,11 +4,11 @@ import { act, render, screen, fireEvent, within } from "@testing-library/react";
 
 import "../i18nConfig";
 import GlossaryDrawer from "../components/help/GlossaryDrawer";
-import useStore from "../store";
+import useUIStore from "../store/useUIStore";
 
 const renderOpen = () => {
   act(() => {
-    useStore.getState().setGlossaryOpen(true);
+    useUIStore.getState().setGlossaryOpen(true);
   });
   return render(<GlossaryDrawer />);
 };
@@ -16,12 +16,13 @@ const renderOpen = () => {
 describe("GlossaryDrawer", () => {
   beforeEach(() => {
     act(() => {
-      useStore.getState().setGlossaryOpen(false);
+      useUIStore.getState().setGlossaryOpen(false);
     });
   });
 
   it("renders terms from the English glossary when opened", () => {
     renderOpen();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^glossary$/i })).toBeInTheDocument();
     expect(screen.getByText(/AAL \(Average Annual Loss\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Return Period/)).toBeInTheDocument();

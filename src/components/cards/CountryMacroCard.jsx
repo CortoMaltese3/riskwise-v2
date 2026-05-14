@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardActionArea, Typography, CardContent } from "@mui/material";
-import useStore from "../../store";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { layoutTransition } from "../../theme/theme";
 
@@ -16,9 +16,14 @@ const BUILTIN_LABEL_KEYS = {
 
 const countryKey = (country) => country.name.toLowerCase();
 
+// Macroeconomic cards intentionally remain enabled while a scenario run is
+// in flight (#401): their selections drive a separate workflow and never
+// flow into ``runScenario``'s body, so changing them mid-run cannot
+// corrupt the active job. Revisit only if a corruption case surfaces.
 const CountryMacroCard = () => {
   const { t } = useTranslation();
-  const { selectedMacroCountry, setSelectedMacroCountry } = useStore();
+  const selectedMacroCountry = useWorkspaceStore((s) => s.selectedMacroCountry);
+  const setSelectedMacroCountry = useWorkspaceStore((s) => s.setSelectedMacroCountry);
   const [countries, setCountries] = useState([]);
 
   useEffect(() => {

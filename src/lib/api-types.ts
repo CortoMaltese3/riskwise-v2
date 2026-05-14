@@ -459,7 +459,7 @@ export interface paths {
         patch: operations["patch_scenario_endpoint_api_v1_scenarios__scenario_id__patch"];
         trace?: never;
     };
-    "/api/v1/scenarios/{scenario_id}/export": {
+    "/api/v1/scenarios/{scenario_id}/hydrate-temp": {
         parameters: {
             query?: never;
             header?: never;
@@ -468,8 +468,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Export Scenario */
-        post: operations["export_scenario_api_v1_scenarios__scenario_id__export_post"];
+        /**
+         * Hydrate Scenario Temp Endpoint
+         * @description Rewrite the saved scenario's blobs back into the temp dir.
+         *
+         *     Required by the Workspace ``Restore`` flow: the maps and the
+         *     waterfall/cost-benefit charts read from per-run JSON files, so the
+         *     renderer cannot show the restored state until those files exist on
+         *     disk again. See ``backend.run_hydrate_scenario_temp`` for details.
+         */
+        post: operations["hydrate_scenario_temp_endpoint_api_v1_scenarios__scenario_id__hydrate_temp_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -509,6 +517,24 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings Endpoint */
+        get: operations["get_settings_endpoint_api_v1_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Settings Endpoint */
+        patch: operations["patch_settings_endpoint_api_v1_settings_patch"];
         trace?: never;
     };
     "/api/v1/snapshots/{snapshot_id}": {
@@ -639,6 +665,8 @@ export interface components {
             benefit_cost_ratio: number;
             /** Cost */
             cost: number;
+            /** Display Name */
+            display_name?: string | null;
             /** Name */
             name: string;
         };
@@ -691,6 +719,10 @@ export interface components {
             image_base64: string;
             /** Snapshot Type */
             snapshot_type: string;
+            /** Surface */
+            surface?: ("hazard" | "exposure" | "impact" | "adaptation") | null;
+            /** Title */
+            title?: string | null;
         };
         /** CreateSnapshotResponse */
         CreateSnapshotResponse: {
@@ -857,43 +889,6 @@ export interface components {
             };
             status: components["schemas"]["Status"];
         };
-        /** ExportReportData */
-        ExportReportData: {
-            /**
-             * Report Path
-             * @default
-             */
-            report_path: string;
-            /**
-             * Status
-             * @default delegated_to_electron
-             */
-            status: string;
-        };
-        /**
-         * ExportReportRequest
-         * @description Body posted to ``POST /api/v1/scenarios/{id}/export``.
-         *
-         *     ``scenarioRunCode`` is overwritten by the FastAPI handler with the path
-         *     parameter, so the field is optional in the body.
-         */
-        ExportReportRequest: {
-            /** Exporttype */
-            exportType: string;
-            /** Report */
-            report?: {
-                [key: string]: unknown;
-            } | null;
-            /** Scenarioruncode */
-            scenarioRunCode?: string | null;
-        } & {
-            [key: string]: unknown;
-        };
-        /** ExportReportResponse */
-        ExportReportResponse: {
-            data: components["schemas"]["ExportReportData"];
-            status: components["schemas"]["Status"];
-        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -906,6 +901,23 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /**
+         * HydrateScenarioData
+         * @description Payload returned by ``POST /api/v1/scenarios/{id}/hydrate-temp``.
+         *
+         *     ``written`` lists the result types that were rewritten to the temp
+         *     directory; absent types (e.g. ``costben_data`` on a historical scenario)
+         *     are silently skipped at the writer.
+         */
+        HydrateScenarioData: {
+            /** Written */
+            written: string[];
+        };
+        /** HydrateScenarioResponse */
+        HydrateScenarioResponse: {
+            data: components["schemas"]["HydrateScenarioData"];
+            status: components["schemas"]["Status"];
         };
         /** JobAcceptedResponse */
         JobAcceptedResponse: {
@@ -1161,14 +1173,14 @@ export interface components {
         ScenarioRunRequest: {
             /** Annualgrowth */
             annualGrowth?: number | null;
+            /** Assettype */
+            assetType?: ("economic" | "non_economic") | null;
             /** Countryname */
             countryName?: string | null;
-            /** Exposureeconomic */
-            exposureEconomic?: string | null;
             /** Exposurefile */
             exposureFile?: string | null;
-            /** Exposurenoneconomic */
-            exposureNonEconomic?: string | null;
+            /** Exposuretype */
+            exposureType?: string | null;
             /** Hazardfile */
             hazardFile?: string | null;
             /** Hazardtype */
@@ -1177,6 +1189,8 @@ export interface components {
             isEra?: boolean | null;
             /** Scenario */
             scenario?: string | null;
+            /** Selectedmeasureids */
+            selectedMeasureIds?: string[] | null;
             /** Timehorizon */
             timeHorizon?: number[] | null;
         } & {
@@ -1193,6 +1207,8 @@ export interface components {
             app_option?: string | null;
             /** App Version */
             app_version?: string | null;
+            /** Asset Type */
+            asset_type?: string | null;
             /** Climada Version */
             climada_version?: string | null;
             /** Computed At */
@@ -1209,10 +1225,8 @@ export interface components {
             engine_version?: string | null;
             /** Entity Data Sha256 */
             entity_data_sha256?: string | null;
-            /** Exposure Economic */
-            exposure_economic?: string | null;
-            /** Exposure Non Economic */
-            exposure_non_economic?: string | null;
+            /** Exposure Type */
+            exposure_type?: string | null;
             /** Future Year */
             future_year?: number | null;
             /** Hazard Data Sha256 */
@@ -1260,6 +1274,10 @@ export interface components {
             scenario_id: string;
             /** Snapshot Type */
             snapshot_type: string;
+            /** Surface */
+            surface?: ("hazard" | "exposure" | "impact" | "adaptation") | null;
+            /** Title */
+            title?: string | null;
         };
         /** SnapshotListResponse */
         SnapshotListResponse: {
@@ -1290,10 +1308,41 @@ export interface components {
         UpdateSnapshotRequest: {
             /** Caption */
             caption?: string | null;
+            /** Surface */
+            surface?: ("hazard" | "exposure" | "impact" | "adaptation") | null;
+            /** Title */
+            title?: string | null;
         };
         /** UpdateSnapshotResponse */
         UpdateSnapshotResponse: {
             data: components["schemas"]["SnapshotItem"];
+            status: components["schemas"]["Status"];
+        };
+        /** UpdateUserSettingsRequest */
+        UpdateUserSettingsRequest: {
+            /** Report Currency */
+            report_currency?: ("EUR" | "USD" | "GBP" | "CHF" | "THB" | "EGP") | null;
+            /** Report Locale */
+            report_locale?: ("en-US" | "en-GB" | "de-DE" | "fr-FR" | "es-ES" | "th-TH" | "ar-EG") | null;
+        };
+        /** UserSettings */
+        UserSettings: {
+            /**
+             * Report Currency
+             * @default EUR
+             * @enum {string}
+             */
+            report_currency: "EUR" | "USD" | "GBP" | "CHF" | "THB" | "EGP";
+            /**
+             * Report Locale
+             * @default en-US
+             * @enum {string}
+             */
+            report_locale: "en-US" | "en-GB" | "de-DE" | "fr-FR" | "es-ES" | "th-TH" | "ar-EG";
+        };
+        /** UserSettingsResponse */
+        UserSettingsResponse: {
+            data: components["schemas"]["UserSettings"];
             status: components["schemas"]["Status"];
         };
         /** ValidationError */
@@ -2221,7 +2270,7 @@ export interface operations {
             };
         };
     };
-    export_scenario_api_v1_scenarios__scenario_id__export_post: {
+    hydrate_scenario_temp_endpoint_api_v1_scenarios__scenario_id__hydrate_temp_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2230,11 +2279,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExportReportRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -2242,7 +2287,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExportReportResponse"];
+                    "application/json": components["schemas"]["HydrateScenarioResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2344,6 +2389,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CreateSnapshotResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_endpoint_api_v1_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSettingsResponse"];
+                };
+            };
+        };
+    };
+    patch_settings_endpoint_api_v1_settings_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSettingsResponse"];
                 };
             };
             /** @description Validation Error */

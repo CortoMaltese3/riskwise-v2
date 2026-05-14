@@ -1,13 +1,32 @@
 import { useTranslation } from "react-i18next";
 
 import RiskWiseClient from "../lib/RiskWiseClient";
-import useStore from "../store";
+import useResultsStore from "../store/useResultsStore";
+import useUIStore from "../store/useUIStore";
+import useWorkspaceStore from "../store/useWorkspaceStore";
 
 import outputIconTha from "../assets/folder_grey_network_icon_512.png";
 import outputIconEgy from "../assets/folder_grey_cloud_icon_512.png";
 
+// Backend stores the pycountry canonical title-case name ("Egypt", "Thailand"),
+// but every other consumer of ``selectedCountry`` in the store (i18n keys, the
+// hazard map country-coordinates lookup, the per-country output icons) expects
+// the lowercase slug. Use this for any country value coming back from the API.
+const countrySlug = (value) => (value || "").toLowerCase();
+
+// Extract measure names from a restored cost-benefit payload. ``name`` is the
+// stable join key with the entity measures (``MeasureSpec.name``), so it is
+// what the workspace store stores in ``selectedMeasureIds``.
+const measureNamesFromCostBenefit = (response) => {
+  const code = response?.result?.status?.code;
+  if (code !== 2000) return [];
+  const measures = response?.result?.data?.measures;
+  if (!Array.isArray(measures)) return [];
+  return measures.map((m) => m?.name).filter((n) => typeof n === "string");
+};
+
 const toReport = (row) => {
-  const country = (row.country || "").toLowerCase();
+  const country = countrySlug(row.country);
   const fallbackTitle = [
     row.name || row.id,
     row.country,
@@ -24,7 +43,7 @@ const toReport = (row) => {
       row.country,
       row.hazard_type,
       row.scenario,
-      row.exposure_economic || row.exposure_non_economic || "",
+      row.exposure_type || "",
       `${row.ref_year ?? ""},${row.future_year ?? ""}`,
       row.annual_growth ?? "",
     ]
@@ -33,8 +52,8 @@ const toReport = (row) => {
     params: {
       annual_growth: row.annual_growth,
       country_name: row.country,
-      exposure_economic: row.exposure_economic,
-      exposure_non_economic: row.exposure_non_economic,
+      exposure_type: row.exposure_type,
+      asset_type: row.asset_type,
       future_year: row.future_year,
       hazard_type: row.hazard_type,
       is_era: row.is_era,
@@ -58,22 +77,12 @@ export const useReportTools = () => {
     setAlertMessage,
     setAlertSeverity,
     setAlertShowMessage,
-    setIsScenarioRunCompleted,
-    setSelectedCountry,
-    setSelectedHazard,
-    setSelectedScenario,
-    setSelectedExposureEconomic,
-    setSelectedExposureNonEconomic,
-    setSelectedTimeHorizon,
-    setSelectedAnnualGrowth,
-    setIsValidHazard,
-    setIsValidExposureEconomic,
-    setIsValidExposureNonEconomic,
     setMapTitle,
-    setScenarioRunCode,
     setSelectedReport,
     setReports,
-  } = useStore.getState();
+  } = useUIStore.getState();
+  const { setIsScenarioRunCompleted } = useResultsStore.getState();
+  const { restoreScenarioInputs, initializeMeasureSelection } = useWorkspaceStore.getState();
 
   const fetchReports = async () => {
     try {
@@ -111,30 +120,44 @@ export const useReportTools = () => {
       const scenario = data.scenario;
       setSelectedReport(toReport(scenario));
 
-      setScenarioRunCode(id);
-      setIsScenarioRunCompleted(true);
-      setSelectedCountry(scenario.country);
-      setSelectedHazard(scenario.hazard_type);
-      setIsValidHazard(true);
-      setSelectedScenario(scenario.scenario);
-      setMapTitle(scenario.name || scenario.id);
-
-      if (scenario.exposure_economic) {
-        setSelectedExposureEconomic(scenario.exposure_economic);
-        setIsValidExposureEconomic(true);
-      } else if (scenario.exposure_non_economic) {
-        setSelectedExposureNonEconomic(scenario.exposure_non_economic);
-        setIsValidExposureNonEconomic(true);
+      // Rehydrate the per-run temp directory *before* flipping the
+      // run-completed flag. The maps and the waterfall/cost-benefit charts
+      // re-fetch as soon as that flag flips, so the blobs must already be
+      // on disk or the renderer paints the empty state.
+      const hydrateResponse = await RiskWiseClient.hydrateScenarioTemp(id);
+      if (!hydrateResponse?.success || hydrateResponse?.result?.status?.code !== 2000) {
+        throw new Error(`Failed to hydrate temp dir for scenario ${id}`);
       }
 
-      setSelectedTimeHorizon([scenario.ref_year, scenario.future_year]);
-      setSelectedAnnualGrowth(scenario.annual_growth ?? 0);
+      // Atomically restore all scenario inputs. Avoid the per-field setters'
+      // wipe side-effects on measure state so the saved applied measures
+      // survive into the next run (issue #428).
+      restoreScenarioInputs({ ...scenario, country: countrySlug(scenario.country) });
+      setMapTitle(scenario.name || scenario.id);
+
+      // Seed the measure selection from the restored cost-benefit payload so
+      // a re-run dispatched before the Adaptation tab mounts still carries
+      // the saved measure set. ``measures: []`` (zero-measures runs) still
+      // marks selection initialized; the next run will dispatch the explicit
+      // empty list and the backend will produce the matching empty payload.
+      try {
+        const cb = await RiskWiseClient.fetchCostBenefitData();
+        initializeMeasureSelection(measureNamesFromCostBenefit(cb));
+      } catch (err) {
+        // Cost-benefit may be unavailable for older scenarios saved before
+        // the always-write fix landed. Leave measure state untouched in that
+        // case — the Adaptation tab's catalog fetch will initialize it.
+        console.warn("restoreScenario: cost-benefit hydrate failed", err);
+      }
+
+      setIsScenarioRunCompleted(true);
+      return true;
     } catch (error) {
       console.error("Error restoring scenario:", error);
       setAlertMessage(t("alert_message_report_tools_error_restore_report"));
       setAlertSeverity("error");
-    } finally {
       setAlertShowMessage(true);
+      return false;
     }
   };
 

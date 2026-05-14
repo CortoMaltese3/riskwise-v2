@@ -3,7 +3,7 @@ import { Joyride, ACTIONS, EVENTS, STATUS } from "react-joyride";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import { isRtl } from "../../i18nConfig";
 import { buildJoyrideLocale, buildJoyrideStyles } from "./joyrideTheme";
 
@@ -14,8 +14,8 @@ import { buildJoyrideLocale, buildJoyrideStyles } from "./joyrideTheme";
 const Walkthrough = () => {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const walkthroughActive = useStore((s) => s.walkthroughActive);
-  const finishWalkthrough = useStore((s) => s.finishWalkthrough);
+  const walkthroughActive = useUIStore((s) => s.walkthroughActive);
+  const finishWalkthrough = useUIStore((s) => s.finishWalkthrough);
 
   const rtl = isRtl(i18n.language);
 

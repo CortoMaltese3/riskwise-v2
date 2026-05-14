@@ -9,14 +9,20 @@ import "leaflet/dist/leaflet.css";
 import { formatNumber } from "../../lib/formatNumber";
 import { getScaleLegacy } from "../../utils/colorScalesLegacy";
 import LegendLegacy from "./LegendLegacy";
-import useStore from "../../store";
+import RiskWiseClient from "../../lib/RiskWiseClient";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import useTileLayerUrl from "./useTileLayerUrl";
 
 const adminLayers = [0, 1, 2]; // Administrative layers
 
 const ExposureMap = () => {
   const tileLayerUrl = useTileLayerUrl();
-  const { selectedCountry, selectedExposureEconomic, selectedHazard, setActiveMapRef } = useStore();
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedExposureCategory = useWorkspaceStore((s) => s.selectedExposureCategory);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const setActiveMapRef = useUIStore((s) => s.setActiveMapRef);
+  const isEconomic = selectedExposureCategory === "economic" || selectedExposureCategory === null;
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const mapRefSet = useRef(false);
@@ -30,15 +36,16 @@ const ExposureMap = () => {
   const [unit, setUnit] = useState("");
 
   const fetchGeoJson = async (layer) => {
+    // Served by the main-process `app://` handler (`/__temp/<file>`) — see
+    // HazardMap for the rationale on the same-origin URL.
+    const res = await RiskWiseClient.fetchGeoJson("app://./__temp/exposures_geodata.json");
+    if (!res.success) {
+      console.error("Error fetching GeoJSON data:", res.error.message);
+      setMapInfo({ geoJson: null, colorScale: null });
+      return;
+    }
     try {
-      // Served by the main-process `app://` handler (`/__temp/<file>`) — see
-      // HazardMap for the rationale on the same-origin URL.
-      const response = await fetch("app://./__temp/exposures_geodata.json");
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
+      const data = res.result;
       setUnit(data._metadata.unit);
       const filteredFeatures = data.features.filter(
         (feature) => feature.properties.layer === layer
@@ -53,7 +60,7 @@ const ExposureMap = () => {
 
       setMapInfo({ geoJson: filteredData, colorScale: scale });
     } catch (error) {
-      console.error("Error fetching GeoJSON data:", error);
+      console.error("Error processing GeoJSON data:", error);
       setMapInfo({ geoJson: null, colorScale: null });
     }
   };
@@ -77,15 +84,20 @@ const ExposureMap = () => {
   };
 
   const adminButtonStyle = (layer) => ({
-    flexGrow: 0,
-    margin: 1,
-    minWidth: 7.5,
-    maxWidth: 7.5,
+    flex: "0 0 auto",
+    // Floor wide enough to fit the natural width of "Admin 2" so all three
+    // buttons line up. textTransform:none disables MUI's default ALL-CAPS.
+    minWidth: 9,
+    px: 1,
     fontSize: "0.75rem",
+    whiteSpace: "nowrap",
+    textTransform: "none",
     bgcolor: layer === activeAdminLayer ? "primary.dark" : "primary.main",
     "&:hover": { bgcolor: "secondary.main" },
   });
 
+  // Right-anchored, gap-spaced row that wraps on narrow map widths so the
+  // group never overflows the map viewport or clips long localized labels.
   const buttonContainerSx = {
     position: "absolute",
     top: 1.25,
@@ -93,6 +105,10 @@ const ExposureMap = () => {
     zIndex: 1000,
     display: "flex",
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 0.5,
+    justifyContent: "flex-end",
+    maxWidth: (theme) => `calc(100% - ${theme.spacing(2.5)})`,
   };
 
   const countryCoordinates = {
@@ -107,7 +123,7 @@ const ExposureMap = () => {
       const name = feature.properties.name;
 
       // Check if the value should be rounded up for non-economic exposure
-      if (!selectedExposureEconomic) {
+      if (!isEconomic) {
         value = Math.ceil(value);
       }
 
@@ -179,8 +195,7 @@ const ExposureMap = () => {
             onClick={() => handleAdminLayerChange(layer)}
             variant="contained"
           >
-            {t("map_exposure_button_admin")}
-            {layer}
+            {t("map_exposure_button_admin")} {layer}
           </Button>
         ))}
       </Box>
@@ -197,7 +212,7 @@ const ExposureMap = () => {
             maxValue={maxValue}
             minValue={minValue}
             unit={unit}
-            type={selectedExposureEconomic ? "economic" : "non-economic"}
+            type={isEconomic ? "economic" : "non-economic"}
           />
         </>
       )}

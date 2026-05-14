@@ -6,21 +6,17 @@ import { Box, Typography, IconButton, List, ListItem, ListItemText } from "@mui/
 import { Delete, ArrowUpward, ArrowDownward } from "@mui/icons-material";
 import RestoreIcon from "@mui/icons-material/Restore";
 
-import { useReportTools } from "../../utils/reportTools";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { layoutTransition } from "../../theme/theme";
 
 const ReportCard = ({ data, image, id, isSelected, onCardClick, onReportAction, title, type }) => {
   const { t } = useTranslation();
-  const {
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-    setMapTitle,
-    setSelectedScenarioRunCode,
-    setSelectedReportType,
-  } = useStore();
-  const { getReport } = useReportTools();
+  const setAlertMessage = useUIStore((s) => s.setAlertMessage);
+  const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
+  const setSelectedReportType = useUIStore((s) => s.setSelectedReportType);
+  const setSelectedScenarioRunCode = useWorkspaceStore((s) => s.setSelectedScenarioRunCode);
 
   const [clicked, setClicked] = useState(false); // State to manage click animation
   const handleMouseDown = () => {
@@ -49,10 +45,6 @@ const ReportCard = ({ data, image, id, isSelected, onCardClick, onReportAction, 
     setAlertSeverity("success");
     setAlertShowMessage(true);
     onReportAction(id, "restore");
-    setSelectedScenarioRunCode("");
-
-    const restoredScenario = getReport(id);
-    setMapTitle(restoredScenario.title);
   };
 
   const handleDownButtonClick = () => {

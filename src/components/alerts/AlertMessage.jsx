@@ -2,7 +2,7 @@ import React, { forwardRef } from "react";
 import PropTypes from "prop-types";
 import { Snackbar, Stack, Button } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import { layoutTransition } from "../../theme/theme";
 
 const Alert = forwardRef(function Alert(props, ref) {
@@ -10,7 +10,10 @@ const Alert = forwardRef(function Alert(props, ref) {
 });
 
 const AlertMessage = () => {
-  const { alertMessage, alertSeverity, alertShowMessage, setAlertShowMessage } = useStore();
+  const alertMessage = useUIStore((s) => s.alertMessage);
+  const alertSeverity = useUIStore((s) => s.alertSeverity);
+  const alertShowMessage = useUIStore((s) => s.alertShowMessage);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
 
   const handleCloseMessage = () => {
     setAlertShowMessage(false);
@@ -33,7 +36,7 @@ const AlertMessage = () => {
         open={alertShowMessage}
         autoHideDuration={10000}
         onClose={handleCloseMessage}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert onClose={handleCloseMessage} severity={alertSeverity} sx={{ width: "100%" }}>
           <span>{messageText}</span>
@@ -52,6 +55,12 @@ const AlertMessage = () => {
                 textOverflow: "ellipsis",
                 py: 0.5,
                 px: 1,
+                // Translucent white overlays for the "View" button hover /
+                // active states. `<Alert variant="filled">` is always painted
+                // in a saturated severity colour regardless of scheme, so a
+                // white translucent overlay reads correctly in both light
+                // and dark mode — see the rgba exceptions block in
+                // src/theme/theme.ts (issue #289).
                 "&:hover": {
                   backgroundColor: "rgba(255, 255, 255, 0.1)",
                 },

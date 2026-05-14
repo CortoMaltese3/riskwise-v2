@@ -165,3 +165,52 @@ def test_measures_endpoint_merges_custom_with_builtin(
     custom = next(m for m in data["measures"] if m["name"] == "custom_roofs")
     assert custom["is_builtin"] is False
     assert custom["source_reference"]
+
+
+# ---------------------------------------------------------------------------
+# Upload size cap (issue #251) — Area-18 zip-bomb defence.
+# ---------------------------------------------------------------------------
+#
+# A real >50 MiB xlsx would slow the suite without adding signal; the guard
+# in ``backend.uploads`` reads ``Path.stat().st_size`` so a sparse file with
+# the requested logical size is sufficient to drive the rejection branch.
+
+
+def _write_sparse(path: Path, size_bytes: int) -> None:
+    with path.open("wb") as fh:
+        fh.seek(size_bytes - 1)
+        fh.write(b"\x00")
+
+
+def test_upload_above_50_mib_is_rejected_with_structured_error(
+    api_client, tmp_path: Path, isolated_user_data: Path
+) -> None:
+    xlsx = tmp_path / "huge.xlsx"
+    _write_sparse(xlsx, 51 * 1024 * 1024)
+
+    resp = api_client.post(
+        "/api/v1/measures/datasets",
+        json={"name": "Too Big", "xlsx_path": str(xlsx)},
+    )
+    # 413 Payload Too Large with the structured ``upload_too_large`` code
+    # — distinct from the generic 400 ``data_load`` envelope so the
+    # renderer can tailor the toast.
+    assert resp.status_code == 413
+    body = resp.json()
+    assert body["code"] == "upload_too_large"
+    assert "measures workbook" in body["message"]
+
+
+def test_upload_below_50_mib_passes_size_gate(
+    api_client, tmp_path: Path, isolated_user_data: Path
+) -> None:
+    # Real 49 MiB xlsx files take seconds to write; a real (small) workbook
+    # is the better golden-path proof that the gate did not regress.
+    xlsx = tmp_path / "ok.xlsx"
+    _custom_xlsx(xlsx)
+
+    resp = api_client.post(
+        "/api/v1/measures/datasets",
+        json={"name": "Under cap", "xlsx_path": str(xlsx)},
+    )
+    assert resp.status_code == 200, resp.text

@@ -21,6 +21,11 @@ from backend.models.custom_data import (
     CustomDataValidateResponse,
 )
 from backend.models.data import DataValidateData, DataValidateRequest, DataValidateResponse
+
+# Domain exception taxonomy lives in ``backend.models.errors`` and is
+# imported directly there by callers — re-exporting names like
+# ``ValidationError`` / ``CatalogError`` from this package would shadow
+# Pydantic's and the engine's own classes of the same name.
 from backend.models.errors import ErrorResponse
 from backend.models.health import HealthResponse
 from backend.models.macro import (
@@ -59,9 +64,8 @@ from backend.models.scenarios import (
     CreateSnapshotResponse,
     DeleteScenarioResponse,
     DeleteSnapshotResponse,
-    ExportReportData,
-    ExportReportRequest,
-    ExportReportResponse,
+    HydrateScenarioData,
+    HydrateScenarioResponse,
     PatchScenarioRequest,
     SaveScenarioRequest,
     SaveScenarioResponse,
@@ -78,6 +82,13 @@ from backend.models.scenarios import (
     SnapshotListResponse,
     UpdateSnapshotRequest,
     UpdateSnapshotResponse,
+)
+from backend.models.settings import (
+    ReportCurrency,
+    ReportLocale,
+    UpdateUserSettingsRequest,
+    UserSettings,
+    UserSettingsResponse,
 )
 from backend.models.temp import TempClearResponse
 from backend.models.waterfall import WaterfallCategory, WaterfallPayload, WaterfallResponse
@@ -123,10 +134,9 @@ __all__ = [
     "DeleteScenarioResponse",
     "DeleteSnapshotResponse",
     "ErrorResponse",
-    "ExportReportData",
-    "ExportReportRequest",
-    "ExportReportResponse",
     "HealthResponse",
+    "HydrateScenarioData",
+    "HydrateScenarioResponse",
     "JobAcceptedResponse",
     "MacroChartDataRequest",
     "MacroChartDataResponse",
@@ -161,8 +171,13 @@ __all__ = [
     "Status",
     "StatusEnvelope",
     "TempClearResponse",
+    "ReportCurrency",
+    "ReportLocale",
     "UpdateSnapshotRequest",
     "UpdateSnapshotResponse",
+    "UpdateUserSettingsRequest",
+    "UserSettings",
+    "UserSettingsResponse",
     "WaterfallCategory",
     "WaterfallPayload",
     "WaterfallResponse",

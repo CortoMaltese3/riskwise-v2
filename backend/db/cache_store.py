@@ -27,34 +27,40 @@ def derive_cache_key(
     country: str,
     hazard_type: str,
     scenario: str,
-    exposure_economic: str,
-    exposure_non_economic: str,
+    exposure_type: str,
     ref_year: int,
     future_year: int,
     annual_growth: float,
     entity_sha256: str,
     hazard_sha256: str,
+    selected_measure_ids: list[str] | None = None,
 ) -> str:
     """Stable SHA-256 over the scenario identity tuple.
 
     The inputs mirror the tuple listed in issue #83: any change (a
     different growth rate, a fresher entity file) produces a different
-    key and therefore a cache miss.
+    key and therefore a cache miss. ``asset_type`` is intentionally
+    excluded — ``exposure_type`` already uniquely identifies the asset.
+
+    ``selected_measure_ids`` participates in the key when set so two runs
+    with different measure subsets do not collide. ``None`` keeps the
+    legacy "use every measure" key shape for backwards-compatibility.
     """
-    payload = "|".join(
-        [
-            country,
-            hazard_type,
-            scenario,
-            exposure_economic,
-            exposure_non_economic,
-            str(ref_year),
-            str(future_year),
-            f"{annual_growth:.12g}",
-            entity_sha256,
-            hazard_sha256,
-        ]
-    )
+    parts = [
+        country,
+        hazard_type,
+        scenario,
+        exposure_type,
+        str(ref_year),
+        str(future_year),
+        f"{annual_growth:.12g}",
+        entity_sha256,
+        hazard_sha256,
+    ]
+    if selected_measure_ids is not None:
+        # Sort for order-independence; the selection is a set, not a list.
+        parts.append("measures=" + ",".join(sorted(selected_measure_ids)))
+    payload = "|".join(parts)
     return hashlib.sha256(payload.encode()).hexdigest()
 
 

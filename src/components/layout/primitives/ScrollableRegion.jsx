@@ -19,15 +19,15 @@ const LOCKED_STYLE = { minHeight: 0 };
 // underlying surface shows through.
 const SCROLLBAR_SX = {
   scrollbarWidth: "thin",
-  scrollbarColor: (theme) => `${theme.palette.action.disabled ?? "rgba(0,0,0,0.25)"} transparent`,
+  scrollbarColor: (theme) => `${theme.palette.action.disabled} transparent`,
   "&::-webkit-scrollbar": { width: 8, height: 8 },
   "&::-webkit-scrollbar-track": { background: "transparent" },
   "&::-webkit-scrollbar-thumb": {
-    backgroundColor: (theme) => theme.palette.action.disabled ?? "rgba(0,0,0,0.25)",
+    backgroundColor: (theme) => theme.palette.action.disabled,
     borderRadius: 4,
   },
   "&::-webkit-scrollbar-thumb:hover": {
-    backgroundColor: (theme) => theme.palette.action.active ?? "rgba(0,0,0,0.4)",
+    backgroundColor: (theme) => theme.palette.action.active,
   },
 };
 

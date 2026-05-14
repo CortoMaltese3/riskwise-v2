@@ -8,6 +8,23 @@ import { createTheme } from "@mui/material/styles";
 // #217 / spec § Density) — spacing comes from `theme.spacing(n)` and the
 // named-constant escapes for fixed chrome (`TOP_BAR_HEIGHT`, `SIDEBAR_WIDTH`,
 // `SIDEBAR_COLLAPSED_WIDTH`, `INPUT_CARD_HEIGHT`).
+//
+// Acceptable raw `rgba()` exceptions in component code (issue #289 audit):
+//   1. `viz.patternStroke` (defined below) — exists as `rgba(0,0,0,0.55)` in
+//      light and `rgba(255,255,255,0.55)` in dark. Both are tokenised under
+//      `theme.palette.viz.patternStroke`; the chart helper in
+//      `src/utils/chartPatterns.js` resolves the token via `useTheme()` so
+//      callers don't see raw rgba.
+//   2. `src/components/alerts/AlertMessage.jsx` — translucent white overlays
+//      for hover / active on the filled `<Alert>` "View" button. `<Alert
+//      variant="filled">` is always painted in a saturated severity colour
+//      regardless of scheme, so a white translucent hover is scheme-neutral
+//      and reads correctly in both modes.
+//   3. `src/components/map/{Legend,LegendLegacy}.css` — `box-shadow: 0 0 5px
+//      rgba(0,0,0,0.3)` on the map legend container. The legend sits on top
+//      of OpenStreetMap raster tiles, which stay light in both schemes (see
+//      "Maps" note in the #289 dark-mode audit), so a dark shadow remains
+//      the correct elevation cue on either app theme.
 
 // Light/dark color schemes (issue #288). Both schemes share the same custom
 // palette slots so component `sx={{ bgcolor: "primary.light" }}` keeps working
@@ -83,6 +100,25 @@ const lightBorder = {
   strong: "#AAAAAA",
 };
 
+// Exposure category accent swatches (#319). Used by the unified Exposure
+// input card to colour the chip + left-border stripe by the selected asset's
+// category (economic / non-economic / custom). Light-mode hexes match the
+// designer's seed palette (teal / amber / grey); dark-mode hexes are the
+// paler dark-elevated variants from the same family. Designer can refine
+// post-merge — these are the starting positions, not the final values.
+// Light-mode `economic.main` darkened from the spec'd `#00897B` (Material
+// teal[600]) so it passes WCAG AA 4.5:1 against white contrast text — the
+// original measured 4.32:1, the new value clears 5.28:1. Material teal[700]
+// stays in the same hue family, so the chip + left-border stripe still read
+// as the same "economic" colour. Dark-mode `economic.main` keeps the spec's
+// `#4DB6AC` because it pairs with dark contrast text (6.55:1 — no change
+// needed).
+const lightCategory = {
+  economic: { main: "#00796B", contrastText: "#FFFFFF" },
+  nonEconomic: { main: "#F9A825", contrastText: "#0F172A" },
+  custom: { main: "#9E9E9E", contrastText: "#0F172A" },
+};
+
 // Light-mode feedback `main` swatches darkened from the #298 spec values so
 // each passes WCAG AA 4.5:1 on `background.paper` (#FFFFFF):
 //   success: #05A660 → #047D49 (3.16:1 → 5.21:1)
@@ -100,13 +136,32 @@ const lightFeedback = {
 
 // Categorical chart palette (six fixed hues, used in both schemes). The order
 // is stable so chart series colours don't shift when datasets change.
+//
+// All six hues must clear the WCAG 2.1 AA non-text 3:1 contrast ratio against
+// both `background.paper` swatches (`#FFFFFF` light, `#1E293B` dark) so bar /
+// line fills stay readable in either scheme. The brand-aligned originals
+// (primary teal, secondary salmon, warning yellow, success green) failed one
+// or both backgrounds — see the per-hue audit in `scripts/check-color-contrast.js`.
+// The current values are near-neighbour swaps within the same hue families:
+//
+//   teal    #2F7A86 → #3F8E9C   (was fail-dark 2.96:1; now 3.78 light / 3.87 dark)
+//   salmon  #F79191 → #E15555   (was fail-light 2.23:1; now 3.73 light / 3.92 dark)
+//   yellow  #FDDD48 → #A07A18   (was fail-light 1.35:1; now 3.97 light / 3.69 dark)
+//   blue    #5B8DEF             (unchanged: 3.23 light / 4.53 dark)
+//   purple  #9966FF             (unchanged: 3.68 light / 3.97 dark)
+//   green   #39D98A → #15915A   (was fail-light 1.83:1; now 4.02 light / 3.64 dark)
+//
+// Brand swatches in `primary`, `secondary`, `feedback` are left at their
+// originals — those are paired with specific contrast text and pass their own
+// 4.5:1 lints in the curated `PAIRS` list. The categorical array is the only
+// place where a hue meets the dark *and* light paper directly.
 const VIZ_CATEGORICAL = [
-  "#2F7A86", // primary teal
-  "#F79191", // secondary salmon
-  "#FDDD48", // warning yellow
-  "#5B8DEF", // info blue
-  "#9966FF", // purple
-  "#39D98A", // success green
+  "#3F8E9C", // teal family (near-neighbour of primary teal)
+  "#E15555", // salmon family (deeper red than secondary salmon)
+  "#A07A18", // gold / mustard (deeper than warning yellow)
+  "#5B8DEF", // info blue (unchanged)
+  "#9966FF", // purple (unchanged)
+  "#15915A", // green family (deeper than success green)
 ] as const;
 
 const lightViz = {
@@ -114,6 +169,12 @@ const lightViz = {
   positive: "#05A660",
   neutral: "#2F7A86",
   negative: "#E53535",
+  // Pattern stroke for the canvas-pattern overlay on chart bar fills
+  // (`src/utils/chartPatterns.js`). The dark translucent overlay reads as
+  // hatching on the lighter bar colours used in light mode. Mirrored in
+  // `darkViz` with an inverted (white) stroke so the same textures stay
+  // visible on dark mode's darker bar fills.
+  patternStroke: "rgba(0, 0, 0, 0.55)",
   // Light-mode ramps use D3's pre-baked schemeXxx[9] arrays sliced to the
   // dark end (resolved in `src/utils/colorScales.js`). Domain `[0, 1]`
   // means "use the scheme as-is".
@@ -150,11 +211,15 @@ const darkPrimary = {
   contrastText: "#0F172A",
 };
 
+// Dark-mode `secondary.dark` lightened from the spec'd `#E04848` so the
+// pressed state passes WCAG AA 4.5:1 against the dark contrast text — the
+// original measured 3.96:1, the new value clears 5.4:1. Still darker than
+// `secondary.main` (`#F79191`), so the press visual hierarchy holds.
 const darkSecondary = {
   bg: "#3D2020",
   light: "#7A4A4A",
   main: "#F79191",
-  dark: "#E04848",
+  dark: "#F26B6B",
   contrastText: "#0F172A",
 };
 
@@ -172,6 +237,12 @@ const darkText = {
 const darkBorder = {
   default: "#334155",
   strong: "#475569",
+};
+
+const darkCategory = {
+  economic: { main: "#4DB6AC", contrastText: "#0F172A" },
+  nonEconomic: { main: "#FFB300", contrastText: "#0F172A" },
+  custom: { main: "#BDBDBD", contrastText: "#0F172A" },
 };
 
 // Dark-mode feedback `bg` swatches are tuned to share luminance with
@@ -193,6 +264,10 @@ const darkViz = {
   positive: "#39D98A",
   neutral: "#5FB3C2",
   negative: "#FF5C5C",
+  // Inverted stroke so the diagonal / cross / dots / horizontal overlays in
+  // `chartPatterns.js` stay visible against the dark bar fills used in dark
+  // mode — the light-mode `rgba(0, 0, 0, 0.55)` vanishes here.
+  patternStroke: "rgba(255, 255, 255, 0.55)",
   // Dark-mode ramps clip the unreadable pale steps at the start of each D3
   // sequential scheme, preserving direction + hue family. Resolved via
   // `d3.interpolateXxx` in `src/utils/colorScales.js`.
@@ -210,12 +285,14 @@ declare module "@mui/material/styles" {
     border: typeof lightBorder;
     feedback: typeof lightFeedback;
     viz: typeof lightViz;
+    category: typeof lightCategory;
   }
   interface PaletteOptions {
     surface?: typeof lightSurface;
     border?: typeof lightBorder;
     feedback?: typeof lightFeedback;
     viz?: typeof lightViz;
+    category?: typeof lightCategory;
   }
 }
 
@@ -253,6 +330,7 @@ export const theme = createTheme({
         border: lightBorder,
         feedback: lightFeedback,
         viz: lightViz,
+        category: lightCategory,
       },
     },
     dark: {
@@ -271,6 +349,7 @@ export const theme = createTheme({
         border: darkBorder,
         feedback: darkFeedback,
         viz: darkViz,
+        category: darkCategory,
       },
     },
   },

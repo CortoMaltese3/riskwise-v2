@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,10 +14,13 @@ import {
 } from "@mui/material";
 import InboxIcon from "@mui/icons-material/Inbox";
 
-import useStore from "../../store";
-import useWorkspaceStore from "../../store/workspaceSlice";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
+import { useReportTools } from "../../utils/reportTools";
 import { enqueueToast } from "../../hooks/useToast";
 import ScrollableRegion from "../layout/primitives/ScrollableRegion";
+import BulkDeleteBar from "./BulkDeleteBar";
+import ExportPdfDialog from "./ExportPdfDialog";
 import ScenarioTable from "./ScenarioTable";
 import WorkspaceImportExport from "./WorkspaceImportExport";
 
@@ -70,7 +73,8 @@ EmptyState.propTypes = { onStart: PropTypes.func.isRequired };
 
 const WorkspaceView = ({ initialScenarios }) => {
   const { t } = useTranslation();
-  const setActiveSection = useStore((state) => state.setActiveSection);
+  const setActiveSection = useUIStore((state) => state.setActiveSection);
+  const { restoreScenario } = useReportTools();
 
   const {
     scenarios,
@@ -87,12 +91,15 @@ const WorkspaceView = ({ initialScenarios }) => {
     setSort,
     toggleSelected,
     setAllSelected,
+    clearSelected,
     setScenarios,
     loadScenarios,
     renameScenario,
     deleteScenario,
     deleteSelected,
   } = useWorkspaceStore();
+
+  const [exportTarget, setExportTarget] = useState(null);
 
   useEffect(() => {
     if (initialScenarios !== undefined) {
@@ -115,22 +122,62 @@ const WorkspaceView = ({ initialScenarios }) => {
     return [...filtered].sort(compareBy(sortKey, sortDir));
   }, [scenarios, search, countryFilter, hazardFilter, sortKey, sortDir]);
 
+  const handleExportDialogClose = async (payload) => {
+    const target = exportTarget;
+    setExportTarget(null);
+    if (!target || payload === null) return;
+    const { snapshotIds, includeWaterfall, includeCostBenefit } = payload;
+    const result = await window.electron.exportPdf(target.id, {
+      snapshotIds,
+      includeWaterfall,
+      includeCostBenefit,
+    });
+    if (result.success) {
+      enqueueToast({ severity: "success", message: "PDF saved successfully." });
+    } else if (result.reason !== "cancelled") {
+      enqueueToast({ severity: "error", message: `PDF export failed: ${result.reason}` });
+    }
+  };
+
   const handleAction = async (action, row) => {
     if (action === "delete") {
       await deleteScenario(row.id);
     } else if (action === "export-pdf") {
-      const result = await window.electron.exportPdf(row.id);
-      if (result.success) {
-        enqueueToast({ severity: "success", message: "PDF saved successfully." });
-      } else if (result.reason !== "cancelled") {
-        enqueueToast({ severity: "error", message: `PDF export failed: ${result.reason}` });
+      setExportTarget({ id: row.id, name: row.name });
+    } else if (action === "restore") {
+      const ok = await restoreScenario(row.id);
+      if (ok) {
+        setActiveSection("risk");
+        enqueueToast({
+          severity: "success",
+          message: t("alert_message_report_card_successful_restore"),
+        });
       }
     }
-    // Restore action wired via Issue #79; no-op here.
   };
 
   const toggleAll = (checked) => {
     setAllSelected(checked ? visibleRows.map((r) => r.id) : []);
+  };
+
+  const handleBulkDelete = async () => {
+    const result = await deleteSelected();
+    if (result.total === 0) return;
+    if (result.failed === 0) {
+      enqueueToast({
+        severity: "success",
+        message: t("workspace_bulk_delete_success", { count: result.ok }),
+      });
+    } else {
+      enqueueToast({
+        severity: "error",
+        message: t("workspace_bulk_delete_partial", {
+          ok: result.ok,
+          failed: result.failed,
+          total: result.total,
+        }),
+      });
+    }
   };
 
   return (
@@ -194,16 +241,12 @@ const WorkspaceView = ({ initialScenarios }) => {
               </FormControl>
             </Stack>
 
-            {selectedIds.length > 0 && (
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="body2">
-                  {t("workspace_scenarios_selected", { count: selectedIds.length })}
-                </Typography>
-                <Button size="small" color="error" onClick={deleteSelected}>
-                  Delete selected
-                </Button>
-              </Stack>
-            )}
+            <BulkDeleteBar
+              selectedIds={selectedIds}
+              scenarios={scenarios}
+              onConfirmDelete={handleBulkDelete}
+              onClear={clearSelected}
+            />
 
             {error && (
               <Typography role="alert" color="error">
@@ -225,6 +268,12 @@ const WorkspaceView = ({ initialScenarios }) => {
           </>
         )}
       </Stack>
+      <ExportPdfDialog
+        open={Boolean(exportTarget)}
+        onClose={handleExportDialogClose}
+        scenarioId={exportTarget?.id}
+        scenarioName={exportTarget?.name}
+      />
     </ScrollableRegion>
   );
 };

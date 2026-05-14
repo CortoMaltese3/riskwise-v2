@@ -166,7 +166,12 @@ def _write_archive(
                 {
                     "id": snap["id"],
                     "snapshot_type": snap.get("snapshot_type"),
+                    "title": snap.get("title"),
                     "caption": snap.get("caption"),
+                    # ``surface`` (#362) is best-effort metadata: pre-#362
+                    # bundles omit the key and the import side falls back
+                    # to NULL, matching the migration's nullable column.
+                    "surface": snap.get("surface"),
                 }
             )
         if manifest_entries:
@@ -216,7 +221,11 @@ def build_export_to_temp(scenario_id: str) -> tuple[Path, str]:
     try:
         snapshots = get_scenario_snapshots_with_image(scenario_id)
         _write_archive(output, detail, snapshots)
-    except Exception:
+    except BaseException:
+        # Tempdir cleanup must run for every failure mode, including
+        # KeyboardInterrupt and worker cancellation, before the error
+        # propagates. The original exception is re-raised unchanged so
+        # the caller still sees the precise type.
         shutil.rmtree(tmp_dir, ignore_errors=True)
         raise
     return output, suggested_filename
@@ -281,7 +290,9 @@ def _read_snapshots_from_zip(zf: zipfile.ZipFile) -> list[dict[str, Any]]:
                 "snapshot_type": meta.get("snapshot_type") or "chart",
                 "image": zf.read(entry.filename),
                 "created_at": now,
+                "title": meta.get("title"),
                 "caption": meta.get("caption"),
+                "surface": meta.get("surface"),
             }
         )
     return snapshots
@@ -336,8 +347,8 @@ def import_scenario(zip_path: Path) -> dict[str, Any]:
         "country": provenance_payload.get("country"),
         "hazard_type": provenance_payload.get("hazard"),
         "scenario": provenance_payload.get("scenario_type"),
-        "exposure_economic": provenance_payload.get("exposure_economic"),
-        "exposure_non_economic": provenance_payload.get("exposure_non_economic"),
+        "exposure_type": provenance_payload.get("exposure_type"),
+        "asset_type": provenance_payload.get("asset_type"),
         "ref_year": provenance_payload.get("ref_year"),
         "future_year": provenance_payload.get("future_year"),
         "annual_growth": provenance_payload.get("annual_growth"),

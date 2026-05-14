@@ -6,19 +6,24 @@ import { useTranslation } from "react-i18next";
 import AlertMessage from "./components/alerts/AlertMessage";
 import ErrorBoundary from "./components/errors/ErrorBoundary";
 import AppShell from "./components/layout/AppShell";
-import ProgressOverlay from "./components/layout/ProgressOverlay";
+import ScenarioProgressChip from "./components/layout/ScenarioProgressChip";
 import ToastProvider from "./components/layout/ToastProvider";
-import NavigateAlert from "./components/alerts/NavigateAlert";
 import ScenarioPrintView from "./components/workspace/ScenarioPrintView";
 import HelpMenu from "./components/help/HelpMenu";
 import GlossaryDrawer from "./components/help/GlossaryDrawer";
 import baseTheme from "./theme/theme";
 import { isRtl } from "./i18nConfig";
-import useStore from "./store";
+import useUIStore from "./store/useUIStore";
 
 const printParams = new URLSearchParams(window.location.search);
 const isPrintView = printParams.get("view") === "print";
 const printScenarioId = printParams.get("scenarioId") ?? "";
+const printSnapshotIds = (printParams.get("snapshots") ?? "")
+  .split(",")
+  .map((id) => id.trim())
+  .filter(Boolean);
+const printIncludeWaterfall = printParams.get("waterfall") !== "0";
+const printIncludeCostBenefit = printParams.get("costben") !== "0";
 
 // MUI's CssVarsProvider (the implementation behind <ThemeProvider> when the
 // theme has `colorSchemes`) owns mode persistence and the
@@ -31,9 +36,8 @@ const THEME_MODE_STORAGE_KEY = "riskwise.themeMode";
 const PRINT_THEME_MODE_STORAGE_KEY = "riskwise.themeMode.print";
 
 const App = () => {
-  const { selectedAppOption } = useStore();
-  const setHelpMenuOpen = useStore((s) => s.setHelpMenuOpen);
-  const toggleHelpMenu = useStore((s) => s.toggleHelpMenu);
+  const setHelpMenuOpen = useUIStore((s) => s.setHelpMenuOpen);
+  const toggleHelpMenu = useUIStore((s) => s.toggleHelpMenu);
   const { i18n } = useTranslation();
 
   // Re-create the theme when the active language flips between LTR and RTL so
@@ -81,7 +85,12 @@ const App = () => {
         modeStorageKey={PRINT_THEME_MODE_STORAGE_KEY}
       >
         <CssBaseline />
-        <ScenarioPrintView scenarioId={printScenarioId} />
+        <ScenarioPrintView
+          scenarioId={printScenarioId}
+          snapshotIds={printSnapshotIds}
+          includeWaterfall={printIncludeWaterfall}
+          includeCostBenefit={printIncludeCostBenefit}
+        />
       </ThemeProvider>
     );
   }
@@ -91,17 +100,13 @@ const App = () => {
       <ThemeProvider theme={theme} defaultMode="system" modeStorageKey={THEME_MODE_STORAGE_KEY}>
         <CssBaseline />
         <ToastProvider>
-          {selectedAppOption === "" ? (
-            <NavigateAlert />
-          ) : (
-            <Box display="flex" flexDirection="column" height="100vh" overflow="hidden">
-              <AppShell />
-              <ProgressOverlay />
-              <AlertMessage />
-              <HelpMenu />
-              <GlossaryDrawer />
-            </Box>
-          )}
+          <Box display="flex" flexDirection="column" height="100vh" overflow="hidden">
+            <AppShell />
+            <ScenarioProgressChip />
+            <AlertMessage />
+            <HelpMenu />
+            <GlossaryDrawer />
+          </Box>
         </ToastProvider>
       </ThemeProvider>
     </ErrorBoundary>

@@ -4,13 +4,14 @@ import ReactMarkdown from "react-markdown";
 import {
   Box,
   Collapse,
-  Drawer,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   IconButton,
   List,
   ListItem,
   ListItemButton,
   ListItemText,
-  Stack,
   TextField,
   Typography,
 } from "@mui/material";
@@ -18,16 +19,10 @@ import CloseIcon from "@mui/icons-material/Close";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
 import enGlossary from "../../content/glossary/en.md?raw";
 import arGlossary from "../../content/glossary/ar.md?raw";
 import thGlossary from "../../content/glossary/th.md?raw";
-
-// Mirrors TOP_BAR_HEIGHT in components/layout/Sidebar.jsx. Inlined rather
-// than imported because pulling Sidebar into this module breaks the
-// glossary_drawer test setup (Sidebar's MUI-icon imports trigger a module
-// load failure in the test runner).
-const TOP_BAR_HEIGHT = 56;
 
 const GLOSSARIES = { en: enGlossary, ar: arGlossary, th: thGlossary };
 
@@ -46,8 +41,8 @@ const normalize = (s) => s.toLocaleLowerCase();
 
 const GlossaryDrawer = () => {
   const { t, i18n } = useTranslation();
-  const open = useStore((s) => s.glossaryOpen);
-  const setOpen = useStore((s) => s.setGlossaryOpen);
+  const open = useUIStore((s) => s.glossaryOpen);
+  const setOpen = useUIStore((s) => s.setGlossaryOpen);
 
   const [query, setQuery] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(-1);
@@ -107,52 +102,38 @@ const GlossaryDrawer = () => {
   };
 
   return (
-    <Drawer
-      anchor="right"
+    <Dialog
       open={open}
       onClose={() => setOpen(false)}
-      // TopBar is `position: fixed` with zIndex `drawer + 1`, so the AppBar
-      // paints over the default drawer paper (top: 0). Override via the
-      // `& .MuiDrawer-paper` selector — sx specificity from this Drawer root
-      // wins over MUI's internal `top: 0`, which PaperProps.sx alone does not.
-      sx={{
-        "& .MuiDrawer-paper": {
-          top: `${TOP_BAR_HEIGHT}px`,
-          height: `calc(100% - ${TOP_BAR_HEIGHT}px)`,
-          width: { xs: "100%", sm: 400 },
-        },
-      }}
+      maxWidth="md"
+      fullWidth
+      aria-labelledby="glossary-dialog-title"
     >
-      <Box role="presentation" sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          sx={{ px: 2, pt: 2 }}
-        >
-          <Typography variant="h6" component="h2">
-            {t("glossary_title")}
-          </Typography>
-          <IconButton aria-label={t("glossary_close")} onClick={() => setOpen(false)} size="small">
-            <CloseIcon />
-          </IconButton>
-        </Stack>
-        <Box sx={{ px: 2, pt: 1 }}>
-          <TextField
-            fullWidth
-            size="small"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setFocusedIndex(0);
-              setExpandedIndex(-1);
-            }}
-            placeholder={t("glossary_search_placeholder")}
-            inputProps={{ "aria-label": t("glossary_search_aria") }}
-            autoFocus
-          />
-        </Box>
-        <Box sx={{ flex: 1, overflowY: "auto", px: 1, py: 1 }} onKeyDown={handleKeyDown}>
+      <DialogTitle
+        id="glossary-dialog-title"
+        sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+      >
+        {t("glossary_title")}
+        <IconButton aria-label={t("glossary_close")} onClick={() => setOpen(false)} size="small">
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers sx={{ height: "70vh", display: "flex", flexDirection: "column" }}>
+        <TextField
+          fullWidth
+          size="small"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setFocusedIndex(0);
+            setExpandedIndex(-1);
+          }}
+          placeholder={t("glossary_search_placeholder")}
+          inputProps={{ "aria-label": t("glossary_search_aria") }}
+          autoFocus
+          sx={{ pb: 1 }}
+        />
+        <Box sx={{ flex: 1, overflowY: "auto", py: 1 }} onKeyDown={handleKeyDown}>
           {filtered.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 2 }}>
               {t("glossary_no_results")}
@@ -203,8 +184,8 @@ const GlossaryDrawer = () => {
             </List>
           )}
         </Box>
-      </Box>
-    </Drawer>
+      </DialogContent>
+    </Dialog>
   );
 };
 

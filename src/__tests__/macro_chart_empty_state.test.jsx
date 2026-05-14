@@ -41,11 +41,9 @@ vi.mock("chart.js", () => ({
   Filler: {},
 }));
 
-vi.mock("chartjs-plugin-datalabels", () => ({ default: {} }));
-
 let MacroEconomicChart;
-let useStore;
-let baseSnapshot;
+let useResultsStore;
+let useWorkspaceStore;
 
 const SAMPLE_ROWS = [
   {
@@ -88,21 +86,21 @@ const SAMPLE_ROWS = [
 
 beforeAll(async () => {
   ({ default: MacroEconomicChart } = await import("../components/charts/MacroEconomicChart"));
-  ({ default: useStore } = await import("../store"));
-  baseSnapshot = useStore.getState();
+  ({ default: useResultsStore } = await import("../store/useResultsStore"));
+  ({ default: useWorkspaceStore } = await import("../store/useWorkspaceStore"));
 });
 
 beforeEach(() => {
   lineSpy.mockClear();
-  useStore.setState(baseSnapshot, true);
-  useStore.setState({
+  useResultsStore.setState({
     credOutputData: [],
+    macroEconomicChartTitle: "",
+  });
+  useWorkspaceStore.setState({
     selectedMacroCountry: "",
     selectedMacroScenario: "",
     selectedMacroSector: "",
     selectedMacroVariable: "",
-    macroEconomicChartTitle: "",
-    showChartValues: false,
   });
 });
 
@@ -124,16 +122,15 @@ describe("MacroEconomicChart empty + progressive states", () => {
     expect(props.options.plugins.legend.display).toBe(true);
   });
 
-  it("does not render the title bar or values toggle in the empty state", () => {
+  it("does not render the title bar or data table in the empty state", () => {
     render(<MacroEconomicChart />);
 
-    expect(screen.queryByRole("button", { name: /chart_show_values/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
   it("keeps the empty frame when only some parameters are selected (slice unresolved)", () => {
-    useStore.setState({
-      credOutputData: SAMPLE_ROWS,
+    useResultsStore.setState({ credOutputData: SAMPLE_ROWS });
+    useWorkspaceStore.setState({
       selectedMacroCountry: "ESP",
       selectedMacroScenario: "rcp45",
       // sector + variable still unset → no row matches the filter
@@ -147,19 +144,20 @@ describe("MacroEconomicChart empty + progressive states", () => {
   });
 
   it("populates the chart progressively once all four parameters resolve a non-empty slice", () => {
-    useStore.setState({
+    useResultsStore.setState({
       credOutputData: SAMPLE_ROWS,
+      macroEconomicChartTitle: "ESP · agriculture · gdp",
+    });
+    useWorkspaceStore.setState({
       selectedMacroCountry: "ESP",
       selectedMacroScenario: "rcp45",
       selectedMacroSector: "agriculture",
       selectedMacroVariable: "gdp",
-      macroEconomicChartTitle: "ESP · agriculture · gdp",
     });
 
     render(<MacroEconomicChart />);
 
     expect(screen.queryByTestId("macro-chart-empty-hint")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /chart_show_values/i })).toBeInTheDocument();
     expect(screen.getByRole("table")).toBeInTheDocument();
 
     const props = lineSpy.mock.calls.at(-1)[0];

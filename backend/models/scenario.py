@@ -26,14 +26,20 @@ class ScenarioRunRequest(BaseModel):
 
     annualGrowth: float | int | None = None
     countryName: str | None = None
-    exposureEconomic: str | None = None
+    exposureType: str | None = None
+    assetType: Literal["economic", "non_economic"] | None = None
     exposureFile: str | None = None
-    exposureNonEconomic: str | None = None
     hazardType: str | None = None
     hazardFile: str | None = None
     isEra: bool | None = None
     scenario: str | None = None
     timeHorizon: list[int] | None = None
+    # ``None`` preserves today's behaviour (use every measure attached to the
+    # hazard); an explicit list — including the empty list — scopes the
+    # cost-benefit run to that subset. Values match ``MeasureSpec.name`` (the
+    # only stable join key with xlsx-loaded entity measures; the catalog row
+    # ``id`` is a per-seed UUID and not stable across rebuilds).
+    selectedMeasureIds: list[str] | None = None
 
 
 class JobAcceptedResponse(BaseModel):

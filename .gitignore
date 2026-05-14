@@ -62,7 +62,6 @@ scripts/*
 # Phase 4 Area 4 — Python engine bundling + measurement scripts (issue #113,
 # ADR docs/spikes/adr-bundling.md).
 !scripts/build_engine.ps1
-!scripts/build_engine_pyinstaller.ps1
 !scripts/measure_engine.ps1
 # Local dev workflow — stage built engine into %LOCALAPPDATA% (ADR §3.5.1).
 !scripts/stage_engine.ps1
@@ -80,6 +79,9 @@ scripts/*
 !scripts/check_engine_imports.py
 # Issue #195 — backend import-scheme lint (forbid shallow ``from db import …``).
 !scripts/check_backend_imports.py
+# Issue #429 — one-shot backfill that wrote the ``code`` column to the catalog
+# xlsx; tracked so the mapping rationale stays auditable from the repo.
+!scripts/add_codes_to_adaptation_measures.py
 notes.txt
 
 # Issue #163 — parity test summary is regenerated on every pytest run; the

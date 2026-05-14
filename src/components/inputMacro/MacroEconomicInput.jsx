@@ -7,12 +7,13 @@ import MacroEconomicViewTitle from "../title/MacroEconomicViewTitle";
 import Sector from "./Sector";
 import MacroEconomicVariable from "./MacroEconomicVariable";
 import Scenario from "./Scenario";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import { TABS } from "../main/tabs";
 
 const MacroEconomicInput = () => {
-  const { selectedTab } = useStore();
+  const selectedTab = useUIStore((s) => s.selectedTab);
 
-  if (!(selectedTab === 2)) {
+  if (!(selectedTab === TABS.MACRO)) {
     return null;
   }
 
@@ -23,8 +24,8 @@ const MacroEconomicInput = () => {
 
       {/* MacroEconomic parameters section. No wrapper background — cards
           float directly on the page surface. */}
-      <Box sx={{ padding: 1.5 }}>
-        <Grid container spacing={1}>
+      <Box sx={{ padding: 1 }}>
+        <Grid container spacing={0.5}>
           <Grid item xs={12}>
             <Country />
           </Grid>

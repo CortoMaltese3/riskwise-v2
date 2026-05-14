@@ -115,7 +115,7 @@ describe("sanitizeScenarioRow", () => {
         created_at: "2026-04-25T12:00:00Z",
         // Fields below must NOT leak into the sanitized row.
         notes: "private user notes",
-        exposure_economic: 12345.67,
+        exposure_type: "crops",
       })
     ).toEqual({
       scenario_id: "abc-123",

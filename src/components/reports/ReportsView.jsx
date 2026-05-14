@@ -1,27 +1,49 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useReportTools } from "../../utils/reportTools";
 import ReportCard from "./ReportCard";
-import useStore from "../../store";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import logger from "../../lib/logger.ts";
 
+// Module-scoped in-flight guard. Component-local refs would reset when the
+// view unmounts on rapid tab switching, allowing a second fetch to fire
+// while the first is still pending. The flag is cleared in `finally` so a
+// genuine refetch (e.g., after returning to the tab once the first request
+// has completed) still works.
+let reportsFetchInFlight = false;
+
 const ReportsView = () => {
-  const {
-    reports,
-    removeReport,
-    selectedReport,
-    setAlertMessage,
-    setAlertSeverity,
-    setAlertShowMessage,
-    setSelectedScenarioRunCode,
-    setSelectedReport,
-    updateReports,
-  } = useStore();
-  const { restoreScenario, getReport } = useReportTools();
+  const reports = useUIStore((s) => s.reports);
+  const removeReport = useUIStore((s) => s.removeReport);
+  const selectedReport = useUIStore((s) => s.selectedReport);
+  const setAlertMessage = useUIStore((s) => s.setAlertMessage);
+  const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
+  const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
+  const setSelectedReport = useUIStore((s) => s.setSelectedReport);
+  const updateReports = useUIStore((s) => s.updateReports);
+  const setSelectedScenarioRunCode = useWorkspaceStore((s) => s.setSelectedScenarioRunCode);
+  const { fetchReports, restoreScenario, getReport } = useReportTools();
   const { t } = useTranslation();
+
+  // Lazy-fetch the scenario list when the Reports tab becomes active. Owning
+  // the fetch here (rather than in a global tab-switch handler) keeps caching
+  // policy with the consumer. The module-scoped flag suppresses duplicate
+  // requests when the user toggles tabs rapidly — a remount during a pending
+  // fetch won't trigger a second one. See #248.
+  useEffect(() => {
+    if (reportsFetchInFlight) return;
+    reportsFetchInFlight = true;
+    Promise.resolve(fetchReports()).finally(() => {
+      reportsFetchInFlight = false;
+    });
+    // fetchReports is recreated on every render of useReportTools (it closes
+    // over store getters); intentionally fire once per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onCardClickHandler = (id) => {
     const report = getReport(id);

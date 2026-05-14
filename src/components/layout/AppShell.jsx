@@ -1,10 +1,13 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Box } from "@mui/material";
 
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useUIStore from "../../store/useUIStore";
 import Sidebar, { SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from "./Sidebar";
 import TopBar from "./TopBar";
+import ActiveScenarioCard from "../adaptation/ActiveScenarioCard";
+import AdaptationDisplayPanel from "../adaptation/AdaptationDisplayPanel";
 import AdaptationMeasuresInput from "../input/AdaptationMeasuresInput";
 import DataInput from "../input/DataInput";
 import MacroEconomicInput from "../inputMacro/MacroEconomicInput";
@@ -23,18 +26,27 @@ import HorizontalSplit from "./primitives/HorizontalSplit";
 import FixedColumn from "./primitives/FixedColumn";
 import ScrollableRegion from "./primitives/ScrollableRegion";
 import { useMacroTools } from "../../utils/macroTools";
+import { TABS, isValidTab } from "../main/tabs";
 
-const sectionToTab = { home: 0, risk: 1, macro: 2, workspace: 3, settings: 0 };
+const sectionToTab = {
+  home: TABS.PARAMETERS,
+  risk: TABS.RISK,
+  macro: TABS.MACRO,
+  adaptation: TABS.ADAPTATION,
+  workspace: TABS.REPORTS,
+  settings: TABS.PARAMETERS,
+};
 
 const RISK_LEFT_PANEL_WIDTH = 280;
 const RISK_RESULTS_PANEL_WIDTH = 260;
 const MACRO_LEFT_PANEL_WIDTH = 280;
+const ADAPTATION_LEFT_PANEL_WIDTH = 280;
+const ADAPTATION_RESULTS_PANEL_WIDTH = 260;
 
 export const RiskAssessmentView = () => {
   const { t } = useTranslation();
-  const selectedTab = useStore((s) => s.selectedTab);
-  const selectedSubTab = useStore((s) => s.selectedSubTab);
-  const showRunButton = selectedTab === 0 || (selectedTab === 1 && selectedSubTab === 0);
+  const selectedTab = useUIStore((s) => s.selectedTab);
+  const showRunButton = selectedTab === TABS.PARAMETERS || selectedTab === TABS.RISK;
   return (
     <HorizontalSplit>
       <FixedColumn width={RISK_LEFT_PANEL_WIDTH}>
@@ -50,7 +62,6 @@ export const RiskAssessmentView = () => {
           <ScrollableRegion>
             <Box sx={{ pt: 2, px: 1, pb: 1 }}>
               <DataInput />
-              <AdaptationMeasuresInput />
             </Box>
           </ScrollableRegion>
           {showRunButton && (
@@ -107,16 +118,21 @@ export const RiskAssessmentView = () => {
 };
 
 const MacroeconomicView = () => {
-  const credOutputData = useStore((s) => s.credOutputData);
+  const credOutputData = useResultsStore((s) => s.credOutputData);
   const { loadCREDOutputData } = useMacroTools();
 
-  // Sidebar-driven nav doesn't go through MainTabs, so the legacy tab-change
-  // CRED fetch trigger never fires. Fetch on first activation if the cache
-  // is empty.
+  // Sidebar-driven nav lazy-fetches CRED data on first activation if the
+  // cache is empty. The ref guards against duplicate in-flight requests when
+  // the user toggles sections quickly (the effect can re-run before the
+  // first fetch resolves and updates the cache). See #248.
+  const credFetchInFlight = useRef(false);
   useEffect(() => {
-    if (!credOutputData || credOutputData.length === 0) {
-      loadCREDOutputData();
-    }
+    if (credOutputData && credOutputData.length > 0) return;
+    if (credFetchInFlight.current) return;
+    credFetchInFlight.current = true;
+    Promise.resolve(loadCREDOutputData()).finally(() => {
+      credFetchInFlight.current = false;
+    });
   }, [credOutputData, loadCREDOutputData]);
 
   return (
@@ -166,10 +182,71 @@ const MacroeconomicView = () => {
   );
 };
 
+export const AdaptationView = () => {
+  const { t } = useTranslation();
+  return (
+    <HorizontalSplit>
+      <FixedColumn width={ADAPTATION_LEFT_PANEL_WIDTH}>
+        <Box
+          sx={{
+            height: "100%",
+            borderRight: 1,
+            borderColor: "divider",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <ScrollableRegion>
+            <Box sx={{ pt: 2, px: 1, pb: 1 }}>
+              <AdaptationMeasuresInput />
+              <ActiveScenarioCard />
+            </Box>
+          </ScrollableRegion>
+        </Box>
+      </FixedColumn>
+      <ScrollableRegion>
+        <Box
+          sx={{
+            pt: 2,
+            px: 2,
+            pb: 2,
+            minHeight: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <MainView />
+        </Box>
+      </ScrollableRegion>
+      <FixedColumn width={ADAPTATION_RESULTS_PANEL_WIDTH}>
+        <Box
+          component="aside"
+          role="complementary"
+          aria-label={t("results_panel_aria")}
+          sx={{
+            height: "100%",
+            borderLeft: 1,
+            borderColor: "divider",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <ScrollableRegion>
+            <Box sx={{ pt: 2, px: 1, pb: 1 }}>
+              <AdaptationDisplayPanel />
+            </Box>
+          </ScrollableRegion>
+        </Box>
+      </FixedColumn>
+    </HorizontalSplit>
+  );
+};
+
 const sectionComponents = {
   home: HomeView,
   risk: RiskAssessmentView,
   macro: MacroeconomicView,
+  adaptation: AdaptationView,
   workspace: WorkspaceView,
   settings: SettingsView,
 };
@@ -186,11 +263,13 @@ const MAIN_PANE_SX = { display: "flex", flexDirection: "column", height: "100%" 
 
 const AppShell = () => {
   const { t } = useTranslation();
-  const { activeSection, setSelectedTab, sidebarCollapsed } = useStore();
+  const activeSection = useUIStore((s) => s.activeSection);
+  const setSelectedTab = useUIStore((s) => s.setSelectedTab);
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
 
   useEffect(() => {
     const tab = sectionToTab[activeSection];
-    if (typeof tab === "number") setSelectedTab(tab);
+    if (isValidTab(tab)) setSelectedTab(tab);
   }, [activeSection, setSelectedTab]);
 
   const Section = sectionComponents[activeSection] || HomeView;

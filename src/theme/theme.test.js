@@ -82,6 +82,17 @@ describe("theme — design tokens", () => {
     expect(theme.palette.viz.ramps.heatwave).toBeDefined();
     expect(theme.palette.viz.ramps.drought).toBeDefined();
     expect(theme.palette.viz.ramps.risk).toBeDefined();
+    expect(theme.palette.viz.patternStroke).toBeDefined();
+  });
+
+  it("exposes a per-scheme pattern stroke for chart canvas-pattern overlays (#367)", () => {
+    // Light mode keeps the historic dark stroke; dark mode flips to a white
+    // stroke so the diagonal / cross / dots / horizontal textures painted by
+    // `chartPatterns.js` stay visible on the darker bar fills.
+    const lightStroke = theme.colorSchemes.light.palette.viz.patternStroke;
+    const darkStroke = theme.colorSchemes.dark.palette.viz.patternStroke;
+    expect(lightStroke).toMatch(/rgba\(0,\s*0,\s*0/);
+    expect(darkStroke).toMatch(/rgba\(255,\s*255,\s*255/);
   });
 
   it("aliases palette.error.main to feedback.error.main", () => {
@@ -186,108 +197,158 @@ describe("theme — color schemes", () => {
 });
 
 describe("theme — WCAG AA contrast", () => {
-  // Pairs must pass 4.5:1 for normal body text (WCAG 2.1 AA). The
-  // comprehensive audit (every text-bearing pair, both schemes) lives in the
-  // follow-up issue #289; this suite covers the foundational text-on-bg pairs
-  // both schemes must hit before either is acceptable to ship.
+  // Pairs must pass 4.5:1 for normal body text (WCAG 2.1 AA). The comprehensive
+  // audit below covers every text-bearing palette pair under both schemes
+  // (issue #289). The pair list was translated from the original #289 audit
+  // table after #298 collapsed the legacy `card`/`inputCard`/`header`/`tab`/
+  // `accent`/`mapControl`/`tableHeader`/`slider` namespaces into the seven
+  // semantic namespaces — the table maps each removed slot onto its current
+  // equivalent (e.g. `card.bg` → `primary.bgStrong`, `header.contrastText on
+  // header.main` → `primary.contrastText on primary.main`, `accent.*` →
+  // `secondary.*`, `tableHeader.main` → `primary.bgStrong`).
   const lightPalette = theme.colorSchemes.light.palette;
   const darkPalette = theme.colorSchemes.dark.palette;
 
+  // Surfaces where the foreground is the scheme's normal body text — light
+  // text on dark surfaces in dark mode, dark text on light surfaces in light
+  // mode. These are surfaces that move *with* the scheme, so the same
+  // foreground token (`text.primary`) gives the right pairing in both.
+  const TEXT_PRIMARY_SURFACES = [
+    "background.default",
+    "background.paper",
+    "primary.bg",
+    "primary.bgStrong",
+    "secondary.bg",
+    "secondary.light",
+    "surface.muted",
+    "surface.subdued",
+    "feedback.success.bg",
+    "feedback.warning.bg",
+    "feedback.error.bg",
+    "feedback.info.bg",
+  ];
+
+  // Resolve a "namespace.slot" path against a palette object. Avoids
+  // duplicating the same `(p) => p.foo.bar` accessor per pair.
+  const resolveSlot = (palette, path) =>
+    path.split(".").reduce((node, segment) => node[segment], palette);
+
+  // Contrast-text-on-fill pairs. The third tuple element optionally restricts
+  // the pair to one scheme — used for `primary.dark` (used as a *background*
+  // only in light mode; in dark mode `primary.dark` reads as a foreground
+  // against the pale `primary.light`).
+  const CONTRAST_PAIRS = [
+    ["primary.contrastText", "primary.main"],
+    ["primary.contrastText", "primary.dark", "light"],
+    ["primary.dark", "primary.light"], // TopBar header band, both schemes.
+    ["secondary.contrastText", "secondary.main"],
+    ["secondary.contrastText", "secondary.dark"],
+    ["error.contrastText", "error.main"],
+    ["error.contrastText", "error.dark"],
+    ["category.economic.contrastText", "category.economic.main"],
+    ["category.nonEconomic.contrastText", "category.nonEconomic.main"],
+    ["category.custom.contrastText", "category.custom.main"],
+  ];
+
+  // Feedback `*.main` on `background.paper` — these are used as icon / badge
+  // fills (text-bearing in dialogs and inline alerts), not as backgrounds.
+  const FEEDBACK_MAIN_FOREGROUNDS = [
+    "feedback.success.main",
+    "feedback.warning.main",
+    "feedback.error.main",
+    "feedback.info.main",
+  ];
+
+  const SCHEMES = [
+    ["light", lightPalette],
+    ["dark", darkPalette],
+  ];
+
+  const textPrimaryPairs = SCHEMES.flatMap(([scheme, palette]) =>
+    TEXT_PRIMARY_SURFACES.map((surface) => ({
+      name: `[${scheme}] text.primary on ${surface}`,
+      fg: palette.text.primary,
+      bg: resolveSlot(palette, surface),
+    }))
+  );
+
+  const textSecondaryPairs = SCHEMES.flatMap(([scheme, palette]) => [
+    {
+      name: `[${scheme}] text.secondary on background.default`,
+      fg: palette.text.secondary,
+      bg: palette.background.default,
+    },
+    {
+      name: `[${scheme}] text.secondary on background.paper`,
+      fg: palette.text.secondary,
+      bg: palette.background.paper,
+    },
+  ]);
+
+  const contrastPairs = SCHEMES.flatMap(([scheme, palette]) =>
+    CONTRAST_PAIRS.filter(([, , onlyScheme]) => !onlyScheme || onlyScheme === scheme).map(
+      ([fgPath, bgPath]) => ({
+        name: `[${scheme}] ${fgPath} on ${bgPath}`,
+        fg: resolveSlot(palette, fgPath),
+        bg: resolveSlot(palette, bgPath),
+      })
+    )
+  );
+
+  const feedbackMainPairs = SCHEMES.flatMap(([scheme, palette]) =>
+    FEEDBACK_MAIN_FOREGROUNDS.map((fgPath) => ({
+      name: `[${scheme}] ${fgPath} on background.paper`,
+      fg: resolveSlot(palette, fgPath),
+      bg: palette.background.paper,
+    }))
+  );
+
   const pairs = [
-    {
-      name: "[light] text.primary on background.default",
-      fg: () => lightPalette.text.primary,
-      bg: () => lightPalette.background.default,
-    },
-    {
-      name: "[light] text.primary on background.paper",
-      fg: () => lightPalette.text.primary,
-      bg: () => lightPalette.background.paper,
-    },
-    {
-      name: "[light] text.secondary on background.default",
-      fg: () => lightPalette.text.secondary,
-      bg: () => lightPalette.background.default,
-    },
-    {
-      name: "[dark] text.primary on background.default",
-      fg: () => darkPalette.text.primary,
-      bg: () => darkPalette.background.default,
-    },
-    {
-      name: "[dark] text.primary on background.paper",
-      fg: () => darkPalette.text.primary,
-      bg: () => darkPalette.background.paper,
-    },
-    {
-      name: "[dark] text.secondary on background.default",
-      fg: () => darkPalette.text.secondary,
-      bg: () => darkPalette.background.default,
-    },
-    {
-      name: "[light] primary.contrastText on primary.main",
-      fg: () => lightPalette.primary.contrastText,
-      bg: () => lightPalette.primary.main,
-    },
-    {
-      name: "[dark] primary.contrastText on primary.main",
-      fg: () => darkPalette.primary.contrastText,
-      bg: () => darkPalette.primary.main,
-    },
-    {
-      name: "[light] primary.dark on primary.light (TopBar header band)",
-      fg: () => lightPalette.primary.dark,
-      bg: () => lightPalette.primary.light,
-    },
-    {
-      name: "[dark] primary.dark on primary.light (TopBar header band)",
-      fg: () => darkPalette.primary.dark,
-      bg: () => darkPalette.primary.light,
-    },
-    {
-      name: "[light] feedback.success.main on background.paper",
-      fg: () => lightPalette.feedback.success.main,
-      bg: () => lightPalette.background.paper,
-    },
-    {
-      name: "[light] feedback.warning.main on background.paper",
-      fg: () => lightPalette.feedback.warning.main,
-      bg: () => lightPalette.background.paper,
-    },
-    {
-      name: "[light] feedback.error.main on background.paper",
-      fg: () => lightPalette.feedback.error.main,
-      bg: () => lightPalette.background.paper,
-    },
-    {
-      name: "[light] feedback.info.main on background.paper",
-      fg: () => lightPalette.feedback.info.main,
-      bg: () => lightPalette.background.paper,
-    },
-    {
-      name: "[dark] feedback.success.main on background.paper",
-      fg: () => darkPalette.feedback.success.main,
-      bg: () => darkPalette.background.paper,
-    },
-    {
-      name: "[dark] feedback.warning.main on background.paper",
-      fg: () => darkPalette.feedback.warning.main,
-      bg: () => darkPalette.background.paper,
-    },
-    {
-      name: "[dark] feedback.error.main on background.paper",
-      fg: () => darkPalette.feedback.error.main,
-      bg: () => darkPalette.background.paper,
-    },
-    {
-      name: "[dark] feedback.info.main on background.paper",
-      fg: () => darkPalette.feedback.info.main,
-      bg: () => darkPalette.background.paper,
-    },
+    ...textPrimaryPairs,
+    ...textSecondaryPairs,
+    ...contrastPairs,
+    ...feedbackMainPairs,
   ];
 
   it.each(pairs)("$name meets 4.5:1", ({ fg, bg }) => {
-    const ratio = contrastRatio(fg(), bg());
+    const ratio = contrastRatio(fg, bg);
     expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // Disabled-control text is intentionally low-contrast. WCAG 2.1 § 1.4.3
+  // exempts disabled UI components from the 4.5:1 minimum — they're a
+  // visual signal to the user that the control isn't interactive. This
+  // assertion documents the exemption (and would catch a future swap that
+  // accidentally pushed disabled text *above* the normal-text threshold,
+  // which would erase the visual cue).
+  it.each(SCHEMES)(
+    "[%s] disabled text on action.disabledBackground is below AA by design",
+    (_, palette) => {
+      const ratio = contrastRatio(palette.text.disabled, palette.action.disabledBackground);
+      expect(ratio).toBeLessThan(4.5);
+    }
+  );
+
+  // VIZ_CATEGORICAL hues are rendered as chart bar / line fills sitting on
+  // `background.paper` in both schemes (#367). Non-text contrast floor is
+  // WCAG 2.1 § 1.4.11 (3:1) — each positional hue must clear it against
+  // both papers so the categorical encoding stays distinguishable from the
+  // surface in either mode.
+  const NON_TEXT_RATIO = 3.0;
+  const categoricalPairs = lightPalette.viz.categorical.flatMap((hex, idx) => [
+    {
+      name: `[viz] categorical[${idx}] (${hex}) on light background.paper`,
+      fg: hex,
+      bg: lightPalette.background.paper,
+    },
+    {
+      name: `[viz] categorical[${idx}] (${hex}) on dark background.paper`,
+      fg: hex,
+      bg: darkPalette.background.paper,
+    },
+  ]);
+
+  it.each(categoricalPairs)("$name meets 3:1 non-text", ({ fg, bg }) => {
+    expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(NON_TEXT_RATIO);
   });
 });

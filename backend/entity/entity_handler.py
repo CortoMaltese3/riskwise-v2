@@ -27,9 +27,9 @@ import pandas as pd
 
 from backend.cache import file_cache_key, get_entity_cache
 from backend.constants import DATA_ENTITIES_DIR
-from backend.logger_config import LoggerConfig
+from backend.logging_config import get_logger
 
-logger = LoggerConfig(logger_types=["file"])
+logger = get_logger("backend.entity.entity_handler")
 
 
 class EntityHandler:
@@ -56,10 +56,8 @@ class EntityHandler:
         try:
             entity_filepath = DATA_ENTITIES_DIR / filepath
             return self._get_entity_bundle_via_engine(entity_filepath)
-        except Exception as exc:
-            logger.log(
-                "error",
-                f"An error occurred while trying to create entity from xlsx. More info: {exc}",
+        except (OSError, ValueError, KeyError, ImportError) as exc:
+            logger.error(f"An error occurred while trying to create entity from xlsx. More info: {exc}",
             )
             return None
 
@@ -74,10 +72,8 @@ class EntityHandler:
             return cached
         try:
             bundle = load_entity_xlsx(entity_filepath)
-        except Exception as exc:
-            logger.log(
-                "error",
-                f"An error occurred while trying to create EntityBundle from xlsx. "
+        except (OSError, ValueError, KeyError) as exc:
+            logger.error(f"An error occurred while trying to create EntityBundle from xlsx. "
                 f"More info: {exc}",
             )
             return None
@@ -98,8 +94,8 @@ class EntityHandler:
             new_values = np.asarray(entity.exposures.values, dtype=np.float64) * multiplier
             new_exposures = replace(entity.exposures, values=new_values)
             return replace(entity, exposures=new_exposures, ref_year=future_year)
-        except Exception as e:
-            logger.log("error", f"Failed to generate future entity: {e}")
+        except (AttributeError, TypeError, ValueError) as e:
+            logger.error(f"Failed to generate future entity: {e}")
             return None
 
     @staticmethod
@@ -120,10 +116,8 @@ class EntityHandler:
                 frame.to_parquet(sidecar, index=False)
             else:  # pragma: no cover - defensive
                 pd.DataFrame(gdf).to_parquet(sidecar, index=False)
-        except Exception as exc:  # pragma: no cover - sidecar is best-effort
-            logger.log(
-                "warning",
-                f"Failed to write parquet sidecar for {xlsx_path}: {exc}",
+        except (OSError, ValueError, ImportError) as exc:  # pragma: no cover - sidecar is best-effort
+            logger.warning(f"Failed to write parquet sidecar for {xlsx_path}: {exc}",
             )
 
     def load_exposures_dataframe(self, xlsx_path: Path | str) -> "pd.DataFrame":
@@ -143,10 +137,8 @@ class EntityHandler:
         df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
         try:
             df.to_parquet(sidecar, index=False)
-        except Exception as exc:  # pragma: no cover
-            logger.log(
-                "warning",
-                f"Failed to write parquet sidecar for {xlsx}: {exc}",
+        except (OSError, ValueError, ImportError) as exc:  # pragma: no cover
+            logger.warning(f"Failed to write parquet sidecar for {xlsx}: {exc}",
             )
         return df
 

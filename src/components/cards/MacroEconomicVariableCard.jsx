@@ -2,12 +2,15 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box, Card, CardActionArea, Typography, CardContent } from "@mui/material";
-import useStore from "../../store";
+import useResultsStore from "../../store/useResultsStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { layoutTransition } from "../../theme/theme";
 
 const MacroEconomicVariableCard = () => {
-  const { credOutputData, selectedMacroCountry, selectedMacroVariable, setSelectedMacroVariable } =
-    useStore();
+  const credOutputData = useResultsStore((s) => s.credOutputData);
+  const selectedMacroCountry = useWorkspaceStore((s) => s.selectedMacroCountry);
+  const selectedMacroVariable = useWorkspaceStore((s) => s.selectedMacroVariable);
+  const setSelectedMacroVariable = useWorkspaceStore((s) => s.setSelectedMacroVariable);
   const { t } = useTranslation();
 
   // Extract distinct economic indicators

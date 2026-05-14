@@ -11,12 +11,16 @@ import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { getScale } from "../../utils/colorScales";
 import Legend from "./Legend";
-import useStore from "../../store";
+import RiskWiseClient from "../../lib/RiskWiseClient";
+import useUIStore from "../../store/useUIStore";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import useTileLayerUrl from "./useTileLayerUrl";
 
 const HazardMap = () => {
   const tileLayerUrl = useTileLayerUrl();
-  const { selectedCountry, selectedHazard, setActiveMapRef } = useStore();
+  const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
+  const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const setActiveMapRef = useUIStore((s) => s.setActiveMapRef);
   const { t } = useTranslation();
   const mapRefSet = useRef(false);
   const theme = useTheme();
@@ -57,17 +61,18 @@ const HazardMap = () => {
 
   const fetchGeoJson = useCallback(
     async (rpLayer) => {
+      // Served by the main-process `app://` handler (`/__temp/<file>`)
+      // out of `userData/data/temp`. Same origin as the renderer, so we
+      // dodge Chromium's "Not allowed to load local resource" block on
+      // direct `file://` reads from an `app://` page.
+      const res = await RiskWiseClient.fetchGeoJson("app://./__temp/hazards_geodata.json");
+      if (!res.success) {
+        console.error("Error fetching GeoJSON data:", res.error.message);
+        setMapInfo({ geoJson: null, colorScale: null });
+        return;
+      }
       try {
-        // Served by the main-process `app://` handler (`/__temp/<file>`)
-        // out of `userData/data/temp`. Same origin as the renderer, so we
-        // dodge Chromium's "Not allowed to load local resource" block on
-        // direct `file://` reads from an `app://` page.
-        const response = await fetch("app://./__temp/hazards_geodata.json");
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
+        const data = res.result;
 
         // Set return periods and initially set activeRPLayer
         const returnPeriods = data._metadata.return_periods;
@@ -101,7 +106,7 @@ const HazardMap = () => {
           throw new Error("Percentile values are missing or incomplete.");
         }
       } catch (error) {
-        console.error("Error fetching GeoJSON data:", error);
+        console.error("Error processing GeoJSON data:", error);
         setMapInfo({ geoJson: null, colorScale: null });
       }
     },
@@ -168,15 +173,19 @@ const HazardMap = () => {
   };
 
   const RPButtonStyle = (rp) => ({
-    flexGrow: 0,
-    margin: 1,
-    minWidth: 7.5,
-    maxWidth: 7.5,
+    flex: "0 0 auto",
+    // Floor at 7 spacing units so "RP2" pads up to the natural width of
+    // "RP100" — keeps the row visually uniform without clipping long labels.
+    minWidth: 7,
+    px: 1,
     fontSize: "0.75rem",
+    whiteSpace: "nowrap",
     bgcolor: rp === activeRPLayer ? "primary.dark" : "primary.main",
     "&:hover": { bgcolor: "secondary.main" },
   });
 
+  // Right-anchored, gap-spaced row that wraps on narrow map widths so the
+  // group never overflows the map viewport or clips a long ``RP100`` label.
   const buttonContainerSx = {
     position: "absolute",
     top: 1.25,
@@ -184,6 +193,13 @@ const HazardMap = () => {
     zIndex: 1000,
     display: "flex",
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 0.5,
+    justifyContent: "flex-end",
+    // Bound width so flexWrap engages on narrow map widths instead of
+    // overflowing left of the relative-positioned MapContainer. The 2.5
+    // step matches `right: 1.25` doubled (a symmetric inset).
+    maxWidth: (theme) => `calc(100% - ${theme.spacing(2.5)})`,
   };
 
   const countryCoordinates = {

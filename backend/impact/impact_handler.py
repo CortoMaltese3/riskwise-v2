@@ -32,12 +32,14 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 
-from backend.base_handler import BaseHandler
 from backend.constants import DATA_TEMP_DIR
 from backend.impact.registry import ImpactFunctionRegistry, load_country_registry, load_registry_from_paths
-from backend.logger_config import LoggerConfig
+from backend.logging_config import get_logger
+from backend.utils.admin import get_admin_data
+from backend.utils.country import get_iso3_country_code
+from backend.utils.levels import assign_levels
 
-logger = LoggerConfig(logger_types=["file"])
+logger = get_logger("backend.impact.impact_handler")
 
 # Map the user-facing hazard names accepted by ``get_impact_function_set``
 # (matching ``request_data.hazard_type`` strings such as "flood" / "drought")
@@ -109,10 +111,8 @@ def _calculate_via_engine(
         cc_exposure = build_exposures(exposure)
         cc_impfset = build_impfset(impfset_specs)
         return run_impact(cc_hazard, cc_exposure, cc_impfset, save_mat=True)
-    except Exception as exception:
-        logger.log(
-            "error",
-            f"An error occurred during engine impact calculation: More info: {exception}",
+    except (AttributeError, TypeError, ValueError, RuntimeError, ImportError) as exception:
+        logger.error(f"An error occurred during engine impact calculation: More info: {exception}",
         )
         return None
 
@@ -158,7 +158,7 @@ class ImpactHandler:
     """
 
     def __init__(self) -> None:
-        self.base_handler = BaseHandler()
+        pass
 
     def get_impact_function_set(self, exposure_type: str, hazard_type: str) -> Any:
         """
@@ -297,8 +297,8 @@ class ImpactHandler:
                 valid_exposure_mask,
             )
 
-            country_iso3 = self.base_handler.get_iso3_country_code(country_name)
-            admin_gdf = self.base_handler.get_admin_data(country_iso3, 2)
+            country_iso3 = get_iso3_country_code(country_name)
+            admin_gdf = get_admin_data(country_iso3, 2)
             # ``Impact.imp_mat`` only carries columns for the valid (non-excluded)
             # exposure subset — see climate_lama_engine.ImpactCalc.impact() — so
             # ``lat`` / ``lon`` have to be subset through the same mask before
@@ -339,7 +339,7 @@ class ImpactHandler:
             percentile_values = _compute_rp_percentile_levels(impact_gdf, return_periods)
 
             # Assign levels based on the percentile values
-            impact_gdf = self.base_handler.assign_levels(impact_gdf, percentile_values)
+            impact_gdf = assign_levels(impact_gdf, percentile_values)
 
             # Spatial join with administrative areas
             joined_gdf = gpd.sjoin(impact_gdf, admin_gdf, how="left", predicate="within")
@@ -360,8 +360,8 @@ class ImpactHandler:
             map_data_filepath = DATA_TEMP_DIR / "risks_geodata.json"
             with open(map_data_filepath, "w", encoding="utf-8") as f:
                 json.dump(impact_geojson, f)
-        except Exception as exception:
-            logger.log("error", f"An unexpected error occurred. More info: {exception}")
+        except (AttributeError, KeyError, TypeError, ValueError, OSError) as exception:
+            logger.error(f"An unexpected error occurred. More info: {exception}")
 
     def generate_impact_report_dataset(
         self,
@@ -421,7 +421,7 @@ class ImpactHandler:
             ]
 
             # Retrieve the admin_gdf and perform spatial join
-            country_iso3 = self.base_handler.get_iso3_country_code(country_name)
+            country_iso3 = get_iso3_country_code(country_name)
             layers = [1, 2]
             final_gdf = impact_gdf.copy()
 
@@ -429,15 +429,15 @@ class ImpactHandler:
             for layer in layers:
                 try:
                     # Retrieve the admin_gdf for the current layer
-                    admin_gdf = self.base_handler.get_admin_data(country_iso3, layer)
+                    admin_gdf = get_admin_data(country_iso3, layer)
 
                     # Perform spatial join with the current layer
                     joined_gdf = gpd.sjoin(final_gdf, admin_gdf, how="left", predicate="within")
 
                     # Add the admin column for this layer to final_gdf
                     final_gdf[f"admin{layer}"] = joined_gdf["name"]
-                except Exception as e:
-                    logger.log("error", f"Error processing layer {layer}: {str(e)}")
+                except (KeyError, ValueError, TypeError, OSError) as e:
+                    logger.error(f"Error processing layer {layer}: {str(e)}")
                     # Continue with the next layer if an error occurs
                     continue
 
@@ -466,8 +466,8 @@ class ImpactHandler:
             return final_df
 
         except AttributeError as e:
-            logger.log("error", f"Invalid Impact object: {str(e)}")
-        except Exception as e:
-            logger.log("error", f"An unexpected error occurred: {str(e)}")
+            logger.error(f"Invalid Impact object: {str(e)}")
+        except (KeyError, ValueError, TypeError) as e:
+            logger.error(f"An unexpected error occurred: {str(e)}")
 
         return pd.DataFrame()  # Return an empty DataFrame in case of failure

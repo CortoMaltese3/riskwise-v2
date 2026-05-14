@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Stack, Tooltip, Typography } from "@mui/material";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { enqueueToast } from "../../hooks/useToast";
+import useResultsStore from "../../store/useResultsStore";
 
 // Mirrors the workspace import flow: Electron's main process opens a
 // native open dialog and POSTs the chosen path to the backend; the
@@ -13,6 +14,7 @@ const ImportScenarioSection = () => {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [lastImport, setLastImport] = useState(null);
+  const isScenarioRunning = useResultsStore((s) => s.isScenarioRunning);
 
   const handleImport = async () => {
     setBusy(true);
@@ -56,19 +58,25 @@ const ImportScenarioSection = () => {
       </Stack>
 
       <Box>
-        <Button
-          variant="contained"
-          startIcon={<FileUploadIcon />}
-          onClick={handleImport}
-          disabled={busy}
-          aria-label="import-scenario-bundle"
-        >
-          {busy ? (
-            <CircularProgress size={18} sx={{ color: "inherit" }} />
-          ) : (
-            t("settings_import_scenario_action", { defaultValue: "Import .riskwise-scenario" })
-          )}
-        </Button>
+        <Tooltip title={isScenarioRunning ? t("scenario_running_disabled_tooltip") : ""}>
+          <span>
+            <Button
+              variant="contained"
+              startIcon={<FileUploadIcon />}
+              onClick={handleImport}
+              disabled={busy || isScenarioRunning}
+              aria-label="import-scenario-bundle"
+            >
+              {busy ? (
+                <CircularProgress size={18} sx={{ color: "inherit" }} />
+              ) : (
+                t("settings_import_scenario_action", {
+                  defaultValue: "Import .riskwise-scenario",
+                })
+              )}
+            </Button>
+          </span>
+        </Tooltip>
       </Box>
 
       {lastImport && (
