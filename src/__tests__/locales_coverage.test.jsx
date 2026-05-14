@@ -14,6 +14,7 @@ const LOCALES = { en: translationEN, ar: translationAR, th: translationTH };
 const DRIFT_ALLOWLIST = new Set([
   "export_pdf_dialog_group_count", // "{{label}} ({{count}})"
   "scenario_chip_summary", // "{{country}} · {{hazard}} · {{from}}–{{to}}"
+  "home_active_run_summary", // "{{country}} · {{hazard}} · {{from}}–{{to}}"
 ]);
 
 const DRIFT_MIN_LENGTH = 15;

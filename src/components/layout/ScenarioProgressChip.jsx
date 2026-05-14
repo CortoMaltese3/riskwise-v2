@@ -18,7 +18,12 @@ import { enqueueToast } from "../../hooks/useToast";
 import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
-import { SCENARIO_PHASES, TERMINAL_PHASES } from "../../store/scenarioPhases";
+import {
+  SCENARIO_PHASES,
+  TERMINAL_PHASES,
+  buildRunSummary,
+  isNumericProgress,
+} from "../../store/scenarioPhases";
 
 const TERMINAL_FADE_MS = 10_000;
 const CANCEL_CONFIRM_MS = 3_000;
@@ -171,21 +176,10 @@ const ScenarioProgressChip = () => {
 
   const config = PHASE_CONFIG[scenarioPhase];
   const isTerminal = TERMINAL_PHASES.has(scenarioPhase);
-  const summaryLine = activeRunSummary
-    ? t("scenario_chip_summary", {
-        country: activeRunSummary.country || "",
-        hazard: activeRunSummary.hazard || "",
-        from: activeRunSummary.timeHorizonStart ?? "",
-        to: activeRunSummary.timeHorizonEnd ?? "",
-      })
-    : "";
+  const summaryLine = buildRunSummary(t, "scenario_chip_summary", activeRunSummary);
   const titleKey = config?.titleKey ?? "scenario_chip_running_title";
   const showProgressBar = config?.showProgressBar ?? false;
-  const hasNumericProgress =
-    scenarioPhase === SCENARIO_PHASES.RUNNING &&
-    typeof progress === "number" &&
-    progress > 0 &&
-    progress <= 100;
+  const hasNumericProgress = isNumericProgress(scenarioPhase, progress);
 
   return (
     <Fade in={scenarioPhase !== null} timeout={300} unmountOnExit>

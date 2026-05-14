@@ -35,11 +35,13 @@ vi.mock("../../CHANGELOG.md?raw", () => ({
 let HomeView;
 let useStore;
 let useWorkspaceStore;
+let useResultsStore;
 
 beforeAll(async () => {
   ({ default: HomeView } = await import("../components/layout/views/HomeView"));
   ({ default: useStore } = await import("../store/useUIStore"));
   ({ default: useWorkspaceStore } = await import("../store/useWorkspaceStore"));
+  ({ default: useResultsStore } = await import("../store/useResultsStore"));
 }, 60000);
 
 const FIXTURE = [
@@ -69,7 +71,12 @@ beforeEach(() => {
       downloadUpdate: vi.fn(),
     },
   };
-  useStore.setState({ activeSection: "home" });
+  useStore.setState({ activeSection: "home", modalMessage: "", progress: 0 });
+  useResultsStore.setState({
+    scenarioPhase: null,
+    activeRunSummary: null,
+    isScenarioRunning: false,
+  });
   useWorkspaceStore.setState({
     scenarios: FIXTURE,
     pinnedIds: [],
@@ -161,5 +168,44 @@ describe("HomeView", () => {
     render(<HomeView />);
     expect(screen.getByTestId("home-recent-error")).toBeInTheDocument();
     expect(screen.getByTestId("home-pinned-error")).toBeInTheDocument();
+  });
+
+  it("renders the active run card when a scenario is running", () => {
+    useResultsStore.setState({
+      scenarioPhase: "running",
+      activeRunSummary: {
+        country: "Egypt",
+        hazard: "flood",
+        timeHorizonStart: 2030,
+        timeHorizonEnd: 2050,
+      },
+    });
+    render(<HomeView />);
+    expect(screen.getByTestId("home-active-run-card")).toBeInTheDocument();
+  });
+
+  it("hides the active run card when scenarioPhase is null", () => {
+    render(<HomeView />);
+    expect(screen.queryByTestId("home-active-run-card")).toBeNull();
+  });
+
+  it("shows the 'Last completed' hint when at least one scenario is completed", () => {
+    render(<HomeView />);
+    expect(screen.getByTestId("home-recent-last-completed")).toBeInTheDocument();
+  });
+
+  it("hides the 'Last completed' hint when no scenarios are completed", () => {
+    useWorkspaceStore.setState({
+      scenarios: [
+        {
+          id: "s-3",
+          name: "queued run",
+          status: "queued",
+          created_at: new Date().toISOString(),
+        },
+      ],
+    });
+    render(<HomeView />);
+    expect(screen.queryByTestId("home-recent-last-completed")).toBeNull();
   });
 });

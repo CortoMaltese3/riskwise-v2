@@ -65,6 +65,15 @@ const RecentProjectsCard = ({ scenarios, loading, error }) => {
     [scenarios]
   );
 
+  const lastCompleted = useMemo(
+    () =>
+      scenarios.reduce((best, s) => {
+        if (s.status !== "completed") return best;
+        return !best || sortByCreated(s, best) < 0 ? s : best;
+      }, null),
+    [scenarios]
+  );
+
   return (
     <HomeCard
       data-testid="home-recent-card"
@@ -79,6 +88,19 @@ const RecentProjectsCard = ({ scenarios, loading, error }) => {
         </Button>
       }
     >
+      {!loading && !error && lastCompleted && (
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          data-testid="home-recent-last-completed"
+          sx={{ mb: 1 }}
+        >
+          {t("home_recent_last_completed", {
+            name: lastCompleted.name || lastCompleted.id,
+            relative: formatRelativeTime(lastCompleted.created_at, i18n.language),
+          })}
+        </Typography>
+      )}
       {loading ? (
         <Stack spacing={1} data-testid="home-recent-loading">
           {Array.from({ length: SKELETON_ROWS }).map((_, idx) => (

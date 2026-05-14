@@ -61,6 +61,15 @@ is met on at least one Nuitka configuration.
 ## [1.1.0](https://github.com/CortoMaltese3/riskwise-v2/compare/v1.0.8...v1.1.0) (2026-05-04)
 
 
+### Highlights
+
+- Shareable scenario exports and provenance reports (`.riskwise-scenario`)
+- New auto-update workflow with code-signed Windows installers
+- Bundled portable Windows builds for offline distribution
+- Typed TypeScript API client generated from OpenAPI
+- FastAPI on loopback HTTP replaces stdin/stdout IPC
+
+
 ### Features
 
 * Add CHANGELOG.md ([03ac2cd](https://github.com/CortoMaltese3/riskwise-v2/commit/03ac2cd630d0ea6c4efbd9e6728c1ca6e82b724f))

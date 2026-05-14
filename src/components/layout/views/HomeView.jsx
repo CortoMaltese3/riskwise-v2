@@ -5,6 +5,7 @@ import { Box, Stack } from "@mui/material";
 import useWorkspaceStore from "../../../store/useWorkspaceStore";
 import { parseChangelog } from "../../../utils/changelog";
 import ScrollableRegion from "../primitives/ScrollableRegion";
+import ActiveRunCard from "../../home/ActiveRunCard";
 import GetStartedCards from "../../home/GetStartedCards";
 import RecentProjectsCard from "../../home/RecentProjectsCard";
 import PinnedCard from "../../home/PinnedCard";
@@ -53,6 +54,7 @@ const HomeView = () => {
       <Box sx={PAGE_SX} data-testid="home-view">
         <Box sx={GRID_SX}>
           <Box sx={COLUMN_SX}>
+            <ActiveRunCard />
             <GetStartedCards />
             {isFirstRun ? (
               <FirstRunCard />
