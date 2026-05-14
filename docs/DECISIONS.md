@@ -648,6 +648,54 @@ does not retract the runtime offline behavior.
 
 ---
 
+## D28 — Impact-function visibility and override model
+
+**Status**: Accepted
+**Date**: 2026-05-14
+
+**Decision**: Phase 10.2 ([#444](https://github.com/CortoMaltese3/riskwise-v2/issues/444)) makes impact functions (IFs) visible in the UI and editable in custom mode. Four sub-decisions:
+
+1. **The viewer reads from the XLSX (the live source the engine consumes), never from the JSON registry.** Run-time IFs come from `backend/engine/loaders/xlsx.py:38` (`load_entity_xlsx`) — they are parsed from the `impact_functions` sheet of the active entity file and reach `calculate_impact` via `entity_present.impfset_specs`. The per-country JSON registry at `backend/impact/registry.py` is loaded at startup but only consulted by the non-run-path `ImpactHandler.get_impact_function_set`. The two sources can legitimately disagree — the XLSX loader is intentionally permissive (see the comment at `backend/engine/loaders/xlsx.py:315`) while the registry is stricter. A viewer that read the registry could lie about what the engine ran.
+
+2. **Custom-mode edits are stored as an override on the scenario row, not as a file rewrite.** The uploaded XLSX is never modified. The override is a JSON blob on the scenario row (`impact_function_override`). At run time, `RunScenario._execute()` loads the entity XLSX as usual, then patches `entity_present.impfset_specs` with the override before calling `calculate_impact`. Saved scenarios persist the override; restoring replays the exact IF the run used.
+
+3. **The JSON registry is repurposed as the validator-of-record for user-modified IFs.** Its run-time role is unchanged. Its strict rules (intensity monotonicity, unit consistency, ID uniqueness, mdd/paa monotonicity) are lifted into a reusable validator that user input must pass before being accepted server-side.
+
+4. **ERA stays read-only; editing is custom-mode only. Table editing first, graph manipulation deferred.** ERA's value is being canonical — users who want to tamper switch to custom and re-upload. Within custom mode, the first cut is editable numeric inputs on the IF table with a live chart preview. Drag-to-edit-curve and parametric sliders are deferred until there is evidence of demand.
+
+**Why**:
+- **Single source of truth at run time.** A viewer that diverges from what the engine actually computes is worse than no viewer — it erodes trust in the tool. Reading from the XLSX guarantees parity by construction.
+- **User trust.** Mutating an uploaded file (option β — "write a derived XLSX") surprises users and creates the question "which file actually ran?" The override-on-scenario model keeps the user's uploaded file pristine and makes provenance unambiguous.
+- **Reproducibility for free.** Persisting the override on the scenario row means restored scenarios replay against the exact IF the run used, with no separate "saved custom IF" table or per-scenario derived file to manage.
+- **Guardrails on free-form editing.** The XLSX loader's permissiveness is appropriate for ingesting real CLIMADA files but inappropriate for accepting user input from a UI. The registry's stricter rules already exist; reusing them is cheaper than inventing parallel validation.
+- **Scope discipline on edit UX.** Drag-to-edit UIs are flashy but trivially produce non-monotonic curves and need either snap-to-monotonic logic or aggressive validation. Table editing is the safest cut, validates cleanly, and produces the same scientific outcomes; we earn the right to richer editing by seeing how users use the table version first.
+
+**Rejected**:
+- **(α) UI is the only source of edited IFs (no persistence).** The modified IF rides on the run request and is dropped afterward. No reproducibility — refresh the page, edits are gone. Saved scenarios cannot replay.
+- **(β) Write a derived XLSX file per edit.** Mutates user data (or creates per-scenario file sprawl); raises the "which file actually ran?" question; adds cleanup and naming concerns. Keeps the engine flow unchanged at the cost of UX clarity. Override-on-scenario is cleaner.
+- **(C) Hybrid registry-first / XLSX-fallback viewer.** Worst of the viewer options — when JSON and XLSX disagree, the viewer shows one while the engine runs the other, with no signal to the user.
+- **Delete the JSON registry.** Tempting once the engine no longer needs it, but its validation rules are exactly what user editing needs as a guardrail. Repurposing is cheaper than rebuilding.
+- **Enable ERA editing in-app.** Would destroy the canonical/auditable property that justifies ERA's existence as a separate mode. Users who need different parameters should use custom mode.
+- **Ship drag-to-edit-curve UI in the first cut.** No evidence yet that table editing is insufficient. Premature complexity.
+
+**Consequence**:
+- 10.2.1 (#452) adds the viewer endpoint, the `ImpactFunctionCard`, and the dialog. ERA and custom modes render identically; no write paths.
+- 10.2.2 (#453) adds the `impact_function_override` column on scenarios, the runtime patch in `RunScenario._execute()`, the `backend/impact/validator.py` module wrapping registry rules, the dialog's Edit mode, and the "Modified" badge on the IF card and `ResultsView`.
+- The JSON registry stays. Its long-term fate (validator-only vs. richer metadata layer vs. eventual removal) is revisited only if 10.2.2 usage shows the registry is obsolete.
+
+**Trigger to revisit**:
+- A named requirement for multi-IF-per-pair scenarios (e.g., a single scenario covering several exposure types at once) forces the viewer from a single-IF panel to a list/picker. Registry and run-time flow would both need rework.
+- Real usage of 10.2.2 shows table editing is insufficient — users want parametric or drag-to-edit. Open a follow-up that explicitly tracks the gap rather than retrofitting it as a tweak.
+- An ERA stakeholder requests editable parameters in ERA mode. The decision then is whether to add a "fork to custom with edits" path or to relax ERA's canonical guarantee.
+
+**References**:
+- [phase-10-ui-logic-enhancements.md § 10.2](plan/phase-10-ui-logic-enhancements.md)
+- Umbrella [#444](https://github.com/CortoMaltese3/riskwise-v2/issues/444)
+- Children: [#452](https://github.com/CortoMaltese3/riskwise-v2/issues/452) (viewer), [#453](https://github.com/CortoMaltese3/riskwise-v2/issues/453) (editor)
+- Code touchpoints: `backend/engine/loaders/xlsx.py`, `backend/impact/registry.py`, `backend/impact/impact_handler.py`, `backend/run_scenario.py`
+
+---
+
 ## D27 — MUI + emotion + CSS variables stay; no Tailwind
 
 **Status**: Accepted

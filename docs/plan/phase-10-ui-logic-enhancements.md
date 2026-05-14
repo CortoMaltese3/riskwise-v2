@@ -57,12 +57,20 @@ The six child issues below close that gap incrementally. They are sequenced so e
 
 ### 10.2 — Impact Functions visibility & customization (parent [#444](https://github.com/CortoMaltese3/riskwise-v2/issues/444))
 
-> **Status**: scope TBD.
->
-> Out of scope for the first pass of Phase 10 detail. Will be filled with a child-issue table when work is scoped. Expected themes (not commitments):
-> - Read-only impact-function inspector — list functions per (hazard, exposure), render the y(intensity) curve, expose source.
-> - Editable impact-function parameters — clone a built-in, adjust mdd / paa coefficients, save as custom; round-trip through scenario runs.
-> - Custom function set management — upload / delete / version, mirror the `measure_sets` pattern.
+Impact functions translate hazard intensity into expected damage / loss. Today they are a black box: the engine consumes them from XLSX-loaded entities (`backend/engine/loaders/xlsx.py:38` → `entity_present.impfset_specs` → `calculate_impact` at `backend/run_scenario.py`), and there is no UI surface to inspect or customize them. A second source — the per-country JSON registry at `backend/impact/registry.py` — is loaded at startup but **not** consulted at run time; it exists only for the non-run-path `ImpactHandler.get_impact_function_set`. The two can legitimately disagree (the XLSX loader is intentionally permissive per the comment at `backend/engine/loaders/xlsx.py:315`; the registry is stricter).
+
+Phase 10.2 closes this gap in two steps: a read-only viewer that reads from the XLSX (the engine's actual source), then an editor for custom mode that overrides the loaded IF via a scenario-row column without mutating the uploaded XLSX. Architectural decisions are captured in [`docs/DECISIONS.md`](../DECISIONS.md) D28.
+
+| Child | Goal | Files in scope | Issue label | Depends on |
+|---|---|---|---|---|
+| 10.2.1 — Read-only impact-function viewer on Risk inputs | New `ImpactFunctionCard` in the left input column between `ExposureCard` and the Run button; opens a dialog with the `(intensity, mdd, paa)` table and a recharts curve plot. Backed by a new `GET /api/v1/impact-function` endpoint that delegates to the same `load_entity_xlsx` the engine uses — viewer parity with the engine is guaranteed. ERA and custom modes render identically; no write paths. Secondary entry point on `ResultsView` for post-run inspection. | `backend/app.py`, `backend/impact/resolver.py` (new), `backend/models/impact.py`, `backend/test_app.py`, `backend/test_impact_resolver.py` (new), `src/lib/RiskWiseClient.ts`, `src/components/input/ImpactFunctionCard.jsx` (new), `src/components/input/DataInput.jsx`, `src/components/dialogs/ImpactFunctionDialog.jsx` (new), `src/components/results/ResultsView.jsx`, `src/store/useResultsStore.js`, `src/locales/en.json` (+ other locales) | `phase-10/impact-functions-viewer` | none |
+| 10.2.2 — Editable impact functions in custom-mode scenarios | Extends 10.2.1 with an Edit mode (custom mode only) on the IF dialog: editable numeric table with live chart preview, server-side validation against registry-strict rules, override persisted as a JSON column on the scenario row. At run time, `entity_present.impfset_specs` is patched with the override before `calculate_impact`; the uploaded XLSX is never modified. Restored scenarios replay the exact override and surface a "Modified" badge on the IF card and `ResultsView` panels. JSON registry repurposed as validator-of-record. ERA stays read-only. Table editing only; graph manipulation deferred. | `backend/db/migrations/000X_scenario_impact_function_override.sql` (new), `backend/models/scenario.py`, `backend/run_scenario.py`, `backend/impact/validator.py` (new), `backend/app.py`, `backend/test_app.py`, `backend/test_run_scenario.py`, `src/lib/RiskWiseClient.ts`, `src/components/dialogs/ImpactFunctionDialog.jsx`, `src/components/input/ImpactFunctionCard.jsx`, `src/components/results/ResultsView.jsx`, `src/store/useWorkspaceStore.js`, `src/hooks/useRunScenario.js`, `src/locales/en.json` (+ other locales) | `phase-10/impact-functions-editor` | 10.2.1 |
+
+**Out of scope for 10.2 (future work):**
+- Multi-IF-per-pair scenarios (multi-exposure runs displaying multiple IFs side by side). The registry enforces exactly one IF per `(country, exp_type, haz_type)` today.
+- Editing ERA impact functions in-app. ERA is canonical by design; users who want to tamper switch to custom and re-upload.
+- Parametric IFs / drag-to-edit-curve UI. Deferred until 10.2.2 ships and real usage shows whether table editing is sufficient.
+- Deleting or retiring the JSON registry. Repurposed as validator-of-record in 10.2.2; long-term fate revisited only if editing usage proves the registry obsolete.
 
 ### 10.3 — PDF Report enhancements (parent [#445](https://github.com/CortoMaltese3/riskwise-v2/issues/445))
 
@@ -127,7 +135,13 @@ Adaptation Measures (parent [#443](https://github.com/CortoMaltese3/riskwise-v2/
 - [ ] Catalog cards carry visible applicability indicators against the current entity; on Apply, the user is told (via toast or chart annotation) how many measures were skipped.
 - [ ] The Adaptation page no longer has its own Apply button; measure selection lives in the Risk inputs as a collapsible panel; the dual-state (`selected` vs `applied` vs `initialized`) is collapsed to one source of truth.
 
-Impact Functions (parent [#444](https://github.com/CortoMaltese3/riskwise-v2/issues/444)): TBD when scoped.
+Impact Functions (parent [#444](https://github.com/CortoMaltese3/riskwise-v2/issues/444)):
+
+- [ ] `GET /api/v1/impact-function?country=X&hazard=Y&exposure=Z[&entityFile=...]` returns the active IF spec parsed from the same XLSX the engine consumes; a smoke test confirms engine-vs-viewer parity on a real run.
+- [ ] `ImpactFunctionCard` appears between `ExposureCard` and the Run button in the Risk Assessment left input column; it shows IF id / name / unit once `(country, hazard, exposure)` are all valid and opens a dialog with the full `(intensity, mdd, paa)` table plus a curve plot. `ResultsView` carries a secondary "View impact function" entry point.
+- [ ] Custom-mode `POST /api/v1/scenario/run` accepts an `impact_function_override` payload; ERA-mode runs reject it with 400; overrides are validated server-side against registry-strict rules with per-field structured errors.
+- [ ] At run time, when an override is present, `entity_present.impfset_specs` is patched before `calculate_impact`; the uploaded entity XLSX is byte-identical before and after edits.
+- [ ] Saved scenarios persist the override; restoring replays the exact IF the run used and shows a "Modified" badge on the IF card and `ResultsView` panels.
 
 PDF Reports (parent [#445](https://github.com/CortoMaltese3/riskwise-v2/issues/445)): TBD when scoped.
 
@@ -148,7 +162,15 @@ General UI (no parent): TBD.
 10.1.5 depends on 10.1.1 (so the catalog list is itself unambiguous before applicability flags are layered on).
 10.1.6 is the architectural alignment and depends on all five preceding child issues so it folds into a clean state.
 
-10.2 and 10.3 sequencing will be added when their sub-phase tables are filled in.
+10.2:
+
+```
+10.2.1 ──> 10.2.2
+```
+
+10.2.1 ships the viewer surface (endpoint, card, dialog) for ERA and custom modes. 10.2.2 extends the dialog with an Edit mode and the run pipeline with override application.
+
+10.3 sequencing will be added when its sub-phase table is filled in.
 
 ---
 
