@@ -12,3 +12,19 @@ export const SCENARIO_PHASES = Object.freeze({
 export const TERMINAL_PHASES = Object.freeze(
   new Set([SCENARIO_PHASES.COMPLETED, SCENARIO_PHASES.FAILED])
 );
+
+export const buildRunSummary = (t, key, summary) =>
+  summary
+    ? t(key, {
+        country: summary.country || "",
+        hazard: summary.hazard || "",
+        from: summary.timeHorizonStart ?? "",
+        to: summary.timeHorizonEnd ?? "",
+      })
+    : "";
+
+export const isNumericProgress = (phase, progress) =>
+  phase === SCENARIO_PHASES.RUNNING &&
+  typeof progress === "number" &&
+  progress > 0 &&
+  progress <= 100;
