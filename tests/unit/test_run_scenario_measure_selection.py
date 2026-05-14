@@ -1,10 +1,13 @@
 """``selected_measure_ids`` scopes the entity's measures before cost-benefit.
 
-Covers issue #373. The runner accepts an optional list of measure names
+Covers issues #373 and #449. The runner accepts a list of measure names
 (matching ``MeasureSpec.name``) and filters the loaded entity's measure
-set before the engine sees it. ``None`` preserves the legacy
-"use every measure" behaviour. The filter must apply to both present
-and future entities so CLIMADA's identical-measure-set invariant holds.
+set before the engine sees it. ``[]`` means "no filter, run every
+entity measure"; a non-empty list scopes the run to that subset.
+``None`` is rejected at the request boundary — the wire format is
+uniform between the Risk and Adaptation views. The filter must apply
+to both present and future entities so CLIMADA's identical-measure-set
+invariant holds.
 """
 
 from __future__ import annotations
@@ -113,13 +116,13 @@ def _build_entity(measure_names: list[str]) -> _StubEntity:
 
 
 class TestSelectedMeasureIdsAtRequestBoundary:
-    def test_field_defaults_to_none(self) -> None:
+    def test_field_defaults_to_empty_list(self) -> None:
         data = _make_request_data()
-        assert data.selected_measure_ids is None
+        assert data.selected_measure_ids == []
 
-    def test_explicit_none_is_accepted(self) -> None:
-        data = _make_request_data(selected_measure_ids=None)
-        assert data.selected_measure_ids is None
+    def test_explicit_empty_list_is_accepted(self) -> None:
+        data = _make_request_data(selected_measure_ids=[])
+        assert data.selected_measure_ids == []
 
     def test_explicit_list_is_stored_verbatim(self) -> None:
         data = _make_request_data(selected_measure_ids=["m_levee", "m_pumps"])
@@ -151,7 +154,7 @@ class TestSelectedMeasureIdsAtRequestBoundary:
             monkey.undo()
         assert data.selected_measure_ids == ["m_levee", "m_drainage"]
 
-    def test_from_request_omitted_field_resolves_to_none(self) -> None:
+    def test_from_request_omitted_field_resolves_to_empty_list(self) -> None:
         from backend import run_scenario
         from backend.run_scenario import RequestData
 
@@ -168,7 +171,39 @@ class TestSelectedMeasureIdsAtRequestBoundary:
             data = RequestData.from_request({"countryName": "Thailand"}, _HazardStub())
         finally:
             monkey.undo()
-        assert data.selected_measure_ids is None
+        assert data.selected_measure_ids == []
+
+
+class TestScenarioRunRequestRejectsNone:
+    """Issue #449: ``None`` must be rejected at the Pydantic boundary so the
+    backend never has to disambiguate between "field missing" and "field
+    nulled out" — the renderer always sends an array."""
+
+    def test_none_is_rejected(self) -> None:
+        from pydantic import ValidationError
+
+        from backend.models.scenario import ScenarioRunRequest
+
+        with pytest.raises(ValidationError):
+            ScenarioRunRequest(selectedMeasureIds=None)
+
+    def test_missing_field_defaults_to_empty_list(self) -> None:
+        from backend.models.scenario import ScenarioRunRequest
+
+        request = ScenarioRunRequest()
+        assert request.selectedMeasureIds == []
+
+    def test_empty_list_is_accepted(self) -> None:
+        from backend.models.scenario import ScenarioRunRequest
+
+        request = ScenarioRunRequest(selectedMeasureIds=[])
+        assert request.selectedMeasureIds == []
+
+    def test_non_empty_list_is_stored_verbatim(self) -> None:
+        from backend.models.scenario import ScenarioRunRequest
+
+        request = ScenarioRunRequest(selectedMeasureIds=["m_levee", "m_drainage"])
+        assert request.selectedMeasureIds == ["m_levee", "m_drainage"]
 
 
 class TestRunnerFiltersMeasures:
@@ -178,17 +213,32 @@ class TestRunnerFiltersMeasures:
         runner._get_average_annual_growth = lambda: 0.0
         runner._execute(strategy)
 
-    def test_none_passes_every_measure_through(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_empty_list_passes_every_measure_through(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Issue #449: ``[]`` means "no filter, run every entity measure".
         _patch_module_helpers(monkeypatch)
         entity = _build_entity(["m_levee", "m_drainage", "m_pumps"])
         strategy = _FixedLoadStrategy(entity, MagicMock(), MagicMock())
         runner = _make_runner()
-        runner.request_data = _make_request_data(selected_measure_ids=None)
+        runner.request_data = _make_request_data(selected_measure_ids=[])
         self._run(runner, strategy)
 
         calculate_calls = runner.costben_handler.calculate_cost_benefit.call_args_list
         assert calculate_calls, "calculate_cost_benefit must run"
         entity_arg = calculate_calls[0].args[1]
+        assert [m.name for m in entity_arg.measures] == ["m_levee", "m_drainage", "m_pumps"]
+
+    def test_default_request_data_passes_every_measure_through(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The dataclass default is ``[]``, equivalent to "no filter".
+        _patch_module_helpers(monkeypatch)
+        entity = _build_entity(["m_levee", "m_drainage", "m_pumps"])
+        strategy = _FixedLoadStrategy(entity, MagicMock(), MagicMock())
+        runner = _make_runner()
+        runner.request_data = _make_request_data()
+        self._run(runner, strategy)
+
+        entity_arg = runner.costben_handler.calculate_cost_benefit.call_args_list[0].args[1]
         assert [m.name for m in entity_arg.measures] == ["m_levee", "m_drainage", "m_pumps"]
 
     def test_subset_filters_entity_measures(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -215,12 +265,17 @@ class TestRunnerFiltersMeasures:
         entity_arg = runner.costben_handler.calculate_cost_benefit.call_args_list[0].args[1]
         assert [m.name for m in entity_arg.measures] == ["m_levee"]
 
-    def test_empty_list_filters_everything(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_unknown_only_selection_filters_to_empty(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # A non-empty selection that matches nothing on the entity still
+        # filters to zero measures — this is the "user picked measures
+        # from a different hazard" footgun, kept observable so the
+        # cost-benefit handler returns ``[]`` and the renderer shows the
+        # no-measures empty state.
         _patch_module_helpers(monkeypatch)
         entity = _build_entity(["m_levee", "m_drainage"])
         strategy = _FixedLoadStrategy(entity, MagicMock(), MagicMock())
         runner = _make_runner()
-        runner.request_data = _make_request_data(selected_measure_ids=[])
+        runner.request_data = _make_request_data(selected_measure_ids=["m_does_not_exist"])
         self._run(runner, strategy)
 
         entity_arg = runner.costben_handler.calculate_cost_benefit.call_args_list[0].args[1]
@@ -262,17 +317,42 @@ class TestCacheKey:
             entity_sha256="a" * 64,
             hazard_sha256="b" * 64,
         )
-        without = cache_store.derive_cache_key(**base, selected_measure_ids=None)
+        # Issue #449: ``[]`` is the no-filter case and keeps the legacy
+        # "no measures clause" key shape so pre-#449 cache entries stay
+        # reachable on the no-filter path.
+        without = cache_store.derive_cache_key(**base, selected_measure_ids=[])
         all_three = cache_store.derive_cache_key(
             **base, selected_measure_ids=["m_levee", "m_drainage", "m_pumps"]
         )
         subset = cache_store.derive_cache_key(
             **base, selected_measure_ids=["m_levee", "m_drainage"]
         )
-        # Three distinct keys: None / full / subset must never collide.
+        # Three distinct keys: no-filter / full / subset must never collide.
         assert without != all_three
         assert without != subset
         assert all_three != subset
+
+    def test_empty_list_matches_legacy_none_key_shape(self) -> None:
+        # Backwards compatibility: cache entries written before #449 used
+        # ``selected_measure_ids=None`` to mean "no filter". The new
+        # convention represents the same case as ``[]`` and must hash to
+        # the same key so warm caches survive the migration.
+        from backend.db import cache_store
+
+        base = dict(
+            country="Thailand",
+            hazard_type="flood",
+            scenario="historical",
+            exposure_type="crops",
+            ref_year=2020,
+            future_year=2050,
+            annual_growth=0.02,
+            entity_sha256="a" * 64,
+            hazard_sha256="b" * 64,
+        )
+        legacy = cache_store.derive_cache_key(**base, selected_measure_ids=None)
+        new = cache_store.derive_cache_key(**base, selected_measure_ids=[])
+        assert legacy == new
 
     def test_selection_is_order_independent(self) -> None:
         from backend.db import cache_store

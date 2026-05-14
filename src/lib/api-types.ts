@@ -1190,7 +1190,7 @@ export interface components {
             /** Scenario */
             scenario?: string | null;
             /** Selectedmeasureids */
-            selectedMeasureIds?: string[] | null;
+            selectedMeasureIds?: string[];
             /** Timehorizon */
             timeHorizon?: number[] | null;
         } & {

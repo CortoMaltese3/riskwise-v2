@@ -23,7 +23,6 @@ const useRunScenario = () => {
   const selectedScenario = useWorkspaceStore((s) => s.selectedScenario);
   const selectedTimeHorizon = useWorkspaceStore((s) => s.selectedTimeHorizon);
   const selectedMeasureIds = useWorkspaceStore((s) => s.selectedMeasureIds);
-  const isMeasureSelectionInitialized = useWorkspaceStore((s) => s.isMeasureSelectionInitialized);
   const markMeasureSelectionApplied = useWorkspaceStore((s) => s.markMeasureSelectionApplied);
   const setScenarioRunCode = useWorkspaceStore((s) => s.setScenarioRunCode);
 
@@ -53,10 +52,11 @@ const useRunScenario = () => {
         scenario: selectedScenario,
         timeHorizon: selectedTimeHorizon,
       };
-      const appliedMeasureIds = isMeasureSelectionInitialized ? [...selectedMeasureIds] : null;
-      if (appliedMeasureIds !== null) {
-        body.selectedMeasureIds = appliedMeasureIds;
-      }
+      // Snapshot the selection at dispatch so a post-dispatch store edit
+      // can't leak into the in-flight body (the snapshot is also handed
+      // to ``markMeasureSelectionApplied`` on success below).
+      const appliedMeasureIds = [...selectedMeasureIds];
+      body.selectedMeasureIds = appliedMeasureIds;
       // Snapshot the inputs that drive the chip's summary line at dispatch
       // so the user can navigate the workspace freely mid-run without
       // changing what the chip says is running. ``landingTab`` rides along
@@ -87,7 +87,7 @@ const useRunScenario = () => {
           setAlertSeverity(succeeded ? "success" : "error");
           setAlertShowMessage(true);
           if (succeeded) {
-            markMeasureSelectionApplied(appliedMeasureIds ?? []);
+            markMeasureSelectionApplied(appliedMeasureIds);
           }
           setMapTitle(response.result.data.mapTitle);
           setScenarioRunCode(response.result.data.scenarioId);
@@ -122,7 +122,6 @@ const useRunScenario = () => {
       selectedScenario,
       selectedTimeHorizon,
       selectedMeasureIds,
-      isMeasureSelectionInitialized,
       markMeasureSelectionApplied,
       setActiveRunSummary,
       setAlertMessage,
