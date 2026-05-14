@@ -879,3 +879,88 @@ class TestScenarioBundleEndpoints:
                 json={"import_path": "C:/tmp/bad.zip"},
             )
         assert response.status_code == 400
+
+
+class TestImpactFunctionEndpoint:
+    """``GET /impact-function`` — read-only viewer (issue #452)."""
+
+    def _spec(self) -> object:
+        from backend.engine.types import ImpactFunctionSpec
+
+        return ImpactFunctionSpec(
+            haz_type="FL",
+            exp_type="Diarrhoea patients",
+            id=105,
+            name="Diarrhoea patients",
+            intensity_unit="m",
+            intensity=(0.01, 0.08, 0.44, 2.0),
+            mdd=(0.0001, 0.0002, 0.0004, 0.0009),
+            paa=(1.0, 1.0, 1.0, 1.0),
+        )
+
+    def test_returns_spec_for_valid_selection(self, client: TestClient) -> None:
+        with patch(
+            "backend.impact.resolver.get_active_impact_function",
+            return_value=self._spec(),
+        ) as resolver:
+            response = client.get(
+                "/api/v1/impact-function",
+                params={"country": "Egypt", "hazard": "flood", "exposure": "diarrhea_patients"},
+            )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"]["code"] == 2000
+        assert body["data"]["id"] == 105
+        assert body["data"]["name"] == "Diarrhoea patients"
+        assert body["data"]["intensity_unit"] == "m"
+        assert body["data"]["intensity"] == [0.01, 0.08, 0.44, 2.0]
+        assert body["data"]["mdd"] == [0.0001, 0.0002, 0.0004, 0.0009]
+        assert body["data"]["paa"] == [1.0, 1.0, 1.0, 1.0]
+        # The endpoint forwards the renderer's selection unchanged so the
+        # viewer's resolution matches the engine's.
+        resolver.assert_called_once_with("Egypt", "flood", "diarrhea_patients", None)
+
+    def test_forwards_entity_file_for_custom_mode(self, client: TestClient) -> None:
+        with patch(
+            "backend.impact.resolver.get_active_impact_function",
+            return_value=self._spec(),
+        ) as resolver:
+            response = client.get(
+                "/api/v1/impact-function",
+                params={
+                    "country": "Egypt",
+                    "hazard": "flood",
+                    "exposure": "diarrhea_patients",
+                    "entityFile": "custom_upload.xlsx",
+                },
+            )
+        assert response.status_code == 200
+        resolver.assert_called_once_with(
+            "Egypt", "flood", "diarrhea_patients", "custom_upload.xlsx"
+        )
+
+    def test_returns_400_when_required_param_missing(self, client: TestClient) -> None:
+        response = client.get(
+            "/api/v1/impact-function",
+            params={"country": "Egypt", "hazard": "flood"},
+        )
+        assert response.status_code == 400
+        body = response.json()
+        assert body["code"] == "http_error"
+        assert "exposure" in body["message"]
+
+    def test_returns_404_when_resolver_cannot_locate_spec(self, client: TestClient) -> None:
+        from backend.impact.resolver import ImpactFunctionNotFoundError
+
+        with patch(
+            "backend.impact.resolver.get_active_impact_function",
+            side_effect=ImpactFunctionNotFoundError("Entity file not found: foo.xlsx"),
+        ):
+            response = client.get(
+                "/api/v1/impact-function",
+                params={"country": "Egypt", "hazard": "flood", "exposure": "crops"},
+            )
+        assert response.status_code == 404
+        body = response.json()
+        assert body["code"] == "impact_function_not_found"
+        assert "foo.xlsx" in body["message"]

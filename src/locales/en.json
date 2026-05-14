@@ -1185,5 +1185,20 @@
     "theme_mode_selector_aria": "Select theme mode",
     "theme_mode_light": "Light",
     "theme_mode_dark": "Dark",
-    "theme_mode_system": "System"
+    "theme_mode_system": "System",
+    "close": "Close",
+    "impact_function_card_title": "Impact function",
+    "impact_function_card_placeholder": "Select country, hazard, and exposure to view the impact function.",
+    "impact_function_card_loading": "Loading impact function…",
+    "impact_function_card_error": "Could not load the impact function for this selection.",
+    "impact_function_card_summary": "ID {{id}} · {{name}}",
+    "impact_function_card_unit": "Intensity unit: {{unit}}",
+    "impact_function_card_view_details": "View details",
+    "impact_function_dialog_title": "Impact function {{id}} — {{name}}",
+    "impact_function_dialog_intensity_unit": "Intensity unit: {{unit}}",
+    "impact_function_dialog_intensity_axis": "Intensity ({{unit}})",
+    "impact_function_dialog_yaxis": "Fraction (0–1)",
+    "impact_function_dialog_mdd": "MDD (mean damage degree)",
+    "impact_function_dialog_paa": "PAA (percentage of affected assets)",
+    "results_view_impact_function": "View impact function"
 }

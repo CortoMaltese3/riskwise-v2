@@ -31,6 +31,16 @@ const useResultsStore = create((set, get) => ({
   setIsScenarioRunning: (value) => set({ isScenarioRunning: value }),
   setScenarioPhase: (phase) => set({ scenarioPhase: phase }),
   setActiveRunSummary: (summary) => set({ activeRunSummary: summary }),
+  // Merge ``impactFunction`` onto the active summary if it still exists.
+  // The IF lookup is async, so this guards against a stale write landing
+  // after ``resetScenarioPhase`` has already cleared the summary (issue
+  // #452 secondary entry point).
+  setActiveRunImpactFunction: (impactFunction) =>
+    set((state) =>
+      state.activeRunSummary
+        ? { activeRunSummary: { ...state.activeRunSummary, impactFunction } }
+        : state
+    ),
   // Reset both phase and the captured summary together so the chip's "what's
   // running" source of truth doesn't outlive the chip itself.
   resetScenarioPhase: () => set({ scenarioPhase: null, activeRunSummary: null }),

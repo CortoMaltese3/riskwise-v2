@@ -83,6 +83,7 @@ from backend.models import (
     ErrorResponse,
     HealthResponse,
     HydrateScenarioResponse,
+    ImpactFunctionResponse,
     JobAcceptedResponse,
     MacroChartDataRequest,
     MacroChartDataResponse,
@@ -955,6 +956,44 @@ async def scenario_waterfall() -> dict:
 @app.get(f"{API_PREFIX}/scenario/cost-benefit", response_model=CostBenefitResponse)
 async def scenario_cost_benefit() -> dict:
     return await _dispatch("run_fetch_costbenefit.py", None)
+
+
+@app.get(f"{API_PREFIX}/impact-function", response_model=ImpactFunctionResponse)
+async def impact_function_endpoint(
+    country: str = "",
+    hazard: str = "",
+    exposure: str = "",
+    entityFile: str | None = None,
+) -> dict:
+    """Return the impact-function spec the engine would apply for this selection.
+
+    Read-only viewer backing the Risk-input Impact Function panel (issue #452).
+    The spec is parsed from the same entity XLSX the scenario runner consumes
+    so the viewer cannot drift from the engine's resolution. ``entityFile``
+    overrides canonical-filename derivation for custom-mode uploads.
+    """
+    if not country or not hazard or not exposure:
+        raise HTTPException(status_code=400, detail="country, hazard, and exposure are required")
+    # Deferred import — the resolver pulls in openpyxl via the entity loader,
+    # and tests for unrelated endpoints should not pay that import cost.
+    from backend.impact.resolver import get_active_impact_function
+
+    spec = await asyncio.to_thread(
+        get_active_impact_function, country, hazard, exposure, entityFile
+    )
+    return {
+        "data": {
+            "id": spec.id,
+            "name": spec.name,
+            "haz_type": spec.haz_type,
+            "exp_type": spec.exp_type,
+            "intensity_unit": spec.intensity_unit,
+            "intensity": list(spec.intensity),
+            "mdd": list(spec.mdd),
+            "paa": list(spec.paa),
+        },
+        "status": _status_ok(),
+    }
 
 
 @app.get(f"{API_PREFIX}/countries", response_model=CountriesResponse)
