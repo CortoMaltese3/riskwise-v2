@@ -53,6 +53,9 @@ export const switchAppMode = (option) => {
     selectedAnnualGrowth: 0,
     isValidExposure: false,
     isValidHazard: false,
+    selectedMeasureIds: [],
+    appliedMeasureIds: [],
+    isMeasureSelectionInitialized: false,
   });
   useUIStore.setState({ mapTitle: "" });
   useResultsStore.setState({ isScenarioRunCompleted: false });

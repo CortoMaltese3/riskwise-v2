@@ -77,7 +77,9 @@ const useWorkspaceStore = create((set, get) => ({
   // distinguishes "picker has never been populated" (run with backend
   // default — every measure) from "user explicitly emptied the picker" (run
   // with ``selectedMeasureIds = []`` so the chart shows the no-measures
-  // empty state). All three reset whenever the hazard or country changes.
+  // empty state). All three reset whenever the country, hazard, exposure, or
+  // app option changes so a stale selection never rides into the runner for a
+  // different entity (issue #448).
   selectedMeasureIds: [],
   appliedMeasureIds: [],
   isMeasureSelectionInitialized: false,
@@ -223,7 +225,13 @@ const useWorkspaceStore = create((set, get) => ({
     };
   },
 
-  setSelectedAppOption: (option) => set({ selectedAppOption: option }),
+  setSelectedAppOption: (option) =>
+    set({
+      selectedAppOption: option,
+      selectedMeasureIds: [],
+      appliedMeasureIds: [],
+      isMeasureSelectionInitialized: false,
+    }),
   // One-shot setter for the Workspace ``Restore`` flow. Sets every active-
   // scenario input from a persisted scenario row in a single ``set`` call so
   // the per-field setters' wipe side-effects (``setSelectedCountry`` /
@@ -262,7 +270,13 @@ const useWorkspaceStore = create((set, get) => ({
       isMeasureSelectionInitialized: false,
     }),
   setSelectedExposure: (exposure) => {
-    set({ selectedExposure: exposure, selectedAnnualGrowth: 0 });
+    set({
+      selectedExposure: exposure,
+      selectedAnnualGrowth: 0,
+      selectedMeasureIds: [],
+      appliedMeasureIds: [],
+      isMeasureSelectionInitialized: false,
+    });
   },
   setSelectedExposureCategory: (category) => set({ selectedExposureCategory: category }),
   setSelectedExposureFile: (exposureFile) => set({ selectedExposureFile: exposureFile }),
