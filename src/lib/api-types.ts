@@ -1105,6 +1105,8 @@ export interface components {
         MeasuresData: {
             /** Adaptationmeasures */
             adaptationMeasures: string[];
+            /** Entitymeasurenames */
+            entityMeasureNames?: string[] | null;
             /** Measures */
             measures?: components["schemas"]["Measure"][];
         };
@@ -1977,6 +1979,7 @@ export interface operations {
         parameters: {
             query?: {
                 measure_set_id?: string | null;
+                exposure_file?: string | null;
             };
             header?: never;
             path: {

@@ -136,10 +136,15 @@ const RiskWiseClient = {
   validateData: (body: DataValidateRequest) =>
     post<DataValidateResponse>("/api/v1/data/validate", body),
 
-  fetchAdaptationMeasures: (countryName: string, hazardType: string) =>
-    get<MeasuresResponse>(
-      `/api/v1/measures/${encodeURIComponent(countryName)}/${encodeURIComponent(hazardType)}`
-    ),
+  // ``exposureFile`` is optional — when provided, the backend loads the
+  // entity for the current scenario and returns its measure names so the
+  // renderer can tag catalog cards by applicability (issue #450). Omit
+  // it on flows that have no file yet (the catalog still comes back).
+  fetchAdaptationMeasures: (countryName: string, hazardType: string, exposureFile?: string) => {
+    const base = `/api/v1/measures/${encodeURIComponent(countryName)}/${encodeURIComponent(hazardType)}`;
+    const qs = exposureFile ? `?exposure_file=${encodeURIComponent(exposureFile)}` : "";
+    return get<MeasuresResponse>(`${base}${qs}`);
+  },
 
   // Read-only impact-function viewer (issue #452). ``entityFile`` is supplied
   // in custom mode to override the canonical ``entity_TODAY_*.xlsx`` lookup

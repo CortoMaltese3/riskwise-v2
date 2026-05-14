@@ -54,9 +54,6 @@ vi.mock("../components/cards/ViewCard", () => ({ default: () => <div /> }));
 vi.mock("../components/cards/ViewMacroCard", () => ({ default: () => <div /> }));
 vi.mock("../components/input/DataInput", () => ({ default: () => <div /> }));
 vi.mock("../components/inputMacro/MacroEconomicInput", () => ({ default: () => <div /> }));
-vi.mock("../components/input/AdaptationMeasuresInput", () => ({
-  default: () => <div data-testid="adaptation-measures-input" />,
-}));
 vi.mock("../components/results/ResultsView", () => ({ default: () => <div /> }));
 vi.mock("../components/workspace/WorkspaceView", () => ({ default: () => <div /> }));
 vi.mock("../components/settings/SettingsView", () => ({ default: () => <div /> }));
@@ -104,7 +101,15 @@ describe("Adaptation sidebar entry (#371)", () => {
     useUIStore.setState({ activeSection: "adaptation" });
     renderWithTheme(<AppShell />);
     expect(useUIStore.getState().selectedTab).toBe(TABS.ADAPTATION);
-    expect(screen.getByTestId("adaptation-measures-input")).toBeInTheDocument();
     expect(screen.getByTestId("adaptation-chart-layout")).toBeInTheDocument();
+  });
+
+  it("does not render any input column on the Adaptation route (#451)", () => {
+    useUIStore.setState({ activeSection: "adaptation" });
+    renderWithTheme(<AppShell />);
+    // The pre-#451 layout mounted DataInput / MeasuresPanel in a left column
+    // on the Adaptation route. The route is now a pure results view.
+    expect(screen.queryByTestId("adaptation-measures-panel")).toBeNull();
+    expect(screen.queryByTestId("adaptation-measures-panel-summary")).toBeNull();
   });
 });

@@ -32,6 +32,13 @@ class MeasuresData(BaseModel):
     # issue #92.
     adaptationMeasures: list[str]
     measures: list[Measure] = Field(default_factory=list)
+    # Names of measures present on the loaded entity for the current
+    # ``(country, hazard, exposure_file)`` tuple. Populated when the
+    # renderer passes ``exposure_file``; ``None`` when applicability is
+    # unknown (no file supplied or the entity could not be loaded). The
+    # UI tags catalog cards whose names are absent from this list as
+    # "not in scenario" (issue #450).
+    entityMeasureNames: list[str] | None = None
 
 
 class MeasuresResponse(BaseModel):

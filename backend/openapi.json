@@ -1213,6 +1213,20 @@
             "title": "Adaptationmeasures",
             "type": "array"
           },
+          "entityMeasureNames": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entitymeasurenames"
+          },
           "measures": {
             "items": {
               "$ref": "#/components/schemas/Measure"
@@ -3062,6 +3076,22 @@
                 }
               ],
               "title": "Measure Set Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "exposure_file",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exposure File"
             }
           }
         ],

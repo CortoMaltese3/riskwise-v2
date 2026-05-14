@@ -19,9 +19,6 @@ vi.mock("../nav/LanguageButton", () => ({ default: () => <div data-testid="lang"
 vi.mock("../nav/MinimizeButton", () => ({ default: () => <div data-testid="minimize" /> }));
 vi.mock("../nav/ShutdownButton", () => ({ default: () => <div data-testid="shutdown" /> }));
 vi.mock("../input/DataInput", () => ({ default: () => <div data-testid="data-input" /> }));
-vi.mock("../input/AdaptationMeasuresInput", () => ({
-  default: () => <div data-testid="adaptation-input" />,
-}));
 vi.mock("../inputMacro/MacroEconomicInput", () => ({
   default: () => <div data-testid="macro-input" />,
 }));

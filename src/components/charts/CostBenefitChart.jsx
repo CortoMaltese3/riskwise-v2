@@ -76,7 +76,7 @@ const buildBreakEvenPlugin = (lineColor, labelText, font) => ({
 });
 
 const CostBenefitChart = React.forwardRef(function CostBenefitChart(
-  { data, errorMessage, animate = true },
+  { data, errorMessage, animate = true, appliedCount = null, selectedCount = null },
   ref
 ) {
   const { t, i18n } = useTranslation();
@@ -268,6 +268,25 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart(
           bodyKey="chart_info_cost_benefit_body"
         />
       </Stack>
+      {/* Surface the silent-backend-filter signal (issue #450). The chip
+       * renders only when the run dropped at least one of the user's
+       * selected measures so the cost-benefit chart can't go on
+       * pretending it covered every pick. */}
+      {Number.isInteger(appliedCount) &&
+        Number.isInteger(selectedCount) &&
+        appliedCount < selectedCount && (
+          <Typography
+            variant="caption"
+            color="warning.main"
+            sx={{ mb: 1 }}
+            data-testid="cost-benefit-applied-subtitle"
+          >
+            {t("economic_non_economic_adaptation_chart_applied_subtitle", {
+              applied: appliedCount,
+              selected: selectedCount,
+            })}
+          </Typography>
+        )}
       <Box
         sx={{
           position: "relative",

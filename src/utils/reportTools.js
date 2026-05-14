@@ -82,7 +82,7 @@ export const useReportTools = () => {
     setReports,
   } = useUIStore.getState();
   const { setIsScenarioRunCompleted } = useResultsStore.getState();
-  const { restoreScenarioInputs, initializeMeasureSelection } = useWorkspaceStore.getState();
+  const { restoreScenarioInputs, setSelectedMeasureIds } = useWorkspaceStore.getState();
 
   const fetchReports = async () => {
     try {
@@ -136,17 +136,17 @@ export const useReportTools = () => {
       setMapTitle(scenario.name || scenario.id);
 
       // Seed the measure selection from the restored cost-benefit payload so
-      // a re-run dispatched before the Adaptation tab mounts still carries
-      // the saved measure set. ``measures: []`` (zero-measures runs) still
-      // marks selection initialized; the next run will dispatch the explicit
-      // empty list and the backend will produce the matching empty payload.
+      // a re-run dispatched before the MeasuresPanel re-fetches the catalog
+      // still carries the saved measure set. ``measures: []`` (zero-measures
+      // runs) seeds the explicit empty list; the next run dispatches it and
+      // the backend produces the matching empty payload.
       try {
         const cb = await RiskWiseClient.fetchCostBenefitData();
-        initializeMeasureSelection(measureNamesFromCostBenefit(cb));
+        setSelectedMeasureIds(measureNamesFromCostBenefit(cb));
       } catch (err) {
         // Cost-benefit may be unavailable for older scenarios saved before
         // the always-write fix landed. Leave measure state untouched in that
-        // case — the Adaptation tab's catalog fetch will initialize it.
+        // case — the MeasuresPanel's catalog fetch will seed it.
         console.warn("restoreScenario: cost-benefit hydrate failed", err);
       }
 

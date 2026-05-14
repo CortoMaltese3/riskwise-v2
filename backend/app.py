@@ -571,10 +571,20 @@ async def data_validate(payload: DataValidateRequest) -> dict:
 
 
 @app.get(f"{API_PREFIX}/measures/{{country}}/{{hazard}}", response_model=MeasuresResponse)
-async def measures(country: str, hazard: str, measure_set_id: str | None = None) -> dict:
+async def measures(
+    country: str,
+    hazard: str,
+    measure_set_id: str | None = None,
+    exposure_file: str | None = None,
+) -> dict:
     payload: dict = {"countryName": country, "hazardType": hazard}
     if measure_set_id is not None:
         payload["measureSetId"] = measure_set_id
+    # ``exposure_file``, when supplied, lets the dispatcher load the
+    # entity and return its measure names so the renderer can tag
+    # catalog cards as "in scenario" / "not in scenario" (issue #450).
+    if exposure_file is not None:
+        payload["exposureFile"] = exposure_file
     return await _dispatch("run_fetch_measures.py", payload)
 
 

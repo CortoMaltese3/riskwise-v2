@@ -69,20 +69,22 @@ const useWorkspaceStore = create((set, get) => ({
   isValidExposure: false,
   isValidHazard: false,
 
-  // Adaptation-measure selection (issue #373). ``selectedMeasureIds`` is the
-  // user's pending UI selection; ``appliedMeasureIds`` is the set that was
-  // last actually sent to the scenario runner. Values are
-  // ``MeasureSpec.name`` — the only stable join key between the catalog and
-  // the xlsx-loaded entity measures. ``isMeasureSelectionInitialized``
-  // distinguishes "picker has never been populated" (run with backend
-  // default — every measure) from "user explicitly emptied the picker" (run
-  // with ``selectedMeasureIds = []`` so the chart shows the no-measures
-  // empty state). All three reset whenever the country, hazard, exposure, or
-  // app option changes so a stale selection never rides into the runner for a
-  // different entity (issue #448).
+  // Adaptation-measure selection (issue #373, simplified in #451). Values
+  // are ``MeasureSpec.name`` — the only stable join key between the catalog
+  // and the xlsx-loaded entity measures. The list is the single source of
+  // truth for what the next scenario run will include; the MeasuresPanel in
+  // the Risk inputs seeds it from the catalog and the global Run button
+  // dispatches it. It resets whenever the country, hazard, exposure, or
+  // app option changes so a stale selection never rides into the runner for
+  // a different entity (issue #448).
   selectedMeasureIds: [],
-  appliedMeasureIds: [],
-  isMeasureSelectionInitialized: false,
+  // Names of selected measures the backend silently dropped on the most
+  // recent run because the entity did not carry them (issue #450). The
+  // chart subtitle reads ``length`` to render
+  // "Cost-benefit for {applied}/{selected} measures". Reset by the same
+  // setters that wipe the measure selection so a stale run's skip list
+  // never lingers into a new scenario.
+  lastRunSkippedMeasures: [],
 
   // --- Macro inputs ---
   selectedMacroCountry: "",
@@ -229,8 +231,7 @@ const useWorkspaceStore = create((set, get) => ({
     set({
       selectedAppOption: option,
       selectedMeasureIds: [],
-      appliedMeasureIds: [],
-      isMeasureSelectionInitialized: false,
+      lastRunSkippedMeasures: [],
     }),
   // One-shot setter for the Workspace ``Restore`` flow. Sets every active-
   // scenario input from a persisted scenario row in a single ``set`` call so
@@ -266,16 +267,14 @@ const useWorkspaceStore = create((set, get) => ({
     set({
       selectedCountry: country,
       selectedMeasureIds: [],
-      appliedMeasureIds: [],
-      isMeasureSelectionInitialized: false,
+      lastRunSkippedMeasures: [],
     }),
   setSelectedExposure: (exposure) => {
     set({
       selectedExposure: exposure,
       selectedAnnualGrowth: 0,
       selectedMeasureIds: [],
-      appliedMeasureIds: [],
-      isMeasureSelectionInitialized: false,
+      lastRunSkippedMeasures: [],
     });
   },
   setSelectedExposureCategory: (category) => set({ selectedExposureCategory: category }),
@@ -284,8 +283,7 @@ const useWorkspaceStore = create((set, get) => ({
     set({
       selectedHazard: hazard,
       selectedMeasureIds: [],
-      appliedMeasureIds: [],
-      isMeasureSelectionInitialized: false,
+      lastRunSkippedMeasures: [],
     }),
   setSelectedHazardFile: (hazardFile) => set({ selectedHazardFile: hazardFile }),
   setSelectedScenario: (scenario) => set({ selectedScenario: scenario }),
@@ -300,17 +298,6 @@ const useWorkspaceStore = create((set, get) => ({
     const next = Array.isArray(ids) ? ids.filter((x) => typeof x === "string") : [];
     set({ selectedMeasureIds: next });
   },
-  initializeMeasureSelection: (ids) => {
-    // Called by the Adaptation picker once the catalog fetch resolves. Both
-    // lists land on the same "every measure selected" value so the Apply
-    // button stays disabled until the user actually toggles something.
-    const next = Array.isArray(ids) ? ids.filter((x) => typeof x === "string") : [];
-    set({
-      selectedMeasureIds: next,
-      appliedMeasureIds: next,
-      isMeasureSelectionInitialized: true,
-    });
-  },
   toggleMeasureId: (id) => {
     if (typeof id !== "string") return;
     const { selectedMeasureIds } = get();
@@ -320,16 +307,9 @@ const useWorkspaceStore = create((set, get) => ({
         : [...selectedMeasureIds, id],
     });
   },
-  resetMeasureSelectionToApplied: () => {
-    const { appliedMeasureIds } = get();
-    set({ selectedMeasureIds: [...appliedMeasureIds] });
-  },
-  markMeasureSelectionApplied: (ids) => {
-    // ``ids`` is the exact list the runner received; storing it (not the
-    // current pending selection) keeps applied/selected aligned even if the
-    // user toggles something else while the request is in flight.
-    const next = Array.isArray(ids) ? ids.filter((x) => typeof x === "string") : [];
-    set({ appliedMeasureIds: next });
+  setLastRunSkippedMeasures: (names) => {
+    const next = Array.isArray(names) ? names.filter((x) => typeof x === "string") : [];
+    set({ lastRunSkippedMeasures: next });
   },
   setSelectedAnnualGrowth: (annualGrowth) => set({ selectedAnnualGrowth: annualGrowth }),
   setIsValidExposure: (isValid = null) => {

@@ -20,6 +20,8 @@ const renderCostBenefitBody = ({
   errorMessage,
   scenarioRunCode,
   setCostBenefitChartRef,
+  appliedCount,
+  selectedCount,
   t,
 }) => {
   if (isLoading) {
@@ -49,6 +51,8 @@ const renderCostBenefitBody = ({
       ref={setCostBenefitChartRef}
       data={costBenefitData}
       errorMessage={errorMessage}
+      appliedCount={appliedCount}
+      selectedCount={selectedCount}
     />
   );
 };
@@ -60,6 +64,8 @@ const AdaptationChartLayout = () => {
   // first-mount intro animation replays. The macro chart deliberately does
   // NOT get this key — dropdown changes should update silently.
   const scenarioRunCode = useWorkspaceStore((state) => state.scenarioRunCode);
+  const selectedMeasureIds = useWorkspaceStore((state) => state.selectedMeasureIds);
+  const lastRunSkippedMeasures = useWorkspaceStore((state) => state.lastRunSkippedMeasures);
   const costBenefitData = useResultsStore((state) => state.costBenefitData);
   const errorMessage = useResultsStore((state) => state.costBenefitError);
   const isLoading = useResultsStore((state) => state.isCostBenefitLoading);
@@ -120,14 +126,25 @@ const AdaptationChartLayout = () => {
           }}
           aria-label={t("economic_non_economic_adaptation_chart_title")}
         >
-          {renderCostBenefitBody({
-            isLoading,
-            costBenefitData,
-            errorMessage,
-            scenarioRunCode,
-            setCostBenefitChartRef,
-            t,
-          })}
+          {(() => {
+            // Applied = selected minus the names the backend silently
+            // filtered out. The chart subtitle reads both to render
+            // "Cost-benefit for {applied}/{selected} measures" when
+            // applied < selected (issue #450).
+            const selectedCount = selectedMeasureIds.length;
+            const skippedCount = lastRunSkippedMeasures.length;
+            const appliedCount = Math.max(0, selectedCount - skippedCount);
+            return renderCostBenefitBody({
+              isLoading,
+              costBenefitData,
+              errorMessage,
+              scenarioRunCode,
+              setCostBenefitChartRef,
+              appliedCount,
+              selectedCount,
+              t,
+            });
+          })()}
         </Box>
       </Paper>
     </div>

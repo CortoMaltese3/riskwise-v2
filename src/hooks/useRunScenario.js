@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 import RiskWiseClient from "../lib/RiskWiseClient";
 import useResultsStore from "../store/useResultsStore";
@@ -7,10 +8,9 @@ import useWorkspaceStore from "../store/useWorkspaceStore";
 import { SCENARIO_PHASES } from "../store/scenarioPhases";
 import { TABS } from "../components/main/tabs";
 
-// Centralised scenario-run dispatch shared between the global Run button on
-// the Risk view and the Adaptation view's Apply measure-selection button.
-// The hook owns the alert / map / applied-selection plumbing so two callers
-// do not drift.
+// Centralised scenario-run dispatch for the global Run button on the Risk
+// view. The hook owns the alert / map / skipped-measure plumbing in one place
+// so the wire format and post-run side effects stay consistent.
 const useRunScenario = () => {
   const selectedAnnualGrowth = useWorkspaceStore((s) => s.selectedAnnualGrowth);
   const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
@@ -23,7 +23,7 @@ const useRunScenario = () => {
   const selectedScenario = useWorkspaceStore((s) => s.selectedScenario);
   const selectedTimeHorizon = useWorkspaceStore((s) => s.selectedTimeHorizon);
   const selectedMeasureIds = useWorkspaceStore((s) => s.selectedMeasureIds);
-  const markMeasureSelectionApplied = useWorkspaceStore((s) => s.markMeasureSelectionApplied);
+  const setLastRunSkippedMeasures = useWorkspaceStore((s) => s.setLastRunSkippedMeasures);
   const setScenarioRunCode = useWorkspaceStore((s) => s.setScenarioRunCode);
 
   const setMapTitle = useUIStore((s) => s.setMapTitle);
@@ -38,6 +38,8 @@ const useRunScenario = () => {
   const setScenarioPhase = useResultsStore((s) => s.setScenarioPhase);
   const setActiveRunSummary = useResultsStore((s) => s.setActiveRunSummary);
   const setActiveRunImpactFunction = useResultsStore((s) => s.setActiveRunImpactFunction);
+
+  const { t } = useTranslation();
 
   const runScenario = useCallback(
     ({ landingTab = TABS.RISK, onSuccess } = {}) => {
@@ -54,10 +56,9 @@ const useRunScenario = () => {
         timeHorizon: selectedTimeHorizon,
       };
       // Snapshot the selection at dispatch so a post-dispatch store edit
-      // can't leak into the in-flight body (the snapshot is also handed
-      // to ``markMeasureSelectionApplied`` on success below).
-      const appliedMeasureIds = [...selectedMeasureIds];
-      body.selectedMeasureIds = appliedMeasureIds;
+      // can't leak into the in-flight body.
+      const dispatchedMeasureIds = [...selectedMeasureIds];
+      body.selectedMeasureIds = dispatchedMeasureIds;
       // Snapshot the inputs that drive the chip's summary line at dispatch
       // so the user can navigate the workspace freely mid-run without
       // changing what the chip says is running. ``landingTab`` rides along
@@ -103,13 +104,31 @@ const useRunScenario = () => {
             setScenarioPhase(SCENARIO_PHASES.FAILED);
             return { success: false, response };
           }
-          setAlertMessage(response.result.status.message);
           const succeeded = response.result.status.code === 2000;
-          setAlertSeverity(succeeded ? "success" : "error");
-          setAlertShowMessage(true);
+          // Surface the backend's silent measure-filter as a warning
+          // snackbar so users see when the engine dropped some of their
+          // selected measures (issue #450). The warning replaces the
+          // success message because the more interesting signal is the
+          // skipped count, not "run succeeded".
+          const skippedNames = Array.isArray(response.result.data?.skippedMeasures)
+            ? response.result.data.skippedMeasures
+            : [];
           if (succeeded) {
-            markMeasureSelectionApplied(appliedMeasureIds);
+            setLastRunSkippedMeasures(skippedNames);
           }
+          if (succeeded && skippedNames.length > 0) {
+            setAlertMessage(
+              t("scenario_run_skipped_measures_snackbar", {
+                count: skippedNames.length,
+                total: dispatchedMeasureIds.length,
+              })
+            );
+            setAlertSeverity("warning");
+          } else {
+            setAlertMessage(response.result.status.message);
+            setAlertSeverity(succeeded ? "success" : "error");
+          }
+          setAlertShowMessage(true);
           setMapTitle(response.result.data.mapTitle);
           setScenarioRunCode(response.result.data.scenarioId);
           setIsScenarioRunCompleted(true);
@@ -143,7 +162,7 @@ const useRunScenario = () => {
       selectedScenario,
       selectedTimeHorizon,
       selectedMeasureIds,
-      markMeasureSelectionApplied,
+      setLastRunSkippedMeasures,
       setActiveRunSummary,
       setActiveRunImpactFunction,
       setAlertMessage,
@@ -156,6 +175,7 @@ const useRunScenario = () => {
       setMapTitle,
       setScenarioRunCode,
       setSelectedReport,
+      t,
     ]
   );
 
