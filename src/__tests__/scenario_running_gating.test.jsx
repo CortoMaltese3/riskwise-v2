@@ -77,6 +77,7 @@ vi.mock("../components/nav/ShutdownButton", () => ({ default: () => null }));
 vi.mock("../components/nav/ThemeModeButton", () => ({ default: () => null }));
 
 vi.mock("../assets/giz_logo.png", () => ({ default: "" }));
+vi.mock("../assets/unu_ehs_logo.png", () => ({ default: "" }));
 
 import RunScenarioButton from "../components/nav/RunScenarioButton";
 import CountryCard from "../components/cards/CountryCard";

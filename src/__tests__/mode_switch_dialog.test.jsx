@@ -31,6 +31,7 @@ vi.mock("../components/nav/ThemeModeButton", () => ({
   default: () => <div data-testid="mock-theme" />,
 }));
 vi.mock("../assets/giz_logo.png", () => ({ default: "" }));
+vi.mock("../assets/unu_ehs_logo.png", () => ({ default: "" }));
 
 let TopBar;
 let useUIStore;

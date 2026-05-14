@@ -19,6 +19,7 @@ import ThemeModeButton from "../nav/ThemeModeButton";
 import ModeSwitchConfirmDialog from "../alerts/ModeSwitchConfirmDialog";
 
 import giz_logo from "../../assets/giz_logo.png";
+import unu_ehs_logo from "../../assets/unu_ehs_logo.png";
 import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
@@ -27,6 +28,8 @@ import { TOP_BAR_HEIGHT } from "./Sidebar";
 
 const GIZ_LOGO_WIDTH = 140;
 const GIZ_LOGO_HEIGHT = 40;
+const UNU_LOGO_WIDTH = 95;
+const UNU_LOGO_HEIGHT = 40;
 
 const TopBar = () => {
   const { t } = useTranslation();
@@ -93,6 +96,12 @@ const TopBar = () => {
             src={giz_logo}
             alt="giz_logo"
             sx={{ width: GIZ_LOGO_WIDTH, height: GIZ_LOGO_HEIGHT, my: 1, mx: 2 }}
+          />
+          <Box
+            component="img"
+            src={unu_ehs_logo}
+            alt="unu_ehs_logo"
+            sx={{ width: UNU_LOGO_WIDTH, height: UNU_LOGO_HEIGHT, my: 1, mx: 2 }}
           />
         </Box>
         <Box
