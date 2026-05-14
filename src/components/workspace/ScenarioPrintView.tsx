@@ -826,7 +826,7 @@ const ScenarioPrintView = ({
               {showWaterfall && (
                 <>
                   <Box sx={{ height: 380, mb: 1 }}>
-                    <WaterfallChartView data={waterfallData} />
+                    <WaterfallChartView data={waterfallData} animate={false} />
                   </Box>
                   {renderFigureCaption(nextFigureNumber(), "print_caption_figure_waterfall")}
                 </>
@@ -893,7 +893,7 @@ const ScenarioPrintView = ({
           {showCostBenefit && costbenData && (
             <>
               <Box sx={{ height: 380, mb: 1 }}>
-                <CostBenefitChartView data={costbenData} />
+                <CostBenefitChartView data={costbenData} animate={false} />
               </Box>
               {renderFigureCaption(nextFigureNumber(), "print_caption_figure_cost_benefit")}
 

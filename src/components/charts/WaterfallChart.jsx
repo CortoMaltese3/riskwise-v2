@@ -131,7 +131,10 @@ const computeMagnitudeRatio = (categories) => {
   return Math.max(...magnitudes) / Math.min(...magnitudes);
 };
 
-const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMessage }, ref) {
+const WaterfallChart = React.forwardRef(function WaterfallChart(
+  { data, errorMessage, animate = true },
+  ref
+) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const rtl = isRtl(locale);
@@ -271,7 +274,13 @@ const WaterfallChart = React.forwardRef(function WaterfallChart({ data, errorMes
     // Mount-only intro animation (#370). `prefersReducedMotion()` honours the
     // OS-level reduce-motion setting; otherwise we use Chart.js's canonical
     // fast-then-settle easing to match the rest of the UI's motion language.
-    animation: prefersReducedMotion() ? false : { duration: 600, easing: "easeOutQuart" },
+    // `animate={false}` from a caller (e.g. the PDF print view, #439) forces
+    // a deterministic, animation-free render so the captured frame matches
+    // the on-screen final state.
+    animation:
+      animate === false || prefersReducedMotion()
+        ? false
+        : { duration: 600, easing: "easeOutQuart" },
     // `mode: "index"` + `intersect: false` makes tooltips fire on the nearest
     // x-category from anywhere in the plot area, not only when the cursor sits
     // directly on a bar.

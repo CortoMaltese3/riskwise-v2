@@ -75,7 +75,10 @@ const buildBreakEvenPlugin = (lineColor, labelText, font) => ({
   },
 });
 
-const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, errorMessage }, ref) {
+const CostBenefitChart = React.forwardRef(function CostBenefitChart(
+  { data, errorMessage, animate = true },
+  ref
+) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const rtl = isRtl(locale);
@@ -158,7 +161,13 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart({ data, erro
     maintainAspectRatio: false,
     // Mount-only intro animation (#370); see `prefersReducedMotion` for the
     // OS-level opt-out path and `WaterfallChart` for the matching pattern.
-    animation: prefersReducedMotion() ? false : { duration: 600, easing: "easeOutQuart" },
+    // `animate={false}` from a caller (e.g. the PDF print view, #439) forces
+    // a deterministic, animation-free render so the captured frame matches
+    // the on-screen final state.
+    animation:
+      animate === false || prefersReducedMotion()
+        ? false
+        : { duration: 600, easing: "easeOutQuart" },
     // `mode: "index"` still resolves tooltips to the nearest x-axis
     // category, but `position: "average"` anchors the tooltip above the
     // bar centre instead of tracking the cursor (#412 B4).
