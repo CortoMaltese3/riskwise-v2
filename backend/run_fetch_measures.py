@@ -14,11 +14,33 @@ from time import time
 from backend.cli import Command, StatusCode
 from backend.costben.costben_handler import CostBenefitHandler
 from backend.db.connection import get_connection, resolve_db_path
+from backend.entity.entity_handler import EntityHandler
 from backend.hazard.hazard_handler import HazardHandler
 from backend.progress import update_progress
 from backend.utils.strings import beautify_hazard_type
 
-_EMPTY_DATA = {"adaptationMeasures": [], "measures": []}
+_EMPTY_DATA = {"adaptationMeasures": [], "measures": [], "entityMeasureNames": None}
+
+
+def _entity_measure_names(exposure_file: str | None) -> list[str] | None:
+    """Return the measure names attached to the entity at ``exposure_file``.
+
+    Returns ``None`` when no file is provided or the load fails — the
+    renderer uses ``None`` as the "applicability unknown" sentinel so a
+    missing entity file does not get rendered as "every catalog measure
+    is unapplicable" (issue #450).
+    """
+    if not exposure_file:
+        return None
+    try:
+        entity = EntityHandler().get_entity_from_xlsx(exposure_file)
+    except (OSError, ValueError, KeyError):  # pragma: no cover - defensive
+        return None
+    if entity is None:
+        return None
+    measures = list(getattr(entity, "measures", []) or [])
+    names = [getattr(m, "name", None) for m in measures]
+    return [n for n in names if isinstance(n, str)]
 
 
 class RunFetchScenario(Command):
@@ -56,6 +78,7 @@ class RunFetchScenario(Command):
             conn.close()
 
         adaptation_measures = [m["name"] for m in measures]
+        entity_measure_names = _entity_measure_names(self.request.get("exposureFile"))
         if not hazard_code or not adaptation_measures:
             status_code = StatusCode.VALIDATION_ERROR
             message = f"No available adaptation measures for {hazard_beautified}."
@@ -67,7 +90,11 @@ class RunFetchScenario(Command):
         self.logger.info(f"Finished fetching adaptation measures data in {time() - initial_time:.2f}sec.",
         )
         return {
-            "data": {"adaptationMeasures": adaptation_measures, "measures": measures},
+            "data": {
+                "adaptationMeasures": adaptation_measures,
+                "measures": measures,
+                "entityMeasureNames": entity_measure_names,
+            },
             "status": {"code": status_code, "message": message},
         }
 

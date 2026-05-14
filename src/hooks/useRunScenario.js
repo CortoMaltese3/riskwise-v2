@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 import RiskWiseClient from "../lib/RiskWiseClient";
 import useResultsStore from "../store/useResultsStore";
@@ -24,6 +25,7 @@ const useRunScenario = () => {
   const selectedTimeHorizon = useWorkspaceStore((s) => s.selectedTimeHorizon);
   const selectedMeasureIds = useWorkspaceStore((s) => s.selectedMeasureIds);
   const markMeasureSelectionApplied = useWorkspaceStore((s) => s.markMeasureSelectionApplied);
+  const setLastRunSkippedMeasures = useWorkspaceStore((s) => s.setLastRunSkippedMeasures);
   const setScenarioRunCode = useWorkspaceStore((s) => s.setScenarioRunCode);
 
   const setMapTitle = useUIStore((s) => s.setMapTitle);
@@ -37,6 +39,8 @@ const useRunScenario = () => {
   const setIsScenarioRunCompleted = useResultsStore((s) => s.setIsScenarioRunCompleted);
   const setScenarioPhase = useResultsStore((s) => s.setScenarioPhase);
   const setActiveRunSummary = useResultsStore((s) => s.setActiveRunSummary);
+
+  const { t } = useTranslation();
 
   const runScenario = useCallback(
     ({ landingTab = TABS.RISK, onSuccess } = {}) => {
@@ -82,9 +86,30 @@ const useRunScenario = () => {
             setScenarioPhase(SCENARIO_PHASES.FAILED);
             return { success: false, response };
           }
-          setAlertMessage(response.result.status.message);
           const succeeded = response.result.status.code === 2000;
-          setAlertSeverity(succeeded ? "success" : "error");
+          // Surface the backend's silent measure-filter as a warning
+          // snackbar so users see when the engine dropped some of their
+          // selected measures (issue #450). The warning replaces the
+          // success message because the more interesting signal is the
+          // skipped count, not "run succeeded".
+          const skippedNames = Array.isArray(response.result.data?.skippedMeasures)
+            ? response.result.data.skippedMeasures
+            : [];
+          if (succeeded) {
+            setLastRunSkippedMeasures(skippedNames);
+          }
+          if (succeeded && skippedNames.length > 0) {
+            setAlertMessage(
+              t("scenario_run_skipped_measures_snackbar", {
+                count: skippedNames.length,
+                total: appliedMeasureIds.length,
+              })
+            );
+            setAlertSeverity("warning");
+          } else {
+            setAlertMessage(response.result.status.message);
+            setAlertSeverity(succeeded ? "success" : "error");
+          }
           setAlertShowMessage(true);
           if (succeeded) {
             markMeasureSelectionApplied(appliedMeasureIds);
@@ -123,6 +148,7 @@ const useRunScenario = () => {
       selectedTimeHorizon,
       selectedMeasureIds,
       markMeasureSelectionApplied,
+      setLastRunSkippedMeasures,
       setActiveRunSummary,
       setAlertMessage,
       setAlertSeverity,
@@ -134,6 +160,7 @@ const useRunScenario = () => {
       setMapTitle,
       setScenarioRunCode,
       setSelectedReport,
+      t,
     ]
   );
 

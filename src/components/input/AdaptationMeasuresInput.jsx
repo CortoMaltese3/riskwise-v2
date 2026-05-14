@@ -33,6 +33,7 @@ const arraysEqualAsSets = (a, b) => {
 const AdaptationMeasuresInput = () => {
   const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
   const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const selectedExposureFile = useWorkspaceStore((s) => s.selectedExposureFile);
   const selectedTab = useUIStore((s) => s.selectedTab);
   const selectedMeasureIds = useWorkspaceStore((s) => s.selectedMeasureIds);
   const appliedMeasureIds = useWorkspaceStore((s) => s.appliedMeasureIds);
@@ -44,6 +45,11 @@ const AdaptationMeasuresInput = () => {
   const { runScenario } = useRunScenario();
 
   const [measures, setMeasures] = useState([]);
+  // ``null`` means "applicability unknown" (no entity file resolved yet,
+  // or the backend could not load the entity). The renderer keeps every
+  // card visually neutral in that case so the user does not see a wall
+  // of "not in scenario" tags on the first render (issue #450).
+  const [entityMeasureNames, setEntityMeasureNames] = useState(null);
   // Per-card checkbox state, keyed by row id. Decoupled from the store's
   // name-keyed `selectedMeasureIds` so that duplicate-name catalog rows do
   // not visually flip together (issue #447 — defense in depth against #443).
@@ -57,7 +63,11 @@ const AdaptationMeasuresInput = () => {
   const rowIdOf = (m) => m.id ?? m.name;
 
   const onFetchAdaptationMeasuresHandler = async () => {
-    RiskWiseClient.fetchAdaptationMeasures(selectedCountry ?? "", selectedHazard)
+    RiskWiseClient.fetchAdaptationMeasures(
+      selectedCountry ?? "",
+      selectedHazard,
+      selectedExposureFile || undefined
+    )
       .then((response) => {
         const data = response?.result?.data;
         let fetched = [];
@@ -76,6 +86,14 @@ const AdaptationMeasuresInput = () => {
         }
         setMeasures(fetched);
         setSelectedRowIds(new Set(fetched.map(rowIdOf)));
+        // ``null`` keeps the cards visually neutral when applicability
+        // is unknown (no exposure file resolved, or entity load failed
+        // on the backend); a list — even an empty one — flips the
+        // renderer into the explicit "tag what isn't in scenario" mode.
+        const entityNames = Array.isArray(data?.entityMeasureNames)
+          ? data.entityMeasureNames
+          : null;
+        setEntityMeasureNames(entityNames);
         // Dedupe names so the wire payload doesn't carry duplicate entries.
         const uniqueNames = Array.from(new Set(fetched.map((m) => m.name)));
         initializeMeasureSelection(uniqueNames);
@@ -86,6 +104,7 @@ const AdaptationMeasuresInput = () => {
         });
         setMeasures([]);
         setSelectedRowIds(new Set());
+        setEntityMeasureNames(null);
       });
   };
 
@@ -93,7 +112,7 @@ const AdaptationMeasuresInput = () => {
     if (selectedHazard) {
       onFetchAdaptationMeasuresHandler();
     }
-  }, [selectedHazard, selectedCountry]);
+  }, [selectedHazard, selectedCountry, selectedExposureFile]);
 
   const selectionDiffersFromApplied = useMemo(
     () => !arraysEqualAsSets(selectedMeasureIds, appliedMeasureIds),
@@ -135,6 +154,13 @@ const AdaptationMeasuresInput = () => {
               measure.source_reference ?? t("adaptation_measure_source_reference_missing");
             const rowId = rowIdOf(measure);
             const checked = selectedRowIds.has(rowId);
+            // Applicability tag (issue #450). ``null`` (applicability
+            // unknown) renders nothing; an explicit list flips on the
+            // "not in scenario" chip for any catalog name absent from
+            // it. Cards that ARE in scenario stay visually neutral so
+            // the warning chip is the only signal.
+            const isNotApplicable =
+              entityMeasureNames !== null && !entityMeasureNames.includes(measure.name);
             const onToggle = () => {
               setSelectedRowIds((prev) => {
                 const next = new Set(prev);
@@ -182,12 +208,29 @@ const AdaptationMeasuresInput = () => {
                           {t(measure.name)}
                         </Typography>
                       </Stack>
-                      <Chip
-                        size="small"
-                        label={badgeLabel}
-                        color={measure.is_builtin ? "default" : "secondary"}
-                        variant="outlined"
-                      />
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        {isNotApplicable && (
+                          <Tooltip
+                            title={t("adaptation_measure_applicability_not_in_scenario_tooltip")}
+                            placement="top"
+                            arrow
+                          >
+                            <Chip
+                              size="small"
+                              label={t("adaptation_measure_applicability_not_in_scenario")}
+                              color="warning"
+                              variant="outlined"
+                              data-testid={`measure-applicability-not-in-scenario-${rowId}`}
+                            />
+                          </Tooltip>
+                        )}
+                        <Chip
+                          size="small"
+                          label={badgeLabel}
+                          color={measure.is_builtin ? "default" : "secondary"}
+                          variant="outlined"
+                        />
+                      </Stack>
                     </Stack>
                   </CardContent>
                 </Card>
