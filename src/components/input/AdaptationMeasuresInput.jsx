@@ -129,7 +129,7 @@ const AdaptationMeasuresInput = () => {
                 <Card
                   variant="outlined"
                   sx={{
-                    bgcolor: (theme) => theme.palette.primary.bgStrong,
+                    bgcolor: "primary.bgStrong",
                     mb: 2,
                     minHeight: 3,
                   }}
@@ -182,8 +182,9 @@ const AdaptationMeasuresInput = () => {
               pt: 1,
               pb: 1,
               mt: 1,
-              bgcolor: (theme) => theme.palette.background.default,
-              borderTop: (theme) => `${theme.spacing(0.125)} solid ${theme.palette.divider}`,
+              bgcolor: "background.default",
+              borderTop: 1,
+              borderColor: "divider",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -198,10 +199,7 @@ const AdaptationMeasuresInput = () => {
               disabled={!selectionDiffersFromApplied || isScenarioRunning}
               sx={{
                 cursor: selectionDiffersFromApplied ? "pointer" : "default",
-                color: (theme) =>
-                  selectionDiffersFromApplied
-                    ? theme.palette.primary.main
-                    : theme.palette.text.disabled,
+                color: selectionDiffersFromApplied ? "primary.main" : "text.disabled",
               }}
               data-testid="adaptation-measure-reset-link"
             >
