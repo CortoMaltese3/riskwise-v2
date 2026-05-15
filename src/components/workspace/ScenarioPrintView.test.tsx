@@ -322,6 +322,41 @@ describe("ScenarioPrintView", () => {
     expect(tocText).not.toContain("print_section_cost_benefit_adaptation");
   });
 
+  it("shows the scenario identifier on the cover page when meta.id is present", async () => {
+    mockScenario({
+      scenario: meta,
+      results: {
+        waterfall_data: JSON.stringify(waterfall),
+        costben_data: JSON.stringify(costben),
+      },
+    });
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("print-cover")).toBeInTheDocument());
+
+    const runCode = screen.getByTestId("print-cover-run-code");
+    const cover = screen.getByTestId("print-cover");
+    expect(cover.contains(runCode)).toBe(true);
+    expect(runCode.textContent).toContain("print_cover_run_code");
+    expect(runCode.textContent).toContain(meta.id);
+  });
+
+  it("omits the cover run-code row when meta.id is missing", async () => {
+    mockScenario({
+      scenario: { ...meta, id: "" },
+      results: {
+        waterfall_data: JSON.stringify(waterfall),
+        costben_data: JSON.stringify(costben),
+      },
+    });
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("print-cover")).toBeInTheDocument());
+    expect(screen.queryByTestId("print-cover-run-code")).toBeNull();
+  });
+
   it("renders continuous Table and Figure captions in order", async () => {
     mockScenario({
       scenario: meta,

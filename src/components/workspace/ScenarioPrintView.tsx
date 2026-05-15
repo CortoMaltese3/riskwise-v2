@@ -636,6 +636,18 @@ const ScenarioPrintView = ({
               <Typography variant="body1">
                 <strong>{t("time_horizon_title")}:</strong> {horizon}
               </Typography>
+              {meta.id ? (
+                <Typography
+                  variant="body1"
+                  data-testid="print-cover-run-code"
+                  sx={{ fontSize: "0.85em" }}
+                >
+                  <strong>{t("print_cover_run_code")}:</strong>{" "}
+                  <Box component="span" sx={{ fontFamily: "monospace" }}>
+                    {meta.id}
+                  </Box>
+                </Typography>
+              ) : null}
             </Stack>
           </Box>
 
