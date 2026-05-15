@@ -151,8 +151,8 @@ Impact Functions (parent [#444](https://github.com/CortoMaltese3/riskwise-v2/iss
 
 PDF Reports (parent [#445](https://github.com/CortoMaltese3/riskwise-v2/issues/445)):
 
-- [ ] Cover page in `ScenarioPrintView` shows the scenario identifier (`meta.id`) under the time-horizon line, styled consistently with the other cover fields and labelled via a new i18n key in `en`, `th`, and `ar`.
-- [ ] An Arabic-locale export of a representative scenario renders without layout, alignment, or number-formatting regressions; `en` and `th` exports remain unchanged.
+- [x] Cover page in `ScenarioPrintView` shows the scenario identifier (`meta.id`) under the time-horizon line, styled consistently with the other cover fields and labelled via a new i18n key in `en`, `th`, and `ar`. _(landed: #465 closing #463)_
+- [x] An Arabic-locale export of a representative scenario renders without layout, alignment, or number-formatting regressions; `en` and `th` exports remain unchanged. _(landed: #466 closing #464)_
 
 General UI (no parent): TBD.
 

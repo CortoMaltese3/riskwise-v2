@@ -27,7 +27,7 @@ For per-phase exit-criteria status see each phase file's `Exit criteria` section
 | 7 — Optional / Later | [phase-7-optional.md](phase-7-optional.md) | post-v2.0 | ⏳ Unstarted (non-blocking) |
 | 8 — UI Layout Architecture Refinement | [phase-8-ui-layout.md](phase-8-ui-layout.md) | post-v2.0 | 🔄 In progress |
 | 9 — Technical-Debt Cleanup | [phase-9-tech-debt-cleanup.md](phase-9-tech-debt-cleanup.md) | post-v2.0 | ⏳ Unstarted |
-| 10 — UI & Logic Enhancements | [phase-10-ui-logic-enhancements.md](phase-10-ui-logic-enhancements.md) | post-v2.0 | 🔄 In progress (10.1 scoped) |
+| 10 — UI & Logic Enhancements | [phase-10-ui-logic-enhancements.md](phase-10-ui-logic-enhancements.md) | post-v2.0 | 🔄 In progress (10.1–10.3 scoped; 10.3 done) |
 
 Status legend: 🔄 in progress · ✅ done · ⏳ pending · 🔲 not started · ❌ blocked.
 
