@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import duckdb
-import openpyxl
 import pytest
 from fastapi.testclient import TestClient
 
@@ -13,99 +13,38 @@ from backend.db.migrations import run_migrations
 from backend.measures.measures_seeder import seed_builtin_measures
 
 
-def write_minimal_measures_xlsx(path: Path) -> None:
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "measures"
-    ws.append(
-        [
-            "name",
-            "color",
-            "cost",
-            "hazard intensity impact a",
-            "hazard intensity impact b",
-            "hazard high frequency cutoff",
-            "hazard event set",
-            "MDD impact a",
-            "MDD impact b",
-            "PAA impact a",
-            "PAA impact b",
-            "damagefunctions map",
-            "assets file",
-            "Region_ID",
-            "risk transfer attachement",
-            "risk transfer cover",
-            "risk transfer cost factor",
-            "peril_ID",
-        ]
+def write_minimal_measures_json(path: Path) -> None:
+    """Write a tiny built-in catalog covering both HW and FL hazards.
+
+    Mirrors the on-disk shape of ``requirements/adaptation_measures.json``.
+    Rows omit the ``code`` field so the legacy "no code column" branch
+    of ``build_display_name_lookup`` keeps an exercising fixture.
+    """
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "name": "green_roofs",
+                    "peril_ID": "HW",
+                    "cost": 20_000_000,
+                    "MDD impact a": 0.69,
+                },
+                {
+                    "name": "trees_planting",
+                    "peril_ID": "HW",
+                    "cost": 31_000_000,
+                    "MDD impact a": 0.675,
+                },
+                {
+                    "name": "retention_reservoirs",
+                    "peril_ID": "FL",
+                    "cost": 10_000_000,
+                    "MDD impact a": 0.85,
+                },
+            ]
+        ),
+        encoding="utf-8",
     )
-    ws.append(
-        [
-            "green_roofs",
-            "0 0.42 0.36",
-            20_000_000,
-            1,
-            0,
-            0,
-            "nil",
-            0.69,
-            0,
-            1,
-            0,
-            "nil",
-            "nil",
-            0,
-            0,
-            0,
-            1,
-            "HW",
-        ]
-    )
-    ws.append(
-        [
-            "trees_planting",
-            "0.01 0.67 0.51",
-            31_000_000,
-            1,
-            0,
-            0,
-            "nil",
-            0.675,
-            0,
-            1,
-            0,
-            "nil",
-            "nil",
-            0,
-            0,
-            0,
-            1,
-            "HW",
-        ]
-    )
-    ws.append(
-        [
-            "retention_reservoirs",
-            "0.16 0.38 0.56",
-            10_000_000,
-            1,
-            0,
-            0,
-            "nil",
-            0.85,
-            0,
-            1,
-            0,
-            "nil",
-            "nil",
-            0,
-            0,
-            0,
-            1,
-            "FL",
-        ]
-    )
-    wb.save(path)
 
 
 @pytest.fixture
@@ -123,9 +62,9 @@ def seeded_db(tmp_path: Path):
     db_path = tmp_path / "test.db"
     conn = duckdb.connect(str(db_path))
     run_migrations(conn)
-    xlsx = tmp_path / "measures.xlsx"
-    write_minimal_measures_xlsx(xlsx)
-    seed_builtin_measures(conn, xlsx)
+    src = tmp_path / "measures.json"
+    write_minimal_measures_json(src)
+    seed_builtin_measures(conn, src)
     conn.close()
     return db_path
 

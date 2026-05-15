@@ -140,9 +140,21 @@ const RiskWiseClient = {
   // entity for the current scenario and returns its measure names so the
   // renderer can tag catalog cards by applicability (issue #450). Omit
   // it on flows that have no file yet (the catalog still comes back).
-  fetchAdaptationMeasures: (countryName: string, hazardType: string, exposureFile?: string) => {
+  // ``exposureType`` is the ERA fallback: with no uploaded workbook the
+  // backend rebuilds the canonical entity filename from country + hazard
+  // + exposure_type so applicability tagging also works for built-in
+  // country/hazard/exposure combos.
+  fetchAdaptationMeasures: (
+    countryName: string,
+    hazardType: string,
+    exposureFile?: string,
+    exposureType?: string
+  ) => {
     const base = `/api/v1/measures/${encodeURIComponent(countryName)}/${encodeURIComponent(hazardType)}`;
-    const qs = exposureFile ? `?exposure_file=${encodeURIComponent(exposureFile)}` : "";
+    const params = new URLSearchParams();
+    if (exposureFile) params.set("exposure_file", exposureFile);
+    if (exposureType) params.set("exposure_type", exposureType);
+    const qs = params.toString() ? `?${params.toString()}` : "";
     return get<MeasuresResponse>(`${base}${qs}`);
   },
 

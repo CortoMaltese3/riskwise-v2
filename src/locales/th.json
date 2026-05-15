@@ -948,6 +948,8 @@
     "adaptation_measures_summary_value": "เลือกแล้ว {{selected}} จาก {{total}} รายการ",
     "adaptation_measure_applicability_not_in_scenario": "ไม่อยู่ในสถานการณ์นี้",
     "adaptation_measure_applicability_not_in_scenario_tooltip": "มาตรการนี้ไม่ได้กำหนดไว้สำหรับสถานการณ์ปัจจุบัน และจะถูกข้ามเมื่อนำไปใช้",
+    "adaptation_measures_select_all": "เลือกทั้งหมด",
+    "adaptation_measures_unselect_all": "ยกเลิกการเลือกทั้งหมด",
     "scenario_run_skipped_measures_snackbar": "ข้าม {{count}} จากทั้งหมด {{total}} มาตรการที่เลือก เนื่องจากไม่สอดคล้องกับสถานการณ์นี้",
     "economic_non_economic_adaptation_chart_applied_subtitle": "ต้นทุน-ผลประโยชน์สำหรับมาตรการ {{applied}}/{{selected}} รายการ",
     "settings_about_body": "RISK WISE — หน้าบ้านเดสก์ท็อปสำหรับชุดเครื่องมือวิเคราะห์ความเสี่ยงภูมิอากาศ CLIMADA",

@@ -948,6 +948,8 @@
     "adaptation_measures_summary_value": "{{selected}} of {{total}} selected",
     "adaptation_measure_applicability_not_in_scenario": "Not in scenario",
     "adaptation_measure_applicability_not_in_scenario_tooltip": "This measure isn't defined for the current scenario and will be skipped if applied.",
+    "adaptation_measures_select_all": "Select all",
+    "adaptation_measures_unselect_all": "Unselect all",
     "scenario_run_skipped_measures_snackbar": "{{count}} of your {{total}} selected measures were skipped because they don't apply to this scenario.",
     "economic_non_economic_adaptation_chart_applied_subtitle": "Cost-benefit for {{applied}}/{{selected}} measures",
     "settings_about_body": "RISK WISE — a desktop front-end for the CLIMADA climate risk analysis toolkit.",

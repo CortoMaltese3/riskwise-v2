@@ -78,7 +78,6 @@ class TestSynchronousEndpoints:
             "data": {
                 "adaptationMeasures": [],
                 "measures": [],
-                "entityMeasureNames": None,
             },
             "status": {"code": 2000, "message": "ok"},
         }
@@ -93,13 +92,12 @@ class TestSynchronousEndpoints:
 
     def test_measures_forwards_exposure_file_query_param(self, client: TestClient) -> None:
         # ``exposure_file`` rides into the dispatch payload as
-        # ``exposureFile`` so the renderer can opt into the
-        # entity-measure-names side channel (issue #450).
+        # ``exposureFile`` so the runner loads the user's uploaded
+        # entity workbook for both the picker and the run.
         envelope = {
             "data": {
                 "adaptationMeasures": [],
                 "measures": [],
-                "entityMeasureNames": ["m_levee"],
             },
             "status": {"code": 2000, "message": "ok"},
         }
@@ -114,6 +112,29 @@ class TestSynchronousEndpoints:
                 "countryName": "Egypt",
                 "hazardType": "Flood",
                 "exposureFile": "entity_TODAY_EGY_FL_crops.xlsx",
+            },
+        )
+
+    def test_measures_forwards_exposure_type_query_param(self, client: TestClient) -> None:
+        # ``exposure_type`` is the ERA fallback: with no uploaded workbook
+        # the dispatcher rebuilds the canonical entity filename from
+        # country + hazard + exposure_type and uses it as the picker source.
+        envelope = {
+            "data": {
+                "adaptationMeasures": [],
+                "measures": [],
+            },
+            "status": {"code": 2000, "message": "ok"},
+        }
+        with patch.object(app_module, "_dispatch_sync", return_value=envelope) as m:
+            response = client.get("/api/v1/measures/Egypt/Flood?exposure_type=livestock")
+        assert response.status_code == 200
+        m.assert_called_once_with(
+            "run_fetch_measures.py",
+            {
+                "countryName": "Egypt",
+                "hazardType": "Flood",
+                "exposureType": "livestock",
             },
         )
 

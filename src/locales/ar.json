@@ -952,6 +952,8 @@
     "adaptation_measures_summary_value": "{{selected}} من {{total}} محدد",
     "adaptation_measure_applicability_not_in_scenario": "غير مدرج في السيناريو",
     "adaptation_measure_applicability_not_in_scenario_tooltip": "هذا التدبير غير معرّف للسيناريو الحالي وسيتم تخطيه عند تطبيقه.",
+    "adaptation_measures_select_all": "تحديد الكل",
+    "adaptation_measures_unselect_all": "إلغاء تحديد الكل",
     "scenario_run_skipped_measures_snackbar": "تم تخطي {{count}} من أصل {{total}} من التدابير المحددة لأنها لا تنطبق على هذا السيناريو.",
     "economic_non_economic_adaptation_chart_applied_subtitle": "تحليل التكلفة والمنفعة لـ {{applied}} من أصل {{selected}} من التدابير",
     "settings_about_body": "RISK WISE — واجهة سطح مكتب لحزمة تحليل مخاطر المناخ CLIMADA.",

@@ -49,6 +49,6 @@
     {"country": "THA", "hazard": "HW", "exposure_type": "students", "path": "data/entities/entity_TODAY_THA_HW_students.xlsx"}
   ],
   "measures": [
-    {"path": "requirements/adaptation_measures.xlsx", "scope": "all"}
+    {"path": "requirements/adaptation_measures.json", "scope": "all"}
   ]
 }

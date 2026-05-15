@@ -1,12 +1,13 @@
-// Coverage for #450: applicability tagging on the adaptation-measure viewer
-// and the skipped-measures snackbar wired through useRunScenario. Re-anchored
-// on the post-#461 layout where the picker is split into a left-column
-// summary (``Measures``, owns the fetch) and a middle-pane viewer
-// (``MeasuresCard``, renders the chip).
+// Coverage for the entity-driven picker (replaces the catalog applicability
+// tagging from #450). With the picker now sourced from the entity, the
+// applicability concept collapses — every row is something the engine
+// can run — so the only assertions left here are that the fetch threads
+// the right inputs, and that the post-run "skipped measures" snackbar
+// (now a defensive fallback rather than the common case) still fires.
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material/styles";
 
 import theme from "../theme/theme";
@@ -35,7 +36,6 @@ vi.mock("../lib/RiskWiseClient", () => ({
 }));
 
 import Measures from "../components/input/Measures";
-import MeasuresCard from "../components/cards/MeasuresCard";
 import useRunScenario from "../hooks/useRunScenario";
 import useResultsStore from "../store/useResultsStore";
 import useUIStore from "../store/useUIStore";
@@ -45,18 +45,29 @@ import { TABS } from "../components/main/tabs";
 const renderWithTheme = (ui) => render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
 
 const fakeMeasures = [
-  { id: "uuid-levee", name: "Levee", is_builtin: true, source_reference: null },
-  { id: "uuid-cropswitch", name: "Crop switching", is_builtin: true, source_reference: null },
+  {
+    id: "uuid-levee",
+    name: "Levee",
+    displayName: "adaptation_measures_levee",
+    is_builtin: true,
+    source_reference: null,
+  },
+  {
+    id: "uuid-cropswitch",
+    name: "Crop switching",
+    displayName: "adaptation_measures_crop_switching",
+    is_builtin: true,
+    source_reference: null,
+  },
 ];
 
-const measureResponse = (measures, entityMeasureNames) => ({
+const measureResponse = (measures) => ({
   success: true,
   result: {
     status: { code: 2000 },
     data: {
       measures,
       adaptationMeasures: measures.map((m) => m.name),
-      entityMeasureNames,
     },
   },
 });
@@ -77,58 +88,34 @@ beforeEach(() => {
     selectedAnnualGrowth: 0,
     selectedMeasureIds: [],
     adaptationMeasures: [],
-    entityMeasureNames: null,
     lastRunSkippedMeasures: [],
   });
   useUIStore.setState({ selectedTab: TABS.RISK });
   useResultsStore.setState({ isScenarioRunning: false });
 });
 
-describe("MeasuresCard applicability tag (#450)", () => {
-  it("does not tag any card when entityMeasureNames is null (applicability unknown)", () => {
-    useWorkspaceStore.setState({
-      adaptationMeasures: fakeMeasures,
-      entityMeasureNames: null,
-      selectedMeasureIds: ["Levee", "Crop switching"],
-    });
-    renderWithTheme(<MeasuresCard />);
-    expect(screen.queryByTestId("measure-applicability-not-in-scenario-uuid-levee")).toBeNull();
-    expect(
-      screen.queryByTestId("measure-applicability-not-in-scenario-uuid-cropswitch")
-    ).toBeNull();
-  });
-
-  it("tags catalog cards absent from entityMeasureNames as not-in-scenario", () => {
-    useWorkspaceStore.setState({
-      adaptationMeasures: fakeMeasures,
-      entityMeasureNames: ["Levee"],
-      selectedMeasureIds: ["Levee", "Crop switching"],
-    });
-    renderWithTheme(<MeasuresCard />);
-    expect(screen.queryByTestId("measure-applicability-not-in-scenario-uuid-levee")).toBeNull();
-    expect(
-      screen.getByTestId("measure-applicability-not-in-scenario-uuid-cropswitch")
-    ).toBeInTheDocument();
-  });
-
-  it("threads selectedExposureFile through to the measures fetch", async () => {
-    fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(fakeMeasures, ["Levee"]));
+describe("Measures fetch wiring", () => {
+  it("threads selectedExposureFile and selectedExposure through to the measures fetch", async () => {
+    fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(fakeMeasures));
     renderWithTheme(<Measures />);
     await waitFor(() => expect(fetchAdaptationMeasuresMock).toHaveBeenCalled());
     const call = fetchAdaptationMeasuresMock.mock.calls[0];
     expect(call[0]).toBe("Thailand");
     expect(call[1]).toBe("flood");
     expect(call[2]).toBe("entity_TODAY_THA_FL_crops.xlsx");
+    expect(call[3]).toBe("crops");
   });
 
-  it("hoists entityMeasureNames into the workspace store after fetch", async () => {
-    fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(fakeMeasures, ["Levee"]));
+  it("hoists the entity-derived measures into the workspace store", async () => {
+    fetchAdaptationMeasuresMock.mockResolvedValue(measureResponse(fakeMeasures));
     renderWithTheme(<Measures />);
-    await waitFor(() => expect(useWorkspaceStore.getState().entityMeasureNames).toEqual(["Levee"]));
+    await waitFor(() => expect(useWorkspaceStore.getState().adaptationMeasures).toHaveLength(2));
+    const stored = useWorkspaceStore.getState().adaptationMeasures.map((m) => m.name);
+    expect(stored).toEqual(["Levee", "Crop switching"]);
   });
 });
 
-describe("useRunScenario skipped-measures snackbar (#450)", () => {
+describe("useRunScenario skipped-measures snackbar (defensive fallback)", () => {
   beforeEach(() => {
     useUIStore.setState({
       alertMessage: "",

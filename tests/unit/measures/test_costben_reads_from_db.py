@@ -1,4 +1,4 @@
-"""Tests verifying cost-benefit handler reads measures from DuckDB, not xlsx."""
+"""Tests verifying cost-benefit handler reads measures from DuckDB, not the source file."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ from backend.costben.costben_handler import CostBenefitHandler
 
 def test_get_measure_names_returns_names_for_hazard(migrated_conn, tmp_path) -> None:
     from backend.measures.measures_seeder import seed_builtin_measures
-    from tests.unit.measures.conftest import write_minimal_measures_xlsx
+    from tests.unit.measures.conftest import write_minimal_measures_json
 
-    xlsx = tmp_path / "measures.xlsx"
-    write_minimal_measures_xlsx(xlsx)
-    seed_builtin_measures(migrated_conn, xlsx)
+    src = tmp_path / "measures.json"
+    write_minimal_measures_json(src)
+    seed_builtin_measures(migrated_conn, src)
 
     handler = CostBenefitHandler()
     names = handler.get_measure_names_from_db(migrated_conn, "HW")
@@ -22,11 +22,11 @@ def test_get_measure_names_returns_names_for_hazard(migrated_conn, tmp_path) -> 
 
 def test_get_measure_names_flood(migrated_conn, tmp_path) -> None:
     from backend.measures.measures_seeder import seed_builtin_measures
-    from tests.unit.measures.conftest import write_minimal_measures_xlsx
+    from tests.unit.measures.conftest import write_minimal_measures_json
 
-    xlsx = tmp_path / "measures.xlsx"
-    write_minimal_measures_xlsx(xlsx)
-    seed_builtin_measures(migrated_conn, xlsx)
+    src = tmp_path / "measures.json"
+    write_minimal_measures_json(src)
+    seed_builtin_measures(migrated_conn, src)
 
     handler = CostBenefitHandler()
     names = handler.get_measure_names_from_db(migrated_conn, "FL")
@@ -36,11 +36,11 @@ def test_get_measure_names_flood(migrated_conn, tmp_path) -> None:
 
 def test_get_measure_names_unknown_hazard_returns_empty(migrated_conn, tmp_path) -> None:
     from backend.measures.measures_seeder import seed_builtin_measures
-    from tests.unit.measures.conftest import write_minimal_measures_xlsx
+    from tests.unit.measures.conftest import write_minimal_measures_json
 
-    xlsx = tmp_path / "measures.xlsx"
-    write_minimal_measures_xlsx(xlsx)
-    seed_builtin_measures(migrated_conn, xlsx)
+    src = tmp_path / "measures.json"
+    write_minimal_measures_json(src)
+    seed_builtin_measures(migrated_conn, src)
 
     handler = CostBenefitHandler()
     names = handler.get_measure_names_from_db(migrated_conn, "TC")
@@ -49,11 +49,11 @@ def test_get_measure_names_unknown_hazard_returns_empty(migrated_conn, tmp_path)
 
 def test_get_measure_names_with_explicit_set_id(migrated_conn, tmp_path) -> None:
     from backend.measures.measures_seeder import seed_builtin_measures
-    from tests.unit.measures.conftest import write_minimal_measures_xlsx
+    from tests.unit.measures.conftest import write_minimal_measures_json
 
-    xlsx = tmp_path / "measures.xlsx"
-    write_minimal_measures_xlsx(xlsx)
-    seed_builtin_measures(migrated_conn, xlsx)
+    src = tmp_path / "measures.json"
+    write_minimal_measures_json(src)
+    seed_builtin_measures(migrated_conn, src)
 
     set_id = migrated_conn.execute(
         "SELECT id FROM measure_sets WHERE is_builtin = TRUE"

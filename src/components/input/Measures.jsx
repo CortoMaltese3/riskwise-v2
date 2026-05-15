@@ -17,11 +17,11 @@ const Measures = () => {
   const { t } = useTranslation();
   const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
   const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
+  const selectedExposure = useWorkspaceStore((s) => s.selectedExposure);
   const selectedExposureFile = useWorkspaceStore((s) => s.selectedExposureFile);
   const selectedMeasureIds = useWorkspaceStore((s) => s.selectedMeasureIds);
   const measures = useWorkspaceStore((s) => s.adaptationMeasures);
   const setMeasures = useWorkspaceStore((s) => s.setAdaptationMeasures);
-  const setEntityMeasureNames = useWorkspaceStore((s) => s.setEntityMeasureNames);
   const setSelectedMeasureIds = useWorkspaceStore((s) => s.setSelectedMeasureIds);
   const openInputEditor = useUIStore((s) => s.openInputEditor);
   const setSelectedCard = useUIStore((s) => s.setSelectedCard);
@@ -31,7 +31,6 @@ const Measures = () => {
   useEffect(() => {
     if (!selectedHazard) {
       setMeasures([]);
-      setEntityMeasureNames(null);
       return undefined;
     }
     // Guard against an older response overwriting a newer one when the
@@ -40,7 +39,8 @@ const Measures = () => {
     RiskWiseClient.fetchAdaptationMeasures(
       selectedCountry ?? "",
       selectedHazard,
-      selectedExposureFile || undefined
+      selectedExposureFile || undefined,
+      selectedExposure || undefined
     )
       .then((response) => {
         if (cancelled) return;
@@ -56,15 +56,12 @@ const Measures = () => {
           fetched = names.map((name) => ({
             id: name,
             name,
+            displayName: name,
             is_builtin: true,
             source_reference: null,
           }));
         }
         setMeasures(fetched);
-        const entityNames = Array.isArray(data?.entityMeasureNames)
-          ? data.entityMeasureNames
-          : null;
-        setEntityMeasureNames(entityNames);
         // Dedupe names so the wire payload doesn't carry duplicate entries.
         const uniqueNames = Array.from(new Set(fetched.map((m) => m.name)));
         setSelectedMeasureIds(uniqueNames);
@@ -75,13 +72,12 @@ const Measures = () => {
           error: error?.message ?? String(error),
         });
         setMeasures([]);
-        setEntityMeasureNames(null);
       });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedHazard, selectedCountry, selectedExposureFile]);
+  }, [selectedHazard, selectedCountry, selectedExposure, selectedExposureFile]);
 
   const active = Boolean(selectedHazard) && measures.length > 0;
   const cardState = active && selectedMeasureIds.length > 0 ? "valid" : "default";

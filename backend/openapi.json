@@ -961,10 +961,17 @@
       "Measure": {
         "properties": {
           "cost_factor": {
-            "title": "Cost Factor",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Factor"
           },
-          "country": {
+          "displayName": {
             "anyOf": [
               {
                 "type": "string"
@@ -973,37 +980,18 @@
                 "type": "null"
               }
             ],
-            "title": "Country"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "exposure_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Exposure Type"
+            "title": "Displayname"
           },
           "hazard_reduction_percentage": {
-            "title": "Hazard Reduction Percentage",
-            "type": "number"
-          },
-          "hazard_type": {
-            "title": "Hazard Type",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hazard Reduction Percentage"
           },
           "id": {
             "title": "Id",
@@ -1012,14 +1000,6 @@
           "is_builtin": {
             "title": "Is Builtin",
             "type": "boolean"
-          },
-          "measure_set_id": {
-            "title": "Measure Set Id",
-            "type": "string"
-          },
-          "measure_set_name": {
-            "title": "Measure Set Name",
-            "type": "string"
           },
           "name": {
             "title": "Name",
@@ -1039,12 +1019,7 @@
         },
         "required": [
           "id",
-          "measure_set_id",
-          "measure_set_name",
           "name",
-          "hazard_type",
-          "cost_factor",
-          "hazard_reduction_percentage",
           "is_builtin"
         ],
         "title": "Measure",
@@ -1212,20 +1187,6 @@
             },
             "title": "Adaptationmeasures",
             "type": "array"
-          },
-          "entityMeasureNames": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Entitymeasurenames"
           },
           "measures": {
             "items": {
@@ -3092,6 +3053,22 @@
                 }
               ],
               "title": "Exposure File"
+            }
+          },
+          {
+            "in": "query",
+            "name": "exposure_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exposure Type"
             }
           }
         ],

@@ -1,23 +1,28 @@
 """Seed the built-in adaptation measures into DuckDB on first launch.
 
-Idempotent — computes the SHA-256 of the source xlsx and skips the insert
-if a matching built-in ``measure_sets`` row already exists. Any validation
-failure raises :class:`MeasureSeedError` with a structured message naming
-the offending row; callers treat this as a fatal startup error.
+Idempotent — skips the insert when a built-in ``measure_sets`` row with the
+canonical name already exists. Bumping the catalog requires bumping the
+version in :data:`BUILTIN_MEASURE_SET_NAME`. Any validation failure raises
+:class:`MeasureSeedError` with a structured message naming the offending
+row; callers treat this as a fatal startup error.
+
+The catalog is checked in as ``requirements/adaptation_measures.json`` —
+diffable, language-agnostic, and trivial to regenerate from a spreadsheet
+when the science team updates the source data.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import uuid
 from pathlib import Path
 from typing import Any
 
 import duckdb
-import pandas as pd
 
 from backend.logging_config import get_logger
-from backend.provenance import sha256_file
 
 _log = get_logger("measures.measures_seeder")
 
@@ -29,11 +34,11 @@ _PERIL_TO_HAZARD: dict[str, str] = {
     "FL": "flood",
 }
 
-REQUIRED_COLUMNS = {"name", "cost", "MDD impact a", "peril_ID"}
+REQUIRED_FIELDS = {"name", "cost", "MDD impact a", "peril_ID"}
 
 
 class MeasureSeedError(RuntimeError):
-    """Raised when xlsx validation fails during the built-in migration."""
+    """Raised when JSON validation fails during the built-in migration."""
 
 
 def _validate_row(row: dict[str, Any], row_index: int, seen: set[tuple]) -> None:
@@ -75,63 +80,64 @@ def _validate_row(row: dict[str, Any], row_index: int, seen: set[tuple]) -> None
     seen.add(key)
 
 
-def seed_builtin_measures(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> None:
+def _load_records(json_path: Path) -> list[dict[str, Any]]:
+    try:
+        text = json_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise MeasureSeedError(f"Cannot open '{json_path}': {exc}") from exc
+    try:
+        records = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise MeasureSeedError(f"Invalid JSON in '{json_path}': {exc}") from exc
+    if not isinstance(records, list):
+        raise MeasureSeedError(f"'{json_path}' must contain a JSON array of measure rows")
+    return records
+
+
+def seed_builtin_measures(conn: duckdb.DuckDBPyConnection, json_path: Path) -> None:
     """Insert the built-in adaptation measures unless already present.
 
-    Uses the xlsx SHA-256 as the idempotency key so a re-packaged xlsx
-    triggers a fresh seed rather than silently serving stale data.
+    Skips when a built-in set with :data:`BUILTIN_MEASURE_SET_NAME`
+    already exists, so existing installs upgrade silently — bump the
+    version in that constant when the catalog changes.
     """
-    try:
-        sha = sha256_file(xlsx_path)
-    except OSError as exc:
-        raise MeasureSeedError(f"Cannot open '{xlsx_path}': {exc}") from exc
-
     existing = conn.execute(
-        "SELECT id FROM measure_sets WHERE is_builtin = TRUE AND sha256 = ?",
-        [sha],
+        "SELECT id FROM measure_sets WHERE is_builtin = TRUE AND name = ?",
+        [BUILTIN_MEASURE_SET_NAME],
     ).fetchone()
     if existing:
-        _log.info("measures_seeder.skip", reason="already_seeded", sha256=sha[:12])
+        _log.info(
+            "measures_seeder.skip",
+            reason="already_seeded",
+            set_name=BUILTIN_MEASURE_SET_NAME,
+        )
         return
 
-    _log.info("measures_seeder.start", xlsx=str(xlsx_path), sha256=sha[:12])
+    records = _load_records(json_path)
+    digest = hashlib.sha256(json_path.read_bytes()).hexdigest()
+    _log.info("measures_seeder.start", source=str(json_path), sha256=digest[:12])
 
-    try:
-        df = pd.read_excel(xlsx_path, sheet_name="measures")
-    except (OSError, ValueError, ImportError) as exc:
-        raise MeasureSeedError(f"Cannot read 'measures' sheet from '{xlsx_path}': {exc}") from exc
+    for i, row in enumerate(records):
+        missing = REQUIRED_FIELDS - set(row)
+        if missing:
+            raise MeasureSeedError(f"Row {i}: missing required fields: {sorted(missing)}")
 
-    missing = REQUIRED_COLUMNS - set(df.columns)
-    if missing:
-        raise MeasureSeedError(f"xlsx is missing required columns: {sorted(missing)}")
-
-    rows = df.to_dict(orient="records")
     measure_set_id = str(uuid.uuid4())
     seen: set[tuple] = set()
     enriched: list[dict] = []
 
-    has_code_column = "code" in df.columns
-
-    for i, row in enumerate(rows):
+    for i, row in enumerate(records):
         peril_id = str(row.get("peril_ID", ""))
         hazard_type = _PERIL_TO_HAZARD.get(peril_id, peril_id)
         row["hazard_type"] = hazard_type
         row["country"] = None
         _validate_row(row, i, seen)
         # ``code`` aligns the catalog i18n key with the short code the
-        # engine echoes back from the entity xlsx (#429). NaN / empty
-        # cells are persisted as NULL so the join in the cost-benefit
-        # handler falls through to the raw engine name.
-        code_val: str | None = None
-        if has_code_column:
-            raw_code = row.get("code")
-            if isinstance(raw_code, str):
-                stripped = raw_code.strip()
-                code_val = stripped or None
-            elif raw_code is not None and not (
-                isinstance(raw_code, float) and math.isnan(raw_code)
-            ):
-                code_val = str(raw_code)
+        # engine echoes back from the entity xlsx (#429). Empty / null
+        # values stay NULL so the join in the cost-benefit handler
+        # falls through to the raw engine name.
+        raw_code = row.get("code")
+        code_val = raw_code.strip() if isinstance(raw_code, str) and raw_code.strip() else None
         enriched.append(
             {
                 "id": str(uuid.uuid4()),
@@ -143,7 +149,7 @@ def seed_builtin_measures(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> N
                 "cost_factor": float(row["cost"]),
                 "hazard_reduction_percentage": (1.0 - float(row["MDD impact a"])) * 100.0,
                 "description": None,
-                "source_reference": "TODO — source not yet cited",
+                "source_reference": None,
                 "is_builtin": True,
                 "code": code_val,
             }
@@ -153,7 +159,7 @@ def seed_builtin_measures(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> N
     try:
         conn.execute(
             "INSERT INTO measure_sets (id, name, sha256, is_builtin) VALUES (?, ?, ?, TRUE)",
-            [measure_set_id, BUILTIN_MEASURE_SET_NAME, sha],
+            [measure_set_id, BUILTIN_MEASURE_SET_NAME, digest],
         )
         conn.executemany(
             """
@@ -189,7 +195,7 @@ def seed_builtin_measures(conn: duckdb.DuckDBPyConnection, xlsx_path: Path) -> N
     _log.info("measures_seeder.done", measure_set_id=measure_set_id, rows=len(enriched))
 
 
-def run_startup_measures_seed(xlsx_path: Path) -> None:
+def run_startup_measures_seed(json_path: Path) -> None:
     """Resolve the production DB, run the seeder, and close the connection.
 
     Intended as the FastAPI lifespan entry point, called after migrations.
@@ -199,6 +205,6 @@ def run_startup_measures_seed(xlsx_path: Path) -> None:
     db_path = resolve_db_path()
     conn = get_connection(db_path)
     try:
-        seed_builtin_measures(conn, xlsx_path)
+        seed_builtin_measures(conn, json_path)
     finally:
         conn.close()

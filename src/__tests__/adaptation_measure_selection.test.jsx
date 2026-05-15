@@ -71,7 +71,6 @@ beforeEach(() => {
     selectedAnnualGrowth: 0,
     selectedMeasureIds: [],
     adaptationMeasures: [],
-    entityMeasureNames: null,
   });
   useUIStore.setState({ selectedTab: TABS.RISK });
   useResultsStore.setState({ isScenarioRunning: false });
@@ -115,36 +114,53 @@ describe("MeasuresCard viewer", () => {
   it("renders one row per fetched measure", async () => {
     useWorkspaceStore.setState({
       adaptationMeasures: fakeMeasures,
-      entityMeasureNames: null,
       selectedMeasureIds: ["Levee", "Drainage", "Pumps"],
     });
     renderWithTheme(<MeasuresCard />);
-    expect(screen.getByTestId("measure-checkbox-uuid-levee")).toBeInTheDocument();
-    expect(screen.getByTestId("measure-checkbox-uuid-drainage")).toBeInTheDocument();
-    expect(screen.getByTestId("measure-checkbox-uuid-pumps")).toBeInTheDocument();
+    expect(screen.getByTestId("measure-row-uuid-levee")).toBeInTheDocument();
+    expect(screen.getByTestId("measure-row-uuid-drainage")).toBeInTheDocument();
+    expect(screen.getByTestId("measure-row-uuid-pumps")).toBeInTheDocument();
   });
 
-  it("toggling a checkbox updates selectedMeasureIds in place", async () => {
+  it("clicking a row updates selectedMeasureIds in place", async () => {
     useWorkspaceStore.setState({
       adaptationMeasures: fakeMeasures,
-      entityMeasureNames: null,
       selectedMeasureIds: ["Levee", "Drainage", "Pumps"],
     });
     renderWithTheme(<MeasuresCard />);
-    fireEvent.click(screen.getByTestId("measure-checkbox-uuid-levee"));
+    fireEvent.click(screen.getByTestId("measure-row-uuid-levee"));
     expect(useWorkspaceStore.getState().selectedMeasureIds).toEqual(["Drainage", "Pumps"]);
   });
 
   it("does not render an Apply or Reset control (global Run is the only trigger)", async () => {
     useWorkspaceStore.setState({
       adaptationMeasures: fakeMeasures,
-      entityMeasureNames: null,
       selectedMeasureIds: ["Levee", "Drainage", "Pumps"],
     });
     renderWithTheme(<MeasuresCard />);
     expect(screen.queryByTestId("adaptation-measure-apply-button")).toBeNull();
     expect(screen.queryByTestId("adaptation-measure-reset-link")).toBeNull();
     expect(screen.queryByTestId("adaptation-measure-apply-bar")).toBeNull();
+  });
+
+  it("toggle-all clears every selection when all rows are currently selected", async () => {
+    useWorkspaceStore.setState({
+      adaptationMeasures: fakeMeasures,
+      selectedMeasureIds: ["Levee", "Drainage", "Pumps"],
+    });
+    renderWithTheme(<MeasuresCard />);
+    fireEvent.click(screen.getByTestId("adaptation-measures-toggle-all"));
+    expect(useWorkspaceStore.getState().selectedMeasureIds).toEqual([]);
+  });
+
+  it("toggle-all restores every row when nothing is selected", async () => {
+    useWorkspaceStore.setState({
+      adaptationMeasures: fakeMeasures,
+      selectedMeasureIds: [],
+    });
+    renderWithTheme(<MeasuresCard />);
+    fireEvent.click(screen.getByTestId("adaptation-measures-toggle-all"));
+    expect(useWorkspaceStore.getState().selectedMeasureIds).toEqual(["Levee", "Drainage", "Pumps"]);
   });
 });
 
@@ -174,14 +190,13 @@ describe("MeasuresCard duplicate-name UI isolation (#447)", () => {
   it("viewer renders one card per row even when names duplicate", () => {
     useWorkspaceStore.setState({
       adaptationMeasures: dupeMeasures,
-      entityMeasureNames: null,
       selectedMeasureIds: ["Early warning system", "Levee"],
     });
     renderWithTheme(<MeasuresCard />);
-    expect(screen.getByTestId("measure-checkbox-row-ews-1")).toBeInTheDocument();
-    expect(screen.getByTestId("measure-checkbox-row-ews-2")).toBeInTheDocument();
-    expect(screen.getByTestId("measure-checkbox-row-ews-3")).toBeInTheDocument();
-    expect(screen.getByTestId("measure-checkbox-row-levee")).toBeInTheDocument();
+    expect(screen.getByTestId("measure-row-row-ews-1")).toBeInTheDocument();
+    expect(screen.getByTestId("measure-row-row-ews-2")).toBeInTheDocument();
+    expect(screen.getByTestId("measure-row-row-ews-3")).toBeInTheDocument();
+    expect(screen.getByTestId("measure-row-row-levee")).toBeInTheDocument();
   });
 });
 

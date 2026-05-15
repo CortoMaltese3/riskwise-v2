@@ -19,6 +19,7 @@ Conventions:
 
 from __future__ import annotations
 
+import json
 import sys
 import types
 from collections.abc import Iterator
@@ -72,79 +73,23 @@ def _write_minimal_cred_xlsx(path: Path) -> None:
     wb.save(path)
 
 
-_MEASURES_COLUMNS = [
-    "name",
-    "color",
-    "cost",
-    "hazard intensity impact a",
-    "hazard intensity impact b",
-    "hazard high frequency cutoff",
-    "hazard event set",
-    "MDD impact a",
-    "MDD impact b",
-    "PAA impact a",
-    "PAA impact b",
-    "damagefunctions map",
-    "assets file",
-    "Region_ID",
-    "risk transfer attachement",
-    "risk transfer cover",
-    "risk transfer cost factor",
-    "peril_ID",
-]
-
-
-def _write_minimal_measures_xlsx(path: Path) -> None:
+def _write_minimal_measures_json(path: Path) -> None:
     """Tiny measures fixture: one flood (FL) + one heatwaves (HW) measure."""
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "measures"
-    ws.append(_MEASURES_COLUMNS)
-    ws.append(
-        [
-            "retention_reservoirs",
-            "0.16 0.38 0.56",
-            10_000_000,
-            1,
-            0,
-            0,
-            "nil",
-            0.85,
-            0,
-            1,
-            0,
-            "nil",
-            "nil",
-            0,
-            0,
-            0,
-            1,
-            "FL",
-        ]
-    )
-    ws.append(
-        [
-            "green_roofs",
-            "0 0.42 0.36",
-            20_000_000,
-            1,
-            0,
-            0,
-            "nil",
-            0.69,
-            0,
-            1,
-            0,
-            "nil",
-            "nil",
-            0,
-            0,
-            0,
-            1,
-            "HW",
-        ]
-    )
-    wb.save(path)
+    rows = [
+        {
+            "name": "retention_reservoirs",
+            "peril_ID": "FL",
+            "cost": 10_000_000,
+            "MDD impact a": 0.85,
+        },
+        {
+            "name": "green_roofs",
+            "peril_ID": "HW",
+            "cost": 20_000_000,
+            "MDD impact a": 0.69,
+        },
+    ]
+    path.write_text(json.dumps(rows), encoding="utf-8")
 
 
 @pytest.fixture
@@ -199,9 +144,9 @@ def seeded_client(
     _write_minimal_cred_xlsx(cred_xlsx)
     seed_builtin_cred(conn, cred_xlsx)
 
-    measures_xlsx = tmp_path / "measures.xlsx"
-    _write_minimal_measures_xlsx(measures_xlsx)
-    seed_builtin_measures(conn, measures_xlsx)
+    measures_src = tmp_path / "measures.json"
+    _write_minimal_measures_json(measures_src)
+    seed_builtin_measures(conn, measures_src)
     conn.close()
 
     monkeypatch.setenv("RISKWISE_DB_PATH", str(tmp_db))

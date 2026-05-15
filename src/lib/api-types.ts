@@ -1016,25 +1016,15 @@ export interface components {
         /** Measure */
         Measure: {
             /** Cost Factor */
-            cost_factor: number;
-            /** Country */
-            country?: string | null;
-            /** Description */
-            description?: string | null;
-            /** Exposure Type */
-            exposure_type?: string | null;
+            cost_factor?: number | null;
+            /** Displayname */
+            displayName?: string | null;
             /** Hazard Reduction Percentage */
-            hazard_reduction_percentage: number;
-            /** Hazard Type */
-            hazard_type: string;
+            hazard_reduction_percentage?: number | null;
             /** Id */
             id: string;
             /** Is Builtin */
             is_builtin: boolean;
-            /** Measure Set Id */
-            measure_set_id: string;
-            /** Measure Set Name */
-            measure_set_name: string;
             /** Name */
             name: string;
             /** Source Reference */
@@ -1105,8 +1095,6 @@ export interface components {
         MeasuresData: {
             /** Adaptationmeasures */
             adaptationMeasures: string[];
-            /** Entitymeasurenames */
-            entityMeasureNames?: string[] | null;
             /** Measures */
             measures?: components["schemas"]["Measure"][];
         };
@@ -1980,6 +1968,7 @@ export interface operations {
             query?: {
                 measure_set_id?: string | null;
                 exposure_file?: string | null;
+                exposure_type?: string | null;
             };
             header?: never;
             path: {

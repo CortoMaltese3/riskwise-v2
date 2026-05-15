@@ -211,7 +211,8 @@ class CostBenefitHandler:
                         am.cost_factor,
                         am.hazard_reduction_percentage,
                         am.description,
-                        am.source_reference
+                        am.source_reference,
+                        am.code
                     FROM adaptation_measures am
                     JOIN measure_sets ms ON ms.id = am.measure_set_id
                     WHERE {" AND ".join(clauses)}
@@ -239,6 +240,7 @@ class CostBenefitHandler:
                 "hazard_reduction_percentage",
                 "description",
                 "source_reference",
+                "code",
             ]
             return [dict(zip(cols, r, strict=True)) for r in rows]
         except duckdb.Error as exc:

@@ -16,6 +16,7 @@ import {
 
 import { isRtl } from "../../i18nConfig";
 import { formatNumber, formatNumberWithUnit } from "../../lib/formatNumber";
+import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { buildChartThemeOptions } from "../../utils/chartTheme";
 import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
@@ -93,6 +94,21 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart(
   // Theme-aware axis / tooltip / gridline colours (issue #289).
   const chartThemeOptions = buildChartThemeOptions(theme);
 
+  // Pull the picker's enriched measure list to look up display labels
+  // by engine name. The picker fetch already resolved the catalog join
+  // (entity ``TP`` → catalog ``adaptation_measures_trees_planting``), so
+  // joining here keeps the chart in sync without depending on whatever
+  // ``display_name`` the backend may or may not have persisted into the
+  // cost-benefit JSON for this run.
+  const adaptationMeasures = useWorkspaceStore((s) => s.adaptationMeasures);
+  const displayKeyByName = React.useMemo(() => {
+    const map = new Map();
+    for (const m of adaptationMeasures) {
+      if (m?.name) map.set(m.name, m.displayName || m.display_name || null);
+    }
+    return map;
+  }, [adaptationMeasures]);
+
   useEffect(() => {
     return () => {
       if (chartRef && "current" in chartRef) {
@@ -123,12 +139,16 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart(
 
   const unit = data.currency_unit || "";
   // Engine output ships an opaque short code in ``measure_name`` ("GR",
-  // "TP", ...) which we surface as ``name`` on the payload. The backend
-  // also joins each code back to a catalog i18n key in ``display_name``
-  // (#429); when present, translate it and use it on the axis / tooltip
-  // / a11y label so users see the full measure name. Fall back to the
-  // raw name for codes that have no catalog mapping yet.
-  const labelFor = (m) => (m.display_name ? t(m.display_name) : m.name);
+  // "TP", ...) which we surface as ``name`` on the payload. Resolve the
+  // i18n key in this order: (1) the picker's enriched catalog join from
+  // the workspace store, (2) ``display_name`` persisted on the cost-
+  // benefit payload by the backend (#429), (3) raw engine name. (1)
+  // catches the case where this run's payload was written before the
+  // backend lookup ran or the catalog row had no ``code`` set.
+  const labelFor = (m) => {
+    const key = displayKeyByName.get(m.name) || m.display_name;
+    return key ? t(key) : m.name;
+  };
   const labels = data.measures.map(labelFor);
   const ratios = data.measures.map((m) => m.benefit_cost_ratio);
   const colors = ratios.map((r) => colorForRatio(r, vizColors));

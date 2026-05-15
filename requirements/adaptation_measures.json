@@ -1,0 +1,247 @@
+[
+  {
+    "name": "adaptation_measures_green_roofs",
+    "peril_ID": "HW",
+    "cost": 20000000.0,
+    "MDD impact a": 0.69,
+    "code": "GR"
+  },
+  {
+    "name": "adaptation_measures_trees_planting",
+    "peril_ID": "HW",
+    "cost": 31120331.95020747,
+    "MDD impact a": 0.675,
+    "code": "TP"
+  },
+  {
+    "name": "adaptation_measures_green_spaces",
+    "peril_ID": "HW",
+    "cost": 1145000.0,
+    "MDD impact a": 0.39,
+    "code": "GS"
+  },
+  {
+    "name": "adaptation_measures_green_white_roofs",
+    "peril_ID": "HW",
+    "cost": 298778.1828936443,
+    "MDD impact a": 0.75,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_early_warning_system",
+    "peril_ID": "HW",
+    "cost": 22370744.8520311,
+    "MDD impact a": 0.78,
+    "code": "EWS"
+  },
+  {
+    "name": "adaptation_measures_training_on_adaptation_agricultural_practices",
+    "peril_ID": "HW",
+    "cost": 35952982.79790714,
+    "MDD impact a": 0.75,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_water_saving_cultivation_and_production_practices",
+    "peril_ID": "HW",
+    "cost": 34035490.38201877,
+    "MDD impact a": 0.8,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_research_and_monitoring",
+    "peril_ID": "HW",
+    "cost": 22398708.28309615,
+    "MDD impact a": 0.67999,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_climate_smart_agriculture",
+    "peril_ID": "HW",
+    "cost": 113132052.5374145,
+    "MDD impact a": 0.6,
+    "code": "CSA"
+  },
+  {
+    "name": "adaptation_measures_green_building_codes",
+    "peril_ID": "HW",
+    "cost": 196542972.6285591,
+    "MDD impact a": 0.55,
+    "code": "GBC"
+  },
+  {
+    "name": "adaptation_measures_green_roofs",
+    "peril_ID": "HW",
+    "cost": 3600000.0,
+    "MDD impact a": 0.69,
+    "code": "GR"
+  },
+  {
+    "name": "adaptation_measures_trees_planting",
+    "peril_ID": "HW",
+    "cost": 5601659.751037344,
+    "MDD impact a": 0.675,
+    "code": "TP"
+  },
+  {
+    "name": "adaptation_measures_early_warning_system",
+    "peril_ID": "HW",
+    "cost": 4026734.073365598,
+    "MDD impact a": 0.78,
+    "code": "EWS"
+  },
+  {
+    "name": "adaptation_measures_green_building_codes",
+    "peril_ID": "HW",
+    "cost": 35377735.07314063,
+    "MDD impact a": 0.55,
+    "code": "GBC"
+  },
+  {
+    "name": "adaptation_measures_wetland_restoration_and_rehabilitation",
+    "peril_ID": "D",
+    "cost": 3021000.0,
+    "MDD impact a": 0.65,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_soil_water_and_pest_management",
+    "peril_ID": "D",
+    "cost": 6616532.721010331,
+    "MDD impact a": 0.6,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_legume_seeds_production_and_propagation",
+    "peril_ID": "D",
+    "cost": 3777900.0,
+    "MDD impact a": 0.7,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_management_of_protected_environmental_areas",
+    "peril_ID": "D",
+    "cost": 13233065.44202066,
+    "MDD impact a": 0.52,
+    "code": "MPA"
+  },
+  {
+    "name": "adaptation_measures_climate_smart_agriculture_precision_agriculture",
+    "peril_ID": "D",
+    "cost": 12870471.77419354,
+    "MDD impact a": 0.55,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_improvement_of_water_storage_systems",
+    "peril_ID": "D",
+    "cost": 21420000.0,
+    "MDD impact a": 0.45,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_improvement_of_water_distribution_facilities",
+    "peril_ID": "D",
+    "cost": 105000000.0,
+    "MDD impact a": 0.47,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_trees_planting",
+    "peril_ID": "FL",
+    "cost": 69156293.22268327,
+    "MDD impact a": 0.35,
+    "code": "TP"
+  },
+  {
+    "name": "adaptation_measures_retention_reservoirs",
+    "peril_ID": "FL",
+    "cost": 10653600.0,
+    "MDD impact a": 0.85,
+    "code": "RR"
+  },
+  {
+    "name": "adaptation_measures_dredging_of_canals",
+    "peril_ID": "FL",
+    "cost": 40341171.04656523,
+    "MDD impact a": 0.6,
+    "code": "DC"
+  },
+  {
+    "name": "adaptation_measures_infiltration_ponds",
+    "peril_ID": "FL",
+    "cost": 52523956.17801953,
+    "MDD impact a": 0.52,
+    "code": "IP"
+  },
+  {
+    "name": "adaptation_measures_recharging_wells",
+    "peril_ID": "FL",
+    "cost": 77706469.3767436,
+    "MDD impact a": 0.35,
+    "code": "RW"
+  },
+  {
+    "name": "adaptation_measures_small_dams",
+    "peril_ID": "FL",
+    "cost": 168148056.3777159,
+    "MDD impact a": 1e-05,
+    "code": "SD"
+  },
+  {
+    "name": "adaptation_measures_early_warning_system",
+    "peril_ID": "FL",
+    "cost": 459403.0058495805,
+    "MDD impact a": 0.995,
+    "code": "EWS"
+  },
+  {
+    "name": "adaptation_measures_wetland_restoration_and_rehabilitation",
+    "peril_ID": "FL",
+    "cost": 3021000.0,
+    "MDD impact a": 0.98,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_improved_drainage_system",
+    "peril_ID": "FL",
+    "cost": 21895243.97692433,
+    "MDD impact a": 0.97,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_training_for_agricultural_topic_for_adaptation",
+    "peril_ID": "FL",
+    "cost": 1620000.0,
+    "MDD impact a": 0.989,
+    "code": null
+  },
+  {
+    "name": "adaptation_measures_retention_furrows",
+    "peril_ID": "FL",
+    "cost": 30674921.3138182,
+    "MDD impact a": 0.9,
+    "code": "RF"
+  },
+  {
+    "name": "adaptation_measures_agricultural_zoning",
+    "peril_ID": "FL",
+    "cost": 13500000.0,
+    "MDD impact a": 0.973,
+    "code": "AZ"
+  },
+  {
+    "name": "adaptation_measures_water_tolerant_crops",
+    "peril_ID": "FL",
+    "cost": 13500000.0,
+    "MDD impact a": 0.98,
+    "code": "WTC"
+  },
+  {
+    "name": "adaptation_measures_flood_index_insurance",
+    "peril_ID": "FL",
+    "cost": 92345330.17434502,
+    "MDD impact a": 0.83,
+    "code": "FI"
+  }
+]

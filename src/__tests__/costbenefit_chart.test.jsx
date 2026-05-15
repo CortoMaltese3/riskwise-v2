@@ -184,6 +184,37 @@ describe("CostBenefitChart", () => {
     expect(props.data.labels).toEqual(["Recharging wells", "Soil and water bunds"]);
   });
 
+  it("joins labels against the picker's enriched measures when the payload lacks display_name", async () => {
+    // The picker fetch already resolved the catalog join (entity ``TP``
+    // → catalog ``adaptation_measures_trees_planting``). The chart
+    // should pick up that displayName even when the cost-benefit JSON
+    // for this run has no ``display_name`` (e.g. the run predates the
+    // backend lookup, or its catalog row had no ``code``).
+    const { default: useWorkspaceStore } = await import("../store/useWorkspaceStore");
+    useWorkspaceStore.setState({
+      adaptationMeasures: [
+        { id: "uuid-tp", name: "TP", displayName: "adaptation_measures_trees_planting" },
+        { id: "uuid-rr", name: "RR", displayName: "adaptation_measures_retention_reservoirs" },
+      ],
+    });
+    const PAYLOAD_NO_DISPLAY = {
+      currency_unit: "USD",
+      present_year: 2024,
+      future_year: 2050,
+      measures: [
+        { name: "TP", cost: 100, benefit: 200, benefit_cost_ratio: 2.0 },
+        { name: "RR", cost: 100, benefit: 80, benefit_cost_ratio: 0.8 },
+      ],
+    };
+    render(<CostBenefitChart data={PAYLOAD_NO_DISPLAY} />);
+    const props = barSpy.mock.calls.at(-1)[0];
+    expect(props.data.labels).toEqual([
+      "adaptation_measures_trees_planting",
+      "adaptation_measures_retention_reservoirs",
+    ]);
+    useWorkspaceStore.setState({ adaptationMeasures: [] });
+  });
+
   it("renders display_name through i18n when present, falling back to name otherwise (#429)", () => {
     const FIXTURE_429 = {
       currency_unit: "USD",

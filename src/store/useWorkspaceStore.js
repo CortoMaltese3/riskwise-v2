@@ -94,11 +94,12 @@ const useWorkspaceStore = create((set, get) => ({
   impactFunctionSpec: null,
   impactFunctionError: "",
   impactFunctionLoading: false,
+  // Each entry is an entity-derived measure enriched with catalog
+  // metadata (display label, built-in flag, source citation); see the
+  // backend ``run_fetch_measures`` for the join. The picker is
+  // entity-driven so applicability is implicit — every row is something
+  // the engine can actually run.
   adaptationMeasures: [],
-  // ``null`` means "applicability unknown" (no entity file resolved yet),
-  // distinct from "every measure is in scenario" so the viewer can render
-  // a neutral state on first paint.
-  entityMeasureNames: null,
 
   // --- Macro inputs ---
   selectedMacroCountry: "",
@@ -330,8 +331,6 @@ const useWorkspaceStore = create((set, get) => ({
   setImpactFunctionLoading: (loading) => set({ impactFunctionLoading: Boolean(loading) }),
   setAdaptationMeasures: (measures) =>
     set({ adaptationMeasures: Array.isArray(measures) ? measures : [] }),
-  setEntityMeasureNames: (names) =>
-    set({ entityMeasureNames: Array.isArray(names) ? names : null }),
   setSelectedAnnualGrowth: (annualGrowth) => set({ selectedAnnualGrowth: annualGrowth }),
   setIsValidExposure: (isValid = null) => {
     const { selectedAppOption } = get();

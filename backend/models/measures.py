@@ -10,35 +10,35 @@ from backend.models.common import Status
 
 
 class Measure(BaseModel):
+    # Stable id used by the picker UI's React keys. Falls back to ``name``
+    # when no catalog row matches (custom entity measure with no alias).
     id: str
-    measure_set_id: str
-    measure_set_name: str
+    # The engine name — what ``MeasureSpec.name`` carries on the entity
+    # workbook and what the runtime filter matches against. Stays the
+    # source of truth for selection so the run pipeline keeps working.
     name: str
-    hazard_type: str
-    country: str | None = None
-    exposure_type: str | None = None
-    cost_factor: float
-    hazard_reduction_percentage: float
-    description: str | None = None
-    source_reference: str | None = None
+    # i18n key from the catalog (e.g. ``adaptation_measures_trees_planting``)
+    # when the entity row joins to a catalog row by ``code`` or ``name``.
+    # Null when the entity ships a measure absent from the catalog —
+    # the renderer falls back to ``name``.
+    displayName: str | None = None
     is_builtin: bool
+    source_reference: str | None = None
+    # Optional extra metadata from the catalog. Kept around for future
+    # editor surfaces; the picker today only consumes the fields above.
+    cost_factor: float | None = None
+    hazard_reduction_percentage: float | None = None
 
 
 class MeasuresData(BaseModel):
     # ``adaptationMeasures`` stays a flat list of names for backwards
     # compatibility with the scenario-run pipeline (which only needs names).
-    # ``measures`` carries the full metadata the UI uses to render the
-    # built-in/custom chips and source-reference tooltips introduced with
-    # issue #92.
     adaptationMeasures: list[str]
+    # ``measures`` carries the per-row metadata the picker renders
+    # (display label, built-in/custom badge, source citation). The list
+    # is sourced from the entity workbook with catalog enrichment so
+    # every row is something the engine can actually run.
     measures: list[Measure] = Field(default_factory=list)
-    # Names of measures present on the loaded entity for the current
-    # ``(country, hazard, exposure_file)`` tuple. Populated when the
-    # renderer passes ``exposure_file``; ``None`` when applicability is
-    # unknown (no file supplied or the entity could not be loaded). The
-    # UI tags catalog cards whose names are absent from this list as
-    # "not in scenario" (issue #450).
-    entityMeasureNames: list[str] | None = None
 
 
 class MeasuresResponse(BaseModel):

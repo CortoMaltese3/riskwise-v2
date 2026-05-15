@@ -203,17 +203,22 @@ class TestRunnerAccumulatesSkippedNames:
         assert runner.skipped_measures == ["m_phantom"]
 
 
-class TestFetchMeasuresEntityNames:
-    def test_entity_field_omitted_when_no_exposure_file(self) -> None:
-        # Without an ``exposureFile`` the renderer cannot resolve an entity,
-        # so the field must be ``None`` (applicability unknown), never an
-        # empty list (which would render every catalog card as "skipped").
-        from backend.run_fetch_measures import _entity_measure_names
+class TestFetchMeasuresEntitySource:
+    """The picker is entity-driven: ``_load_entity_measures`` is the source.
 
-        assert _entity_measure_names(None) is None
-        assert _entity_measure_names("") is None
+    These tests pin the contract used by ``RunFetchScenario.execute``:
+    a missing file or failed load returns ``None`` so the runner falls
+    back to the catalog; a successful load returns the entity's
+    ``MeasureSpec`` list verbatim.
+    """
 
-    def test_entity_field_returns_measure_names_when_load_succeeds(
+    def test_entity_load_omitted_when_no_exposure_file(self) -> None:
+        from backend.run_fetch_measures import _load_entity_measures
+
+        assert _load_entity_measures(None) is None
+        assert _load_entity_measures("") is None
+
+    def test_entity_load_returns_measure_specs_when_load_succeeds(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         from backend import run_fetch_measures
@@ -227,12 +232,10 @@ class TestFetchMeasuresEntityNames:
                 return loaded_entity
 
         monkeypatch.setattr(run_fetch_measures, "EntityHandler", _Stub)
-        assert run_fetch_measures._entity_measure_names("entity.xlsx") == [
-            "m_levee",
-            "m_pumps",
-        ]
+        result = run_fetch_measures._load_entity_measures("entity.xlsx")
+        assert [m.name for m in result] == ["m_levee", "m_pumps"]
 
-    def test_entity_field_none_when_load_fails(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_entity_load_none_when_load_fails(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from backend import run_fetch_measures
 
         class _Stub:
@@ -240,4 +243,4 @@ class TestFetchMeasuresEntityNames:
                 return None
 
         monkeypatch.setattr(run_fetch_measures, "EntityHandler", _Stub)
-        assert run_fetch_measures._entity_measure_names("missing.xlsx") is None
+        assert run_fetch_measures._load_entity_measures("missing.xlsx") is None

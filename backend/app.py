@@ -295,7 +295,7 @@ def _scan_user_data_countries() -> None:
 
 
 _CRED_XLSX_PATH = REQUIREMENTS_DIR / "cred_output.xlsx"
-_MEASURES_XLSX_PATH = REQUIREMENTS_DIR / "adaptation_measures.xlsx"
+_MEASURES_JSON_PATH = REQUIREMENTS_DIR / "adaptation_measures.json"
 
 
 @asynccontextmanager
@@ -321,7 +321,7 @@ async def _lifespan(_app: FastAPI):
     if not os.getenv("RISKWISE_SKIP_MEASURES_SEED"):
         from backend.measures.measures_seeder import run_startup_measures_seed
 
-        run_startup_measures_seed(_MEASURES_XLSX_PATH)
+        run_startup_measures_seed(_MEASURES_JSON_PATH)
     yield
 
 
@@ -576,6 +576,7 @@ async def measures(
     hazard: str,
     measure_set_id: str | None = None,
     exposure_file: str | None = None,
+    exposure_type: str | None = None,
 ) -> dict:
     payload: dict = {"countryName": country, "hazardType": hazard}
     if measure_set_id is not None:
@@ -585,6 +586,12 @@ async def measures(
     # catalog cards as "in scenario" / "not in scenario" (issue #450).
     if exposure_file is not None:
         payload["exposureFile"] = exposure_file
+    # ``exposure_type`` is the ERA fallback: with no uploaded workbook
+    # the dispatcher rebuilds the canonical entity filename so the same
+    # applicability tagging works for built-in country/hazard/exposure
+    # combos.
+    if exposure_type is not None:
+        payload["exposureType"] = exposure_type
     return await _dispatch("run_fetch_measures.py", payload)
 
 

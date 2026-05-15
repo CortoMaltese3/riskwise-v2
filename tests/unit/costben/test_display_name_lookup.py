@@ -8,17 +8,16 @@ joins one to the other so the chart can render translated full names.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import duckdb
-import openpyxl
 import pytest
 
 from backend.costben.costben_handler import CostBenefitHandler
 from backend.db.migrations import run_migrations
 from backend.engine.types import CostBenefitResult, EntityBundle, ExposureArrays
 from backend.measures.measures_seeder import seed_builtin_measures
-from tests.unit.measures.conftest import write_minimal_measures_xlsx
 
 
 @pytest.fixture
@@ -31,77 +30,51 @@ def migrated_conn(tmp_path: Path):
         conn.close()
 
 
-def _write_measures_xlsx_with_codes(path: Path) -> None:
-    """Write a minimal measures xlsx that includes a ``code`` column.
+def _write_measures_json_with_codes(path: Path) -> None:
+    """Write a minimal measures JSON that includes a ``code`` column.
 
     Covers the three ERA codes the #429 acceptance criteria require — GR,
     TP, GBC — plus a flood row with no code so the no-mapping fallback
     path is exercised.
     """
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "measures"
-    ws.append(
-        [
-            "name",
-            "color",
-            "cost",
-            "hazard intensity impact a",
-            "hazard intensity impact b",
-            "hazard high frequency cutoff",
-            "hazard event set",
-            "MDD impact a",
-            "MDD impact b",
-            "PAA impact a",
-            "PAA impact b",
-            "damagefunctions map",
-            "assets file",
-            "Region_ID",
-            "risk transfer attachement",
-            "risk transfer cover",
-            "risk transfer cost factor",
-            "peril_ID",
-            "code",
-        ]
-    )
     rows = [
-        ("adaptation_measures_green_roofs", 1, 0.69, "HW", "GR"),
-        ("adaptation_measures_trees_planting", 1, 0.675, "HW", "TP"),
-        ("adaptation_measures_green_building_codes", 1, 0.8, "HW", "GBC"),
-        ("adaptation_measures_wetland_restoration_and_rehabilitation", 1, 0.85, "FL", ""),
+        {
+            "name": "adaptation_measures_green_roofs",
+            "cost": 1,
+            "MDD impact a": 0.69,
+            "peril_ID": "HW",
+            "code": "GR",
+        },
+        {
+            "name": "adaptation_measures_trees_planting",
+            "cost": 1,
+            "MDD impact a": 0.675,
+            "peril_ID": "HW",
+            "code": "TP",
+        },
+        {
+            "name": "adaptation_measures_green_building_codes",
+            "cost": 1,
+            "MDD impact a": 0.8,
+            "peril_ID": "HW",
+            "code": "GBC",
+        },
+        {
+            "name": "adaptation_measures_wetland_restoration_and_rehabilitation",
+            "cost": 1,
+            "MDD impact a": 0.85,
+            "peril_ID": "FL",
+            "code": None,
+        },
     ]
-    for name, cost, mdd, peril, code in rows:
-        ws.append(
-            [
-                name,
-                "0 0 0",
-                cost,
-                1,
-                0,
-                0,
-                "nil",
-                mdd,
-                0,
-                1,
-                0,
-                "nil",
-                "nil",
-                0,
-                0,
-                0,
-                1,
-                peril,
-                code,
-            ]
-        )
-    wb.save(path)
+    path.write_text(json.dumps(rows), encoding="utf-8")
 
 
 @pytest.fixture
 def seeded_with_codes(migrated_conn, tmp_path: Path):
-    xlsx = tmp_path / "measures_with_codes.xlsx"
-    _write_measures_xlsx_with_codes(xlsx)
-    seed_builtin_measures(migrated_conn, xlsx)
+    src = tmp_path / "measures_with_codes.json"
+    _write_measures_json_with_codes(src)
+    seed_builtin_measures(migrated_conn, src)
     return migrated_conn
 
 
@@ -127,10 +100,25 @@ def test_lookup_excludes_rows_with_blank_code(seeded_with_codes) -> None:
     assert all("wetland_restoration" not in v for v in lookup.values())
 
 
-def test_legacy_xlsx_without_code_column_yields_empty_lookup(migrated_conn, tmp_path: Path) -> None:
-    xlsx = tmp_path / "measures.xlsx"
-    write_minimal_measures_xlsx(xlsx)
-    seed_builtin_measures(migrated_conn, xlsx)
+def test_source_with_only_null_codes_yields_empty_lookup(migrated_conn, tmp_path: Path) -> None:
+    # Catalog rows can legitimately ship without a code (custom uploads
+    # with no engine alias); the lookup should still be safe to call.
+    src = tmp_path / "measures.json"
+    src.write_text(
+        json.dumps(
+            [
+                {
+                    "name": "no_code_measure",
+                    "cost": 1,
+                    "MDD impact a": 0.5,
+                    "peril_ID": "HW",
+                    "code": None,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    seed_builtin_measures(migrated_conn, src)
     handler = CostBenefitHandler()
     assert handler.build_display_name_lookup(migrated_conn) == {}
 
