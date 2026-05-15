@@ -13,6 +13,7 @@ import {
 
 import { formatDate as formatDateI18n, formatDateTime } from "../../lib/formatDate";
 import { useReportLocale } from "../../hooks/useReportLocale";
+import { isRtl } from "../../i18nConfig";
 import RiskWiseClient, { type SnapshotItem } from "../../lib/RiskWiseClient";
 import logger from "../../lib/logger";
 import gizLogo from "../../assets/giz_logo.png";
@@ -593,6 +594,7 @@ const ScenarioPrintView = ({
       <Box
         data-testid="print-root"
         data-mui-color-scheme="light"
+        dir={isRtl(locale) ? "rtl" : "ltr"}
         sx={{
           p: "24px",
           maxWidth: 960,
@@ -653,6 +655,7 @@ const ScenarioPrintView = ({
 
           <Box
             data-testid="print-cover-logos"
+            dir="ltr"
             sx={{
               mt: 6,
               mb: 2,

@@ -2,6 +2,10 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
+// `i18nLanguageRef` lets individual tests flip the active language without
+// re-mocking the module. Defaulting to "en" preserves existing assertions; the
+// RTL-parity test swaps it to "ar" for its render and resets afterwards.
+const i18nLanguageRef = { current: "en" };
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
@@ -11,8 +15,19 @@ vi.mock("react-i18next", () => ({
       }
       return key;
     },
-    i18n: { language: "en" },
+    i18n: {
+      get language() {
+        return i18nLanguageRef.current;
+      },
+    },
   }),
+}));
+
+// i18nConfig pulls in the real i18next and the locale JSON files at module
+// load. Stubbing it sidesteps that side effect — `isRtl` is the only export
+// the print view needs, and it's a pure language-code check.
+vi.mock("../../i18nConfig", () => ({
+  isRtl: (lng: string) => /^(ar|he|fa|ur)/i.test(lng),
 }));
 
 vi.mock("../charts/WaterfallChart", () => ({
@@ -173,6 +188,7 @@ const mockSnapshots = (
 };
 
 beforeEach(() => {
+  i18nLanguageRef.current = "en";
   delete (document.body.dataset as Record<string, string | undefined>).printReady;
   listSnapshotsMock.mockReset();
   // Default to an empty snapshot list so the surface-count effect (#364)
@@ -739,6 +755,28 @@ describe("ScenarioPrintView", () => {
     // Waterfall chart took Figure 1; this impact snapshot is Figure 2.
     expect(within(fig).getByText(/figure_label\|number=2.*snapshot_type_map/)).toBeInTheDocument();
     expect(within(fig).getByText("tagged caption")).toBeInTheDocument();
+  });
+
+  it('flips the print root to dir="rtl" under an RTL locale and keeps logos LTR (#464)', async () => {
+    // Arabic is the project's only RTL locale today. The print root must
+    // carry an explicit dir attribute (not just inherit from <html>) so CI
+    // catches RTL parity regressions without a manual PDF export. The brand
+    // logos box stays dir="ltr" so GIZ/UNU-EHS render in the same physical
+    // order regardless of document direction.
+    i18nLanguageRef.current = "ar";
+    mockScenario({
+      scenario: meta,
+      results: {
+        waterfall_data: JSON.stringify(waterfall),
+        costben_data: JSON.stringify(costben),
+      },
+    });
+
+    render(<ScenarioPrintView scenarioId="scn-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("print-root")).toBeInTheDocument());
+    expect(screen.getByTestId("print-root").getAttribute("dir")).toBe("rtl");
+    expect(screen.getByTestId("print-cover-logos").getAttribute("dir")).toBe("ltr");
   });
 
   it("skips a failing snapshot fetch without blocking remaining figures", async () => {
