@@ -86,6 +86,20 @@ const useWorkspaceStore = create((set, get) => ({
   // never lingers into a new scenario.
   lastRunSkippedMeasures: [],
 
+  // Fetched view-state shared by the input summary card (left column) and
+  // the detail viewer in the middle pane. Owned by the left summary, which
+  // is the only fetcher; the middle viewer reads from here. ``null`` means
+  // "not loaded yet"; the loaders track in-flight requests so reopening the
+  // viewer mid-fetch shows a spinner rather than a stale spec.
+  impactFunctionSpec: null,
+  impactFunctionError: "",
+  impactFunctionLoading: false,
+  adaptationMeasures: [],
+  // ``null`` means "applicability unknown" (no entity file resolved yet),
+  // distinct from "every measure is in scenario" so the viewer can render
+  // a neutral state on first paint.
+  entityMeasureNames: null,
+
   // --- Macro inputs ---
   selectedMacroCountry: "",
   selectedMacroScenario: "",
@@ -311,6 +325,13 @@ const useWorkspaceStore = create((set, get) => ({
     const next = Array.isArray(names) ? names.filter((x) => typeof x === "string") : [];
     set({ lastRunSkippedMeasures: next });
   },
+  setImpactFunctionSpec: (spec) => set({ impactFunctionSpec: spec }),
+  setImpactFunctionError: (message) => set({ impactFunctionError: message || "" }),
+  setImpactFunctionLoading: (loading) => set({ impactFunctionLoading: Boolean(loading) }),
+  setAdaptationMeasures: (measures) =>
+    set({ adaptationMeasures: Array.isArray(measures) ? measures : [] }),
+  setEntityMeasureNames: (names) =>
+    set({ entityMeasureNames: Array.isArray(names) ? names : null }),
   setSelectedAnnualGrowth: (annualGrowth) => set({ selectedAnnualGrowth: annualGrowth }),
   setIsValidExposure: (isValid = null) => {
     const { selectedAppOption } = get();

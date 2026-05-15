@@ -1,8 +1,10 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { ThemeProvider } from "@mui/material/styles";
 
 import enLocale from "../locales/en.json";
+import theme from "../theme/theme";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -21,8 +23,8 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: vi.fn() },
 }));
 
-// Chart.js stub — the card's dialog renders <Line> when opened, but card
-// tests only assert the summary row.
+// Chart.js stub — the middle-pane viewer renders <Line> when a spec is
+// loaded; the left summary does not.
 vi.mock("react-chartjs-2", () => ({
   Line: () => <div data-testid="chart-stub" />,
 }));
@@ -44,8 +46,12 @@ vi.mock("../lib/RiskWiseClient", () => ({
   },
 }));
 
-import ImpactFunctionCard from "../components/input/ImpactFunctionCard";
+import ImpactFunction from "../components/input/ImpactFunction";
+import ImpactFunctionCard from "../components/cards/ImpactFunctionCard";
+import useUIStore from "../store/useUIStore";
 import useWorkspaceStore from "../store/useWorkspaceStore";
+
+const renderWithTheme = (ui) => render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
 
 const ok = (data) => ({ success: true, result: { data, status: { code: 2000, message: "ok" } } });
 const fail = (message = "boom") => ({
@@ -53,7 +59,7 @@ const fail = (message = "boom") => ({
   error: { code: "x", message, detail: null, error_id: "e1", request_id: "r1" },
 });
 
-const seed = (patch = {}) => {
+const seedInputs = (patch = {}) => {
   useWorkspaceStore.setState({
     selectedCountry: "Egypt",
     selectedHazard: "flood",
@@ -61,6 +67,9 @@ const seed = (patch = {}) => {
     isValidExposure: true,
     selectedAppOption: "era",
     selectedExposureFile: "",
+    impactFunctionSpec: null,
+    impactFunctionError: "",
+    impactFunctionLoading: false,
     ...patch,
   });
 };
@@ -73,15 +82,15 @@ afterEach(() => {
   cleanup();
 });
 
-describe("ImpactFunctionCard", () => {
-  it("shows the placeholder until country, hazard, and exposure are valid", async () => {
-    seed({ selectedCountry: "", isValidExposure: false });
-    render(<ImpactFunctionCard />);
-    expect(screen.getByText(enLocale.impact_function_card_placeholder)).toBeInTheDocument();
+describe("ImpactFunction (left-column summary)", () => {
+  it("renders the empty summary until country, hazard, and exposure are valid", async () => {
+    seedInputs({ selectedCountry: "", isValidExposure: false });
+    renderWithTheme(<ImpactFunction />);
+    expect(document.getElementById("impact-function-textfield").value).toBe("");
     expect(fetchImpactFunctionMock).not.toHaveBeenCalled();
   });
 
-  it("fetches and renders the active impact function once inputs are valid", async () => {
+  it("fetches and renders the active impact function summary once inputs are valid", async () => {
     fetchImpactFunctionMock.mockResolvedValue(
       ok({
         id: 105,
@@ -94,14 +103,13 @@ describe("ImpactFunctionCard", () => {
         paa: [1, 1, 1],
       })
     );
-    seed();
-    render(<ImpactFunctionCard />);
+    seedInputs();
+    renderWithTheme(<ImpactFunction />);
 
     await waitFor(() => {
-      expect(screen.getByText("ID 105 · Diarrhoea patients")).toBeInTheDocument();
+      const field = document.getElementById("impact-function-textfield");
+      expect(field.value).toBe("ID 105 · Diarrhoea patients");
     });
-    expect(screen.getByText("Intensity unit: m")).toBeInTheDocument();
-    expect(screen.getByTestId("impact-function-view-details")).toBeInTheDocument();
     // ERA mode → no entityFile passed.
     expect(fetchImpactFunctionMock).toHaveBeenCalledWith(
       "Egypt",
@@ -109,6 +117,7 @@ describe("ImpactFunctionCard", () => {
       "diarrhea_patients",
       null
     );
+    expect(useWorkspaceStore.getState().impactFunctionSpec.id).toBe(105);
   });
 
   it("passes the uploaded entityFile through in custom mode", async () => {
@@ -124,8 +133,8 @@ describe("ImpactFunctionCard", () => {
         paa: [1, 1],
       })
     );
-    seed({ selectedAppOption: "explore", selectedExposureFile: "my_upload.xlsx" });
-    render(<ImpactFunctionCard />);
+    seedInputs({ selectedAppOption: "explore", selectedExposureFile: "my_upload.xlsx" });
+    renderWithTheme(<ImpactFunction />);
 
     await waitFor(() =>
       expect(fetchImpactFunctionMock).toHaveBeenCalledWith(
@@ -137,20 +146,86 @@ describe("ImpactFunctionCard", () => {
     );
   });
 
-  it("falls back to the placeholder until the custom entity file is selected", async () => {
-    seed({ selectedAppOption: "explore", selectedExposureFile: "" });
-    render(<ImpactFunctionCard />);
-    expect(screen.getByText(enLocale.impact_function_card_placeholder)).toBeInTheDocument();
-    expect(fetchImpactFunctionMock).not.toHaveBeenCalled();
-  });
-
-  it("surfaces an error when the backend returns failure", async () => {
+  it("surfaces the backend error in the store so the viewer can render it", async () => {
     fetchImpactFunctionMock.mockResolvedValue(fail("file missing"));
-    seed();
-    render(<ImpactFunctionCard />);
+    seedInputs();
+    renderWithTheme(<ImpactFunction />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("impact-function-card-error")).toHaveTextContent("file missing");
+      expect(useWorkspaceStore.getState().impactFunctionError).toBe("file missing");
     });
+  });
+
+  it("opens the middle-pane viewer on click", async () => {
+    fetchImpactFunctionMock.mockResolvedValue(
+      ok({
+        id: 105,
+        name: "Diarrhoea patients",
+        haz_type: "FL",
+        exp_type: "x",
+        intensity_unit: "m",
+        intensity: [0, 1],
+        mdd: [0, 1],
+        paa: [1, 1],
+      })
+    );
+    seedInputs();
+    useUIStore.setState({ selectedCard: "country" });
+    const { container } = renderWithTheme(<ImpactFunction />);
+
+    await waitFor(() =>
+      expect(document.getElementById("impact-function-textfield").value).toBe(
+        "ID 105 · Diarrhoea patients"
+      )
+    );
+
+    const card = container.querySelector(".MuiCard-root");
+    card.click();
+    expect(useUIStore.getState().selectedCard).toBe("impactFunction");
+  });
+});
+
+describe("ImpactFunctionCard (middle-pane viewer)", () => {
+  it("renders the placeholder when no spec is loaded", () => {
+    useWorkspaceStore.setState({
+      impactFunctionSpec: null,
+      impactFunctionError: "",
+      impactFunctionLoading: false,
+    });
+    renderWithTheme(<ImpactFunctionCard />);
+    expect(screen.getByTestId("impact-function-viewer-placeholder")).toBeInTheDocument();
+    expect(screen.queryByTestId("impact-function-chart")).toBeNull();
+  });
+
+  it("renders the chart and table when the store carries a spec", () => {
+    useWorkspaceStore.setState({
+      impactFunctionSpec: {
+        id: 105,
+        name: "Diarrhoea patients",
+        haz_type: "FL",
+        exp_type: "x",
+        intensity_unit: "m",
+        intensity: [0, 1, 2],
+        mdd: [0, 0.5, 1],
+        paa: [1, 1, 1],
+      },
+      impactFunctionError: "",
+      impactFunctionLoading: false,
+    });
+    renderWithTheme(<ImpactFunctionCard />);
+    expect(screen.getByTestId("impact-function-chart")).toBeInTheDocument();
+    const table = screen.getByTestId("impact-function-table");
+    expect(table.querySelectorAll("tbody tr")).toHaveLength(3);
+    expect(screen.getByText("Impact function 105 — Diarrhoea patients")).toBeInTheDocument();
+  });
+
+  it("renders the error message when fetch failed", () => {
+    useWorkspaceStore.setState({
+      impactFunctionSpec: null,
+      impactFunctionError: "file missing",
+      impactFunctionLoading: false,
+    });
+    renderWithTheme(<ImpactFunctionCard />);
+    expect(screen.getByTestId("impact-function-viewer-error")).toHaveTextContent("file missing");
   });
 });

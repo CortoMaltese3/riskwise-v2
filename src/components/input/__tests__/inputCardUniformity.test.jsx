@@ -15,6 +15,34 @@ vi.mock("../../help/ContextualTooltip", () => ({
   default: () => null,
 }));
 
+// ImpactFunction and Measures kick off a fetch when their input prereqs are
+// satisfied. Stub the client so the uniformity assertion isn't coupled to
+// the backend.
+vi.mock("../../../lib/RiskWiseClient", () => ({
+  default: {
+    fetchImpactFunction: vi.fn().mockResolvedValue({
+      success: true,
+      result: {
+        status: { code: 2000 },
+        data: {
+          id: 1,
+          name: "stub",
+          haz_type: "FL",
+          exp_type: "stub",
+          intensity_unit: "m",
+          intensity: [0, 1],
+          mdd: [0, 1],
+          paa: [1, 1],
+        },
+      },
+    }),
+    fetchAdaptationMeasures: vi.fn().mockResolvedValue({
+      success: true,
+      result: { status: { code: 2000 }, data: { measures: [], adaptationMeasures: [] } },
+    }),
+  },
+}));
+
 import theme from "../../../theme/theme";
 import useWorkspaceStore from "../../../store/useWorkspaceStore";
 import { getInputCardSx, INPUT_CARD_HEIGHT } from "../inputCardStyles";
@@ -24,6 +52,8 @@ import Scenario from "../Scenario";
 import TimeHorizon from "../TimeHorizon";
 import Exposure from "../Exposure";
 import AnnualGrowth from "../AnnualGrowth";
+import ImpactFunction from "../ImpactFunction";
+import Measures from "../Measures";
 import MacroCountry from "../../inputMacro/Country";
 import MacroScenario from "../../inputMacro/Scenario";
 import MacroEconomicVariable from "../../inputMacro/MacroEconomicVariable";
@@ -36,6 +66,8 @@ const CARDS = [
   { name: "TimeHorizon", Component: TimeHorizon },
   { name: "Exposure", Component: Exposure },
   { name: "AnnualGrowth", Component: AnnualGrowth },
+  { name: "ImpactFunction", Component: ImpactFunction },
+  { name: "Measures", Component: Measures },
 ];
 
 const MACRO_CARDS = [
