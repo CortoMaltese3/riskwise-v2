@@ -74,12 +74,18 @@ Phase 10.2 closes this gap in two steps: a read-only viewer that reads from the 
 
 ### 10.3 — PDF Report enhancements (parent [#445](https://github.com/CortoMaltese3/riskwise-v2/issues/445))
 
-> **Status**: scope TBD.
->
-> Out of scope for the first pass of Phase 10 detail. Tracking issue [#356](https://github.com/CortoMaltese3/riskwise-v2/issues/356) already captures concrete enrichments; the parent umbrella issue created in this phase consolidates and prioritises them. Expected themes (not commitments):
-> - Include cost-benefit / adaptation results in the standard report (currently omitted).
-> - Cover-page metadata polish (run code, applied measures, timestamps).
-> - Multi-locale rendering parity (RTL spot-check).
+The PDF report v1 landed across PRs #350–#354, #362–#365 and now renders a full per-domain structure with cover page, mini-TOC, executive summary, hazard / exposure / impact / cost-benefit sections, captioned figures and tables, methodology + provenance, and disclaimer. Rendering is entirely client-side via [`ScenarioPrintView.tsx`](../../src/components/workspace/ScenarioPrintView.tsx) in a hidden Electron window; there is no backend report module.
+
+Re-scoping against current code surfaced one umbrella claim that was already stale: "cost-benefit / adaptation results currently omitted" — the cost-benefit chart + measures table (BCR-sorted) has been in Section 8 of the print view since #363. That theme is dropped from 10.3. Tracking issue [#356](https://github.com/CortoMaltese3/riskwise-v2/issues/356) remains the parking lot for deferred v2 ideas (executive notes, editable cover fields, per-export locale override, partner logos, persistence, TOC anchors, snapshot tags/annotations, removing disabled camera buttons) — none of those are promoted into 10.3.
+
+The two child issues below close the remaining real gaps. Both are small; both are independent.
+
+| Child | Goal | Files in scope | Issue label | Depends on |
+|---|---|---|---|---|
+| 10.3.1 — Scenario ID on cover page | The cover currently shows title, scenario name, country, hazard, time horizon, and two logos but not the scenario identifier. Add a `meta.id` row (full UUID, monospaced, small caption styling) under the existing horizon line so the printed report carries its identifier at-a-glance without flipping to Section 3. Hidden when `meta.id` is absent (defensive only). | `src/components/workspace/ScenarioPrintView.tsx`, `src/components/workspace/ScenarioPrintView.test.tsx`, `src/locales/{en,th,ar}.json` (one new key, e.g. `print_cover_run_code`) | `phase-10/pdf-cover-run-code` | none |
+| 10.3.2 — RTL locale parity audit + fix | Generate a real PDF in Arabic (`ar`) and spot-check every section of `ScenarioPrintView` for layout / alignment / number-formatting bugs (text-align, flex-direction, table cell padding, caption italics). Fix issues found in the same PR. Done when an Arabic export visually matches English for the same scenario, with no regressions in `en` or `th`. | `src/components/workspace/ScenarioPrintView.tsx` (targeted CSS / `dir` handling), `src/locales/ar.json` (translation corrections only), `src/components/workspace/ScenarioPrintView.test.tsx` (RTL render assertion) | `phase-10/pdf-rtl-parity` | 10.3.1 (soft — land first so the cover-id surface is audited in the same pass) |
+
+**Out of scope for 10.3 (stays in [#356](https://github.com/CortoMaltese3/riskwise-v2/issues/356)):** executive notes / commentary field, editable cover title / subtitle / author, per-export locale override, applied-measures listing on cover, additional timestamp fields on cover, snapshot tags / annotations, persistence and history of generated PDFs, partner-logo configuration, cross-page TOC with anchor links, removing the disabled camera button from chart surfaces, additional auto-charts beyond waterfall / cost-benefit.
 
 ### 10.4 — General UI enhancements (no parent yet)
 
@@ -143,7 +149,10 @@ Impact Functions (parent [#444](https://github.com/CortoMaltese3/riskwise-v2/iss
 - [ ] At run time, when an override is present, `entity_present.impfset_specs` is patched before `calculate_impact`; the uploaded entity XLSX is byte-identical before and after edits.
 - [ ] Saved scenarios persist the override; restoring replays the exact IF the run used and shows a "Modified" badge on the IF card and `ResultsView` panels.
 
-PDF Reports (parent [#445](https://github.com/CortoMaltese3/riskwise-v2/issues/445)): TBD when scoped.
+PDF Reports (parent [#445](https://github.com/CortoMaltese3/riskwise-v2/issues/445)):
+
+- [ ] Cover page in `ScenarioPrintView` shows the scenario identifier (`meta.id`) under the time-horizon line, styled consistently with the other cover fields and labelled via a new i18n key in `en`, `th`, and `ar`.
+- [ ] An Arabic-locale export of a representative scenario renders without layout, alignment, or number-formatting regressions; `en` and `th` exports remain unchanged.
 
 General UI (no parent): TBD.
 
@@ -170,7 +179,13 @@ General UI (no parent): TBD.
 
 10.2.1 ships the viewer surface (endpoint, card, dialog) for ERA and custom modes. 10.2.2 extends the dialog with an Edit mode and the run pipeline with override application.
 
-10.3 sequencing will be added when its sub-phase table is filled in.
+10.3:
+
+```
+10.3.1 ──> 10.3.2
+```
+
+10.3.1 ships the cover-page identifier surface. 10.3.2 is the RTL audit + fix and is soft-dependent on 10.3.1 so the new cover surface is included in the same audit pass.
 
 ---
 

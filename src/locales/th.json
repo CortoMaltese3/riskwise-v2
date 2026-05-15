@@ -1083,6 +1083,7 @@
     "print_section_provenance": "Provenance",
     "print_citation_title": "การอ้างอิง (BibTeX)",
     "print_cover_title": "รายงานสถานการณ์ RISK WISE",
+    "print_cover_run_code": "รหัสการรัน",
     "print_cover_app_version": "App Version",
     "print_cover_engine_version": "Engine Version",
     "print_cover_climada_version": "เวอร์ชัน CLIMADA",
