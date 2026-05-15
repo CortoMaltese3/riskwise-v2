@@ -1015,3 +1015,168 @@ class TestImpactFunctionEndpoint:
         body = response.json()
         assert body["code"] == "impact_function_not_found"
         assert "foo.xlsx" in body["message"]
+
+
+def _valid_override() -> dict:
+    return {
+        "id": 101,
+        "name": "edited",
+        "haz_type": "FL",
+        "exp_type": "crops",
+        "intensity_unit": "m",
+        "intensity": [0.0, 0.5, 1.0, 2.0],
+        "mdd": [0.0, 0.3, 0.7, 1.0],
+        "paa": [1.0, 1.0, 1.0, 1.0],
+    }
+
+
+class TestImpactFunctionValidateEndpoint:
+    """``POST /impact-function/validate`` — editor-side validation (issue #453)."""
+
+    def test_accepts_a_valid_override(self, client: TestClient) -> None:
+        response = client.post("/api/v1/impact-function/validate", json=_valid_override())
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"]["code"] == 2000
+        assert body["data"]["valid"] is True
+        assert body["data"]["errors"] == []
+
+    def test_returns_field_errors_for_non_monotonic_intensity(self, client: TestClient) -> None:
+        bad = _valid_override()
+        bad["intensity"] = [0.0, 1.0, 0.5, 2.0]
+        response = client.post("/api/v1/impact-function/validate", json=bad)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["data"]["valid"] is False
+        codes = {(e["field"], e["code"]) for e in body["data"]["errors"]}
+        assert ("intensity[2]", "not_non_decreasing") in codes
+
+
+class TestScenarioRunOverride:
+    """``POST /scenario/run`` ERA reject + server-side validation (issue #453)."""
+
+    def test_era_run_with_override_rejected_with_400(self, client: TestClient) -> None:
+        response = client.post(
+            "/api/v1/scenario/run",
+            json={"isEra": True, "impactFunctionOverride": _valid_override()},
+        )
+        assert response.status_code == 400
+        body = response.json()
+        assert body["status"] == "error"
+        assert "ERA" in body["message"]
+
+    def test_invalid_override_rejected_with_field_errors(self, client: TestClient) -> None:
+        bad = _valid_override()
+        bad["mdd"] = [0.0, 0.5, 0.2, 0.6]  # oscillates
+        response = client.post(
+            "/api/v1/scenario/run",
+            json={"isEra": False, "impactFunctionOverride": bad},
+        )
+        assert response.status_code == 400
+        body = response.json()
+        assert body["status"] == "error"
+        assert body["code"] == "validation_error"
+        # The structured field errors ride alongside the envelope so the
+        # editor can highlight the offending input directly.
+        codes = {(e["field"], e["code"]) for e in body.get("errors", [])}
+        assert ("mdd", "not_monotonic") in codes
+
+    def test_custom_run_with_valid_override_accepted(self, client: TestClient) -> None:
+        # The runner is mocked so the test does not pull in CLIMADA; the
+        # important assertion is that the request reached dispatch with
+        # the override intact. ``_check_memory_preflight`` is patched
+        # because CI containers may report less RAM than the gate's
+        # threshold and that would mask the override-routing check.
+        captured: dict[str, dict] = {}
+
+        def _capture(payload: dict) -> dict:
+            captured["payload"] = payload
+            return {"data": {"mapTitle": "T", "scenarioId": "abc"}, "status": {"code": 2000}}
+
+        with (
+            patch.object(app_module, "_run_scenario_sync", side_effect=_capture),
+            patch.object(app_module, "_check_memory_preflight", return_value=(True, "")),
+        ):
+            response = client.post(
+                "/api/v1/scenario/run",
+                json={"isEra": False, "impactFunctionOverride": _valid_override()},
+            )
+            assert response.status_code == 200
+            job_id = response.json()["job_id"]
+            # Drain the SSE stream so the worker finishes and clears
+            # ``_active_job_id`` before the test teardown.
+            with client.stream("GET", f"/api/v1/scenario/{job_id}/stream") as stream:
+                for _ in stream.iter_lines():
+                    pass
+
+        assert captured["payload"]["impactFunctionOverride"]["mdd"] == [0.0, 0.3, 0.7, 1.0]
+
+
+class TestScenarioRowOverrideRoundtrip:
+    """``GET /scenarios/{id}`` exposes the override + ``modified`` flag (issue #453)."""
+
+    def test_modified_flag_set_when_override_present(self, client: TestClient) -> None:
+        import backend.db as db
+        from backend.db.scenario_store import ScenarioDetail, ScenarioRow
+
+        row = ScenarioRow(
+            id="abc",
+            name=None,
+            tags=None,
+            notes=None,
+            country="Egypt",
+            hazard_type="flood",
+            scenario="rcp85",
+            exposure_type="crops",
+            asset_type="economic",
+            ref_year=2024,
+            future_year=2050,
+            annual_growth=0.0,
+            is_era=False,
+            app_option="explore",
+            status="completed",
+            created_at=None,
+            impact_function_override=_valid_override(),
+        )
+        detail = ScenarioDetail(scenario=row, results={})
+        with patch.object(db, "get_scenario", return_value=detail):
+            response = client.get("/api/v1/scenarios/abc")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["data"]["scenario"]["modified"] is True
+        assert body["data"]["scenario"]["impact_function_override"]["mdd"] == [
+            0.0,
+            0.3,
+            0.7,
+            1.0,
+        ]
+
+    def test_modified_flag_false_when_no_override(self, client: TestClient) -> None:
+        import backend.db as db
+        from backend.db.scenario_store import ScenarioDetail, ScenarioRow
+
+        row = ScenarioRow(
+            id="def",
+            name=None,
+            tags=None,
+            notes=None,
+            country="Egypt",
+            hazard_type="flood",
+            scenario="rcp85",
+            exposure_type="crops",
+            asset_type="economic",
+            ref_year=2024,
+            future_year=2050,
+            annual_growth=0.0,
+            is_era=False,
+            app_option="explore",
+            status="completed",
+            created_at=None,
+            impact_function_override=None,
+        )
+        detail = ScenarioDetail(scenario=row, results={})
+        with patch.object(db, "get_scenario", return_value=detail):
+            response = client.get("/api/v1/scenarios/def")
+        body = response.json()
+        assert body["data"]["scenario"]["modified"] is False
+        assert body["data"]["scenario"]["impact_function_override"] is None

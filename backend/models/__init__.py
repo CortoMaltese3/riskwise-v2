@@ -28,7 +28,14 @@ from backend.models.data import DataValidateData, DataValidateRequest, DataValid
 # Pydantic's and the engine's own classes of the same name.
 from backend.models.errors import ErrorResponse
 from backend.models.health import HealthResponse
-from backend.models.impact import ImpactFunctionPayload, ImpactFunctionResponse
+from backend.models.impact import (
+    ImpactFunctionFieldError,
+    ImpactFunctionPayload,
+    ImpactFunctionResponse,
+    ImpactFunctionValidateData,
+    ImpactFunctionValidateRequest,
+    ImpactFunctionValidateResponse,
+)
 from backend.models.macro import (
     ChartDataDataset,
     ChartDataPayload,
@@ -137,8 +144,12 @@ __all__ = [
     "ErrorResponse",
     "HealthResponse",
     "HydrateScenarioData",
+    "ImpactFunctionFieldError",
     "ImpactFunctionPayload",
     "ImpactFunctionResponse",
+    "ImpactFunctionValidateData",
+    "ImpactFunctionValidateRequest",
+    "ImpactFunctionValidateResponse",
     "HydrateScenarioResponse",
     "JobAcceptedResponse",
     "MacroChartDataRequest",

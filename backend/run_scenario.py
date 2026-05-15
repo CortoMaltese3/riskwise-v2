@@ -38,6 +38,7 @@ from backend.entity.entity_handler import EntityHandler
 from backend.exposure.exposure_handler import ExposureHandler
 from backend.hazard.hazard_handler import HazardHandler
 from backend.impact.impact_handler import ImpactHandler
+from backend.impact.overrides import apply_impact_function_override
 from backend.logging_config import get_logger
 from backend.progress import update_progress
 from backend.provenance import REPRODUCIBILITY_NOTE, new_random_seed
@@ -135,6 +136,11 @@ class RequestData:
     scenario: str
     time_horizon: tuple[int, int]
     selected_measure_ids: list[str] = field(default_factory=list)
+    # Custom-mode IF override (#453). ``None`` means "run the entity
+    # workbook unchanged"; otherwise the runner patches the entity's
+    # ``impfset_specs`` with this spec before ``calculate_impact``. The
+    # dict mirrors :class:`backend.engine.types.ImpactFunctionSpec`.
+    impact_function_override: dict | None = None
     ref_year: int = field(init=False)
     future_year: int = field(init=False)
 
@@ -153,6 +159,10 @@ class RequestData:
         country_name = sanitize_country_name(request.get("countryName", ""))
         raw_selected = request.get("selectedMeasureIds") or []
         selected_measure_ids = [str(x) for x in raw_selected]
+        raw_override = request.get("impactFunctionOverride")
+        impact_function_override = (
+            dict(raw_override) if isinstance(raw_override, dict) else None
+        )
         return cls(
             adaptation_measures=request.get("adaptationMeasures", []),
             annual_growth=request.get("annualGrowth", 0),
@@ -168,6 +178,7 @@ class RequestData:
             scenario=request.get("scenario", ""),
             time_horizon=request.get("timeHorizon", [2024, 2050]),
             selected_measure_ids=selected_measure_ids,
+            impact_function_override=impact_function_override,
         )
 
 
@@ -303,6 +314,17 @@ class RunScenario:
         return_periods = self._resolve_return_periods()
 
         aag = self._get_average_annual_growth()
+
+        # Apply the user's IF edit (#453) before the future entity is
+        # derived so the projected entity inherits the modified curve.
+        # ERA-mode runs reject the override at the endpoint layer, so the
+        # branch is implicitly custom-only.
+        if self.request_data.impact_function_override is not None:
+            entity_present = apply_impact_function_override(
+                entity_present,
+                self.request_data.impact_function_override,
+                self.logger,
+            )
 
         entity_future = None
         if is_future:
@@ -766,6 +788,7 @@ class RunScenario:
                 results,
                 provenance=provenance,
                 name=map_title,
+                impact_function_override=self.request_data.impact_function_override,
             )
             return scenario_id
         except (duckdb.Error, OSError, ValueError, KeyError, TypeError) as exc:

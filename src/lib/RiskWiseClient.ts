@@ -69,6 +69,9 @@ export type CustomDataDeleteResponse = Schema<"CustomDataDeleteResponse">;
 export type CustomCountryEntry = Schema<"CustomCountryEntry">;
 export type ImpactFunctionPayload = Schema<"ImpactFunctionPayload">;
 export type ImpactFunctionResponse = Schema<"ImpactFunctionResponse">;
+export type ImpactFunctionValidateRequest = Schema<"ImpactFunctionValidateRequest">;
+export type ImpactFunctionValidateResponse = Schema<"ImpactFunctionValidateResponse">;
+export type ImpactFunctionFieldError = Schema<"ImpactFunctionFieldError">;
 
 const http = () => window.api.http;
 
@@ -171,6 +174,12 @@ const RiskWiseClient = {
     if (entityFile) params.set("entityFile", entityFile);
     return get<ImpactFunctionResponse>(`/api/v1/impact-function?${params.toString()}`);
   },
+
+  // Validate a user-edited impact function against the registry's
+  // scientific rules (#453). Always 200; the editor reads ``data.valid``
+  // and ``data.errors`` to drive inline highlighting.
+  validateImpactFunction: (body: ImpactFunctionValidateRequest) =>
+    post<ImpactFunctionValidateResponse>("/api/v1/impact-function/validate", body),
 
   listScenarios: () => get<ScenarioListResponse>("/api/v1/scenarios"),
 

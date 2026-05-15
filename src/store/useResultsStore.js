@@ -41,6 +41,21 @@ const useResultsStore = create((set, get) => ({
         ? { activeRunSummary: { ...state.activeRunSummary, impactFunction } }
         : state
     ),
+  // Captures the IF override the most recent run was dispatched with so
+  // the results panel can show a "Modified" badge and the secondary
+  // viewer can replay the edited curve (#453). Cleared on the same
+  // ``resetScenarioPhase`` tick as the summary.
+  setActiveRunImpactFunctionOverride: (impactFunctionOverride) =>
+    set((state) =>
+      state.activeRunSummary
+        ? {
+            activeRunSummary: {
+              ...state.activeRunSummary,
+              impactFunctionOverride,
+            },
+          }
+        : state
+    ),
   // Reset both phase and the captured summary together so the chip's "what's
   // running" source of truth doesn't outlive the chip itself.
   resetScenarioPhase: () => set({ scenarioPhase: null, activeRunSummary: null }),

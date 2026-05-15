@@ -40,9 +40,11 @@ vi.mock("chart.js", () => ({
 }));
 
 const fetchImpactFunctionMock = vi.fn();
+const validateImpactFunctionMock = vi.fn();
 vi.mock("../lib/RiskWiseClient", () => ({
   default: {
     fetchImpactFunction: (...args) => fetchImpactFunctionMock(...args),
+    validateImpactFunction: (...args) => validateImpactFunctionMock(...args),
   },
 }));
 
@@ -227,5 +229,64 @@ describe("ImpactFunctionCard (middle-pane viewer)", () => {
     });
     renderWithTheme(<ImpactFunctionCard />);
     expect(screen.getByTestId("impact-function-viewer-error")).toHaveTextContent("file missing");
+  });
+
+  it("renders the Modified badge when an override is pending (#453)", () => {
+    useWorkspaceStore.setState({
+      impactFunctionSpec: {
+        id: 105,
+        name: "Diarrhoea patients",
+        haz_type: "FL",
+        exp_type: "x",
+        intensity_unit: "m",
+        intensity: [0, 1, 2],
+        mdd: [0, 0.5, 1],
+        paa: [1, 1, 1],
+      },
+      impactFunctionOverride: {
+        id: 105,
+        name: "edited",
+        haz_type: "FL",
+        exp_type: "x",
+        intensity_unit: "m",
+        intensity: [0, 1, 2],
+        mdd: [0, 0.7, 1],
+        paa: [1, 1, 1],
+      },
+      impactFunctionError: "",
+      impactFunctionLoading: false,
+      selectedAppOption: "explore",
+    });
+    renderWithTheme(<ImpactFunctionCard />);
+    expect(screen.getByTestId("impact-function-card-modified-badge")).toBeInTheDocument();
+  });
+
+  it("only shows the Edit affordance in custom (non-era) mode", () => {
+    useWorkspaceStore.setState({
+      impactFunctionSpec: {
+        id: 105,
+        name: "Diarrhoea patients",
+        haz_type: "FL",
+        exp_type: "x",
+        intensity_unit: "m",
+        intensity: [0, 1, 2],
+        mdd: [0, 0.5, 1],
+        paa: [1, 1, 1],
+      },
+      impactFunctionOverride: null,
+      impactFunctionError: "",
+      impactFunctionLoading: false,
+      selectedAppOption: "era",
+    });
+    const { rerender } = renderWithTheme(<ImpactFunctionCard />);
+    expect(screen.queryByTestId("impact-function-card-edit")).toBeNull();
+
+    useWorkspaceStore.setState({ selectedAppOption: "explore" });
+    rerender(
+      <ThemeProvider theme={theme}>
+        <ImpactFunctionCard />
+      </ThemeProvider>
+    );
+    expect(screen.getByTestId("impact-function-card-edit")).toBeInTheDocument();
   });
 });

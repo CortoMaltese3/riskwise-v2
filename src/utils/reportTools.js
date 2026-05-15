@@ -81,7 +81,7 @@ export const useReportTools = () => {
     setSelectedReport,
     setReports,
   } = useUIStore.getState();
-  const { setIsScenarioRunCompleted } = useResultsStore.getState();
+  const { setIsScenarioRunCompleted, setActiveRunSummary } = useResultsStore.getState();
   const { restoreScenarioInputs, setSelectedMeasureIds } = useWorkspaceStore.getState();
 
   const fetchReports = async () => {
@@ -134,6 +134,35 @@ export const useReportTools = () => {
       // survive into the next run (issue #428).
       restoreScenarioInputs({ ...scenario, country: countrySlug(scenario.country) });
       setMapTitle(scenario.name || scenario.id);
+
+      // Seed the active-run summary from the restored row so the
+      // "Modified" badge and "View impact function" link surface on the
+      // results panel exactly as they would after a fresh run (#453).
+      // The IF lookup is fetched separately so the dialog can compare the
+      // canonical curve against the restored override.
+      const restoredOverride = scenario.impact_function_override ?? null;
+      setActiveRunSummary({
+        country: scenario.country,
+        hazard: scenario.hazard_type,
+        exposure: scenario.exposure_type,
+        mode: scenario.is_era ? "era" : "explore",
+        exposureFile: "",
+        timeHorizonStart: scenario.ref_year,
+        timeHorizonEnd: scenario.future_year,
+        landingTab: null,
+        impactFunction: null,
+        impactFunctionOverride: restoredOverride,
+      });
+      RiskWiseClient.fetchImpactFunction?.(
+        scenario.country,
+        scenario.hazard_type,
+        scenario.exposure_type,
+        null
+      )?.then((response) => {
+        if (response?.success) {
+          useResultsStore.getState().setActiveRunImpactFunction(response.result.data);
+        }
+      });
 
       // Seed the measure selection from the restored cost-benefit payload so
       // a re-run dispatched before the MeasuresPanel re-fetches the catalog

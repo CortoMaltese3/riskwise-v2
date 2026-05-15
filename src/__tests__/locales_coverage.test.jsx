@@ -29,6 +29,10 @@ const DRIFT_ALLOWLIST = new Set([
   "impact_function_dialog_mdd",
   "impact_function_dialog_paa",
   "results_view_impact_function",
+  // Editable impact-function strings (issue #453): per the issue's i18n
+  // acceptance criterion, non-English locales ship the English text as
+  // an explicit placeholder pending translation.
+  "impact_function_editor_save_error",
 ]);
 
 const DRIFT_MIN_LENGTH = 15;

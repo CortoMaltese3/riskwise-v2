@@ -161,3 +161,49 @@ describe("useRunScenario impact-function lookup (#452)", () => {
     expect(summary.impactFunction).toBeNull();
   });
 });
+
+describe("useRunScenario impactFunctionOverride wire format (#453)", () => {
+  const OVERRIDE = {
+    id: 50,
+    name: "edited",
+    haz_type: "FL",
+    exp_type: "Crops",
+    intensity_unit: "m",
+    intensity: [0, 1, 2],
+    mdd: [0, 0.7, 1],
+    paa: [1, 1, 1],
+  };
+
+  it("omits the field on ERA runs even if the store carries a pending override", async () => {
+    useWorkspaceStore.setState({
+      selectedAppOption: "era",
+      impactFunctionOverride: OVERRIDE,
+    });
+
+    const { result } = renderHook(() => useRunScenario());
+    await result.current.runScenario();
+
+    const body = runScenarioMock.mock.calls[0][0];
+    expect(body.impactFunctionOverride).toBeUndefined();
+  });
+
+  it("forwards the pending override on custom-mode runs and clears it after success", async () => {
+    useWorkspaceStore.setState({
+      selectedAppOption: "explore",
+      selectedExposureFile: "custom.xlsx",
+      impactFunctionOverride: OVERRIDE,
+    });
+
+    const { result } = renderHook(() => useRunScenario());
+    await result.current.runScenario();
+
+    const body = runScenarioMock.mock.calls[0][0];
+    expect(body.impactFunctionOverride).toEqual(OVERRIDE);
+    // After dispatch the workspace clears the pending override so the
+    // next run starts from the canonical curve unless the user re-edits.
+    expect(useWorkspaceStore.getState().impactFunctionOverride).toBeNull();
+    // The active-run summary records the override so the ResultsView
+    // can show the "Modified" badge for this completed run.
+    expect(useResultsStore.getState().activeRunSummary.impactFunctionOverride).toEqual(OVERRIDE);
+  });
+});

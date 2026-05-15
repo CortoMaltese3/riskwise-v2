@@ -12,6 +12,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.models.common import StatusEnvelope
+from backend.models.impact import ImpactFunctionPayload
 
 
 class ScenarioRunRequest(BaseModel):
@@ -39,6 +40,13 @@ class ScenarioRunRequest(BaseModel):
     # UUID and not stable across rebuilds. ``[]`` means "no filter, run
     # every measure attached to the hazard".
     selectedMeasureIds: list[str] = Field(default_factory=list)
+    # Custom-mode IF override (#453). When present, the runner patches
+    # ``entity_present.impfset_specs`` with this spec before calling
+    # ``calculate_impact``; the engine never sees the original entity IF.
+    # ERA-mode runs reject any override with a 400 at the endpoint layer.
+    # The full spec rides on the request so the runner does not need a
+    # second round trip to look the canonical curve back up.
+    impactFunctionOverride: ImpactFunctionPayload | None = None
 
 
 class JobAcceptedResponse(BaseModel):

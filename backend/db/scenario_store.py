@@ -13,6 +13,7 @@ return them verbatim without an extra decode step. The blob-agnostic
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -94,6 +95,12 @@ class ScenarioRow:
     computed_at: datetime | None = None
     is_imported: bool = False
     saved: bool = False
+    # Editable-IF override (#453). ``None`` means "ran the entity workbook
+    # unchanged"; otherwise this is the modified ImpactFunctionSpec the
+    # runner patched into ``impfset_specs`` before ``calculate_impact``.
+    # Serialised as a dict so the frontend can replay it through the same
+    # editor that produced it.
+    impact_function_override: dict | None = None
 
 
 @dataclass
@@ -118,6 +125,7 @@ def insert_scenario(
     is_imported: bool = False,
     saved: bool = False,
     snapshots: list[dict[str, Any]] | None = None,
+    impact_function_override: dict | None = None,
 ) -> None:
     """Persist a finished run: one ``scenarios`` row + N result blobs (+ optional snapshots).
 
@@ -152,9 +160,11 @@ def insert_scenario(
                 future_year, annual_growth, is_era, app_option, status,
                 app_version, engine, engine_version, climada_version,
                 entity_data_sha256, hazard_data_sha256, country_config_sha256,
-                config_version, random_seed, computed_at, is_imported, saved
+                config_version, random_seed, computed_at, is_imported, saved,
+                impact_function_override
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                      ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?)
+                      ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?,
+                      ?)
             """,
             [
                 scenario_id,
@@ -184,6 +194,7 @@ def insert_scenario(
                 computed_at,
                 is_imported,
                 saved,
+                json.dumps(impact_function_override) if impact_function_override else None,
             ],
         )
         for result_type, blob in results.items():
@@ -583,8 +594,34 @@ _SCENARIO_SELECT_COLUMNS = """
     created_at,
     app_version, engine, engine_version, climada_version,
     entity_data_sha256, hazard_data_sha256, country_config_sha256,
-    random_seed, computed_at, is_imported, saved
+    random_seed, computed_at, is_imported, saved,
+    impact_function_override
 """
+
+
+def _decode_override(value: Any) -> dict | None:
+    """Coerce the DuckDB JSON column to a Python dict (or ``None``).
+
+    DuckDB returns ``JSON`` columns as parsed Python values when the
+    connection has the JSON extension loaded, and as strings otherwise.
+    Both branches are handled so this code is robust to either driver
+    behaviour without forcing every call site to special-case the type.
+    """
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, (bytes, bytearray)):
+        value = bytes(value).decode("utf-8")
+    if isinstance(value, str):
+        if not value:
+            return None
+        try:
+            decoded = json.loads(value)
+        except json.JSONDecodeError:
+            return None
+        return decoded if isinstance(decoded, dict) else None
+    return None
 
 
 def _row_to_scenario(row: tuple) -> ScenarioRow:
@@ -616,4 +653,5 @@ def _row_to_scenario(row: tuple) -> ScenarioRow:
         computed_at=row[24],
         is_imported=bool(row[25]) if row[25] is not None else False,
         saved=bool(row[26]) if row[26] is not None else False,
+        impact_function_override=_decode_override(row[27]),
     )

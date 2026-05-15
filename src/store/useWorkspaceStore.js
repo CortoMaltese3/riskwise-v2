@@ -94,6 +94,12 @@ const useWorkspaceStore = create((set, get) => ({
   impactFunctionSpec: null,
   impactFunctionError: "",
   impactFunctionLoading: false,
+  // Pending custom-mode IF override (#453). ``null`` means "no override —
+  // the engine will use the entity workbook's spec". Set by the editor's
+  // Save handler; cleared on the same triggers that wipe
+  // ``selectedMeasureIds`` so a stale edit cannot ride into the next run
+  // for a different country/hazard/exposure/mode.
+  impactFunctionOverride: null,
   // Each entry is an entity-derived measure enriched with catalog
   // metadata (display label, built-in flag, source citation); see the
   // backend ``run_fetch_measures`` for the join. The picker is
@@ -247,6 +253,7 @@ const useWorkspaceStore = create((set, get) => ({
       selectedAppOption: option,
       selectedMeasureIds: [],
       lastRunSkippedMeasures: [],
+      impactFunctionOverride: null,
     }),
   // One-shot setter for the Workspace ``Restore`` flow. Sets every active-
   // scenario input from a persisted scenario row in a single ``set`` call so
@@ -276,6 +283,11 @@ const useWorkspaceStore = create((set, get) => ({
       patch.selectedExposureCategory = scenario.asset_type ?? null;
       patch.isValidExposure = true;
     }
+    // Restore the saved IF override so the middle-pane viewer shows the
+    // modified curve and the "Modified" badge (#453). ``null`` means the
+    // run was on the canonical curve; explicit setting keeps the restore
+    // path from inheriting whatever was previously in the store.
+    patch.impactFunctionOverride = scenario.impact_function_override ?? null;
     set(patch);
   },
   setSelectedCountry: (country) =>
@@ -283,6 +295,7 @@ const useWorkspaceStore = create((set, get) => ({
       selectedCountry: country,
       selectedMeasureIds: [],
       lastRunSkippedMeasures: [],
+      impactFunctionOverride: null,
     }),
   setSelectedExposure: (exposure) => {
     set({
@@ -290,15 +303,18 @@ const useWorkspaceStore = create((set, get) => ({
       selectedAnnualGrowth: 0,
       selectedMeasureIds: [],
       lastRunSkippedMeasures: [],
+      impactFunctionOverride: null,
     });
   },
   setSelectedExposureCategory: (category) => set({ selectedExposureCategory: category }),
-  setSelectedExposureFile: (exposureFile) => set({ selectedExposureFile: exposureFile }),
+  setSelectedExposureFile: (exposureFile) =>
+    set({ selectedExposureFile: exposureFile, impactFunctionOverride: null }),
   setSelectedHazard: (hazard) =>
     set({
       selectedHazard: hazard,
       selectedMeasureIds: [],
       lastRunSkippedMeasures: [],
+      impactFunctionOverride: null,
     }),
   setSelectedHazardFile: (hazardFile) => set({ selectedHazardFile: hazardFile }),
   setSelectedScenario: (scenario) => set({ selectedScenario: scenario }),
@@ -329,6 +345,9 @@ const useWorkspaceStore = create((set, get) => ({
   setImpactFunctionSpec: (spec) => set({ impactFunctionSpec: spec }),
   setImpactFunctionError: (message) => set({ impactFunctionError: message || "" }),
   setImpactFunctionLoading: (loading) => set({ impactFunctionLoading: Boolean(loading) }),
+  setImpactFunctionOverride: (override) =>
+    set({ impactFunctionOverride: override && typeof override === "object" ? override : null }),
+  clearImpactFunctionOverride: () => set({ impactFunctionOverride: null }),
   setAdaptationMeasures: (measures) =>
     set({ adaptationMeasures: Array.isArray(measures) ? measures : [] }),
   setSelectedAnnualGrowth: (annualGrowth) => set({ selectedAnnualGrowth: annualGrowth }),

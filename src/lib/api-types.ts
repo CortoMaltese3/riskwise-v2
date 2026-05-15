@@ -180,6 +180,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/impact-function/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Impact Function Validate
+         * @description Validate a user-edited impact function against the registry's rules.
+         *
+         *     Returns a 200 with ``data.valid`` either way: the editor uses the
+         *     ``errors`` array to highlight offending inputs inline. Calling this
+         *     before a run is purely advisory — ``POST /scenario/run`` re-runs the
+         *     same validator so a stale UI cannot push an invalid curve through.
+         */
+        post: operations["impact_function_validate_api_v1_impact_function_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/macro/chart-data": {
         parameters: {
             query?: never;
@@ -945,6 +970,18 @@ export interface components {
             status: components["schemas"]["Status"];
         };
         /**
+         * ImpactFunctionFieldError
+         * @description One validation failure as the editor sees it.
+         */
+        ImpactFunctionFieldError: {
+            /** Code */
+            code: string;
+            /** Field */
+            field: string;
+            /** Message */
+            message: string;
+        };
+        /**
          * ImpactFunctionPayload
          * @description The full curve plus metadata for one impact function.
          */
@@ -969,6 +1006,51 @@ export interface components {
         /** ImpactFunctionResponse */
         ImpactFunctionResponse: {
             data: components["schemas"]["ImpactFunctionPayload"];
+            status: components["schemas"]["Status"];
+        };
+        /**
+         * ImpactFunctionValidateData
+         * @description Validation result envelope: ``valid`` + the field-error list.
+         */
+        ImpactFunctionValidateData: {
+            /** Errors */
+            errors: components["schemas"]["ImpactFunctionFieldError"][];
+            /** Valid */
+            valid: boolean;
+        };
+        /**
+         * ImpactFunctionValidateRequest
+         * @description Body for ``POST /api/v1/impact-function/validate`` (#453).
+         *
+         *     The renderer posts the spec the user just edited; the server replies
+         *     with structured per-field errors so the editor can highlight the
+         *     offending inputs inline. ``extra="allow"`` keeps the boundary tolerant
+         *     of stray client-only fields without compromising the validator's own
+         *     required-field checks.
+         */
+        ImpactFunctionValidateRequest: {
+            /** Exp Type */
+            exp_type?: string | null;
+            /** Haz Type */
+            haz_type?: string | null;
+            /** Id */
+            id?: number | null;
+            /** Intensity */
+            intensity?: number[] | null;
+            /** Intensity Unit */
+            intensity_unit?: string | null;
+            /** Mdd */
+            mdd?: number[] | null;
+            /** Name */
+            name?: string | null;
+            /** Paa */
+            paa?: number[] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ImpactFunctionValidateResponse */
+        ImpactFunctionValidateResponse: {
+            data: components["schemas"]["ImpactFunctionValidateData"];
             status: components["schemas"]["Status"];
         };
         /** JobAcceptedResponse */
@@ -1227,6 +1309,7 @@ export interface components {
             hazardFile?: string | null;
             /** Hazardtype */
             hazardType?: string | null;
+            impactFunctionOverride?: components["schemas"]["ImpactFunctionPayload"] | null;
             /** Isera */
             isEra?: boolean | null;
             /** Scenario */
@@ -1277,6 +1360,7 @@ export interface components {
             hazard_type?: string | null;
             /** Id */
             id: string;
+            impact_function_override?: components["schemas"]["ImpactFunctionPayload"] | null;
             /** Is Era */
             is_era?: boolean | null;
             /**
@@ -1284,6 +1368,11 @@ export interface components {
              * @default false
              */
             is_imported: boolean;
+            /**
+             * Modified
+             * @default false
+             */
+            modified: boolean;
             /** Name */
             name?: string | null;
             /** Notes */
@@ -1718,6 +1807,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImpactFunctionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    impact_function_validate_api_v1_impact_function_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImpactFunctionValidateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpactFunctionValidateResponse"];
                 };
             };
             /** @description Validation Error */
