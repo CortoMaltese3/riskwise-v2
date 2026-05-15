@@ -23,6 +23,7 @@ const useRunScenario = () => {
   const selectedScenario = useWorkspaceStore((s) => s.selectedScenario);
   const selectedTimeHorizon = useWorkspaceStore((s) => s.selectedTimeHorizon);
   const selectedMeasureIds = useWorkspaceStore((s) => s.selectedMeasureIds);
+  const impactFunctionOverride = useWorkspaceStore((s) => s.impactFunctionOverride);
   const setLastRunSkippedMeasures = useWorkspaceStore((s) => s.setLastRunSkippedMeasures);
   const setScenarioRunCode = useWorkspaceStore((s) => s.setScenarioRunCode);
 
@@ -38,6 +39,10 @@ const useRunScenario = () => {
   const setScenarioPhase = useResultsStore((s) => s.setScenarioPhase);
   const setActiveRunSummary = useResultsStore((s) => s.setActiveRunSummary);
   const setActiveRunImpactFunction = useResultsStore((s) => s.setActiveRunImpactFunction);
+  const setActiveRunImpactFunctionOverride = useResultsStore(
+    (s) => s.setActiveRunImpactFunctionOverride
+  );
+  const clearImpactFunctionOverride = useWorkspaceStore((s) => s.clearImpactFunctionOverride);
 
   const { t } = useTranslation();
 
@@ -59,6 +64,16 @@ const useRunScenario = () => {
       // can't leak into the in-flight body.
       const dispatchedMeasureIds = [...selectedMeasureIds];
       body.selectedMeasureIds = dispatchedMeasureIds;
+      // Snapshot the IF override (#453). Only attach the field if there
+      // is one to send so ERA-mode runs (which forbid it on the server)
+      // stay clean even if a stale override lingers in the store.
+      const dispatchedOverride =
+        impactFunctionOverride && selectedAppOption !== "era"
+          ? { ...impactFunctionOverride }
+          : null;
+      if (dispatchedOverride) {
+        body.impactFunctionOverride = dispatchedOverride;
+      }
       // Snapshot the inputs that drive the chip's summary line at dispatch
       // so the user can navigate the workspace freely mid-run without
       // changing what the chip says is running. ``landingTab`` rides along
@@ -79,7 +94,14 @@ const useRunScenario = () => {
         // the summary so the ``ResultsView`` secondary entry point can open
         // the impact-function dialog for the run that just completed (#452).
         impactFunction: null,
+        // Carries the override the run was dispatched with so the
+        // ResultsView "Modified" badge shows for this run (#453).
+        impactFunctionOverride: dispatchedOverride,
       });
+      // Mirror via the dedicated setter so callers that read directly
+      // from useResultsStore can rely on a stable update path even if
+      // the summary shape changes later.
+      setActiveRunImpactFunctionOverride(dispatchedOverride);
       // Fire-and-forget IF lookup so the ``ResultsView`` secondary entry
       // point can open the dialog without a re-fetch. A failed lookup is
       // non-fatal — the button hides when ``impactFunction`` is missing —
@@ -115,6 +137,13 @@ const useRunScenario = () => {
             : [];
           if (succeeded) {
             setLastRunSkippedMeasures(skippedNames);
+            // The override has now been applied to the run that just
+            // completed. Clear the pending workspace state so the next
+            // scenario starts from the canonical curve unless the user
+            // explicitly edits again (issue #453).
+            if (dispatchedOverride) {
+              clearImpactFunctionOverride();
+            }
           }
           if (succeeded && skippedNames.length > 0) {
             setAlertMessage(
@@ -162,9 +191,12 @@ const useRunScenario = () => {
       selectedScenario,
       selectedTimeHorizon,
       selectedMeasureIds,
+      impactFunctionOverride,
       setLastRunSkippedMeasures,
       setActiveRunSummary,
       setActiveRunImpactFunction,
+      setActiveRunImpactFunctionOverride,
+      clearImpactFunctionOverride,
       setAlertMessage,
       setAlertSeverity,
       setAlertShowMessage,

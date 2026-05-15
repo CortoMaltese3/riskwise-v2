@@ -1209,5 +1209,10 @@
     "impact_function_dialog_yaxis": "Fraction (0–1)",
     "impact_function_dialog_mdd": "MDD (mean damage degree)",
     "impact_function_dialog_paa": "PAA (percentage of affected assets)",
+    "impact_function_editor_edit": "Edit",
+    "impact_function_editor_save": "Save",
+    "impact_function_editor_cancel": "Cancel",
+    "impact_function_editor_save_error": "Could not validate the edited impact function. Please try again.",
+    "impact_function_modified_badge": "Modified",
     "results_view_impact_function": "View impact function"
 }

@@ -1,6 +1,6 @@
 import React from "react";
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { cleanup, render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { cleanup, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material/styles";
 
 import theme from "../theme/theme";
@@ -45,6 +45,13 @@ vi.mock("chart.js", () => ({
   Title: {},
   Tooltip: {},
   Legend: {},
+}));
+
+const validateImpactFunctionMock = vi.fn();
+vi.mock("../lib/RiskWiseClient", () => ({
+  default: {
+    validateImpactFunction: (...args) => validateImpactFunctionMock(...args),
+  },
 }));
 
 import ImpactFunctionDialog from "../components/dialogs/ImpactFunctionDialog";
@@ -104,9 +111,9 @@ describe("ImpactFunctionDialog", () => {
     expect(props.options.scales.x.type).toBe("linear");
   });
 
-  it("renders no Edit affordance — viewer is strictly read-only", () => {
+  it("renders no Edit affordance in ERA mode — canonical IFs are read-only", () => {
     renderDialog();
-    expect(screen.queryByRole("button", { name: /edit/i })).toBeNull();
+    expect(screen.queryByTestId("impact-function-editor-enter")).toBeNull();
   });
 
   it("invokes onClose when the close button is clicked", () => {
@@ -123,5 +130,105 @@ describe("ImpactFunctionDialog", () => {
       </ThemeProvider>
     );
     expect(screen.queryByTestId("impact-function-line-chart")).toBeNull();
+  });
+});
+
+describe("ImpactFunctionDialog edit mode (#453)", () => {
+  beforeEach(() => {
+    validateImpactFunctionMock.mockReset();
+  });
+
+  const renderCustom = (props = {}) =>
+    render(
+      <ThemeProvider theme={theme}>
+        <ImpactFunctionDialog
+          open
+          onClose={() => {}}
+          impactFunction={SPEC}
+          mode="custom"
+          {...props}
+        />
+      </ThemeProvider>
+    );
+
+  it("shows the Edit affordance in custom mode", () => {
+    renderCustom();
+    expect(screen.getByTestId("impact-function-editor-enter")).toBeInTheDocument();
+  });
+
+  it("renders editable inputs after entering edit mode and updates the chart live", () => {
+    renderCustom();
+    fireEvent.click(screen.getByTestId("impact-function-editor-enter"));
+    const mddInput = screen.getByTestId("impact-function-editor-mdd-2");
+    fireEvent.change(mddInput, { target: { value: "0.9" } });
+    // The chart sees the modified series on the next render — live preview.
+    const props = lineSpy.mock.calls[lineSpy.mock.calls.length - 1][0];
+    expect(props.data.datasets[0].data[2]).toBeCloseTo(0.9);
+  });
+
+  it("posts the candidate to the validator on save and writes the override back on success", async () => {
+    validateImpactFunctionMock.mockResolvedValue({
+      success: true,
+      result: { data: { valid: true, errors: [] }, status: { code: 2000, message: "ok" } },
+    });
+    const onSaveOverride = vi.fn();
+    renderCustom({ onSaveOverride });
+
+    fireEvent.click(screen.getByTestId("impact-function-editor-enter"));
+    fireEvent.change(screen.getByTestId("impact-function-editor-mdd-2"), {
+      target: { value: "0.6" },
+    });
+    fireEvent.click(screen.getByTestId("impact-function-editor-save"));
+
+    await waitFor(() => expect(onSaveOverride).toHaveBeenCalled());
+    const saved = onSaveOverride.mock.calls[0][0];
+    expect(saved.mdd[2]).toBeCloseTo(0.6);
+    expect(validateImpactFunctionMock).toHaveBeenCalled();
+  });
+
+  it("renders per-field errors when validation fails and does not save", async () => {
+    validateImpactFunctionMock.mockResolvedValue({
+      success: true,
+      result: {
+        data: {
+          valid: false,
+          errors: [
+            { field: "intensity[2]", code: "not_non_decreasing", message: "intensity must climb" },
+          ],
+        },
+        status: { code: 2000, message: "ok" },
+      },
+    });
+    const onSaveOverride = vi.fn();
+    renderCustom({ onSaveOverride });
+
+    fireEvent.click(screen.getByTestId("impact-function-editor-enter"));
+    fireEvent.click(screen.getByTestId("impact-function-editor-save"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("impact-function-editor-errors")).toBeInTheDocument()
+    );
+    expect(onSaveOverride).not.toHaveBeenCalled();
+  });
+
+  it("Cancel discards edits and exits edit mode without saving", () => {
+    const onSaveOverride = vi.fn();
+    renderCustom({ onSaveOverride });
+
+    fireEvent.click(screen.getByTestId("impact-function-editor-enter"));
+    fireEvent.change(screen.getByTestId("impact-function-editor-mdd-2"), {
+      target: { value: "0.99" },
+    });
+    fireEvent.click(screen.getByTestId("impact-function-editor-cancel"));
+
+    // Back to read-only — the Edit button reappears, no MDD-2 input.
+    expect(screen.getByTestId("impact-function-editor-enter")).toBeInTheDocument();
+    expect(screen.queryByTestId("impact-function-editor-mdd-2")).toBeNull();
+    expect(onSaveOverride).not.toHaveBeenCalled();
+  });
+
+  it("shows the Modified badge when a pending override is supplied", () => {
+    renderCustom({ pendingOverride: { ...SPEC, mdd: [0.0, 0.4, 0.7, 1.0] } });
+    expect(screen.getByTestId("impact-function-modified-badge")).toBeInTheDocument();
   });
 });

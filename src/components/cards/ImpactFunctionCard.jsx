@@ -1,10 +1,12 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
   Box,
+  Button,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
   Stack,
   Table,
@@ -28,6 +30,7 @@ import {
   Tooltip,
 } from "chart.js";
 
+import ImpactFunctionDialog from "../dialogs/ImpactFunctionDialog";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend);
@@ -40,15 +43,26 @@ const ImpactFunctionCard = () => {
   const spec = useWorkspaceStore((s) => s.impactFunctionSpec);
   const loading = useWorkspaceStore((s) => s.impactFunctionLoading);
   const error = useWorkspaceStore((s) => s.impactFunctionError);
+  const override = useWorkspaceStore((s) => s.impactFunctionOverride);
+  const setOverride = useWorkspaceStore((s) => s.setImpactFunctionOverride);
+  const selectedAppOption = useWorkspaceStore((s) => s.selectedAppOption);
+
+  const [editorOpen, setEditorOpen] = useState(false);
+  const editable = selectedAppOption !== "era";
+  // When an override is pending, the card visualises that — not the
+  // canonical curve — so the user can compare the chart they will run
+  // against the saved edits at a glance (#453).
+  const displaySpec = override ?? spec;
+  const isModified = override != null;
 
   const chartData = useMemo(() => {
-    if (!spec) return null;
+    if (!displaySpec) return null;
     return {
-      labels: spec.intensity.map((v) => v),
+      labels: displaySpec.intensity.map((v) => v),
       datasets: [
         {
           label: t("impact_function_dialog_mdd"),
-          data: spec.mdd,
+          data: displaySpec.mdd,
           borderColor: theme.palette.primary.main,
           backgroundColor: theme.palette.primary.main,
           tension: 0.1,
@@ -56,7 +70,7 @@ const ImpactFunctionCard = () => {
         },
         {
           label: t("impact_function_dialog_paa"),
-          data: spec.paa,
+          data: displaySpec.paa,
           borderColor: theme.palette.secondary.main,
           backgroundColor: theme.palette.secondary.main,
           tension: 0.1,
@@ -64,10 +78,10 @@ const ImpactFunctionCard = () => {
         },
       ],
     };
-  }, [spec, theme, t]);
+  }, [displaySpec, theme, t]);
 
   const chartOptions = useMemo(() => {
-    if (!spec) return null;
+    if (!displaySpec) return null;
     return {
       responsive: true,
       maintainAspectRatio: false,
@@ -76,7 +90,9 @@ const ImpactFunctionCard = () => {
           type: "linear",
           title: {
             display: true,
-            text: t("impact_function_dialog_intensity_axis", { unit: spec.intensity_unit }),
+            text: t("impact_function_dialog_intensity_axis", {
+              unit: displaySpec.intensity_unit,
+            }),
           },
         },
         y: {
@@ -89,7 +105,12 @@ const ImpactFunctionCard = () => {
         tooltip: { mode: "index", intersect: false },
       },
     };
-  }, [spec, t]);
+  }, [displaySpec, t]);
+
+  const handleSaveOverride = (saved) => {
+    setOverride(saved);
+    setEditorOpen(false);
+  };
 
   return (
     <Card
@@ -103,24 +124,41 @@ const ImpactFunctionCard = () => {
       }}
     >
       <CardContent>
-        <Typography
-          gutterBottom
-          variant="h5"
-          component="div"
-          color="text.primary"
-          sx={{
-            textAlign: "center",
-            fontWeight: "bold",
-            backgroundColor: "secondary.main",
-            borderRadius: (th) => th.spacing(1),
-            padding: 1,
-            marginBottom: 2,
-          }}
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="center"
+          spacing={1}
+          sx={{ mb: 2 }}
         >
-          {spec
-            ? t("impact_function_dialog_title", { id: spec.id, name: spec.name })
-            : t("impact_function_card_title")}
-        </Typography>
+          <Typography
+            gutterBottom
+            variant="h5"
+            component="div"
+            color="text.primary"
+            sx={{
+              textAlign: "center",
+              fontWeight: "bold",
+              backgroundColor: "secondary.main",
+              borderRadius: (th) => th.spacing(1),
+              padding: 1,
+              marginBottom: 0,
+              flexGrow: 1,
+            }}
+          >
+            {displaySpec
+              ? t("impact_function_dialog_title", { id: displaySpec.id, name: displaySpec.name })
+              : t("impact_function_card_title")}
+          </Typography>
+          {isModified && (
+            <Chip
+              color="warning"
+              size="small"
+              label={t("impact_function_modified_badge")}
+              data-testid="impact-function-card-modified-badge"
+            />
+          )}
+        </Stack>
 
         {loading && (
           <Stack
@@ -148,7 +186,7 @@ const ImpactFunctionCard = () => {
           </Typography>
         )}
 
-        {!loading && !error && !spec && (
+        {!loading && !error && !displaySpec && (
           <Typography
             variant="body2"
             color="text.secondary"
@@ -159,7 +197,7 @@ const ImpactFunctionCard = () => {
           </Typography>
         )}
 
-        {!loading && !error && spec && (
+        {!loading && !error && displaySpec && (
           <>
             <Typography
               variant="caption"
@@ -167,7 +205,7 @@ const ImpactFunctionCard = () => {
               component="div"
               sx={{ mb: 1, textAlign: "center" }}
             >
-              {t("impact_function_dialog_intensity_unit", { unit: spec.intensity_unit })}
+              {t("impact_function_dialog_intensity_unit", { unit: displaySpec.intensity_unit })}
             </Typography>
             <Box sx={{ height: CHART_HEIGHT, mb: 2 }} data-testid="impact-function-chart">
               <Line data={chartData} options={chartOptions} />
@@ -177,26 +215,49 @@ const ImpactFunctionCard = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>
-                      {t("impact_function_dialog_intensity_axis", { unit: spec.intensity_unit })}
+                      {t("impact_function_dialog_intensity_axis", {
+                        unit: displaySpec.intensity_unit,
+                      })}
                     </TableCell>
                     <TableCell align="right">{t("impact_function_dialog_mdd")}</TableCell>
                     <TableCell align="right">{t("impact_function_dialog_paa")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {spec.intensity.map((intensityValue, idx) => (
+                  {displaySpec.intensity.map((intensityValue, idx) => (
                     <TableRow key={`${intensityValue}-${idx}`}>
                       <TableCell>{intensityValue}</TableCell>
-                      <TableCell align="right">{spec.mdd[idx]}</TableCell>
-                      <TableCell align="right">{spec.paa[idx]}</TableCell>
+                      <TableCell align="right">{displaySpec.mdd[idx]}</TableCell>
+                      <TableCell align="right">{displaySpec.paa[idx]}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
+            {editable && (
+              <Stack direction="row" justifyContent="center" sx={{ mt: 2 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => setEditorOpen(true)}
+                  data-testid="impact-function-card-edit"
+                >
+                  {t("impact_function_editor_edit")}
+                </Button>
+              </Stack>
+            )}
           </>
         )}
       </CardContent>
+      <ImpactFunctionDialog
+        open={editorOpen}
+        onClose={() => setEditorOpen(false)}
+        impactFunction={spec}
+        pendingOverride={override}
+        mode={editable ? "custom" : "era"}
+        onSaveOverride={handleSaveOverride}
+      />
     </Card>
   );
 };

@@ -84,6 +84,8 @@ from backend.models import (
     HealthResponse,
     HydrateScenarioResponse,
     ImpactFunctionResponse,
+    ImpactFunctionValidateRequest,
+    ImpactFunctionValidateResponse,
     JobAcceptedResponse,
     MacroChartDataRequest,
     MacroChartDataResponse,
@@ -466,6 +468,34 @@ async def scenario_run(payload: ScenarioRunRequest) -> dict:
             detail="Another scenario is already running",
         )
 
+    # ERA-mode runs are strict about provenance: the canonical impact
+    # functions are the answer of record, so an override on an ERA run
+    # would silently break that contract. Custom mode is where edits
+    # belong (#453, DECISIONS D28). Reject at the boundary so the runner
+    # never has to second-guess the input.
+    if payload.impactFunctionOverride is not None and payload.isEra:
+        raise HTTPException(
+            status_code=400,
+            detail="impactFunctionOverride is not allowed on ERA-mode runs",
+        )
+
+    # Server-side validation runs against the registry's scientific rules
+    # so a renderer that bypasses the editor's client-side checks still
+    # cannot push a non-monotonic curve into the engine.
+    if payload.impactFunctionOverride is not None:
+        from backend.impact.validator import validate_impact_function_override
+
+        errors = validate_impact_function_override(payload.impactFunctionOverride.model_dump())
+        if errors:
+            envelope = _make_error(
+                "validation_error",
+                "impactFunctionOverride failed validation",
+            )
+            envelope["errors"] = [
+                {"field": e.field, "code": e.code, "message": e.message} for e in errors
+            ]
+            return JSONResponse(status_code=400, content=envelope)
+
     ok, msg = _check_memory_preflight()
     if not ok:
         raise HTTPException(status_code=413, detail=msg)
@@ -649,7 +679,13 @@ def _status_ok() -> dict:
 def _scenario_row_to_dict(row: Any) -> dict:
     from dataclasses import asdict
 
-    return asdict(row)
+    payload = asdict(row)
+    # ``modified`` is derived state — the renderer surfaces a "Modified"
+    # badge whenever a run carried an IF override (#453). Pre-computing
+    # here keeps the consumers from re-deriving the same boolean three
+    # times across the workspace, results, and viewer code paths.
+    payload["modified"] = payload.get("impact_function_override") is not None
+    return payload
 
 
 @app.get(f"{API_PREFIX}/scenarios", response_model=ScenarioListResponse)
@@ -973,6 +1009,27 @@ async def scenario_waterfall() -> dict:
 @app.get(f"{API_PREFIX}/scenario/cost-benefit", response_model=CostBenefitResponse)
 async def scenario_cost_benefit() -> dict:
     return await _dispatch("run_fetch_costbenefit.py", None)
+
+
+@app.post(f"{API_PREFIX}/impact-function/validate", response_model=ImpactFunctionValidateResponse)
+async def impact_function_validate(payload: ImpactFunctionValidateRequest) -> dict:
+    """Validate a user-edited impact function against the registry's rules.
+
+    Returns a 200 with ``data.valid`` either way: the editor uses the
+    ``errors`` array to highlight offending inputs inline. Calling this
+    before a run is purely advisory — ``POST /scenario/run`` re-runs the
+    same validator so a stale UI cannot push an invalid curve through.
+    """
+    from backend.impact.validator import validate_impact_function_override
+
+    errors = validate_impact_function_override(payload.model_dump())
+    return {
+        "data": {
+            "valid": not errors,
+            "errors": [{"field": e.field, "code": e.code, "message": e.message} for e in errors],
+        },
+        "status": _status_ok(),
+    }
 
 
 @app.get(f"{API_PREFIX}/impact-function", response_model=ImpactFunctionResponse)

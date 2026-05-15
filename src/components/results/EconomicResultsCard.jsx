@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Box, Button, Chip, Stack, Typography } from "@mui/material";
 
 import ImpactFunctionDialog from "../dialogs/ImpactFunctionDialog";
 import ResultsTypography from "./ResultsTypography";
@@ -16,7 +16,13 @@ const EconomicResultsCard = () => {
   const activeRunSummary = useResultsStore((s) => s.activeRunSummary);
   const { t } = useTranslation();
   const [impactFunctionDialogOpen, setImpactFunctionDialogOpen] = useState(false);
+  // The override the dispatched run carried, if any. The dialog uses
+  // ``pendingOverride`` to render the actual modified curve the engine
+  // saw — the canonical ``runImpactFunction`` is the comparison baseline
+  // (#453).
+  const runOverride = activeRunSummary?.impactFunctionOverride ?? null;
   const runImpactFunction = activeRunSummary?.impactFunction ?? null;
+  const isModified = runOverride != null;
 
   const handleButtonClick = (type) => {
     setActiveMap(type);
@@ -59,18 +65,30 @@ const EconomicResultsCard = () => {
           borderRadius: (theme) => theme.spacing(0.5),
         }}
       >
-        <Typography
-          variant="h6"
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="center"
+          spacing={1}
           sx={{
             borderBottom: 1,
             borderBottomColor: "text.secondary",
             paddingBottom: 1,
             color: "text.secondary",
-            textAlign: "center",
           }}
         >
-          {t("results_eco_details")}
-        </Typography>
+          <Typography variant="h6" sx={{ color: "text.secondary" }}>
+            {t("results_eco_details")}
+          </Typography>
+          {isModified && (
+            <Chip
+              color="warning"
+              size="small"
+              label={t("impact_function_modified_badge")}
+              data-testid="results-impact-function-modified-badge"
+            />
+          )}
+        </Stack>
 
         <ResultsTypography />
         {runImpactFunction && (
@@ -91,6 +109,8 @@ const EconomicResultsCard = () => {
         open={impactFunctionDialogOpen}
         onClose={() => setImpactFunctionDialogOpen(false)}
         impactFunction={runImpactFunction}
+        pendingOverride={runOverride}
+        mode="era"
       />
     </Box>
   );

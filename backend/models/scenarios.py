@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.models.common import Status
+from backend.models.impact import ImpactFunctionPayload
 
 # Domain that produced a snapshot — used by the PDF report to route each
 # selected snapshot into the right per-domain section (#362). The literal
@@ -49,6 +50,14 @@ class ScenarioWorkspaceItem(BaseModel):
     computed_at: datetime | None = None
     is_imported: bool = False
     saved: bool = False
+    # Editable-IF override (#453) — present iff the run was a custom-mode
+    # scenario whose user edited the impact function before dispatch. The
+    # full spec rides along so the restore flow can replay the modified
+    # curve in the viewer/editor without a second lookup. ``modified``
+    # mirrors ``override is not None`` and is provided as a convenience
+    # for the renderer's badge logic.
+    impact_function_override: ImpactFunctionPayload | None = None
+    modified: bool = False
 
 
 class ScenarioDetailPayload(BaseModel):

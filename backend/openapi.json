@@ -770,6 +770,30 @@
         "title": "HydrateScenarioResponse",
         "type": "object"
       },
+      "ImpactFunctionFieldError": {
+        "description": "One validation failure as the editor sees it.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "code",
+          "message"
+        ],
+        "title": "ImpactFunctionFieldError",
+        "type": "object"
+      },
       "ImpactFunctionPayload": {
         "description": "The full curve plus metadata for one impact function.",
         "properties": {
@@ -842,6 +866,149 @@
           "status"
         ],
         "title": "ImpactFunctionResponse",
+        "type": "object"
+      },
+      "ImpactFunctionValidateData": {
+        "description": "Validation result envelope: ``valid`` + the field-error list.",
+        "properties": {
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ImpactFunctionFieldError"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid",
+          "errors"
+        ],
+        "title": "ImpactFunctionValidateData",
+        "type": "object"
+      },
+      "ImpactFunctionValidateRequest": {
+        "additionalProperties": true,
+        "description": "Body for ``POST /api/v1/impact-function/validate`` (#453).\n\nThe renderer posts the spec the user just edited; the server replies\nwith structured per-field errors so the editor can highlight the\noffending inputs inline. ``extra=\"allow\"`` keeps the boundary tolerant\nof stray client-only fields without compromising the validator's own\nrequired-field checks.",
+        "properties": {
+          "exp_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exp Type"
+          },
+          "haz_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Haz Type"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "intensity": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intensity"
+          },
+          "intensity_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intensity Unit"
+          },
+          "mdd": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mdd"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "paa": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paa"
+          }
+        },
+        "title": "ImpactFunctionValidateRequest",
+        "type": "object"
+      },
+      "ImpactFunctionValidateResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ImpactFunctionValidateData"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "title": "ImpactFunctionValidateResponse",
         "type": "object"
       },
       "JobAcceptedResponse": {
@@ -1554,6 +1721,16 @@
             ],
             "title": "Hazardtype"
           },
+          "impactFunctionOverride": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImpactFunctionPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "isEra": {
             "anyOf": [
               {
@@ -1786,6 +1963,16 @@
             "title": "Id",
             "type": "string"
           },
+          "impact_function_override": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImpactFunctionPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "is_era": {
             "anyOf": [
               {
@@ -1800,6 +1987,11 @@
           "is_imported": {
             "default": false,
             "title": "Is Imported",
+            "type": "boolean"
+          },
+          "modified": {
+            "default": false,
+            "title": "Modified",
             "type": "boolean"
           },
           "name": {
@@ -2729,6 +2921,45 @@
           }
         },
         "summary": "Impact Function Endpoint"
+      }
+    },
+    "/api/v1/impact-function/validate": {
+      "post": {
+        "description": "Validate a user-edited impact function against the registry's rules.\n\nReturns a 200 with ``data.valid`` either way: the editor uses the\n``errors`` array to highlight offending inputs inline. Calling this\nbefore a run is purely advisory \u2014 ``POST /scenario/run`` re-runs the\nsame validator so a stale UI cannot push an invalid curve through.",
+        "operationId": "impact_function_validate_api_v1_impact_function_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImpactFunctionValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpactFunctionValidateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Impact Function Validate"
       }
     },
     "/api/v1/macro/chart-data": {
