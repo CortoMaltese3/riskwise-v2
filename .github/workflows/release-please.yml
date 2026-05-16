@@ -22,3 +22,6 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          # PAT (not the default GITHUB_TOKEN) so the tag push fires release.yml.
+          # Required scopes on RELEASE_PLEASE_PAT: contents:write, actions:write.
+          token: ${{ secrets.RELEASE_PLEASE_PAT }}
