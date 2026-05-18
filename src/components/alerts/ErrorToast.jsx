@@ -1,6 +1,7 @@
 import React, { forwardRef, useEffect } from "react";
 import { Snackbar, Stack, Typography } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
+import { useTranslation } from "react-i18next";
 
 import useUIStore from "../../store/useUIStore";
 
@@ -12,6 +13,7 @@ const Alert = forwardRef(function Alert(props, ref) {
 });
 
 const ErrorToast = () => {
+  const { t } = useTranslation();
   const error = useUIStore((s) => s.error);
   const clearError = useUIStore((s) => s.clearError);
   const setError = useUIStore((s) => s.setError);
@@ -41,11 +43,11 @@ const ErrorToast = () => {
         <Alert onClose={clearError} sx={{ width: "100%" }}>
           <Typography variant="body2">{error.message}</Typography>
           <Typography variant="caption" sx={{ display: "block", fontFamily: "monospace" }}>
-            Error ID: {error.error_id}
+            {t("error_id_label", { id: error.error_id })}
           </Typography>
           {error.request_id && (
             <Typography variant="caption" sx={{ display: "block", fontFamily: "monospace" }}>
-              Request ID: {error.request_id}
+              {t("error_request_id_label", { id: error.request_id })}
             </Typography>
           )}
         </Alert>

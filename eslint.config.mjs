@@ -6,6 +6,7 @@ import js from "@eslint/js";
 import globals from "globals";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
+import i18next from "eslint-plugin-i18next";
 
 export default [
   {
@@ -47,6 +48,7 @@ export default [
     plugins: {
       react,
       "react-hooks": reactHooks,
+      i18next,
     },
     settings: {
       react: { version: "detect" },
@@ -70,6 +72,19 @@ export default [
       // for the tooling baseline; re-enable once the gated sections are
       // either deleted or feature-flagged.
       "no-constant-binary-expression": "off",
+      // a2-i18n-enforced (issue #146 A2): raw English text in JSX must be
+      // wrapped in t(...). Scoped to JSX text content (mode: "jsx-text-only");
+      // MUI prop strings (variant="body2", size="small", style enums) are
+      // intentionally out of scope — they're not translatable. The frontend
+      // lint job in .github/workflows/tests.yml already runs `npm run lint`,
+      // so this gate fires on every PR.
+      "i18next/no-literal-string": [
+        "error",
+        {
+          mode: "jsx-text-only",
+          "should-validate-template": false,
+        },
+      ],
     },
   },
   {
@@ -85,6 +100,9 @@ export default [
       // Tests can log freely (e.g. console.table for baseline output);
       // they don't ship and they're not subject to the Area 17 logger rule.
       "no-console": "off",
+      // Tests assert against literal strings; the i18n audit (issue #146 / A2)
+      // does not apply.
+      "i18next/no-literal-string": "off",
     },
   },
   // theme-tokens-enforced (issue #78): every source file under `src/` must

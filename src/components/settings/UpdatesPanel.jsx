@@ -122,7 +122,12 @@ const UpdatesPanel = () => {
         <Typography variant="subtitle2">
           {t("settings_updates_current_version", { defaultValue: "Current version" })}
         </Typography>
-        <Typography variant="body2">v{currentVersion}</Typography>
+        <Typography variant="body2">
+          {t("settings_updates_version_value", {
+            version: currentVersion,
+            defaultValue: "v{{version}}",
+          })}
+        </Typography>
 
         <Typography variant="subtitle2" sx={{ mt: 1 }}>
           {t("settings_updates_last_checked", { defaultValue: "Last checked" })}

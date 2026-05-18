@@ -2,6 +2,7 @@ import React, { forwardRef } from "react";
 import PropTypes from "prop-types";
 import { Snackbar, Stack, Button } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
+import { useTranslation } from "react-i18next";
 import useUIStore from "../../store/useUIStore";
 import { layoutTransition } from "../../theme/theme";
 
@@ -10,6 +11,7 @@ const Alert = forwardRef(function Alert(props, ref) {
 });
 
 const AlertMessage = () => {
+  const { t } = useTranslation();
   const alertMessage = useUIStore((s) => s.alertMessage);
   const alertSeverity = useUIStore((s) => s.alertSeverity);
   const alertShowMessage = useUIStore((s) => s.alertShowMessage);
@@ -69,7 +71,7 @@ const AlertMessage = () => {
                 },
               }}
             >
-              View
+              {t("alert_message_view")}
             </Button>
           )}
         </Alert>
