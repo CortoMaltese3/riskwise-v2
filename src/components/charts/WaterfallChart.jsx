@@ -15,6 +15,7 @@ import {
 } from "chart.js";
 
 import { isRtl } from "../../i18nConfig";
+import { bidiIsolate } from "../../lib/bidi";
 import { formatNumber } from "../../lib/formatNumber";
 import { patternForIndex } from "../../utils/chartPatterns";
 import { buildChartThemeOptions } from "../../utils/chartTheme";
@@ -177,7 +178,7 @@ const WaterfallChart = React.forwardRef(function WaterfallChart(
 
   const memoised = useMemo(() => {
     if (!hasData) return null;
-    const labels = data.categories.map((c) => c.label);
+    const labels = data.categories.map((c) => bidiIsolate(c.label, locale));
     const unit = data.measurement_unit || "";
     const barData = data.categories.map((c) => {
       if (TOTAL_KEYS.has(c.key)) return [0, c.value];
@@ -202,7 +203,7 @@ const WaterfallChart = React.forwardRef(function WaterfallChart(
       decrease: data.categories.some((c) => !TOTAL_KEYS.has(c.key) && c.value < 0),
     };
     return { labels, unit, barData, colors, backgrounds, presence };
-  }, [data, hasData, COLOR_TOTAL, COLOR_INCREASE, COLOR_DECREASE, patternStroke]);
+  }, [data, hasData, locale, COLOR_TOTAL, COLOR_INCREASE, COLOR_DECREASE, patternStroke]);
 
   if (!hasData) {
     return (
@@ -220,7 +221,7 @@ const WaterfallChart = React.forwardRef(function WaterfallChart(
     labels,
     datasets: [
       {
-        label: t("economic_non_economic_risk_display_chart_title"),
+        label: bidiIsolate(t("economic_non_economic_risk_display_chart_title"), locale),
         data: barData,
         backgroundColor: backgrounds,
         borderColor: colors,
@@ -300,7 +301,8 @@ const WaterfallChart = React.forwardRef(function WaterfallChart(
         ticks: {
           ...chartThemeOptions.scales.y.ticks,
           maxTicksLimit: 8,
-          callback: (val) => formatNumber(Number(val), locale, { maximumFractionDigits: 0 }),
+          callback: (val) =>
+            bidiIsolate(formatNumber(Number(val), locale, { maximumFractionDigits: 0 }), locale),
         },
         // Replace Chart.js's default tick layout with a fixed 6-tick scale so
         // the smallest bars stay distinguishable from the y-axis baseline at
@@ -333,10 +335,10 @@ const WaterfallChart = React.forwardRef(function WaterfallChart(
         rtl,
         ...chartThemeOptions.plugins.tooltip,
         callbacks: {
-          title: (items) => items[0]?.label ?? "",
+          title: (items) => bidiIsolate(items[0]?.label ?? "", locale),
           label: (ctx) => {
             const category = data.categories[ctx.dataIndex];
-            return formatValue(category.value, unit, locale);
+            return bidiIsolate(formatValue(category.value, unit, locale), locale);
           },
         },
       },

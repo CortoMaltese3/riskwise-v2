@@ -19,6 +19,7 @@ import {
 import useResultsStore from "../../store/useResultsStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { isRtl } from "../../i18nConfig";
+import { bidiIsolate } from "../../lib/bidi";
 import { formatNumber } from "../../lib/formatNumber";
 import { buildChartThemeOptions } from "../../utils/chartTheme";
 import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
@@ -113,7 +114,7 @@ const MacroEconomicChart = () => {
         : `${formatNumber(parseFloat(key) * 100, locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}% ${t("macro_display_chart_adaptation")}`;
 
     return {
-      label,
+      label: bidiIsolate(label, locale),
       // change proportions to percent values for display
       data: groupedData[key].values.map((v) => v * 100),
       borderColor,
@@ -175,7 +176,10 @@ const MacroEconomicChart = () => {
         ticks: {
           ...chartThemeOptions.scales.y.ticks,
           callback: (val) =>
-            `${formatNumber(Number(val), locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,
+            bidiIsolate(
+              `${formatNumber(Number(val), locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,
+              locale
+            ),
         },
       },
     },
@@ -187,7 +191,10 @@ const MacroEconomicChart = () => {
         ...chartThemeOptions.plugins.tooltip,
         callbacks: {
           label: (ctx) =>
-            `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y, locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,
+            bidiIsolate(
+              `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y, locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,
+              locale
+            ),
         },
       },
     },
