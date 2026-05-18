@@ -33,6 +33,13 @@ const DRIFT_ALLOWLIST = new Set([
   // acceptance criterion, non-English locales ship the English text as
   // an explicit placeholder pending translation.
   "impact_function_editor_save_error",
+  // ErrorBoundary / ErrorToast / AlertMessage labels surfaced by the A2
+  // i18n audit (issue #146 A2). Non-English values are English placeholders
+  // awaiting translator review under #146 A1.
+  "error_id_label",
+  "error_request_id_label",
+  "error_boundary_title",
+  "error_boundary_description",
 ]);
 
 const DRIFT_MIN_LENGTH = 15;

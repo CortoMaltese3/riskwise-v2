@@ -1211,5 +1211,12 @@
     "impact_function_editor_cancel": "Cancel",
     "impact_function_editor_save_error": "Could not validate the edited impact function. Please try again.",
     "impact_function_modified_badge": "Modified",
-    "results_view_impact_function": "View impact function"
+    "results_view_impact_function": "View impact function",
+    "alert_message_view": "View",
+    "error_id_label": "Error ID: {{id}}",
+    "error_request_id_label": "Request ID: {{id}}",
+    "error_boundary_title": "Something went wrong.",
+    "error_boundary_description": "The application encountered an unexpected error. You can try to reload; if the problem persists, please share the error ID below with support.",
+    "error_boundary_reload": "Reload",
+    "settings_updates_version_value": "v{{version}}"
 }

@@ -1,6 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { Box, Button, Typography } from "@mui/material";
+import { withTranslation } from "react-i18next";
 
 import logger from "../../lib/logger.ts";
 
@@ -37,6 +38,7 @@ class ErrorBoundary extends React.Component {
     if (!this.state.error) {
       return this.props.children;
     }
+    const { t } = this.props;
     return (
       <Box
         role="alert"
@@ -51,17 +53,16 @@ class ErrorBoundary extends React.Component {
         }}
       >
         <Typography variant="h5" gutterBottom>
-          Something went wrong.
+          {t("error_boundary_title")}
         </Typography>
         <Typography variant="body2" sx={{ mb: 2 }}>
-          The application encountered an unexpected error. You can try to reload; if the problem
-          persists, please share the error ID below with support.
+          {t("error_boundary_description")}
         </Typography>
         <Typography variant="caption" sx={{ mb: 3, fontFamily: "monospace" }}>
-          Error ID: {this.state.errorId}
+          {t("error_id_label", { id: this.state.errorId })}
         </Typography>
         <Button variant="contained" onClick={this.handleReload}>
-          Reload
+          {t("error_boundary_reload")}
         </Button>
       </Box>
     );
@@ -70,6 +71,7 @@ class ErrorBoundary extends React.Component {
 
 ErrorBoundary.propTypes = {
   children: PropTypes.node.isRequired,
+  t: PropTypes.func.isRequired,
 };
 
-export default ErrorBoundary;
+export default withTranslation()(ErrorBoundary);
