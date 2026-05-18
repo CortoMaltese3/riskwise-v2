@@ -4,6 +4,7 @@ import { initReactI18next } from "react-i18next";
 import translationEN from "./locales/en.json";
 import translationAR from "./locales/ar.json";
 import translationTH from "./locales/th.json";
+import { bidiIsolate, isRtlLocale } from "./lib/bidi";
 
 const resources = {
   en: { translation: translationEN },
@@ -11,9 +12,7 @@ const resources = {
   th: { translation: translationTH },
 };
 
-const RTL_LANGS = ["ar", "he", "fa", "ur"];
-
-const isRtl = (lng) => RTL_LANGS.some((l) => lng.toLowerCase().startsWith(l));
+const isRtl = (lng) => isRtlLocale(lng);
 
 // Custom post-processor to handle empty or whitespace-only translations
 const fallbackWhitespacePostProcessor = {
@@ -42,18 +41,8 @@ const bidiIsolatePostProcessor = {
   type: "postProcessor",
   name: "bidiIsolate",
   process(value, key, options) {
-    if (value == null || typeof value !== "string") return value;
-    const lng = (options.lng || i18n.language || "en").toLowerCase();
-    const dir = i18n.dir ? i18n.dir(lng) : isRtl(lng) ? "rtl" : "ltr";
-
-    if (dir === "rtl") {
-      // Wrap LTR (ASCII) segments inside RTL text
-      return value.replace(/[\p{ASCII}]+/gu, (m) => (m.trim() ? `\u2066${m}\u2069` : m));
-    }
-    // Optional protection for embedded Arabic/Hebrew in LTR
-    return value.replace(/[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+/g, (m) =>
-      m.trim() ? `\u2067${m}\u2069` : m
-    );
+    const lng = options.lng || i18n.language || "en";
+    return bidiIsolate(value, lng);
   },
 };
 

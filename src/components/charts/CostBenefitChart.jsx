@@ -15,6 +15,7 @@ import {
 } from "chart.js";
 
 import { isRtl } from "../../i18nConfig";
+import { bidiIsolate } from "../../lib/bidi";
 import { formatNumber, formatNumberWithUnit } from "../../lib/formatNumber";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { buildChartThemeOptions } from "../../utils/chartTheme";
@@ -149,7 +150,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart(
     const key = displayKeyByName.get(m.name) || m.display_name;
     return key ? t(key) : m.name;
   };
-  const labels = data.measures.map(labelFor);
+  const labels = data.measures.map((m) => bidiIsolate(labelFor(m), locale));
   const ratios = data.measures.map((m) => m.benefit_cost_ratio);
   const colors = ratios.map((r) => colorForRatio(r, vizColors));
 
@@ -157,7 +158,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart(
     labels,
     datasets: [
       {
-        label: t("economic_non_economic_adaptation_chart_ratio_label"),
+        label: bidiIsolate(t("economic_non_economic_adaptation_chart_ratio_label"), locale),
         data: ratios,
         backgroundColor: colors,
         borderColor: colors,
@@ -219,7 +220,7 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart(
         },
         ticks: {
           ...chartThemeOptions.scales.y.ticks,
-          callback: (val) => formatNumber(Number(val), locale),
+          callback: (val) => bidiIsolate(formatNumber(Number(val), locale), locale),
         },
       },
     },
@@ -231,14 +232,14 @@ const CostBenefitChart = React.forwardRef(function CostBenefitChart(
         position: "average",
         ...chartThemeOptions.plugins.tooltip,
         callbacks: {
-          title: (items) => items[0]?.label ?? "",
+          title: (items) => bidiIsolate(items[0]?.label ?? "", locale),
           label: (ctx) => {
             const measure = data.measures[ctx.dataIndex];
             return [
               `${t("economic_non_economic_adaptation_chart_tooltip_cost")}: ${formatCurrency(measure.cost, unit, locale)}`,
               `${t("economic_non_economic_adaptation_chart_tooltip_benefit")}: ${formatCurrency(measure.benefit, unit, locale)}`,
               `${t("economic_non_economic_adaptation_chart_tooltip_ratio")}: ${formatRatio(measure.benefit_cost_ratio, locale)}`,
-            ];
+            ].map((line) => bidiIsolate(line, locale));
           },
         },
       },
