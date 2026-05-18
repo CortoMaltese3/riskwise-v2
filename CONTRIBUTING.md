@@ -73,6 +73,26 @@ npm install --legacy-peer-deps
 See [README.md](README.md) for running the dev server, tests, and the
 Electron shell.
 
+### Legacy local tags
+
+Fresh clones that inherited history from the v1 repository may carry
+phantom `v2.0.0`, `v2.0.1`, `v2.0.2`, `v2.0.3` tags from August 2025.
+These tags exist **only locally** — they are not on `origin` and point
+at commits that are no longer reachable. The only legitimate v2.0.x tag
+on the remote at this stage is `v2.0.0-rc.1`.
+
+If your local `git tag` lists any of the phantom tags, delete them so a
+stray `git push --tags` cannot pollute the remote (and confuse
+`electron-updater`'s semver comparison once `release-please` publishes a
+real `v2.0.0`):
+
+```bash
+git tag -d v2.0.0 v2.0.1 v2.0.2 v2.0.3
+```
+
+Verify with `git ls-remote --tags origin` — the output should match
+`git tag` locally.
+
 ### Configuring Sentry locally (optional)
 
 The "Send to Support" button and the continuous crash-reporting toggle in
