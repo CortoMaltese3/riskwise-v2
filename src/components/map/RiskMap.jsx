@@ -10,11 +10,16 @@ import { MapContainer, TileLayer, useMap } from "react-leaflet";
 
 import "leaflet/dist/leaflet.css";
 import { getScale } from "../../utils/colorScales";
+import { formatNumberDivisor } from "../../lib/formatNumber";
 import Legend from "./Legend";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import useTileLayerUrl from "./useTileLayerUrl";
+
+// Pixel radius for impact-map markers — independent of geographic zoom so each
+// centroid stays visible and clickable at any zoom level.
+const IMPACT_MARKER_RADIUS_PX = 7;
 
 const RiskMap = () => {
   const tileLayerUrl = useTileLayerUrl();
@@ -24,7 +29,8 @@ const RiskMap = () => {
   const setAlertMessage = useUIStore((s) => s.setAlertMessage);
   const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
   const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
   const mapRefSet = useRef(false);
   const theme = useTheme();
   const vizRamps = theme.palette.viz.ramps;
@@ -33,7 +39,6 @@ const RiskMap = () => {
   const [legendTitle, setLegendTitle] = useState("");
   const [mapInfo, setMapInfo] = useState({ geoJson: null, colorScale: null });
   const [percentileValues, setPercentileValues] = useState({});
-  const [radius, setRadius] = useState(0);
   const [returnPeriods, setReturnPeriods] = useState([]);
   const [unit, setUnit] = useState("");
   const [suffix, setSuffix] = useState("");
@@ -85,7 +90,6 @@ const RiskMap = () => {
           setActiveRPLayer(returnPeriods[0]);
         }
         setPercentileValues(data._metadata.percentile_values);
-        setRadius(data._metadata.radius);
         setUnit(data._metadata.unit);
 
         // On the very first render `activeRPLayer` is still ``null`` so the
@@ -132,16 +136,19 @@ const RiskMap = () => {
         const level = feature.properties[`rp${activeRPLayer}_level`];
         const country = feature.properties["country"];
         const name = feature.properties["name"];
+        const formattedValue = formatNumberDivisor(value, divisor, locale);
+        const impactLine = unit ? `${formattedValue} ${unit}` : formattedValue;
 
-        L.circle([coordinates[1], coordinates[0]], {
-          color: colorScale(value),
+        L.circleMarker([coordinates[1], coordinates[0]], {
+          color: theme.palette.common.white,
           fillColor: colorScale(value),
-          fillOpacity: 0.3,
-          radius: radius,
+          fillOpacity: 0.7,
+          weight: 1.5,
+          radius: IMPACT_MARKER_RADIUS_PX,
         })
           .bindPopup(
             `${t("country")}: ${country}<br>${t("admin")} 2: ${name}<br>` +
-              `${t("level")}: ${level}`
+              `${t("level")}: ${level}<br>${t("map_impact_popup_impact")}: ${impactLine}`
           )
           .addTo(layerGroup);
       });
@@ -277,7 +284,6 @@ const RiskMap = () => {
           <CircleLayer
             data={mapInfo.geoJson}
             colorScale={mapInfo.colorScale}
-            radius={radius}
             activeRPLayer={activeRPLayer}
           />
           <Legend
