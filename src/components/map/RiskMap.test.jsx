@@ -143,12 +143,11 @@ describe("RiskMap impact markers", () => {
     });
 
     const popupHtml = circleMarkerInstance.bindPopup.mock.calls[0][0];
-    // Country / Admin 2 / Level lines stay; new Impact line carries the
-    // formatted number (divisor = 1e3 since the min nonzero percentile is
-    // 1000) and the unit from _metadata.
+    // Divisor is picked from the *max* nonzero percentile (9_000_000) so the
+    // top label stays readable — 5_000_000 / 1e6 renders as "5".
     expect(popupHtml).toContain("Country: Egypt");
     expect(popupHtml).toContain("Admin 2: Cairo");
     expect(popupHtml).toContain("Level: 3");
-    expect(popupHtml).toContain("Impact: 5,000 USD");
+    expect(popupHtml).toContain("Impact: 5 USD");
   });
 });

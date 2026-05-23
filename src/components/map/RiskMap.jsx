@@ -43,6 +43,7 @@ const RiskMap = () => {
   const [unit, setUnit] = useState("");
   const [suffix, setSuffix] = useState("");
   const [divisor, setDivisor] = useState(1);
+  const [bucketCounts, setBucketCounts] = useState([]);
 
   const getSuffixAndDivisor = (value) => {
     if (value >= 1e9) return { suffix: t("map_legend_title_billions_suffix"), divisor: 1e9 };
@@ -103,12 +104,29 @@ const RiskMap = () => {
           const scale = getScale(selectedHazard, data._metadata.percentile_values[rpKey], vizRamps);
           setMapInfo({ geoJson: data, colorScale: scale });
 
-          // Calculate minimum non-zero value
+          // Pick the divisor from the *largest* non-zero magnitude so the top
+          // label is always readable. Picking from the min collapses every
+          // smaller bucket to "0" when the values span many orders of magnitude
+          // (e.g. `[0, 0, 0, 0, 5e9]` with `maximumFractionDigits: 2`).
           const values = data._metadata.percentile_values[rpKey];
-          const minAbsValue = Math.min(...values.filter((v) => v !== 0).map(Math.abs));
-          const { suffix, divisor } = getSuffixAndDivisor(minAbsValue);
+          const nonZero = values.filter((v) => v !== 0).map(Math.abs);
+          const maxAbsValue = nonZero.length > 0 ? Math.max(...nonZero) : 0;
+          const { suffix, divisor } = getSuffixAndDivisor(maxAbsValue);
           setDivisor(divisor);
           setSuffix(suffix);
+
+          // Per-bucket feature counts derived from `rp${rp}_level` on the same
+          // features the markers are drawn from. Levels are 1-indexed and match
+          // the percentile slots, so `counts[i]` is the count for level `i+1`.
+          const levelKey = `rp${effectiveRP}_level`;
+          const counts = new Array(values.length).fill(0);
+          (data.features || []).forEach((feature) => {
+            const level = feature?.properties?.[levelKey];
+            if (typeof level === "number" && level >= 1 && level <= counts.length) {
+              counts[level - 1] += 1;
+            }
+          });
+          setBucketCounts(counts);
         } else {
           throw new Error("Percentile values are missing or incomplete.");
         }
@@ -291,6 +309,7 @@ const RiskMap = () => {
             percentileValues={percentileValues ? percentileValues[`rp${activeRPLayer}`] : []}
             title={legendTitle}
             divisor={divisor}
+            bucketCounts={bucketCounts}
           />
         </>
       )}

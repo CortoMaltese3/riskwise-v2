@@ -96,10 +96,14 @@ const HazardMap = () => {
           const scale = getScale(selectedHazard, data._metadata.percentile_values[rpKey], vizRamps);
           setMapInfo({ geoJson: data, colorScale: scale });
 
-          // Calculate minimum non-zero value
+          // Pick the divisor from the *largest* non-zero magnitude so the top
+          // label is always readable. Picking from the min collapses every
+          // smaller bucket to "0" when the values span many orders of magnitude
+          // (e.g. `[0, 0, 0, 0, 5e9]` with `maximumFractionDigits: 2`).
           const values = data._metadata.percentile_values[rpKey];
-          const minAbsValue = Math.min(...values.filter((v) => v !== 0).map(Math.abs));
-          const { suffix, divisor } = getSuffixAndDivisor(minAbsValue);
+          const nonZero = values.filter((v) => v !== 0).map(Math.abs);
+          const maxAbsValue = nonZero.length > 0 ? Math.max(...nonZero) : 0;
+          const { suffix, divisor } = getSuffixAndDivisor(maxAbsValue);
           setDivisor(divisor);
           setSuffix(suffix);
         } else {
