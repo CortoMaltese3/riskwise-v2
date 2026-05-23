@@ -725,6 +725,7 @@
     "map_legend_title_billions_suffix": "Billions",
     "map_legend_title_millions_suffix": "Millions",
     "map_legend_title_thousands_suffix": "Thousands",
+    "map_legend_clear_filter": "Clear filter",
     "level": "Level",
     "map_legend_legacy_title_ecenomic_suffix": "Asset Value",
     "map_legend_legacy_title_non_ecenomic_suffix": "Number of People",

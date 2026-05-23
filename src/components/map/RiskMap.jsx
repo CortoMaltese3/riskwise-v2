@@ -43,6 +43,7 @@ const RiskMap = () => {
   const [suffix, setSuffix] = useState("");
   const [divisor, setDivisor] = useState(1);
   const [bucketCounts, setBucketCounts] = useState([]);
+  const [activeLevels, setActiveLevels] = useState(() => new Set());
 
   const getSuffixAndDivisor = (value) => {
     if (value >= 1e9) return { suffix: t("map_legend_title_billions_suffix"), divisor: 1e9 };
@@ -126,6 +127,10 @@ const RiskMap = () => {
             }
           });
           setBucketCounts(counts);
+          // Bucket indices are dataset-specific; drop stale selections on
+          // reload. Same-reference return preserves React's bail-out when
+          // nothing was selected.
+          setActiveLevels((prev) => (prev.size === 0 ? prev : new Set()));
         } else {
           throw new Error("Percentile values are missing or incomplete.");
         }
@@ -146,6 +151,7 @@ const RiskMap = () => {
 
     useEffect(() => {
       const layerGroup = L.layerGroup().addTo(map);
+      const hasFilter = activeLevels.size > 0;
 
       data.features.forEach((feature) => {
         const { coordinates } = feature.geometry;
@@ -155,11 +161,13 @@ const RiskMap = () => {
         const name = feature.properties["name"];
         const formattedValue = formatNumberDivisor(value, divisor, locale);
         const impactLine = unit ? `${formattedValue} ${unit}` : formattedValue;
+        const dim = hasFilter && !activeLevels.has(level);
 
         L.circleMarker([coordinates[1], coordinates[0]], {
           color: theme.palette.common.white,
           fillColor: colorScale(value),
-          fillOpacity: 0.7,
+          fillOpacity: dim ? 0.1 : 0.7,
+          opacity: dim ? 0.2 : 1,
           weight: 1.5,
           radius: IMPACT_MARKER_RADIUS_PX,
         })
@@ -198,6 +206,28 @@ const RiskMap = () => {
     setActiveRPLayer(rp);
     await fetchGeoJson(rp);
   };
+
+  // Shift = additive toggle; plain click = single-select, with toggle-off
+  // when the clicked level is already the only active one.
+  const handleToggleLevel = useCallback((level, additive) => {
+    setActiveLevels((prev) => {
+      if (additive) {
+        const next = new Set(prev);
+        if (next.has(level)) next.delete(level);
+        else next.add(level);
+        return next;
+      }
+      if (prev.has(level) && prev.size === 1) {
+        return new Set();
+      }
+      return new Set([level]);
+    });
+  }, []);
+
+  const handleClearFilter = useCallback(
+    () => setActiveLevels((prev) => (prev.size === 0 ? prev : new Set())),
+    []
+  );
 
   const RPButtonStyle = (rp) => ({
     flex: "0 0 auto",
@@ -309,6 +339,9 @@ const RiskMap = () => {
             title={legendTitle}
             divisor={divisor}
             bucketCounts={bucketCounts}
+            activeLevels={activeLevels}
+            onToggleLevel={handleToggleLevel}
+            onClearFilter={handleClearFilter}
           />
         </>
       )}

@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material/styles";
 
 import enLocale from "../../locales/en.json";
@@ -141,6 +141,47 @@ describe("RiskMap impact markers", () => {
       color: "#fff",
     });
     expect(typeof options.fillColor).toBe("string");
+  });
+
+  it("dims markers outside the active level filter when a legend level is clicked", async () => {
+    const multiFeatureGeoJson = {
+      _metadata: {
+        return_periods: [10],
+        percentile_values: { rp10: [1, 2, 3, 4, 5] },
+        unit: "USD",
+        radius: 100,
+      },
+      features: [
+        {
+          geometry: { type: "Point", coordinates: [30.0, 26.5] },
+          properties: { country: "Egypt", name: "Cairo", rp10: 5, rp10_level: 5 },
+        },
+        {
+          geometry: { type: "Point", coordinates: [31.0, 27.5] },
+          properties: { country: "Egypt", name: "Giza", rp10: 1, rp10_level: 1 },
+        },
+      ],
+    };
+    fetchGeoJsonMock.mockResolvedValue({ success: true, result: multiFeatureGeoJson });
+
+    renderMap();
+
+    await waitFor(() => {
+      expect(circleMarkerMock).toHaveBeenCalledTimes(2);
+    });
+
+    circleMarkerMock.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Level 5" }));
+
+    await waitFor(() => {
+      expect(circleMarkerMock).toHaveBeenCalledTimes(2);
+    });
+
+    const optionsByCall = circleMarkerMock.mock.calls.map(([, opts]) => opts);
+    const activeOptions = optionsByCall.find((o) => o.fillOpacity === 0.7);
+    const dimmedOptions = optionsByCall.find((o) => o.fillOpacity === 0.1);
+    expect(activeOptions).toMatchObject({ fillOpacity: 0.7, opacity: 1 });
+    expect(dimmedOptions).toMatchObject({ fillOpacity: 0.1, opacity: 0.2 });
   });
 
   it("binds a popup that includes the formatted impact value and unit", async () => {

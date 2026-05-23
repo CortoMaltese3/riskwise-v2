@@ -61,3 +61,57 @@
   font-weight: bold;
   margin-bottom: 5px;
 }
+
+/* Color blocks render as <button> for keyboard/AT support but inherit
+   `pointer-events: none` from .legend-container by default — only the
+   interactive variant opts back into pointer events so the legend still
+   passes drags through to the map. */
+.color-block {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  pointer-events: none;
+  outline: none;
+  display: block;
+}
+
+.color-block-interactive {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 80ms ease;
+}
+
+.color-block-interactive:hover {
+  transform: scaleY(1.15);
+}
+
+.color-block-active {
+  outline: 2px solid #222;
+  outline-offset: -2px;
+  position: relative;
+  z-index: 1;
+}
+
+.color-block-empty {
+  pointer-events: auto;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.legend-clear-filter {
+  pointer-events: auto;
+  display: block;
+  margin: 6px auto 0;
+  background: none;
+  border: none;
+  color: #1976d2;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+}
+
+.legend-clear-filter:hover {
+  color: #0d47a1;
+}
