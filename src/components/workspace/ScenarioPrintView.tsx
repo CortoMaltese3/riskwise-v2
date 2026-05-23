@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Box,
@@ -14,10 +14,17 @@ import {
 import { formatDate as formatDateI18n, formatDateTime } from "../../lib/formatDate";
 import { useReportLocale } from "../../hooks/useReportLocale";
 import { isRtl } from "../../i18nConfig";
-import RiskWiseClient, { type SnapshotItem } from "../../lib/RiskWiseClient";
-import logger from "../../lib/logger";
 import gizLogo from "../../assets/giz_logo.png";
 import unuEhsLogo from "../../assets/unu_ehs_logo.png";
+
+import { useScenarioMeta } from "./scenarioPrintView/hooks/useScenarioMeta";
+import { useCurrentUser } from "./scenarioPrintView/hooks/useCurrentUser";
+import {
+  useSnapshotFigures,
+  type SnapshotFigure,
+} from "./scenarioPrintView/hooks/useSnapshotFigures";
+import { computeExecutiveSummary } from "./scenarioPrintView/utils/executiveSummary";
+import type { SurfaceKey } from "./scenarioPrintView/utils/surfaceGrouping";
 
 // JSX chart components without TS prop declarations — cast to avoid forwardRef
 // inference issues when importing untyped JSX sources into a TS file.
@@ -30,58 +37,7 @@ const WaterfallChartView = WaterfallChartImport as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CostBenefitChartView = CostBenefitChartImport as any;
 
-interface ScenarioMeta {
-  id: string;
-  name: string | null;
-  country: string | null;
-  hazard_type: string | null;
-  scenario: string | null;
-  ref_year: number | null;
-  future_year: number | null;
-  annual_growth: number | null;
-  exposure_type: string | null;
-  asset_type: string | null;
-  created_at: string | null;
-  app_version?: string | null;
-  engine_version?: string | null;
-  climada_version?: string | null;
-  entity_data_sha256?: string | null;
-  hazard_data_sha256?: string | null;
-  country_config_sha256?: string | null;
-  random_seed?: number | null;
-  computed_at?: string | null;
-}
-
-interface WaterfallCategory {
-  key: string;
-  label: string;
-  value: number;
-  base: number;
-}
-
-interface WaterfallData {
-  present_year: number;
-  future_year: number;
-  measurement_unit: string;
-  categories: WaterfallCategory[];
-}
-
-interface CostBenefitMeasure {
-  name: string;
-  cost: number;
-  benefit: number;
-  benefit_cost_ratio: number;
-}
-
-interface CostBenefitData {
-  currency_unit: string;
-  present_year: number;
-  future_year: number;
-  measures: CostBenefitMeasure[];
-}
-
 const SHA_PREFIX_LEN = 8;
-const TOTAL_KEYS = new Set(["risk_present", "risk_future"]);
 
 // Maps backend snapshot_type values to i18n keys for the fallback heading
 // used when a snapshot has no user-provided title.
@@ -90,29 +46,6 @@ const SNAPSHOT_TYPE_LABEL_KEYS: Record<string, string> = {
   waterfall: "snapshot_type_waterfall",
   cost_benefit: "snapshot_type_cost_benefit",
 };
-
-type SurfaceKey = "hazard" | "exposure" | "impact" | "adaptation" | "other";
-
-interface SnapshotFigure {
-  id: string;
-  title: string | null;
-  caption: string | null;
-  snapshotType: string;
-  surface: SurfaceKey;
-  imageUrl: string;
-}
-
-type SurfaceCounts = Record<SurfaceKey, number>;
-const EMPTY_SURFACE_COUNTS: SurfaceCounts = {
-  hazard: 0,
-  exposure: 0,
-  impact: 0,
-  adaptation: 0,
-  other: 0,
-};
-
-const surfaceKey = (snap: Pick<SnapshotItem, "surface">): SurfaceKey =>
-  (snap.surface ?? "other") as SurfaceKey;
 
 const shortSha = (value?: string | null): string | undefined => {
   if (!value) return undefined;
@@ -137,53 +70,6 @@ const LabelRow = ({ label, value }: { label: string; value: React.ReactNode }) =
   </TableRow>
 );
 
-const parseJsonResult = <T,>(json: string, setter: (v: T) => void) => {
-  try {
-    setter(JSON.parse(json) as T);
-  } catch {
-    // leave state unchanged
-  }
-};
-
-interface ExecutiveSummary {
-  presentYear: number;
-  futureYear: number;
-  presentValue: number;
-  futureValue: number;
-  absoluteChange: number;
-  percentChange: number | null;
-  topDriverLabel: string | null;
-  topDriverValue: number | null;
-  unit: string;
-}
-
-const computeExecutiveSummary = (data: WaterfallData): ExecutiveSummary | null => {
-  const present = data.categories.find((c) => c.key === "risk_present");
-  const future = data.categories.find((c) => c.key === "risk_future");
-  if (!present || !future) return null;
-
-  const drivers = data.categories.filter((c) => !TOTAL_KEYS.has(c.key));
-  const topDriver = drivers.reduce<WaterfallCategory | null>((best, c) => {
-    if (!best) return c;
-    return Math.abs(c.value) > Math.abs(best.value) ? c : best;
-  }, null);
-
-  const absoluteChange = future.value - present.value;
-  const percentChange = present.value !== 0 ? (absoluteChange / present.value) * 100 : null;
-
-  return {
-    presentYear: data.present_year,
-    futureYear: data.future_year,
-    presentValue: present.value,
-    futureValue: future.value,
-    absoluteChange,
-    percentChange,
-    topDriverLabel: topDriver?.label ?? null,
-    topDriverValue: topDriver?.value ?? null,
-    unit: data.measurement_unit,
-  };
-};
-
 const SectionHeading = ({ children }: { children: React.ReactNode }) => (
   <Typography variant="h5" gutterBottom>
     {children}
@@ -204,165 +90,16 @@ const ScenarioPrintView = ({
   const { i18n, t } = useTranslation();
   const locale = i18n.language;
   const { formatNumber: formatNumberLocale } = useReportLocale();
-  const [meta, setMeta] = useState<ScenarioMeta | null>(null);
-  const [waterfallData, setWaterfallData] = useState<WaterfallData | null>(null);
-  const [costbenData, setCostbenData] = useState<CostBenefitData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [figures, setFigures] = useState<SnapshotFigure[]>([]);
-  const [availableSurfaceCounts, setAvailableSurfaceCounts] =
-    useState<SurfaceCounts>(EMPTY_SURFACE_COUNTS);
-  const [snapshotsResolved, setSnapshotsResolved] = useState(false);
-  const [imagesSettled, setImagesSettled] = useState(0);
-  // `undefined` = IPC pending; `null` = resolved with no/failed username
-  // (renderer shows the fallback row); a string = OS username.
-  const [currentUser, setCurrentUser] = useState<string | null | undefined>(undefined);
+  const { meta, waterfallData, costbenData, error, loaded } = useScenarioMeta(scenarioId);
+  const currentUser = useCurrentUser();
+  const { figures, snapshotsResolved, availableSurfaceCounts, allImagesSettled, onImageSettled } =
+    useSnapshotFigures(scenarioId, snapshotIds);
 
   const [generatedAt] = useState(() => new Date());
-
-  // Stabilise the snapshot effect's dependency: snapshotIds is a fresh array
-  // on every render from the parent, so memoise on its joined contents.
-  const snapshotIdsKey = (snapshotIds ?? []).join(",");
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await RiskWiseClient.getScenario(scenarioId);
-        if (!res.success) {
-          setError(res.error.message);
-          return;
-        }
-        const payload = (
-          res.result as unknown as {
-            data: { scenario: ScenarioMeta; results: Record<string, string> };
-          }
-        ).data;
-        setMeta(payload.scenario);
-        if (payload.results.waterfall_data)
-          parseJsonResult<WaterfallData>(payload.results.waterfall_data, setWaterfallData);
-        if (payload.results.costben_data)
-          parseJsonResult<CostBenefitData>(payload.results.costben_data, setCostbenData);
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : String(e));
-      } finally {
-        setLoaded(true);
-      }
-    };
-    fetchData();
-  }, [scenarioId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const fetchUser = async () => {
-      try {
-        const name = await window.electron?.getCurrentUser?.();
-        if (cancelled) return;
-        setCurrentUser(typeof name === "string" && name.length > 0 ? name : null);
-      } catch (err: unknown) {
-        if (cancelled) return;
-        logger.warn("ScenarioPrintView: getCurrentUser failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setCurrentUser(null);
-      }
-    };
-    fetchUser();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const createdUrls: string[] = [];
-
-    (async () => {
-      try {
-        const listResp = await RiskWiseClient.listSnapshots(scenarioId);
-        if (cancelled) return;
-
-        if (!listResp.success || listResp.result?.status?.code !== 2000) {
-          logger.warn("ScenarioPrintView: listSnapshots failed", {
-            scenario_id: scenarioId,
-            error: listResp.success ? listResp.result?.status : listResp.error,
-          });
-          setFigures([]);
-          setAvailableSurfaceCounts(EMPTY_SURFACE_COUNTS);
-          setSnapshotsResolved(true);
-          return;
-        }
-
-        const all = listResp.result.data ?? [];
-        // Count only what the user could have picked: the picker shows
-        // map-type snapshots, so the "available but not selected" notice
-        // mirrors that surface.
-        const counts: SurfaceCounts = { ...EMPTY_SURFACE_COUNTS };
-        for (const s of all) {
-          if (s.snapshot_type !== "map") continue;
-          counts[surfaceKey(s)] += 1;
-        }
-        setAvailableSurfaceCounts(counts);
-
-        const ids = snapshotIdsKey ? snapshotIdsKey.split(",") : [];
-        if (ids.length === 0) {
-          setFigures([]);
-          setSnapshotsResolved(true);
-          setImagesSettled(0);
-          return;
-        }
-
-        const byId = new Map<string, SnapshotItem>(all.map((s) => [s.id, s]));
-        const ordered = ids.map((id) => byId.get(id)).filter((s): s is SnapshotItem => Boolean(s));
-
-        const fetched = await Promise.all(
-          ordered.map(async (snap): Promise<SnapshotFigure | null> => {
-            const resp = await RiskWiseClient.fetchSnapshotImage(snap.id);
-            if (!resp.success) {
-              logger.warn("ScenarioPrintView: snapshot image fetch failed", {
-                snapshot_id: snap.id,
-                error: resp.error,
-              });
-              return null;
-            }
-            const url = URL.createObjectURL(resp.result);
-            createdUrls.push(url);
-            return {
-              id: snap.id,
-              title: snap.title ?? null,
-              caption: snap.caption ?? null,
-              snapshotType: snap.snapshot_type,
-              surface: surfaceKey(snap),
-              imageUrl: url,
-            };
-          })
-        );
-
-        if (cancelled) return;
-        setFigures(fetched.filter((f): f is SnapshotFigure => f !== null));
-        setImagesSettled(0);
-        setSnapshotsResolved(true);
-      } catch (err: unknown) {
-        if (cancelled) return;
-        logger.error("ScenarioPrintView: snapshot pipeline failed", {
-          scenario_id: scenarioId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setFigures([]);
-        setAvailableSurfaceCounts(EMPTY_SURFACE_COUNTS);
-        setSnapshotsResolved(true);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      createdUrls.forEach((u) => URL.revokeObjectURL(u));
-    };
-  }, [scenarioId, snapshotIdsKey]);
 
   // Readiness gate also waits for the username fetch and every snapshot
   // <img> to fire onLoad or onError, so printToPDF doesn't capture
   // half-loaded blob URLs.
-  const allImagesSettled = figures.length === 0 || imagesSettled >= figures.length;
   const printReady = loaded && currentUser !== undefined && snapshotsResolved && allImagesSettled;
   useEffect(() => {
     if (!printReady) return;
@@ -371,10 +108,6 @@ const ScenarioPrintView = ({
       delete document.body.dataset.printReady;
     };
   }, [printReady]);
-
-  const onImageSettled = useCallback(() => {
-    setImagesSettled((n) => n + 1);
-  }, []);
 
   const provenanceRows = useMemo<Array<[string, string]>>(() => {
     if (!meta) return [];
