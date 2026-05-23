@@ -28,6 +28,7 @@ const {
 const { scanAndImportPacks } = require("./dataPacks");
 const { startTileServer } = require("./tileServer");
 const { TILES_FILENAME } = require("./offlineConstants");
+const { TILES_PATH_PREFIX, resolveTileRequest, RESULT: TILE_RESULT } = require("./tileProxy");
 const {
   buildDiagnosticsZip,
   buildDiagnosticsBuffer,
@@ -661,16 +662,11 @@ app.whenReady().then(async () => {
   // request cannot escape the temp dir.
   const buildRoot = path.join(basePath, "build");
   const TEMP_PATH_PREFIX = "/__temp/";
-  // Carto tile proxy. The renderer cannot read tiles from
-  // ``basemaps.cartocdn.com`` via XHR/fetch because the response combines
-  // ``Access-Control-Allow-Origin: *`` with ``Access-Control-Allow-Credentials:
-  // true``, which Chromium rejects per spec — so ``dom-to-image-more`` (used
-  // by ``leaflet-simple-map-screenshoter``) silently drops every tile when it
-  // captures a map snapshot. Proxying through ``app://`` makes the tiles
-  // same-origin, which sidesteps CORS entirely.
-  const TILES_PATH_PREFIX = "/__tiles/";
-  const CARTO_TILE_BASE = "https://a.basemaps.cartocdn.com/rastertiles/voyager/";
-  const TILES_PATH_RE = /^\d+\/\d+\/\d+(?:@\dx)?\.png$/;
+  // Multi-provider tile proxy. The handler accepts both legacy
+  // `app://./__tiles/{z}/{x}/{y}.png` (defaults to Voyager for backward
+  // compatibility) and the keyed
+  // `app://./__tiles/{voyager|dark|satellite}/{z}/{x}/{y}.png` shape used
+  // by the basemap selector. Unknown keys / malformed paths return 4xx.
   protocol.handle("app", (request) => {
     const url = new URL(request.url);
     if (url.pathname.startsWith(TEMP_PATH_PREFIX)) {
@@ -684,12 +680,14 @@ app.whenReady().then(async () => {
       return net.fetch(`file://${resolved}`);
     }
     if (url.pathname.startsWith(TILES_PATH_PREFIX)) {
-      const requested = url.pathname.slice(TILES_PATH_PREFIX.length);
-      if (!TILES_PATH_RE.test(requested)) {
-        log.warn(`[electron] blocked app://./__tiles/ malformed path: ${requested}`);
+      const route = resolveTileRequest(url.pathname);
+      if (route.kind === TILE_RESULT.BAD_REQUEST) {
+        log.warn(`[electron] blocked app://./__tiles/ ${route.reason}: ${url.pathname}`);
         return new Response("Bad Request", { status: 400 });
       }
-      return net.fetch(`${CARTO_TILE_BASE}${requested}`);
+      if (route.kind === TILE_RESULT.OK) {
+        return net.fetch(route.url);
+      }
     }
     const filePath = path.join(buildRoot, url.pathname === "/" ? "index.html" : url.pathname);
     return net.fetch(`file://${filePath}`);

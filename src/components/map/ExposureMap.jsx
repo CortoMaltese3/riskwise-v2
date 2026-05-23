@@ -3,21 +3,20 @@ import { useTranslation } from "react-i18next";
 
 import { Box, Button } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
+import { MapContainer, GeoJSON, useMap } from "react-leaflet";
 
 import "leaflet/dist/leaflet.css";
 import { formatNumber } from "../../lib/formatNumber";
 import { getScaleLegacy } from "../../utils/colorScalesLegacy";
 import LegendLegacy from "./LegendLegacy";
+import MapControls from "./MapControls";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
-import useTileLayerUrl from "./useTileLayerUrl";
 
 const adminLayers = [0, 1, 2]; // Administrative layers
 
 const ExposureMap = () => {
-  const tileLayerUrl = useTileLayerUrl();
   const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
   const selectedExposureCategory = useWorkspaceStore((s) => s.selectedExposureCategory);
   const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
@@ -184,7 +183,7 @@ const ExposureMap = () => {
       // to 0; switch to flex sizing on the main axis.
       style={{ position: "relative", flex: 1, minHeight: 0, width: "100%" }}
     >
-      <TileLayer url={tileLayerUrl} maxZoom={15} minZoom={5} />
+      <MapControls />
       <MapEvents />
       <Box sx={buttonContainerSx}>
         {adminLayers.map((layer) => (

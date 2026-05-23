@@ -40,6 +40,11 @@ const DRIFT_ALLOWLIST = new Set([
   "error_request_id_label",
   "error_boundary_title",
   "error_boundary_description",
+  // Map basemap selector tooltip (issue #477). Non-English locales ship
+  // the English text as an explicit placeholder per the issue's i18n
+  // acceptance criterion; other map_controls_* strings are short enough
+  // to fall below DRIFT_MIN_LENGTH and don't need allowlisting.
+  "map_controls_basemap_offline_tooltip",
 ]);
 
 const DRIFT_MIN_LENGTH = 15;

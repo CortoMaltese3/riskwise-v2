@@ -44,6 +44,14 @@ vi.mock("react-leaflet", () => ({
   }),
 }));
 
+// Issue #477 moved the base TileLayer + scale bar inside MapControls.
+// RiskMap's test cares about impact markers, not the basemap chrome, so
+// stub MapControls out to keep this suite focused (MapControls has its
+// own dedicated test).
+vi.mock("./MapControls", () => ({
+  default: () => null,
+}));
+
 const fetchGeoJsonMock = vi.fn();
 vi.mock("../../lib/RiskWiseClient", () => ({
   default: {
