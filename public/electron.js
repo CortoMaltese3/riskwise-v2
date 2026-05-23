@@ -34,6 +34,7 @@ const {
   buildDiagnosticsBuffer,
   sanitizeScenarioRow,
 } = require("./diagnostics");
+const { createBreadcrumbTransport } = require("./sentryBreadcrumbs");
 const os = require("node:os");
 const treeKill = require("tree-kill");
 
@@ -571,6 +572,22 @@ app.whenReady().then(async () => {
     fs.mkdirSync(userLogDir, { recursive: true });
     configureLogRotation(log, userLogDir);
     log.initialize();
+    // Forward electron-log lines (including renderer lines that flow through
+    // the ``log:renderer`` IPC handler below) into Sentry as breadcrumbs.
+    // The transport is a no-op until ``sentryInitialized`` flips true; #119
+    // forbids renderer-side Sentry, so this is the single bridge between
+    // logs and breadcrumbs.
+    log.transports.sentry = createBreadcrumbTransport({
+      isSentryInitialized: () => sentryInitialized,
+      getSentry: () => {
+        try {
+          return require("@sentry/electron/main");
+        } catch {
+          return null;
+        }
+      },
+      minLevel: process.env.SENTRY_BREADCRUMB_LEVEL,
+    });
     autoUpdater.logger = log;
     log.info(`Starting RISKWISE ${app.getVersion()}. Packaged: ${app.isPackaged}`);
   } catch (error) {
@@ -1133,15 +1150,22 @@ const createPythonProcess = async () => {
     args = [];
   }
 
+  // The Python backend only initializes its own Sentry SDK when SENTRY_DSN
+  // is in its environment. To match the Electron consent gate (privacy.md
+  // §"Continuous crash reporting"), strip SENTRY_DSN unless the user has
+  // opted in AND offline mode is off. A consent flip mid-session takes
+  // effect on the next app launch — the running Python process keeps the
+  // env it was spawned with, mirroring the Electron-side restart caveat.
+  const spawnEnv = { ...process.env, LOG_DIR: userLogDir, RISKWISE_USER_DATA: userDataDir };
+  if (!sentryAllowSends()) {
+    delete spawnEnv.SENTRY_DSN;
+  }
+
   try {
     const py = spawn(executable, args, {
       cwd: basePath,
       stdio: ["pipe", "pipe", "pipe"],
-      env: {
-        ...process.env,
-        LOG_DIR: userLogDir,
-        RISKWISE_USER_DATA: userDataDir,
-      },
+      env: spawnEnv,
     });
 
     py.on("error", (error) => log.error("Python spawn error:", error.message));
