@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 
 import "../../i18nConfig";
 import useUIStore from "../../store/useUIStore";
@@ -8,11 +8,10 @@ import useUIStore from "../../store/useUIStore";
 // Shared with the leaflet/react-leaflet factories so the tests can
 // assert the imperative calls MapControls makes against the Leaflet API
 // — the underlying tile layer is mutated in place rather than remounted
-// when the basemap or opacity changes.
+// when the basemap changes.
 const tileLayerInstance = {
   addTo: vi.fn().mockReturnThis(),
   setUrl: vi.fn(),
-  setOpacity: vi.fn(),
 };
 const tileLayerCtor = vi.fn(() => tileLayerInstance);
 const scaleInstance = {
@@ -47,7 +46,6 @@ import MapControls from "./MapControls";
 const resetStore = () => {
   useUIStore.setState({
     basemap: "voyager",
-    basemapOpacity: 1,
     offlineMode: false,
     offlineTilePort: null,
   });
@@ -57,7 +55,6 @@ beforeEach(() => {
   tileLayerCtor.mockClear();
   tileLayerInstance.addTo.mockClear();
   tileLayerInstance.setUrl.mockClear();
-  tileLayerInstance.setOpacity.mockClear();
   scaleCtor.mockClear();
   scaleInstance.addTo.mockClear();
   scaleInstance.remove.mockClear();
@@ -72,13 +69,12 @@ afterEach(() => {
 });
 
 describe("MapControls", () => {
-  it("renders all three basemap options and the opacity slider", () => {
+  it("renders all three basemap options", () => {
     render(<MapControls />);
 
     expect(screen.getByRole("button", { name: /light/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /dark/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /satellite/i })).toBeInTheDocument();
-    expect(screen.getByRole("slider")).toBeInTheDocument();
   });
 
   it("creates the base tile layer with the keyed Voyager proxy URL on mount", () => {
@@ -87,7 +83,7 @@ describe("MapControls", () => {
     expect(tileLayerCtor).toHaveBeenCalledTimes(1);
     const [url, options] = tileLayerCtor.mock.calls[0];
     expect(url).toContain("/__tiles/voyager/");
-    expect(options).toMatchObject({ maxZoom: 15, minZoom: 5, opacity: 1 });
+    expect(options).toMatchObject({ maxZoom: 15, minZoom: 5 });
     expect(tileLayerInstance.addTo).toHaveBeenCalledWith(map);
   });
 
@@ -130,22 +126,7 @@ describe("MapControls", () => {
     expect(newAttribution).toContain("Esri");
   });
 
-  it("mutates the tile layer's opacity live when the slider changes and persists to the store", () => {
-    render(<MapControls />);
-    tileLayerInstance.setOpacity.mockClear();
-
-    const slider = screen.getByRole("slider");
-    fireEvent.change(slider, { target: { value: 40 } });
-
-    // Live visual update: the tile layer's opacity is mutated directly
-    // in onChange, no React-driven remount of the layer.
-    expect(tileLayerInstance.setOpacity).toHaveBeenCalledWith(0.4);
-    // Eventually persisted to the store via onChangeCommitted (fired on
-    // pointer release) so subscribers don't re-render every drag tick.
-    expect(useUIStore.getState().basemapOpacity).toBeCloseTo(0.4);
-  });
-
-  it("hides the basemap selector in offline mode but keeps the opacity slider", () => {
+  it("hides the basemap selector in offline mode", () => {
     useUIStore.setState({ offlineMode: true, offlineTilePort: 51234 });
 
     render(<MapControls />);
@@ -153,7 +134,6 @@ describe("MapControls", () => {
     expect(screen.queryByRole("button", { name: /light/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /satellite/i })).not.toBeInTheDocument();
     expect(screen.getByText(/offline mode/i)).toBeInTheDocument();
-    expect(screen.getByRole("slider")).toBeInTheDocument();
   });
 
   it("uses the loopback URL when offline mode is on and the tile server is up", () => {

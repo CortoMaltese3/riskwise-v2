@@ -1229,6 +1229,5 @@
     "map_controls_basemap_light": "Light",
     "map_controls_basemap_dark": "Dark",
     "map_controls_basemap_satellite": "Satellite",
-    "map_controls_opacity_label": "Opacity",
     "map_controls_basemap_offline_tooltip": "Basemap selection disabled in offline mode"
 }

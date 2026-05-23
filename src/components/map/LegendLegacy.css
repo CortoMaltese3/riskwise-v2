@@ -1,5 +1,7 @@
 /* Legacy map legend overlay (kept alongside Legend.css for older map views).
-   Stays light over the light OpenStreetMap tiles in both schemes — see the
+   Follows the app theme via MUI cssVariables so the legend stays readable
+   across all three basemaps (light / dark / satellite from #482) in both
+   color schemes. The drop shadow stays a hard-coded dark rgba — see the
    rgba exceptions block in src/theme/theme.ts (issue #289). */
 .legend-container {
   position: absolute;
@@ -8,8 +10,8 @@
   width: 250px;
   z-index: 1000;
   font-size: 12px;
-  background-color: #ffffff;
-  opacity: 0.7;
+  background-color: rgb(var(--mui-palette-background-paperChannel) / 0.85);
+  color: var(--mui-palette-text-primary);
   border-radius: 8px;
   padding: 10px;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
@@ -30,7 +32,7 @@
   left: 50%;
   height: 100%; /* Match the height of the color gradient */
   width: 2px; /* Width of the line */
-  background-color: darkgray; /* Color of the line */
+  background-color: var(--mui-palette-text-secondary);
   opacity: 0.7;
   transform: translateX(-50%); /* Center the line */
 }

@@ -87,11 +87,10 @@ const useUIStore = create((set, get) => ({
   costBenefitChartRef: null,
   mapTitle: "",
 
-  // Basemap selector + opacity. Kept in-memory so the preference sticks
-  // across map-type switches (Exposure → Hazard → Impact) and re-runs
-  // within a session, but resets on app restart.
+  // Basemap selector. Kept in-memory so the preference sticks across
+  // map-type switches (Exposure → Hazard → Impact) and re-runs within a
+  // session, but resets on app restart.
   basemap: "voyager",
-  basemapOpacity: 1,
 
   // Alerts / errors / progress
   alertMessage: "",
@@ -159,11 +158,6 @@ const useUIStore = create((set, get) => ({
   setBasemap: (basemap) => {
     if (get().basemap === basemap) return;
     set({ basemap });
-  },
-  setBasemapOpacity: (opacity) => {
-    const next = Math.max(0, Math.min(1, opacity));
-    if (get().basemapOpacity === next) return;
-    set({ basemapOpacity: next });
   },
   setActiveViewControl: (control) => set({ activeViewControl: control }),
   setWaterfallChartRef: (chartRef) => set({ waterfallChartRef: chartRef }),

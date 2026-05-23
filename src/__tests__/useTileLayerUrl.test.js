@@ -11,7 +11,6 @@ const resetOfflineStore = () => {
     offlineTilesPath: null,
     offlineImportedPacks: [],
     basemap: "voyager",
-    basemapOpacity: 1,
   });
 };
 
