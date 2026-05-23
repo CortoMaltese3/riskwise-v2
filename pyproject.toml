@@ -36,6 +36,11 @@ dependencies = [
     "uvicorn[standard]>=0.27,<1",
     "psutil>=5.9,<8",
     "structlog>=24,<26",
+    # Backend crash reporting + log breadcrumbs (issue #308). Init is a
+    # no-op when SENTRY_DSN is absent (Electron only forwards the DSN to
+    # the spawned Python process when the user has opted in), so the SDK
+    # is dormant for forked / dev builds.
+    "sentry-sdk>=2,<3",
 ]
 
 [project.optional-dependencies]

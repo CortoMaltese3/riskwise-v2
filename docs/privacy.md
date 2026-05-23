@@ -97,6 +97,33 @@ your consent choice:
    offline mode".
 3. You opted out (or have not yet been prompted).
 
+### Breadcrumbs
+
+When continuous reporting is armed (or "Send to Support" is clicked),
+each Sentry event carries up to ~100 **breadcrumbs**: short log-line
+records from the run leading up to the event. Breadcrumbs let a support
+engineer see the same pre-crash log trail in the Sentry web UI that
+would otherwise require downloading and unzipping the diagnostics bundle.
+
+The breadcrumbs are populated by:
+
+- The Electron main process — every `electron-log` line at
+  `SENTRY_BREADCRUMB_LEVEL` (default `INFO`) and above, including
+  renderer-side records that flow through the existing `log:renderer`
+  IPC channel.
+- The Python backend — every `logging.getLogger(...)` line at the same
+  level, via `sentry_sdk.integrations.logging.LoggingIntegration`. The
+  structlog pipeline in `backend/logging_config.py` mirrors structured
+  records into stdlib `logging` so they reach the integration.
+
+Breadcrumb content is the same log-line text already written to the
+on-disk log files documented under "What is logged locally" — sending
+them as breadcrumbs is **not** a new privacy surface. The runtime gates
+in "Continuous crash reporting" apply unchanged: no DSN, no consent, or
+offline mode → the event is dropped before transmission and the
+breadcrumbs ride it into oblivion. To raise the floor, set
+`SENTRY_BREADCRUMB_LEVEL=WARN` (or `ERROR`) in `.env` or the build env.
+
 ### How to opt in or out
 
 - **First launch** — a one-time dialog asks "Help improve RISK WISE by

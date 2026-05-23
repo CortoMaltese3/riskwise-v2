@@ -1204,6 +1204,16 @@ class _ReadyNotifyServer(uvicorn.Server):
 
 def run() -> None:
     """Entrypoint for the bundled engine: bind a free port and serve."""
+    # Sentry init runs before ``configure_logging`` so the LoggingIntegration's
+    # logging.Handler is in place before any of the startup INFO lines fire —
+    # otherwise the first ``request.start`` after the user clicks "Send to
+    # Support" would have an empty breadcrumb trail. ``init_sentry`` is a
+    # no-op when SENTRY_DSN is absent (privacy gate enforced by the Electron
+    # main process; see ``public/electron.js`` ``createPythonProcess``).
+    from backend.sentry_init import init_sentry
+
+    init_sentry()
+
     log_dir_env = os.getenv("LOG_DIR")
     # Honour the LOG_DIR the Electron main sets to ``app.getPath('userData')/logs``
     # so Python logs land next to electron-log's files, giving support a

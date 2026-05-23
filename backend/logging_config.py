@@ -41,6 +41,38 @@ def _add_request_id(_logger: Any, _method_name: str, event_dict: dict) -> dict:
     return event_dict
 
 
+# Suppress stdlib logging's ``lastResort`` stderr handler so the mirror
+# processor below does not double-print WARNING+ lines when Sentry's
+# LoggingIntegration is not installed. Sentry attaches its own handler at
+# the root logger when initialized; the NullHandler simply absorbs anything
+# in between so unhandled records vanish instead of leaking to stderr.
+logging.getLogger().addHandler(logging.NullHandler())
+
+
+def _mirror_to_stdlib(_logger: Any, method_name: str, event_dict: dict) -> dict:
+    """Forward this record into stdlib ``logging`` for Sentry breadcrumbs (#308).
+
+    The codebase uses structlog with :class:`WriteLoggerFactory`, which
+    bypasses stdlib ``logging`` entirely. Sentry's ``LoggingIntegration``
+    hooks stdlib handlers, so without this mirror no structlog line would
+    ever become a breadcrumb. We emit a single record per structlog call
+    using the bound ``logger`` name (defaulting to ``riskwise``) so the
+    breadcrumb's ``logger`` field stays meaningful in the Sentry UI.
+
+    Best-effort: a failure here must not break the structlog pipeline.
+    """
+    try:
+        level_no = logging.getLevelName(method_name.upper())
+        if not isinstance(level_no, int):
+            level_no = logging.INFO
+        name = event_dict.get("logger") or "riskwise"
+        message = event_dict.get("event", "")
+        logging.getLogger(name).log(level_no, message)
+    except Exception:  # noqa: BLE001 - mirror must never break structlog
+        pass
+    return event_dict
+
+
 def configure_logging(
     log_dir: Path | None = None,
     *,
@@ -82,6 +114,10 @@ def configure_logging(
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
+        # Mirror to stdlib logging before JSON rendering so Sentry's
+        # LoggingIntegration sees a meaningful ``event`` string rather than
+        # the JSON envelope (issue #308).
+        _mirror_to_stdlib,
         structlog.processors.JSONRenderer(),
     ]
 
