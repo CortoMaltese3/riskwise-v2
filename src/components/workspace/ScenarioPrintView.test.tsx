@@ -73,6 +73,27 @@ vi.mock("../../lib/RiskWiseClient", () => ({
   default: {
     listSnapshots: (...args: unknown[]) => listSnapshotsMock(...args),
     snapshotImageUrl: (id: string) => `/api/v1/snapshots/${id}/image`,
+    // Mirrors the real client well enough for the snapshot-embedding effect:
+    // delegates to the stubbed globalThis.fetch so per-test URL routing /
+    // failure injection still works through the same fetch mock.
+    fetchSnapshotImage: async (id: string) => {
+      const resp = await globalThis.fetch(`/api/v1/snapshots/${id}/image`);
+      if (!resp.ok) {
+        return {
+          success: false,
+          error: {
+            code: "snapshot_image_http_error",
+            message: `HTTP ${resp.status}`,
+            detail: null,
+            error_id: "test",
+            request_id: "test",
+          },
+        };
+      }
+      return { success: true, result: await resp.blob() };
+    },
+    getScenario: (id: string) =>
+      window.api.http.request("GET", `/api/v1/scenarios/${encodeURIComponent(id)}`, null),
   },
 }));
 
