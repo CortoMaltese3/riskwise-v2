@@ -192,7 +192,7 @@ export default [
     // electron-builder auto-detects this exact filename (not
     // electron-builder.config.js — see DECISIONS.md and the file's
     // header comment). It's CommonJS and runs under Node.
-    files: ["electron-builder.js"],
+    files: ["electron-builder.js", "electron-builder.cjs"],
     languageOptions: {
       sourceType: "commonjs",
       globals: { ...globals.node },
