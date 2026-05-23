@@ -25,6 +25,7 @@ const {
   resolveReleaseChannel,
   verifyEngineManifest,
 } = require("./engineManifest");
+const { shouldSuppressUpdate } = require("./appUpdates");
 const { scanAndImportPacks } = require("./dataPacks");
 const { startTileServer } = require("./tileServer");
 const { TILES_FILENAME } = require("./offlineConstants");
@@ -2349,6 +2350,16 @@ ipcMain.handle("updates:remind-later", async () => {
   return snoozeUpdateReminder();
 });
 
+// Persist a per-version skip (issue #424). The next `update-available`
+// for the same semver is suppressed; a higher semver clears the skip.
+ipcMain.handle("updates:skip-version", async (_evt, version) => {
+  const v = typeof version === "string" ? version.trim() : "";
+  if (!v) return { error: "version required" };
+  if (updateStore) updateStore.set("skippedVersion", v);
+  log.info(`[electron] updates: user skipped version=${v}`);
+  return { ok: true };
+});
+
 ipcMain.handle("updates:get-status", async () => {
   return {
     currentVersion: app.getVersion(),
@@ -2535,6 +2546,16 @@ autoUpdater.on("update-available", (info) => {
         `[electron] update-available dialog snoozed until ${new Date(remindAfter).toISOString()}`
       );
       return;
+    }
+    const skipped = updateStore.get("skippedVersion", null);
+    const { suppress, clearSkip } = shouldSuppressUpdate(version, skipped);
+    if (suppress) {
+      log.info(`[electron] update-available suppressed by user skip (version=${version})`);
+      return;
+    }
+    if (clearSkip) {
+      updateStore.set("skippedVersion", null);
+      log.info(`[electron] skip cleared: newer version available (${version} > ${skipped})`);
     }
   }
   // Dispatch to renderer; the React dialog handles user consent. We never

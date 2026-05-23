@@ -32,6 +32,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "updates:check",
   "updates:install-on-next-restart",
   "updates:remind-later",
+  "updates:skip-version",
   "updates:get-status",
   "updates:set-channel",
   "updates:get-release-notes",
@@ -142,6 +143,7 @@ describe("preload bridge surface", () => {
     exposed.electron.updates.check();
     exposed.electron.updates.installOnNextRestart();
     exposed.electron.updates.remindLater();
+    exposed.electron.updates.skipVersion("2.3.4");
     exposed.electron.updates.getStatus();
     exposed.electron.updates.setChannel("beta");
     exposed.electron.updates.getReleaseNotes({ language: "en" });
