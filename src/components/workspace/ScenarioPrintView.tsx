@@ -227,17 +227,15 @@ const ScenarioPrintView = ({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await window.api.http.request(
-          "GET",
-          `/api/v1/scenarios/${encodeURIComponent(scenarioId)}`,
-          null
-        );
+        const res = await RiskWiseClient.getScenario(scenarioId);
         if (!res.success) {
           setError(res.error.message);
           return;
         }
         const payload = (
-          res.result as { data: { scenario: ScenarioMeta; results: Record<string, string> } }
+          res.result as unknown as {
+            data: { scenario: ScenarioMeta; results: Record<string, string> };
+          }
         ).data;
         setMeta(payload.scenario);
         if (payload.results.waterfall_data)
@@ -280,12 +278,7 @@ const ScenarioPrintView = ({
 
     (async () => {
       try {
-        const [baseUrl, listResp] = await Promise.all([
-          (window.api?.http?.getBaseUrl?.().catch(() => null) ?? Promise.resolve(null)).then(
-            (u) => u ?? ""
-          ),
-          RiskWiseClient.listSnapshots(scenarioId),
-        ]);
+        const listResp = await RiskWiseClient.listSnapshots(scenarioId);
         if (cancelled) return;
 
         if (!listResp.success || listResp.result?.status?.code !== 2000) {
@@ -323,27 +316,24 @@ const ScenarioPrintView = ({
 
         const fetched = await Promise.all(
           ordered.map(async (snap): Promise<SnapshotFigure | null> => {
-            try {
-              const resp = await fetch(`${baseUrl}${RiskWiseClient.snapshotImageUrl(snap.id)}`);
-              if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-              const blob = await resp.blob();
-              const url = URL.createObjectURL(blob);
-              createdUrls.push(url);
-              return {
-                id: snap.id,
-                title: snap.title ?? null,
-                caption: snap.caption ?? null,
-                snapshotType: snap.snapshot_type,
-                surface: surfaceKey(snap),
-                imageUrl: url,
-              };
-            } catch (err: unknown) {
+            const resp = await RiskWiseClient.fetchSnapshotImage(snap.id);
+            if (!resp.success) {
               logger.warn("ScenarioPrintView: snapshot image fetch failed", {
                 snapshot_id: snap.id,
-                error: err instanceof Error ? err.message : String(err),
+                error: resp.error,
               });
               return null;
             }
+            const url = URL.createObjectURL(resp.result);
+            createdUrls.push(url);
+            return {
+              id: snap.id,
+              title: snap.title ?? null,
+              caption: snap.caption ?? null,
+              snapshotType: snap.snapshot_type,
+              surface: surfaceKey(snap),
+              imageUrl: url,
+            };
           })
         );
 
