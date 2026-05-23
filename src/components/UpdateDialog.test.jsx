@@ -12,9 +12,11 @@ vi.mock("react-i18next", () => ({
 }));
 
 let availableCallback;
+let releaseNotesResolver;
 
 beforeEach(() => {
   availableCallback = null;
+  releaseNotesResolver = null;
   window.electron = {
     updates: {
       onAvailable: vi.fn((cb) => {
@@ -23,6 +25,13 @@ beforeEach(() => {
       }),
       installOnNextRestart: vi.fn().mockResolvedValue({ ok: true }),
       remindLater: vi.fn().mockResolvedValue({ ok: true }),
+      skipVersion: vi.fn().mockResolvedValue({ ok: true }),
+      getReleaseNotes: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            releaseNotesResolver = resolve;
+          })
+      ),
     },
   };
 });
@@ -59,6 +68,44 @@ describe("UpdateDialog", () => {
     await waitFor(() => screen.getByRole("dialog"));
     fireEvent.click(screen.getByText("Remind me later"));
     await waitFor(() => expect(window.electron.updates.remindLater).toHaveBeenCalled());
+  });
+
+  it("calls skipVersion with the dispatched version when the user clicks Skip this version", async () => {
+    render(<UpdateDialog />);
+    availableCallback({ version: "2.3.4" });
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Skip this version"));
+    await waitFor(() => expect(window.electron.updates.skipVersion).toHaveBeenCalledWith("2.3.4"));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("shows a loading hint while release notes are being fetched, then renders them", async () => {
+    render(<UpdateDialog />);
+    availableCallback({ version: "2.3.4" });
+    await waitFor(() => screen.getByRole("dialog"));
+    expect(screen.getByTestId("update-dialog-notes-loading")).toBeInTheDocument();
+
+    releaseNotesResolver({
+      body: "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8",
+      language: "en",
+    });
+    await waitFor(() => expect(screen.getByTestId("update-dialog-notes")).toBeInTheDocument());
+    expect(window.electron.updates.getReleaseNotes).toHaveBeenCalledWith({ language: "en" });
+    const notesBlock = screen.getByTestId("update-dialog-notes");
+    expect(notesBlock.textContent).toContain("Line 1");
+    expect(notesBlock.textContent).toContain("Line 6");
+    expect(notesBlock.textContent).not.toContain("Line 7");
+  });
+
+  it("falls back silently when release-notes fetch returns an error", async () => {
+    render(<UpdateDialog />);
+    availableCallback({ version: "2.3.4" });
+    await waitFor(() => screen.getByRole("dialog"));
+    releaseNotesResolver({ error: "offline" });
+    await waitFor(() => expect(screen.queryByTestId("update-dialog-notes-loading")).toBeNull());
+    expect(screen.queryByTestId("update-dialog-notes")).toBeNull();
+    // The actions remain interactive even without notes.
+    expect(screen.getByText("Install on next restart")).not.toBeDisabled();
   });
 
   it("never calls installOnNextRestart implicitly on mount (no auto-restart)", async () => {
