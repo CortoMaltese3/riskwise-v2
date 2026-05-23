@@ -195,6 +195,7 @@ const ENGINE_PUB_KEY_FILENAME = "engine-manifest.pub";
 // ``RiskWiseEngine`` so both apps can coexist on the same machine — wiping
 // or replacing the v2 engine binary must never touch v1's CPython install.
 const ENGINE_DIR_NAME = "RiskWiseEngineV2";
+const ENGINE_EXE_NAME = "riskwise-engine.exe";
 
 let updateCheckTimer = null;
 let updateStore = null;
@@ -424,17 +425,14 @@ const downloadAndInstallEngine = async (loaderWindow) => {
   }
 
   const enginePath = path.join(engineRoot, ENGINE_DIR_NAME);
-  const pythonExecutable = path.join(enginePath, "python.exe");
-  const archivePath = path.join(engineRoot, `${ENGINE_DIR_NAME}.zip`);
+  const engineExecutable = path.join(enginePath, ENGINE_EXE_NAME);
 
-  // Check if already installed
-  if (fs.existsSync(pythonExecutable)) {
-    log.info("[electron] Python engine already installed at:", enginePath);
-    return pythonExecutable;
+  if (fs.existsSync(engineExecutable)) {
+    log.info("[electron] RISK WISE Engine already installed at:", enginePath);
+    return engineExecutable;
   }
 
-  log.info("[electron] Python engine not found, downloading...");
-  log.info("[electron] Archive will be downloaded to:", archivePath);
+  log.info("[electron] RISK WISE Engine not found, downloading...");
 
   try {
     updateLoaderMessage("RISK WISE Engine is missing. Fetching manifest...");
@@ -443,162 +441,34 @@ const downloadAndInstallEngine = async (loaderWindow) => {
     // hardcoded fallback. `fetchVerifiedEngineManifest` verifies the
     // minisign signature before we trust any field inside.
     const manifest = await fetchVerifiedEngineManifest();
-    const engineUrl = manifest.download_url;
-    log.info(`[electron] Engine manifest resolved version=${manifest.version} url=${engineUrl}`);
-    updateLoaderMessage("Downloading RISK WISE Engine...");
+    log.info(
+      `[electron] Engine manifest resolved version=${manifest.version} url=${manifest.download_url}`
+    );
 
-    await new Promise((resolve, reject) => {
-      const request = net.request(engineUrl);
-      const file = fs.createWriteStream(archivePath);
-
-      request.on("response", (response) => {
-        const totalBytes = parseInt(response.headers["content-length"], 10);
-        let downloadedBytes = 0;
-
-        log.info(`[electron] Starting download, size: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
-
-        response.on("data", (chunk) => {
-          downloadedBytes += chunk.length;
-          file.write(chunk);
-
-          const percent = ((downloadedBytes / totalBytes) * 100).toFixed(1);
-
-          // Update UI every 10%
-          if (
-            Math.floor(percent / 10) >
-            Math.floor((((downloadedBytes - chunk.length) / totalBytes) * 100) / 10)
-          ) {
-            updateLoaderMessage(`Downloading engine... ${percent}%`);
-            log.info(`[electron] Downloaded: ${percent}%`);
-          }
-        });
-
-        response.on("end", () => {
-          file.end();
-          file.close();
-          log.info("[electron] Download complete, file size:", fs.statSync(archivePath).size);
-          resolve();
-        });
-
-        response.on("error", (err) => {
-          file.close();
-          if (fs.existsSync(archivePath)) {
-            fs.unlinkSync(archivePath);
-          }
-          reject(err);
-        });
-      });
-
-      request.on("error", (err) => {
-        file.close();
-        if (fs.existsSync(archivePath)) {
-          fs.unlinkSync(archivePath);
-        }
-        reject(err);
-      });
-
-      request.end();
-    });
-
-    // Verify download
-    if (!fs.existsSync(archivePath)) {
-      throw new Error("Archive file not found after download");
-    }
-
-    const archiveSize = fs.statSync(archivePath).size;
-    log.info(`[electron] Archive downloaded: ${(archiveSize / 1024 / 1024).toFixed(2)} MB`);
-
-    if (archiveSize < 10 * 1024 * 1024) {
-      throw new Error(
-        `Archive too small (${(archiveSize / 1024 / 1024).toFixed(2)} MB) - download failed`
-      );
-    }
-
-    // Defense-in-depth: the manifest signature was already verified above by
-    // `fetchVerifiedEngineManifest`, so `manifest.sha256` is trusted. Hashing
-    // the on-disk archive here closes the gap between "signed manifest" and
-    // "trusted bytes on disk" — a compromised CDN or TLS-inspecting proxy
-    // corrupting the download is caught before we shell out to `tar -xf`.
-    // Mirrors the resumable downloader's pattern (see `downloadEngineWithResume`).
-    updateLoaderMessage("Verifying engine archive integrity...");
-    const expectedSha256 = String(manifest.sha256 || "").toLowerCase();
-    const actualSha256 = (await sha256File(archivePath)).toLowerCase();
-    if (!expectedSha256 || actualSha256 !== expectedSha256) {
-      log.error(
-        `[electron] engine archive SHA-256 mismatch expected=${expectedSha256} actual=${actualSha256}`
-      );
-      try {
-        fs.unlinkSync(archivePath);
-      } catch (unlinkErr) {
-        log.warn(`[electron] failed to delete tampered archive: ${unlinkErr.message}`);
-      }
-      throw new Error("engine download integrity check failed");
-    }
-    log.info("[electron] engine archive SHA-256 matches manifest");
-
-    updateLoaderMessage("Extracting engine files...");
-    log.info("[electron] Starting extraction...");
-
-    // Extract archive
-    const { execSync } = require("child_process");
-
-    // Clean and create engine directory
-    if (fs.existsSync(enginePath)) {
-      log.info("[electron] Removing existing engine directory");
-      fs.rmSync(enginePath, { recursive: true, force: true });
-    }
     fs.mkdirSync(enginePath, { recursive: true });
 
-    // Extract using tar
-    log.info("[electron] Extracting to:", enginePath);
-    const extractCmd = `tar -xf "${archivePath}" -C "${enginePath}"`;
+    // Download to a temp sibling so a partial/aborted download isn't mistaken
+    // for an installed engine on the next launch. `downloadEngineWithResume`
+    // owns Range-resume, SHA-256 verification, and retry-from-zero on hash
+    // mismatch — we only need to atomic-rename on success.
+    const downloadPath = `${engineExecutable}.partial`;
 
-    execSync(extractCmd, { stdio: "pipe" });
+    updateLoaderMessage("Downloading RISK WISE Engine...");
+    await downloadEngineWithResume(manifest, downloadPath);
 
-    // Check extracted contents
-    const extracted = fs.readdirSync(enginePath);
-    log.info("[electron] Extracted top-level items:", extracted);
-
-    // If archive contains a single directory, flatten structure
-    if (extracted.length === 1 && fs.statSync(path.join(enginePath, extracted[0])).isDirectory()) {
-      const subDir = path.join(enginePath, extracted[0]);
-      log.info("[electron] Flattening nested directory:", subDir);
-
-      const items = fs.readdirSync(subDir);
-
-      for (const item of items) {
-        const srcPath = path.join(subDir, item);
-        const destPath = path.join(enginePath, item);
-        fs.renameSync(srcPath, destPath);
-      }
-
-      fs.rmdirSync(subDir);
-      log.info("[electron] Structure flattened");
-    }
-
-    // Clean up archive
-    if (fs.existsSync(archivePath)) {
-      fs.unlinkSync(archivePath);
-      log.info("[electron] Cleaned up archive file");
-    }
-
-    // Verify installation
-    if (!fs.existsSync(pythonExecutable)) {
-      const contents = fs.readdirSync(enginePath).slice(0, 10);
-      log.error("[electron] python.exe not found. Directory contains:", contents);
-      throw new Error(`Installation incomplete - python.exe not found at: ${pythonExecutable}`);
-    }
+    updateLoaderMessage("Installing engine...");
+    fs.renameSync(downloadPath, engineExecutable);
 
     updateLoaderMessage("Engine installed successfully!");
-    log.info("[electron] Python engine installed successfully");
+    log.info("[electron] RISK WISE Engine installed successfully");
 
-    return pythonExecutable;
+    return engineExecutable;
   } catch (error) {
-    log.error("[electron] Failed to download/install Python engine:", error);
+    log.error("[electron] Failed to download/install RISK WISE Engine:", error);
 
     dialog.showErrorBox(
       "Installation Error",
-      `Failed to install RISK WISE engine.\n\nError: ${error.message}\n\nPlease check:\n- Internet connection\n- Available disk space (~2 GB)\n- Antivirus not blocking download\n\nLogs: ${userLogDir}`
+      `Failed to install RISK WISE engine.\n\nError: ${error.message}\n\nPlease check:\n- Internet connection\n- Available disk space (~500 MB)\n- Antivirus not blocking download\n\nLogs: ${userLogDir}`
     );
 
     throw error;
@@ -1229,17 +1099,10 @@ const restartBackendWithBackoff = async () => {
 
 // Create a long-running Python process.
 //
-// Two engine shapes are supported:
-//   1. Nuitka onefile bundle: a self-contained ``riskwise-engine.exe`` with
-//      ``backend.__main__`` baked in. Spawned with no args; backend package
-//      and shipped data resolve via ``NUITKA_ONEFILE_BINARY`` (see
-//      ``backend/constants.get_base_dir``).
-//   2. Stock CPython portable: ``python.exe -m backend`` against the repo's
-//      source tree at ``basePath``. This is the historical path that
-//      ``downloadAndInstallEngine`` provisions when neither shape is on disk.
-//
-// The Nuitka shape wins when present so a locally-built engine can be tested
-// against the real Electron client without ripping out the legacy path.
+// Packaged builds spawn the Nuitka onefile ``riskwise-engine.exe`` with no
+// args; backend package and shipped data resolve via ``NUITKA_ONEFILE_BINARY``
+// (see ``backend/constants.get_base_dir``). ``downloadAndInstallEngine``
+// provisions the binary into ``%LOCALAPPDATA%/RiskWiseEngineV2`` on first run.
 const createPythonProcess = async () => {
   let executable;
   let args;
@@ -1263,35 +1126,10 @@ const createPythonProcess = async () => {
     executable = devPython;
     args = ["-m", "backend"];
   } else {
-    const engineRoot = process.env.LOCALAPPDATA;
-    if (!engineRoot) {
-      throw new Error("Failed to resolve LOCALAPPDATA environment variable");
-    }
-
-    const enginePath = path.join(engineRoot, ENGINE_DIR_NAME);
-    const nuitkaExecutable = path.join(enginePath, "riskwise-engine.exe");
-    let pythonExecutable = path.join(enginePath, "python.exe");
-
-    const useNuitkaBundle = fs.existsSync(nuitkaExecutable);
-
-    if (!useNuitkaBundle && !fs.existsSync(pythonExecutable)) {
-      log.info("[electron] Python engine not found, initiating download...");
-      pythonExecutable = await downloadAndInstallEngine(loaderWindow);
-    }
-
-    if (useNuitkaBundle) {
-      log.info("[electron] Using Nuitka engine bundle at:", nuitkaExecutable);
-      executable = nuitkaExecutable;
-      args = [];
-    } else {
-      const backendDir = path.join(basePath, "backend");
-      if (!fs.existsSync(backendDir)) {
-        throw new Error("Backend package not found at: " + backendDir);
-      }
-      log.info("[electron] Using CPython interpreter at:", pythonExecutable);
-      executable = pythonExecutable;
-      args = ["-m", "backend"];
-    }
+    const engineExecutable = await downloadAndInstallEngine(loaderWindow);
+    log.info("[electron] Using Nuitka engine bundle at:", engineExecutable);
+    executable = engineExecutable;
+    args = [];
   }
 
   try {
