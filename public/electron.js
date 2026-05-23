@@ -2360,6 +2360,23 @@ ipcMain.handle("updates:downgrade", async () => {
   }
 });
 
+// "Restart now" branch of the post-download toast (issue #423). The binary
+// is already on disk from the install-on-quit flow, so this is a plain
+// quitAndInstall — distinct from `updates:install-on-next-restart`, which
+// triggers the download. Logged with a dedicated tag so field diagnostics
+// can tell "user accepted silent install on quit" apart from
+// "user explicitly restarted now from the toast".
+ipcMain.handle("updates:quit-and-install-now", async () => {
+  try {
+    log.info("[electron] updates: quit-and-install-now requested from renderer");
+    setImmediate(() => autoUpdater.quitAndInstall());
+    return { ok: true };
+  } catch (err) {
+    log.error("[electron] quit-and-install-now failed:", err.message);
+    return { error: err.message };
+  }
+});
+
 ipcMain.handle("engine:verify-manifest", async () => {
   try {
     const manifest = await fetchVerifiedEngineManifest();
@@ -2508,7 +2525,10 @@ autoUpdater.on("update-downloaded", (info) => {
   // Arm install-on-quit rather than prompting for a restart. Users who
   // clicked "Install on next restart" accept exactly that contract; an
   // immediate-restart prompt would violate the "never auto-restart" AC.
+  // The renderer-side toast (issue #423) surfaces an opt-in "Restart now"
+  // shortcut without changing this default.
   autoUpdater.autoInstallOnAppQuit = true;
+  log.info("[electron] updates: armed install-on-quit (autoInstallOnAppQuit=true)");
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("update:downloaded", { version: info?.version });
   }
