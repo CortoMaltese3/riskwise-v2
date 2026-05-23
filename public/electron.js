@@ -1127,6 +1127,7 @@ const createPythonProcess = async () => {
     args = ["-m", "backend"];
   } else {
     const engineExecutable = await downloadAndInstallEngine(loaderWindow);
+    applyDeferredEngineSwap(engineExecutable);
     log.info("[electron] Using Nuitka engine bundle at:", engineExecutable);
     executable = engineExecutable;
     args = [];
@@ -2218,6 +2219,56 @@ const downloadEngineWithResume = async (manifest, destPath, { maxAttempts = 3 } 
   throw new Error(`engine download failed after ${maxAttempts} attempts`);
 };
 
+// On Windows the in-use exe is locked by the previous launch and rename
+// surfaces EBUSY/EPERM. Fall back to staging at `<exe>.new`, which
+// `applyDeferredEngineSwap` consumes on the next app launch before spawn.
+const installEngineBinary = (downloadPath, engineExecutable) => {
+  log.info(
+    `[electron] engine.install attempt mode=rename src=${downloadPath} dst=${engineExecutable}`
+  );
+  try {
+    fs.renameSync(downloadPath, engineExecutable);
+    log.info(`[electron] engine.install success mode=rename path=${engineExecutable}`);
+    return { mode: "rename" };
+  } catch (err) {
+    if (err.code !== "EBUSY" && err.code !== "EPERM") throw err;
+    const stagedPath = `${engineExecutable}.new`;
+    log.warn(
+      `[electron] engine.install rename failed code=${err.code} — staging at ${stagedPath}`
+    );
+    // Clear a stale `.new` from a prior failed attempt so the swap picks up the latest download.
+    try {
+      fs.unlinkSync(stagedPath);
+    } catch (unlinkErr) {
+      if (unlinkErr.code !== "ENOENT") {
+        log.warn(
+          `[electron] engine.install failed to clear stale staged binary: ${unlinkErr.message}`
+        );
+      }
+    }
+    fs.renameSync(downloadPath, stagedPath);
+    log.info(`[electron] engine.install success mode=deferred path=${stagedPath}`);
+    return { mode: "deferred" };
+  }
+};
+
+// Failures never block startup: warn and continue with the existing binary.
+const applyDeferredEngineSwap = (engineExecutable) => {
+  const stagedPath = `${engineExecutable}.new`;
+  if (!fs.existsSync(stagedPath)) return false;
+  log.info(`[electron] engine.deferred-swap detected staged=${stagedPath}`);
+  try {
+    fs.renameSync(stagedPath, engineExecutable);
+    log.info(`[electron] engine.deferred-swap success path=${engineExecutable}`);
+    return true;
+  } catch (err) {
+    log.warn(
+      `[electron] engine.deferred-swap failed code=${err.code || "?"} message=${err.message} — continuing with existing binary`
+    );
+    return false;
+  }
+};
+
 const isEngineBlocked = (manifest, cachedEngineVersion) => {
   if (!manifest) return false;
   if (!cachedEngineVersion) return true;
@@ -2377,10 +2428,19 @@ ipcMain.handle("engine:download-update", async () => {
     const manifest = await fetchVerifiedEngineManifest();
     const engineRoot = process.env.LOCALAPPDATA;
     if (!engineRoot) throw new Error("LOCALAPPDATA is not defined");
-    const destPath = path.join(engineRoot, `${ENGINE_DIR_NAME}.download`);
-    await downloadEngineWithResume(manifest, destPath);
+    const engineDir = path.join(engineRoot, ENGINE_DIR_NAME);
+    const engineExecutable = path.join(engineDir, ENGINE_EXE_NAME);
+    // Stage inside the engine dir so the post-download rename stays on the
+    // same volume as the destination (atomic on Windows).
+    fs.mkdirSync(engineDir, { recursive: true });
+    const downloadPath = path.join(engineDir, `${ENGINE_EXE_NAME}.download`);
+    await downloadEngineWithResume(manifest, downloadPath);
+    log.info(
+      `[electron] engine.download complete version=${manifest.version} path=${downloadPath}`
+    );
+    const { mode } = installEngineBinary(downloadPath, engineExecutable);
     if (updateStore) updateStore.set("engine.version", manifest.version);
-    return { ok: true, version: manifest.version };
+    return { ok: true, version: manifest.version, mode };
   } catch (err) {
     log.error("[electron] engine download failed:", err.message);
     return { error: err.message };
