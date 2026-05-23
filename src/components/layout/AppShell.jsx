@@ -18,6 +18,7 @@ import WorkspaceView from "../workspace/WorkspaceView";
 import HomeView from "./views/HomeView";
 import SettingsView from "../settings/SettingsView";
 import UpdateDialog from "../UpdateDialog";
+import UpdateDownloadedToast from "../UpdateDownloadedToast";
 import EngineStatusBanner from "../EngineStatusBanner";
 import OfflineIndicator from "./OfflineIndicator";
 import AppViewport from "./primitives/AppViewport";
@@ -279,6 +280,7 @@ const AppShell = () => {
         </HorizontalSplit>
       </Box>
       <UpdateDialog />
+      <UpdateDownloadedToast />
       <OfflineIndicator />
     </AppViewport>
   );

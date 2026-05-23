@@ -36,6 +36,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "updates:set-channel",
   "updates:get-release-notes",
   "updates:downgrade",
+  "updates:quit-and-install-now",
   "engine:verify-manifest",
   "engine:check-blocked",
   "engine:download-update",
@@ -145,6 +146,7 @@ describe("preload bridge surface", () => {
     exposed.electron.updates.setChannel("beta");
     exposed.electron.updates.getReleaseNotes({ language: "en" });
     exposed.electron.updates.downgrade();
+    exposed.electron.updates.quitAndInstallNow();
     exposed.electron.engine.verifyManifest();
     exposed.electron.engine.checkBlocked();
     exposed.electron.engine.downloadUpdate();

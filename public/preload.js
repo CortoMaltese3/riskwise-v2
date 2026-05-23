@@ -109,6 +109,7 @@ contextBridge.exposeInMainWorld("electron", {
     setChannel: (channel) => ipcRenderer.invoke("updates:set-channel", channel),
     getReleaseNotes: (opts) => ipcRenderer.invoke("updates:get-release-notes", opts),
     downgrade: () => ipcRenderer.invoke("updates:downgrade"),
+    quitAndInstallNow: () => ipcRenderer.invoke("updates:quit-and-install-now"),
     onAvailable: (callback) => subscribe("update:available", callback),
     onDownloaded: (callback) => subscribe("update:downloaded", callback),
   },
