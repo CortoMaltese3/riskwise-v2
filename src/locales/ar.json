@@ -1223,5 +1223,11 @@
     "error_boundary_title": "Something went wrong.",
     "error_boundary_description": "The application encountered an unexpected error. You can try to reload; if the problem persists, please share the error ID below with support.",
     "error_boundary_reload": "Reload",
-    "settings_updates_version_value": "v{{version}}"
+    "settings_updates_version_value": "v{{version}}",
+    "map_controls_basemap_label": "Basemap",
+    "map_controls_basemap_light": "Light",
+    "map_controls_basemap_dark": "Dark",
+    "map_controls_basemap_satellite": "Satellite",
+    "map_controls_opacity_label": "Opacity",
+    "map_controls_basemap_offline_tooltip": "Basemap selection disabled in offline mode"
 }
