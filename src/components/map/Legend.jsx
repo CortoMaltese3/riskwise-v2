@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import "./Legend.css";
 import { formatNumberDivisor } from "../../lib/formatNumber";
 
-const Legend = ({ colorScale, percentileValues, title, divisor }) => {
+const Legend = ({ colorScale, percentileValues, title, divisor, bucketCounts }) => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const isAscending = percentileValues[0] < percentileValues[percentileValues.length - 1];
@@ -46,13 +46,15 @@ const Legend = ({ colorScale, percentileValues, title, divisor }) => {
         ))}
       </div>
       <div className="legend-labels">
-        {Array.from({ length: percentileValues.length }, (_, i) => `${t("level")} ${i + 1}`).map(
-          (level, index) => (
-            <div key={index} className="legend-label">
-              {level}
-            </div>
-          )
-        )}
+        {Array.from({ length: percentileValues.length }, (_, i) => {
+          const base = `${t("level")} ${i + 1}`;
+          const hasCount = Array.isArray(bucketCounts) && i < bucketCounts.length;
+          return hasCount ? `${base} (${bucketCounts[i]})` : base;
+        }).map((level, index) => (
+          <div key={index} className="legend-label">
+            {level}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -63,6 +65,7 @@ Legend.propTypes = {
   percentileValues: PropTypes.arrayOf(PropTypes.number).isRequired,
   title: PropTypes.string.isRequired,
   divisor: PropTypes.number,
+  bucketCounts: PropTypes.arrayOf(PropTypes.number),
 };
 
 export default Legend;
