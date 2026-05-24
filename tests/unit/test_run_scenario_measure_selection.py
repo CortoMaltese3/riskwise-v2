@@ -37,7 +37,7 @@ class _StubEntity:
 
 
 def _make_runner():
-    from backend.run_scenario import RunScenario
+    from backend.scenario.runner import RunScenario
 
     runner = RunScenario.__new__(RunScenario)
     runner.costben_handler = MagicMock()
@@ -52,12 +52,12 @@ def _make_runner():
         warning=lambda *a, **k: None,
         error=lambda *a, **k: None,
     )
-    runner._generate_geojsons_parallel = lambda *a, **kw: None
+    runner._geojson = SimpleNamespace(generate=lambda *a, **kw: None)
     return runner
 
 
 def _make_request_data(**overrides):
-    from backend.run_scenario import RequestData
+    from backend.scenario.request import RequestData
 
     defaults: dict = dict(
         adaptation_measures=[],
@@ -101,10 +101,10 @@ class _FixedLoadStrategy:
 
 
 def _patch_module_helpers(monkeypatch):
-    from backend import run_scenario
+    from backend.scenario import runner
 
-    monkeypatch.setattr(run_scenario, "update_progress", MagicMock())
-    monkeypatch.setattr(run_scenario, "save_parquet_file", MagicMock())
+    monkeypatch.setattr(runner, "update_progress", MagicMock())
+    monkeypatch.setattr(runner, "save_parquet_file", MagicMock())
 
 
 def _build_entity(measure_names: list[str]) -> _StubEntity:
@@ -129,8 +129,8 @@ class TestSelectedMeasureIdsAtRequestBoundary:
         assert data.selected_measure_ids == ["m_levee", "m_pumps"]
 
     def test_from_request_threads_camelcase_field_through(self) -> None:
-        from backend import run_scenario
-        from backend.run_scenario import RequestData
+        from backend.scenario import request as request_module
+        from backend.scenario.request import RequestData
 
         class _HazardStub:
             def get_hazard_code(self, _hazard_type: str) -> str:
@@ -147,16 +147,16 @@ class TestSelectedMeasureIdsAtRequestBoundary:
 
         monkey = pytest.MonkeyPatch()
         try:
-            monkey.setattr(run_scenario, "sanitize_country_name", lambda name: name)
-            monkey.setattr(run_scenario, "get_iso3_country_code", lambda _: "THA")
+            monkey.setattr(request_module, "sanitize_country_name", lambda name: name)
+            monkey.setattr(request_module, "get_iso3_country_code", lambda _: "THA")
             data = RequestData.from_request(request, _HazardStub())
         finally:
             monkey.undo()
         assert data.selected_measure_ids == ["m_levee", "m_drainage"]
 
     def test_from_request_omitted_field_resolves_to_empty_list(self) -> None:
-        from backend import run_scenario
-        from backend.run_scenario import RequestData
+        from backend.scenario import request as request_module
+        from backend.scenario.request import RequestData
 
         class _HazardStub:
             def get_hazard_code(self, _hazard_type: str) -> str:
@@ -166,8 +166,8 @@ class TestSelectedMeasureIdsAtRequestBoundary:
 
         monkey = pytest.MonkeyPatch()
         try:
-            monkey.setattr(run_scenario, "sanitize_country_name", lambda name: name)
-            monkey.setattr(run_scenario, "get_iso3_country_code", lambda _: "THA")
+            monkey.setattr(request_module, "sanitize_country_name", lambda name: name)
+            monkey.setattr(request_module, "get_iso3_country_code", lambda _: "THA")
             data = RequestData.from_request({"countryName": "Thailand"}, _HazardStub())
         finally:
             monkey.undo()

@@ -47,7 +47,7 @@ def _request_data(**overrides):
 
 @pytest.fixture
 def strategy():
-    from backend.scenario_strategy import CustomDataStrategy
+    from backend.scenario.strategy import CustomDataStrategy
 
     return CustomDataStrategy()
 
@@ -83,7 +83,7 @@ class TestCustomLoadHazardPresent:
     def test_historical_with_uploaded_file_uses_that_file(
         self, strategy, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from backend import scenario_strategy
+        from backend.scenario import strategy as scenario_strategy
 
         monkeypatch.setattr(scenario_strategy, "check_file_type", lambda _path: "raster")
         request_data = _request_data(
@@ -109,7 +109,7 @@ class TestCustomLoadHazardPresent:
         """When the user uploads only a future hazard file, the historical
         hazard is resolved from the ERA seed for that country — matching
         pre-refactor behaviour."""
-        from backend import scenario_strategy
+        from backend.scenario import strategy as scenario_strategy
 
         monkeypatch.setattr(scenario_strategy, "check_file_type", lambda _path: "raster")
         request_data = _request_data(
@@ -145,7 +145,7 @@ class TestCustomLoadHazardFuture:
     def test_with_uploaded_file_loads_future_from_user_file(
         self, strategy, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from backend import scenario_strategy
+        from backend.scenario import strategy as scenario_strategy
 
         monkeypatch.setattr(scenario_strategy, "check_file_type", lambda _path: "hdf5")
         request_data = _request_data(
@@ -178,7 +178,7 @@ class TestCustomLoadHazardFuture:
 
 class TestMakeStrategy:
     def test_era_flag_returns_era_strategy(self) -> None:
-        from backend.scenario_strategy import CustomDataStrategy, EraDataStrategy, make_strategy
+        from backend.scenario.strategy import CustomDataStrategy, EraDataStrategy, make_strategy
 
         assert isinstance(make_strategy(is_era=True), EraDataStrategy)
         assert isinstance(make_strategy(is_era=False), CustomDataStrategy)

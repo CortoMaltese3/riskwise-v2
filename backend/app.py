@@ -121,7 +121,7 @@ def _check_memory_preflight() -> tuple[bool, str]:
 
 def _run_scenario_sync(payload: dict) -> dict:
     """Import and execute the legacy scenario runner. Called inside a thread."""
-    from backend.run_scenario import RunScenario
+    from backend.scenario.runner import RunScenario
 
     return RunScenario(payload).run_scenario()
 

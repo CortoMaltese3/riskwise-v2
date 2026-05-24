@@ -30,7 +30,7 @@ class _StubEntity:
 
 
 def _make_runner():
-    from backend.run_scenario import RunScenario
+    from backend.scenario.runner import RunScenario
 
     runner = RunScenario.__new__(RunScenario)
     runner.costben_handler = MagicMock()
@@ -46,12 +46,12 @@ def _make_runner():
         error=lambda *a, **k: None,
     )
     runner.skipped_measures = []
-    runner._generate_geojsons_parallel = lambda *a, **kw: None
+    runner._geojson = SimpleNamespace(generate=lambda *a, **kw: None)
     return runner
 
 
 def _make_request_data(**overrides):
-    from backend.run_scenario import RequestData
+    from backend.scenario.request import RequestData
 
     defaults: dict = dict(
         adaptation_measures=[],
@@ -95,10 +95,10 @@ class _FixedLoadStrategy:
 
 
 def _patch_module_helpers(monkeypatch):
-    from backend import run_scenario
+    from backend.scenario import runner
 
-    monkeypatch.setattr(run_scenario, "update_progress", MagicMock())
-    monkeypatch.setattr(run_scenario, "save_parquet_file", MagicMock())
+    monkeypatch.setattr(runner, "update_progress", MagicMock())
+    monkeypatch.setattr(runner, "save_parquet_file", MagicMock())
 
 
 def _build_entity(measure_names: list[str]) -> _StubEntity:
@@ -118,7 +118,7 @@ def _run(runner, strategy) -> None:
 
 class TestFilterReturnsSkippedNames:
     def test_unknown_names_are_returned_as_skipped(self) -> None:
-        from backend.run_scenario import _filter_entity_measures
+        from backend.scenario.request import _filter_entity_measures
 
         entity = _build_entity(["m_levee", "m_drainage"])
         logger = SimpleNamespace(warning=lambda *a, **k: None)
@@ -128,7 +128,7 @@ class TestFilterReturnsSkippedNames:
         assert skipped == ["m_does_not_exist"]
 
     def test_no_filter_returns_empty_skipped_list(self) -> None:
-        from backend.run_scenario import _filter_entity_measures
+        from backend.scenario.request import _filter_entity_measures
 
         entity = _build_entity(["m_levee"])
         logger = SimpleNamespace(warning=lambda *a, **k: None)
@@ -136,7 +136,7 @@ class TestFilterReturnsSkippedNames:
         assert skipped == []
 
     def test_every_selection_known_returns_empty_skipped_list(self) -> None:
-        from backend.run_scenario import _filter_entity_measures
+        from backend.scenario.request import _filter_entity_measures
 
         entity = _build_entity(["m_levee", "m_drainage"])
         logger = SimpleNamespace(warning=lambda *a, **k: None)
@@ -144,7 +144,7 @@ class TestFilterReturnsSkippedNames:
         assert skipped == []
 
     def test_all_unknown_filters_to_empty_and_skips_every_name(self) -> None:
-        from backend.run_scenario import _filter_entity_measures
+        from backend.scenario.request import _filter_entity_measures
 
         entity = _build_entity(["m_levee"])
         logger = SimpleNamespace(warning=lambda *a, **k: None)

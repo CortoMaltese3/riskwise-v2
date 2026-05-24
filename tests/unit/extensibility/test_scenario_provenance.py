@@ -69,7 +69,7 @@ def test_resolve_country_config_path_points_at_custom_file(
 
     # Imported lazily: run_scenario imports CLIMADA at module top via a
     # chain of handlers, so we reach the helper via the module object.
-    from backend.run_scenario import _resolve_country_config_path
+    from backend.scenario.persistence import _resolve_country_config_path
 
     resolved = _resolve_country_config_path("KEN")
     assert resolved == custom_path
@@ -85,7 +85,7 @@ def test_resolve_falls_back_to_builtin_path_for_unknown_code(
     # No custom country written; unknown ISO3 falls through to the
     # built-in tree so the "file not found" branch of provenance
     # collection behaves as it did pre-#56.
-    from backend.run_scenario import _resolve_country_config_path
+    from backend.scenario.persistence import _resolve_country_config_path
 
     resolved = _resolve_country_config_path("ZZZ")
 
