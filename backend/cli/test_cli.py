@@ -1,6 +1,6 @@
 """Tests for ``backend.cli`` shared CLI infrastructure.
 
-Covers two contracts the nine ``run_*.py`` scripts depend on:
+Covers two contracts the ``run_*.py`` scripts historically depended on:
 
 1. The :class:`StatusCode` enum compares equal to the legacy integer
    literals ``2000``/``3000``/``4000`` so the FastAPI tests, the
@@ -15,8 +15,6 @@ Covers two contracts the nine ``run_*.py`` scripts depend on:
 from __future__ import annotations
 
 import json
-
-import pytest
 
 from backend.cli import Command, StatusCode
 
@@ -90,31 +88,3 @@ class TestCommand:
         assert result["status"]["code"] == StatusCode.SUCCESS
         assert result["data"] == {"value": 42}
         assert captured.out == ""
-
-
-# Regression tests: every concrete ``run_*.py`` command exposes its
-# legacy ``run_<...>`` method *and* delegates to the shared base class.
-# This is what guarantees ``app.py``'s in-process callers keep working.
-@pytest.mark.parametrize(
-    "module_name, class_name, method_name",
-    [
-        ("backend.run_check_data_type", "RunCheckDataType", "run_check_data_type"),
-        ("backend.run_clear_temp_dir", "RunClearTempDir", "run_clear_temp_dir"),
-        ("backend.run_fetch_costbenefit", "RunFetchCostBenefit", "run_fetch_costbenefit"),
-        ("backend.run_fetch_cred_output", "RunFetchCredOutput", "run_fetch_cred_output"),
-        (
-            "backend.run_fetch_macro_chart_data",
-            "RunFetchMacroChartData",
-            "run_fetch_macro_chart_data",
-        ),
-        ("backend.run_fetch_measures", "RunFetchScenario", "run_fetch_measures"),
-        ("backend.run_fetch_waterfall", "RunFetchWaterfall", "run_fetch_waterfall"),
-    ],
-)
-def test_run_scripts_subclass_command_and_keep_legacy_method(module_name, class_name, method_name):
-    import importlib
-
-    module = importlib.import_module(module_name)
-    cls = getattr(module, class_name)
-    assert issubclass(cls, Command), f"{class_name} must subclass Command"
-    assert callable(getattr(cls, method_name)), f"{class_name}.{method_name} missing"

@@ -281,9 +281,9 @@ class CostBenefitHandler:
         which is not part of the cost-benefit output. When the results list
         is empty (zero measures), baselines are computed via the engine adapter
         ``run_impact`` so the waterfall is still well-defined. The result is
-        persisted as JSON in ``DATA_TEMP_DIR`` so ``run_fetch_waterfall.py``
-        can serve it through the FastAPI endpoint after the scenario run
-        completes.
+        persisted as JSON in ``DATA_TEMP_DIR`` so ``GET /scenario/waterfall``
+        (:mod:`backend.api.scenario`) can serve it through the FastAPI
+        endpoint after the scenario run completes.
         """
         try:
             present_year = entity_present.ref_year
@@ -385,8 +385,9 @@ class CostBenefitHandler:
         pre-Phase-6 payload — ``benefit_cost_ratio`` is the engine's ``bcr``
         (benefit/cost), already inverted at the handler boundary if the
         CLIMADA branch produced it. The result is persisted as JSON in
-        ``DATA_TEMP_DIR`` so ``run_fetch_costbenefit.py`` can serve it
-        through the FastAPI endpoint after the scenario run completes.
+        ``DATA_TEMP_DIR`` so ``GET /scenario/cost-benefit``
+        (:mod:`backend.api.scenario`) can serve it through the FastAPI
+        endpoint after the scenario run completes.
 
         ``future_year`` is taken from the scenario request so the payload's
         time horizon reflects the user's selection even for historical runs,

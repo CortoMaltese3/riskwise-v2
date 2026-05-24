@@ -2,9 +2,10 @@
 
 The integration tests exercise the real :mod:`backend.app` via
 :class:`fastapi.testclient.TestClient`, against a freshly migrated DuckDB in
-a temp directory. Heavy engine entrypoints (``_run_scenario_sync``,
-``_dispatch_sync``) are monkey-patched per-test so the suite runs in a
-vanilla Python environment without the geospatial stack.
+a temp directory. Heavy engine entrypoints (``_run_scenario_sync`` and
+the per-router sync helpers under :mod:`backend.api`) are monkey-patched
+per-test so the suite runs in a vanilla Python environment without the
+geospatial stack.
 
 Conventions:
     - ``tmp_db`` gives a writable DuckDB path with the full migration chain
