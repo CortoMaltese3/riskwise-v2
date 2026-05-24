@@ -2,8 +2,7 @@ import React from "react";
 import { Box, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 
-import type { CostBenefitData } from "../hooks/useScenarioMeta";
-import type { WaterfallData } from "../utils/executiveSummary";
+import type { CostBenefitPayload, WaterfallPayload } from "../../../../lib/RiskWiseClient";
 import type { SnapshotFigure } from "../hooks/useSnapshotFigures";
 import type { SurfaceCounts, SurfaceKey } from "../utils/surfaceGrouping";
 
@@ -21,8 +20,8 @@ const SNAPSHOT_TYPE_LABEL_KEYS: Record<string, string> = {
 export interface FiguresGridProps {
   figuresBySurface: Record<SurfaceKey, SnapshotFigure[]>;
   availableSurfaceCounts: SurfaceCounts;
-  waterfallData: WaterfallData | null;
-  costbenData: CostBenefitData | null;
+  waterfallData: WaterfallPayload | null;
+  costbenData: CostBenefitPayload | null;
   showWaterfall: boolean;
   showCostBenefit: boolean;
   hasCostbenMeasures: boolean;
@@ -252,7 +251,7 @@ export const FiguresGrid = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {[...costbenData.measures]
+                {[...(costbenData.measures ?? [])]
                   .sort((a, b) => b.benefit_cost_ratio - a.benefit_cost_ratio)
                   .map((m) => (
                     <TableRow key={m.name}>

@@ -3,10 +3,10 @@ import { useTranslation } from "react-i18next";
 
 import gizLogo from "../../../../assets/giz_logo.png";
 import unuEhsLogo from "../../../../assets/unu_ehs_logo.png";
-import type { ScenarioMeta } from "../hooks/useScenarioMeta";
+import type { ScenarioWorkspaceItem } from "../../../../lib/RiskWiseClient";
 
 export interface CoverPageProps {
-  meta: ScenarioMeta;
+  meta: ScenarioWorkspaceItem;
   horizon: string;
 }
 

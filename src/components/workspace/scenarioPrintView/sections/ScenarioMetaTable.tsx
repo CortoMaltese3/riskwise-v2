@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { Box, Table, TableBody, TableCell, TableRow, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 
-import type { ScenarioMeta } from "../hooks/useScenarioMeta";
+import type { ScenarioWorkspaceItem } from "../../../../lib/RiskWiseClient";
 import { formatDate, shortSha } from "../utils/formatting";
 
 export const LabelRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
@@ -15,7 +15,7 @@ export const LabelRow = ({ label, value }: { label: string; value: React.ReactNo
 );
 
 export interface ScenarioMetaTableProps {
-  meta: ScenarioMeta;
+  meta: ScenarioWorkspaceItem;
   locale: string;
   renderTableCaption: (descriptionKey: string) => React.ReactNode;
 }

@@ -10,9 +10,12 @@ vi.mock("../../../../lib/formatDate", () => ({
 }));
 
 import { ScenarioMetaTable } from "./ScenarioMetaTable";
-import type { ScenarioMeta } from "../hooks/useScenarioMeta";
+import type { ScenarioWorkspaceItem } from "../../../../lib/RiskWiseClient";
 
-const meta: ScenarioMeta = {
+const meta: ScenarioWorkspaceItem = {
+  is_imported: false,
+  modified: false,
+  saved: false,
   id: "scn-1",
   name: "My Scenario",
   country: "Egypt",

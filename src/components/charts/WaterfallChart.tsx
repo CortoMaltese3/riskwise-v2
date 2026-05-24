@@ -24,7 +24,7 @@ import { buildChartThemeOptions } from "../../utils/chartTheme";
 import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
 import ChartInfoPopover from "../help/ChartInfoPopover";
-import type { WaterfallCategory, WaterfallData } from "./types";
+import type { WaterfallCategory, WaterfallPayload } from "../../lib/RiskWiseClient";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend);
 
@@ -34,7 +34,7 @@ ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend)
 type WaterfallChartHandle = Chart<"bar"> | undefined;
 
 export interface WaterfallChartProps {
-  data: WaterfallData | null | undefined;
+  data: WaterfallPayload | null | undefined;
   errorMessage?: string;
   animate?: boolean;
 }
@@ -70,7 +70,7 @@ const formatValue = (value: number, unit: string, locale: string) => {
 
 const buildAriaLabel = (
   t: (key: string) => string,
-  data: WaterfallData,
+  data: WaterfallPayload,
   unit: string,
   locale: string
 ) => {
