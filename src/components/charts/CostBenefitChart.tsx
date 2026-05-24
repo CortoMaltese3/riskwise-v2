@@ -24,7 +24,7 @@ import { buildChartThemeOptions } from "../../utils/chartTheme";
 import { prefersReducedMotion } from "../../utils/prefersReducedMotion";
 import ChartDataTable from "./ChartDataTable";
 import ChartInfoPopover from "../help/ChartInfoPopover";
-import type { CostBenefitData, CostBenefitMeasure } from "./types";
+import type { CostBenefitMeasure, CostBenefitPayload } from "../../lib/RiskWiseClient";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend);
 
@@ -34,7 +34,7 @@ ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend)
 type CostBenefitChartHandle = Chart<"bar"> | undefined;
 
 export interface CostBenefitChartProps {
-  data: CostBenefitData | null | undefined;
+  data: CostBenefitPayload | null | undefined;
   errorMessage?: string;
   animate?: boolean;
   appliedCount?: number | null;
@@ -170,6 +170,10 @@ const CostBenefitChart = React.forwardRef<CostBenefitChartHandle, CostBenefitCha
       );
     }
 
+    // Bind `measures` to a local so the early-return narrowing survives the
+    // tooltip callback closure — TS resets `data.measures` to `T[] | undefined`
+    // at the closure boundary.
+    const measures = data.measures;
     const unit = data.currency_unit || "";
     // Engine output ships an opaque short code in ``measure_name`` ("GR",
     // "TP", ...) which we surface as ``name`` on the payload. Resolve the
@@ -182,8 +186,8 @@ const CostBenefitChart = React.forwardRef<CostBenefitChartHandle, CostBenefitCha
       const key = displayKeyByName.get(m.name) || m.display_name;
       return key ? t(key) : m.name;
     };
-    const labels = data.measures.map((m) => bidiIsolate(labelFor(m), locale));
-    const ratios = data.measures.map((m) => m.benefit_cost_ratio);
+    const labels = measures.map((m) => bidiIsolate(labelFor(m), locale));
+    const ratios = measures.map((m) => m.benefit_cost_ratio);
     const colors = ratios.map((r) => colorForRatio(r, vizColors));
 
     const chartData = {
@@ -267,7 +271,7 @@ const CostBenefitChart = React.forwardRef<CostBenefitChartHandle, CostBenefitCha
           callbacks: {
             title: (items: Array<{ label?: string }>) => bidiIsolate(items[0]?.label ?? "", locale),
             label: (ctx: { dataIndex: number }) => {
-              const measure = data.measures[ctx.dataIndex];
+              const measure = measures[ctx.dataIndex];
               return [
                 `${t("economic_non_economic_adaptation_chart_tooltip_cost")}: ${formatCurrency(measure.cost, unit, locale)}`,
                 `${t("economic_non_economic_adaptation_chart_tooltip_benefit")}: ${formatCurrency(measure.benefit, unit, locale)}`,
@@ -285,7 +289,7 @@ const CostBenefitChart = React.forwardRef<CostBenefitChartHandle, CostBenefitCha
       buildBreakEvenPlugin(breakEvenColor, t("chart_break_even_label"), breakEvenFont),
     ];
 
-    const ariaLabel = `${titleText}. ${data.measures
+    const ariaLabel = `${titleText}. ${measures
       .map((m) => `${labelFor(m)}: ${formatRatio(m.benefit_cost_ratio, locale)}`)
       .join(", ")}`;
 
@@ -296,7 +300,7 @@ const CostBenefitChart = React.forwardRef<CostBenefitChartHandle, CostBenefitCha
       t("economic_non_economic_adaptation_chart_tooltip_benefit") + (unit ? ` (${unit})` : ""),
       t("economic_non_economic_adaptation_chart_tooltip_ratio"),
     ];
-    const tableRows = data.measures.map((m) => [
+    const tableRows = measures.map((m) => [
       labelFor(m),
       formatNumber(m.cost, locale),
       formatNumber(m.benefit, locale),

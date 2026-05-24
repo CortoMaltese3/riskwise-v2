@@ -1,36 +1,16 @@
 import { useEffect, useState } from "react";
 
 import RiskWiseClient from "../../../../lib/RiskWiseClient";
-import type { CostBenefitData, CostBenefitMeasure, WaterfallData } from "../../../charts/types";
-
-export type { CostBenefitData, CostBenefitMeasure };
-
-export interface ScenarioMeta {
-  id: string;
-  name: string | null;
-  country: string | null;
-  hazard_type: string | null;
-  scenario: string | null;
-  ref_year: number | null;
-  future_year: number | null;
-  annual_growth: number | null;
-  exposure_type: string | null;
-  asset_type: string | null;
-  created_at: string | null;
-  app_version?: string | null;
-  engine_version?: string | null;
-  climada_version?: string | null;
-  entity_data_sha256?: string | null;
-  hazard_data_sha256?: string | null;
-  country_config_sha256?: string | null;
-  random_seed?: number | null;
-  computed_at?: string | null;
-}
+import type {
+  CostBenefitPayload,
+  ScenarioWorkspaceItem,
+  WaterfallPayload,
+} from "../../../../lib/RiskWiseClient";
 
 export interface UseScenarioMetaResult {
-  meta: ScenarioMeta | null;
-  waterfallData: WaterfallData | null;
-  costbenData: CostBenefitData | null;
+  meta: ScenarioWorkspaceItem | null;
+  waterfallData: WaterfallPayload | null;
+  costbenData: CostBenefitPayload | null;
   error: string | null;
   loaded: boolean;
 }
@@ -45,9 +25,9 @@ const parseJsonResult = <T>(json: string, setter: (v: T) => void) => {
 };
 
 export const useScenarioMeta = (scenarioId: string): UseScenarioMetaResult => {
-  const [meta, setMeta] = useState<ScenarioMeta | null>(null);
-  const [waterfallData, setWaterfallData] = useState<WaterfallData | null>(null);
-  const [costbenData, setCostbenData] = useState<CostBenefitData | null>(null);
+  const [meta, setMeta] = useState<ScenarioWorkspaceItem | null>(null);
+  const [waterfallData, setWaterfallData] = useState<WaterfallPayload | null>(null);
+  const [costbenData, setCostbenData] = useState<CostBenefitPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -61,16 +41,13 @@ export const useScenarioMeta = (scenarioId: string): UseScenarioMetaResult => {
           setError(res.error.message);
           return;
         }
-        const payload = (
-          res.result as unknown as {
-            data: { scenario: ScenarioMeta; results: Record<string, string> };
-          }
-        ).data;
+        const payload = res.result.data;
         setMeta(payload.scenario);
-        if (payload.results.waterfall_data)
-          parseJsonResult<WaterfallData>(payload.results.waterfall_data, setWaterfallData);
-        if (payload.results.costben_data)
-          parseJsonResult<CostBenefitData>(payload.results.costben_data, setCostbenData);
+        const results = payload.results;
+        if (results?.waterfall_data)
+          parseJsonResult<WaterfallPayload>(results.waterfall_data, setWaterfallData);
+        if (results?.costben_data)
+          parseJsonResult<CostBenefitPayload>(results.costben_data, setCostbenData);
       } catch (e: unknown) {
         if (cancelled) return;
         setError(e instanceof Error ? e.message : String(e));

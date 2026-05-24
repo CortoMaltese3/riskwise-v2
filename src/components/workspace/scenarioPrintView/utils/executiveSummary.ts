@@ -1,6 +1,4 @@
-import type { WaterfallCategory, WaterfallData } from "../../../charts/types";
-
-export type { WaterfallCategory, WaterfallData };
+import type { WaterfallCategory, WaterfallPayload } from "../../../../lib/RiskWiseClient";
 
 export interface ExecutiveSummary {
   presentYear: number;
@@ -16,7 +14,7 @@ export interface ExecutiveSummary {
 
 export const TOTAL_KEYS = new Set(["risk_present", "risk_future"]);
 
-export const computeExecutiveSummary = (data: WaterfallData): ExecutiveSummary | null => {
+export const computeExecutiveSummary = (data: WaterfallPayload): ExecutiveSummary | null => {
   const present = data.categories.find((c) => c.key === "risk_present");
   const future = data.categories.find((c) => c.key === "risk_future");
   if (!present || !future) return null;

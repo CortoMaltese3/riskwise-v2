@@ -9,9 +9,12 @@ vi.mock("../../../../assets/giz_logo.png", () => ({ default: "giz-logo-stub" }))
 vi.mock("../../../../assets/unu_ehs_logo.png", () => ({ default: "unu-logo-stub" }));
 
 import { CoverPage } from "./CoverPage";
-import type { ScenarioMeta } from "../hooks/useScenarioMeta";
+import type { ScenarioWorkspaceItem } from "../../../../lib/RiskWiseClient";
 
-const meta: ScenarioMeta = {
+const meta: ScenarioWorkspaceItem = {
+  is_imported: false,
+  modified: false,
+  saved: false,
   id: "scn-1",
   name: "My Scenario",
   country: "Egypt",

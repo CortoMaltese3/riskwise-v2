@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 
-import { computeExecutiveSummary, TOTAL_KEYS, type WaterfallData } from "./executiveSummary";
+import type { WaterfallPayload } from "../../../../lib/RiskWiseClient";
 
-const baseData = (overrides: Partial<WaterfallData> = {}): WaterfallData => ({
+import { computeExecutiveSummary, TOTAL_KEYS } from "./executiveSummary";
+
+const baseData = (overrides: Partial<WaterfallPayload> = {}): WaterfallPayload => ({
   present_year: 2020,
   future_year: 2080,
   measurement_unit: "USD",

@@ -57,7 +57,7 @@ const ScenarioPrintView = ({
     [waterfallData]
   );
 
-  const hasCostbenMeasures = !!(costbenData && costbenData.measures.length > 0);
+  const hasCostbenMeasures = !!costbenData?.measures?.length;
   const showWaterfall = includeWaterfall && Boolean(waterfallData);
   const showCostBenefit = includeCostBenefit && hasCostbenMeasures;
 
