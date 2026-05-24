@@ -1,9 +1,10 @@
 """Scenario data-loading strategies for ERA and custom modes.
 
-Before this refactor, ``RunScenario`` duplicated the compute pipeline across
-``_run_era_scenario`` and ``_run_custom_scenario``; only the data-acquisition
-steps actually differed. The strategies here encapsulate that divergence so
-the rest of the pipeline lives in one place.
+Before the original scenario refactor, the runner duplicated the compute
+pipeline across ``_run_era_scenario`` and ``_run_custom_scenario``; only
+the data-acquisition steps actually differed. The strategies here
+encapsulate that divergence so the rest of the pipeline lives in one
+place.
 
 Two concrete strategies:
 

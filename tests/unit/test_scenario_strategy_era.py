@@ -46,7 +46,7 @@ def request_data():
 
 @pytest.fixture
 def strategy():
-    from backend.scenario_strategy import EraDataStrategy
+    from backend.scenario.strategy import EraDataStrategy
 
     return EraDataStrategy()
 

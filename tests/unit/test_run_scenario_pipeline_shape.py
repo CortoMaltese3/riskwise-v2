@@ -30,7 +30,7 @@ def _make_runner(handlers=None):
     for the pipeline-equivalence test, which relies on identical mock
     return objects to produce identical call sequences.
     """
-    from backend.run_scenario import RunScenario
+    from backend.scenario.runner import RunScenario
 
     runner = RunScenario.__new__(RunScenario)
     handlers = handlers or {}
@@ -48,12 +48,12 @@ def _make_runner(handlers=None):
     )
     # The geojson generators write to disk and exercise the partial-result
     # callback path; the call-graph test does not need either.
-    runner._generate_geojsons_parallel = lambda *a, **kw: None
+    runner._geojson = SimpleNamespace(generate=lambda *a, **kw: None)
     return runner
 
 
 def _make_request_data(**overrides):
-    from backend.run_scenario import RequestData
+    from backend.scenario.request import RequestData
 
     defaults = dict(
         adaptation_measures=[],
@@ -127,12 +127,12 @@ def _patch_module_helpers(monkeypatch):
     The tests need to introspect their call args, so swap them with
     ``MagicMock`` instances bound on the runner module.
     """
-    from backend import run_scenario
+    from backend.scenario import runner
 
     progress_mock = MagicMock(name="update_progress")
     parquet_mock = MagicMock(name="save_parquet_file")
-    monkeypatch.setattr(run_scenario, "update_progress", progress_mock)
-    monkeypatch.setattr(run_scenario, "save_parquet_file", parquet_mock)
+    monkeypatch.setattr(runner, "update_progress", progress_mock)
+    monkeypatch.setattr(runner, "save_parquet_file", parquet_mock)
     return progress_mock, parquet_mock
 
 

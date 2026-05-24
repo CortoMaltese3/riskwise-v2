@@ -90,7 +90,6 @@ extend-exclude = [
     "backend/run_fetch_reports.py",
     "backend/run_fetch_waterfall.py",
     "backend/run_remove_report.py",
-    "backend/run_scenario.py",
     # The FastAPI proof-of-concept under spike/ and the v1 translations
     # utility script live outside the v2 backend surface and are not
     # part of the lint baseline.
@@ -141,7 +140,6 @@ module = [
     "backend.run_fetch_macro_chart_data",
     "backend.run_fetch_measures",
     "backend.run_fetch_waterfall",
-    "backend.run_scenario",
     # Test modules whose latent type issues only became visible once
     # ``from backend.X`` imports started resolving (issue #195). Fixing the
     # underlying typing in test fixtures is out of scope for the

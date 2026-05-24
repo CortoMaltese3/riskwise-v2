@@ -19,7 +19,7 @@ from typing import Any
 
 
 def _make_request_data(**overrides: Any):
-    from backend.run_scenario import RequestData
+    from backend.scenario.request import RequestData
 
     defaults: dict[str, Any] = {
         "adaptation_measures": [],
@@ -66,7 +66,7 @@ class TestRequestDataPlainDataclass:
         assert data.asset_type == "non_economic"
 
     def test_dataclass_has_no_handler_fields(self) -> None:
-        from backend.run_scenario import RequestData
+        from backend.scenario.request import RequestData
 
         field_names = {f.name for f in fields(RequestData)}
         forbidden = {"base_handler", "hazard_handler"}
@@ -82,13 +82,13 @@ class TestRequestDataPlainDataclass:
         handler; passing means the request sanitization happens via the
         module-level functions and the injected hazard handler.
         """
-        from backend import run_scenario
-        from backend.run_scenario import RequestData
+        from backend.scenario import request as request_module
+        from backend.scenario.request import RequestData
 
         monkeypatch.setattr(
-            run_scenario, "sanitize_country_name", lambda name: f"sanitized::{name}"
+            request_module, "sanitize_country_name", lambda name: f"sanitized::{name}"
         )
-        monkeypatch.setattr(run_scenario, "get_iso3_country_code", lambda _name: "EGY")
+        monkeypatch.setattr(request_module, "get_iso3_country_code", lambda _name: "EGY")
 
         class _HazardStub:
             def get_hazard_code(self, hazard_type: str) -> str:

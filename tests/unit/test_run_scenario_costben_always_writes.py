@@ -35,7 +35,7 @@ class _StubEntity:
 
 
 def _make_runner():
-    from backend.run_scenario import RunScenario
+    from backend.scenario.runner import RunScenario
 
     runner = RunScenario.__new__(RunScenario)
     runner.costben_handler = MagicMock()
@@ -50,12 +50,12 @@ def _make_runner():
         warning=lambda *a, **k: None,
         error=lambda *a, **k: None,
     )
-    runner._generate_geojsons_parallel = lambda *a, **kw: None
+    runner._geojson = SimpleNamespace(generate=lambda *a, **kw: None)
     return runner
 
 
 def _make_request_data(**overrides):
-    from backend.run_scenario import RequestData
+    from backend.scenario.request import RequestData
 
     defaults: dict = dict(
         adaptation_measures=[],
@@ -99,10 +99,10 @@ class _FixedLoadStrategy:
 
 
 def _patch_module_helpers(monkeypatch):
-    from backend import run_scenario
+    from backend.scenario import runner
 
-    monkeypatch.setattr(run_scenario, "update_progress", MagicMock())
-    monkeypatch.setattr(run_scenario, "save_parquet_file", MagicMock())
+    monkeypatch.setattr(runner, "update_progress", MagicMock())
+    monkeypatch.setattr(runner, "save_parquet_file", MagicMock())
 
 
 def _run(runner, strategy):
