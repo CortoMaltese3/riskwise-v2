@@ -115,6 +115,6 @@ def close_all_connections() -> None:
         for conn in _shared_connections.values():
             try:
                 conn.close()
-            except Exception:
+            except duckdb.Error:
                 pass
         _shared_connections.clear()
