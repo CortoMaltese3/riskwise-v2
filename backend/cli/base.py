@@ -13,10 +13,11 @@ three things:
 
 :class:`Command` owns 2 and 3 so concrete subclasses only have to
 implement :py:meth:`Command.execute`. The class deliberately stays
-permissive about the *shape* of the envelope (some commands return
-``{"success": True, "message": ...}`` — see :mod:`backend.run_clear_temp_dir`)
-because the FastAPI endpoints already depend on those exact shapes;
-this base class consolidates the boilerplate, not the schema.
+permissive about the *shape* of the envelope (some commands returned
+``{"success": True, "message": ...}`` rather than the standard
+``{"data": ..., "status": ...}`` envelope) because the FastAPI
+endpoints already depend on those exact shapes; this base class
+consolidates the boilerplate, not the schema.
 """
 
 from __future__ import annotations
@@ -49,8 +50,7 @@ class Command(ABC):
 
     #: Set to ``True`` when the subclass's constructor takes a request
     #: dict (decoded from ``sys.argv[1]``). Set to ``False`` for
-    #: argument-less commands like
-    #: :class:`~backend.run_fetch_costbenefit.RunFetchCostBenefit`.
+    #: argument-less commands.
     requires_request: bool = True
 
     def __init__(self) -> None:

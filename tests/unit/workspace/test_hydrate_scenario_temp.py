@@ -1,6 +1,6 @@
-"""Tests for ``RunHydrateScenarioTemp``.
+"""Tests for ``_hydrate_scenario_temp_sync``.
 
-The command is the backend half of the Workspace restore flow: it reads
+The helper is the backend half of the Workspace restore flow: it reads
 a saved scenario's persisted blobs and writes them back into
 ``DATA_TEMP_DIR`` so the map and chart components — which fetch from
 that directory — paint the right state.
@@ -38,10 +38,10 @@ def tmp_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def tmp_data_temp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Redirect ``DATA_TEMP_DIR`` inside the command + shared fs helper."""
+    """Redirect ``DATA_TEMP_DIR`` inside the router module + shared fs helper."""
     target = tmp_path / "data_temp"
     target.mkdir()
-    import backend.run_hydrate_scenario_temp as mod
+    import backend.api.scenarios as mod
     import backend.utils.fs as fs_mod
 
     monkeypatch.setattr(mod, "DATA_TEMP_DIR", target)
@@ -88,11 +88,11 @@ def _insert_full_scenario(scenario_id: str = "scn-h1") -> dict[str, bytes]:
 
 
 def test_happy_path_writes_all_file_backed_blobs(tmp_db: Path, tmp_data_temp: Path) -> None:
-    from backend.run_hydrate_scenario_temp import RunHydrateScenarioTemp
+    from backend.api.scenarios import _hydrate_scenario_temp_sync
 
     blobs = _insert_full_scenario("scn-happy")
 
-    result = RunHydrateScenarioTemp({"scenario_id": "scn-happy"}).execute()
+    result = _hydrate_scenario_temp_sync("scn-happy")
 
     assert result["status"]["code"] == StatusCode.SUCCESS
     # ``impact_summary`` is intentionally not a file-backed type; only the
@@ -115,7 +115,7 @@ def test_happy_path_writes_all_file_backed_blobs(tmp_db: Path, tmp_data_temp: Pa
 
 def test_partial_blobs_skip_missing_files(tmp_db: Path, tmp_data_temp: Path) -> None:
     """Historical scenarios skip cost-benefit. The hydrate must not raise."""
-    from backend.run_hydrate_scenario_temp import RunHydrateScenarioTemp
+    from backend.api.scenarios import _hydrate_scenario_temp_sync
 
     blobs = {
         "hazard_geojson": b'{"h":1}',
@@ -143,7 +143,7 @@ def test_partial_blobs_skip_missing_files(tmp_db: Path, tmp_data_temp: Path) -> 
         name="Thailand historical",
     )
 
-    result = RunHydrateScenarioTemp({"scenario_id": "scn-historical"}).execute()
+    result = _hydrate_scenario_temp_sync("scn-historical")
 
     assert result["status"]["code"] == StatusCode.SUCCESS
     assert set(result["data"]["written"]) == {
@@ -157,31 +157,31 @@ def test_partial_blobs_skip_missing_files(tmp_db: Path, tmp_data_temp: Path) -> 
 
 def test_missing_scenario_id_raises(tmp_db: Path, tmp_data_temp: Path) -> None:
     """Endpoint translates ``ScenarioNotFound`` to HTTP 404."""
-    from backend.run_hydrate_scenario_temp import RunHydrateScenarioTemp
+    from backend.api.scenarios import _hydrate_scenario_temp_sync
 
     with pytest.raises(ScenarioNotFound):
-        RunHydrateScenarioTemp({"scenario_id": "nope"}).execute()
+        _hydrate_scenario_temp_sync("nope")
     # Nothing written to the temp dir on the failure path.
     assert list(tmp_data_temp.iterdir()) == []
 
 
 def test_blank_scenario_id_returns_validation_error(tmp_data_temp: Path) -> None:
-    from backend.run_hydrate_scenario_temp import RunHydrateScenarioTemp
+    from backend.api.scenarios import _hydrate_scenario_temp_sync
 
-    result = RunHydrateScenarioTemp({"scenario_id": ""}).execute()
+    result = _hydrate_scenario_temp_sync("")
     assert result["status"]["code"] == StatusCode.VALIDATION_ERROR
     assert result["data"] is None
 
 
 def test_pre_existing_files_are_cleared_before_writing(tmp_db: Path, tmp_data_temp: Path) -> None:
     """Stale files from a previous run must not bleed into the restored view."""
-    from backend.run_hydrate_scenario_temp import RunHydrateScenarioTemp
+    from backend.api.scenarios import _hydrate_scenario_temp_sync
 
     sentinel = tmp_data_temp / "stale_from_previous_run.json"
     sentinel.write_text("ghost", encoding="utf-8")
     _insert_full_scenario("scn-cleanup")
 
-    result = RunHydrateScenarioTemp({"scenario_id": "scn-cleanup"}).execute()
+    result = _hydrate_scenario_temp_sync("scn-cleanup")
 
     assert result["status"]["code"] == StatusCode.SUCCESS
     assert not sentinel.exists()

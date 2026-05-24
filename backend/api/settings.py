@@ -8,7 +8,9 @@ from dataclasses import asdict
 from fastapi import APIRouter, HTTPException
 
 from backend.api._envelope import _status_ok
-from backend.app import _dispatch
+from backend.cli import StatusCode
+from backend.constants import DATA_TEMP_DIR
+from backend.logging_config import get_logger
 from backend.models import (
     CountriesResponse,
     DataValidateRequest,
@@ -21,8 +23,36 @@ from backend.models import (
     UpdateUserSettingsRequest,
     UserSettingsResponse,
 )
+from backend.utils.country import sanitize_country_name
+from backend.utils.data_check import check_data_type
 
 router = APIRouter()
+logger = get_logger("backend.api.settings")
+
+
+def _check_data_type_sync(country: str, data_type: str) -> dict:
+    country = sanitize_country_name(country)
+    is_valid = check_data_type(country, data_type)
+    if not is_valid:
+        message = f"No datasets available for {data_type} in {country} in CLIMADA's API."
+        code = StatusCode.VALIDATION_ERROR
+    else:
+        message = f"Fetched {data_type} data successfully."
+        code = StatusCode.SUCCESS
+    return {"data": {"data": {}}, "status": {"code": code, "message": message}}
+
+
+def _clear_temp_dir_sync() -> dict:
+    try:
+        for file in DATA_TEMP_DIR.glob("*"):
+            file.unlink(missing_ok=True)
+        message = "Successfully cleared all files in the temporary directory."
+        logger.info(message)
+        return {"success": True, "message": message}
+    except OSError as exc:
+        error_message = f"Error while trying to clear temp directory. More info: {exc}"
+        logger.error(error_message)
+        return {"success": False, "error": error_message}
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -57,7 +87,7 @@ async def patch_settings_endpoint(payload: UpdateUserSettingsRequest) -> dict:
 
 @router.post("/data/validate", response_model=DataValidateResponse)
 async def data_validate(payload: DataValidateRequest) -> dict:
-    return await _dispatch("run_check_data_type.py", payload.model_dump())
+    return await asyncio.to_thread(_check_data_type_sync, payload.country, payload.dataType)
 
 
 @router.get("/countries", response_model=CountriesResponse)
@@ -81,7 +111,7 @@ async def countries() -> dict:
 
 @router.post("/temp/clear", response_model=TempClearResponse)
 async def temp_clear() -> dict:
-    return await _dispatch("run_clear_temp_dir.py", None)
+    return await asyncio.to_thread(_clear_temp_dir_sync)
 
 
 @router.post("/cache/clear")

@@ -22,7 +22,6 @@ import threading
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
@@ -30,7 +29,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.api._dispatch import _dispatch_sync
 from backend.constants import BASE_DIR, DATA_MANIFEST_PATH, REQUIREMENTS_DIR
 from backend.db import run_startup_migrations
 from backend.logging_config import (
@@ -124,12 +122,6 @@ def _run_scenario_sync(payload: dict) -> dict:
     from backend.scenario.runner import RunScenario
 
     return RunScenario(payload).run_scenario()
-
-
-async def _dispatch(script_name: str, data: Any) -> dict:
-    # Module-global ``_dispatch_sync`` lookup so test_app.py's
-    # ``patch.object(app_module, "_dispatch_sync", ...)`` intercepts dispatch.
-    return await asyncio.to_thread(_dispatch_sync, script_name, data)
 
 
 def _verify_shipped_data_manifest() -> None:

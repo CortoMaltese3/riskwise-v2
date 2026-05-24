@@ -9,6 +9,9 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from backend.api._envelope import _status_ok
+from backend.cli import StatusCode
+from backend.constants import DATA_TEMP_DIR
+from backend.logging_config import get_logger
 from backend.models import (
     DeleteScenarioResponse,
     HydrateScenarioResponse,
@@ -21,6 +24,7 @@ from backend.models import (
 )
 
 router = APIRouter()
+logger = get_logger("backend.api.scenarios")
 
 
 def _scenario_row_to_dict(row: Any) -> dict:
@@ -34,12 +38,55 @@ def _scenario_row_to_dict(row: Any) -> dict:
 
 
 def _hydrate_scenario_temp_sync(scenario_id: str) -> dict:
-    from backend.run_hydrate_scenario_temp import RunHydrateScenarioTemp
+    """Rewrite a saved scenario's persisted blobs back into ``DATA_TEMP_DIR``.
 
-    # Call ``execute`` directly (not ``run``) so ``ScenarioNotFound``
-    # propagates to the endpoint's 404 handler instead of being caught
-    # and converted to a generic error envelope.
-    return RunHydrateScenarioTemp({"scenario_id": scenario_id}).execute()
+    The Workspace ``Restore`` flow needs the maps and the waterfall /
+    cost-benefit charts (which read from per-run JSON files) to paint
+    the restored state. The temp dir is wiped before the write so a
+    half-restored state never reaches the renderer. ``ScenarioNotFound``
+    is allowed to propagate so the endpoint can translate it to a 404
+    instead of an error envelope.
+    """
+    from backend.db import RESULT_TYPE_TO_TEMP_FILE, get_scenario
+    from backend.utils.fs import clear_temp_dir
+
+    if not scenario_id:
+        return {
+            "data": None,
+            "status": {
+                "code": StatusCode.VALIDATION_ERROR,
+                "message": "scenario_id is required.",
+            },
+        }
+
+    detail = get_scenario(scenario_id)
+    if detail is None:
+        from backend.db import ScenarioNotFound
+
+        raise ScenarioNotFound(scenario_id)
+
+    DATA_TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    clear_temp_dir()
+
+    written: list[str] = []
+    for result_type, blob_str in detail.results.items():
+        filename = RESULT_TYPE_TO_TEMP_FILE.get(result_type)
+        if filename is None:
+            # ``impact_summary`` and any future result types that are
+            # not file-backed land here. Mirror the missing-file
+            # behaviour of ``read_result_blobs`` and skip with a log.
+            logger.warning(f"Skipping unknown result_type for temp hydrate: {result_type}")
+            continue
+        (DATA_TEMP_DIR / filename).write_bytes(blob_str.encode("utf-8"))
+        written.append(result_type)
+
+    return {
+        "data": {"written": written},
+        "status": {
+            "code": StatusCode.SUCCESS,
+            "message": "Scenario hydrated.",
+        },
+    }
 
 
 @router.get("/scenarios", response_model=ScenarioListResponse)

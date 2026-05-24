@@ -7,6 +7,8 @@ import json
 import shutil
 import threading
 from pathlib import Path
+from time import time
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -14,8 +16,10 @@ from starlette.background import BackgroundTask
 
 import backend.app as _app
 from backend.api._envelope import _status_ok
-from backend.app import _dispatch
 from backend.cancellation import CancelRequested, cancel_event_var
+from backend.cli import StatusCode
+from backend.constants import DATA_TEMP_DIR
+from backend.logging_config import get_logger
 from backend.models import (
     CostBenefitResponse,
     JobAcceptedResponse,
@@ -28,6 +32,55 @@ from backend.models import (
 from backend.progress import ProgressEvent, progress_callback_var
 
 router = APIRouter()
+logger = get_logger("backend.api.scenario")
+
+
+_COSTBEN_EMPTY_DATA: dict = {
+    "currency_unit": "",
+    "present_year": 0,
+    "future_year": 0,
+    "measures": [],
+}
+
+
+def _read_persisted_json_payload(
+    path: Path,
+    *,
+    empty_data: Any,
+    success_message: str,
+    missing_message: str,
+    failure_message: str,
+) -> dict:
+    """Return the on-disk JSON envelope written by the scenario runner.
+
+    ``empty_data`` is the schema-shaped placeholder returned when the file
+    is absent or unreadable — ``WaterfallPayload.categories`` enforces
+    ``min_length=4`` so waterfall passes ``None`` rather than an empty
+    dict to keep Pydantic response validation happy.
+    """
+    initial_time = time()
+    if not path.exists():
+        logger.info(missing_message)
+        return {
+            "data": empty_data,
+            "status": {"code": StatusCode.ERROR, "message": missing_message},
+        }
+    try:
+        with open(path, encoding="utf-8") as fh:
+            payload = json.load(fh)
+    except (OSError, ValueError) as exc:
+        message = f"{failure_message} More info: {exc}"
+        logger.error(message)
+        return {
+            "data": empty_data,
+            "status": {"code": StatusCode.ERROR, "message": message},
+        }
+    logger.info(f"{success_message} ({time() - initial_time:.2f} sec)")
+    return {
+        "data": payload,
+        "status": {"code": StatusCode.SUCCESS, "message": success_message},
+    }
+
 
 # Sentinel posted to a job queue to close the SSE stream.
 _STREAM_END = object()
@@ -169,12 +222,41 @@ async def _execute_scenario(
 
 @router.get("/scenario/waterfall", response_model=WaterfallResponse)
 async def scenario_waterfall() -> dict:
-    return await _dispatch("run_fetch_waterfall.py", None)
+    # Deferred import — :mod:`backend.costben.costben_handler` transitively
+    # pulls in geopandas via the hazard handler. The integration suite stubs
+    # geopandas only when a route is actually invoked, so leaving this at
+    # module top would break import of :mod:`backend.app` in vanilla envs.
+    from backend.costben.costben_handler import WATERFALL_DATA_FILENAME
+
+    return await asyncio.to_thread(
+        _read_persisted_json_payload,
+        DATA_TEMP_DIR / WATERFALL_DATA_FILENAME,
+        # ``data`` is ``None`` (not an empty dict) because
+        # ``WaterfallPayload.categories`` enforces ``min_length=4`` —
+        # an empty list there would trip Pydantic response validation
+        # and surface as a 500 to the renderer instead of the intended
+        # graceful "no waterfall yet" status.
+        empty_data=None,
+        success_message="Waterfall data fetched successfully.",
+        missing_message="Waterfall data not available. Run a future scenario first.",
+        failure_message="Failed to read waterfall data.",
+    )
 
 
 @router.get("/scenario/cost-benefit", response_model=CostBenefitResponse)
 async def scenario_cost_benefit() -> dict:
-    return await _dispatch("run_fetch_costbenefit.py", None)
+    from backend.costben.costben_handler import COSTBEN_DATA_FILENAME
+
+    return await asyncio.to_thread(
+        _read_persisted_json_payload,
+        DATA_TEMP_DIR / COSTBEN_DATA_FILENAME,
+        empty_data=dict(_COSTBEN_EMPTY_DATA),
+        success_message="Cost-benefit data fetched successfully.",
+        missing_message=(
+            "Cost-benefit data not available. Run a scenario with adaptation measures first."
+        ),
+        failure_message="Failed to read cost-benefit data.",
+    )
 
 
 # Two flavours of the scenario export endpoint live side by side:
