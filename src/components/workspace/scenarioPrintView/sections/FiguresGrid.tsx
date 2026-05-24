@@ -7,16 +7,8 @@ import type { WaterfallData } from "../utils/executiveSummary";
 import type { SnapshotFigure } from "../hooks/useSnapshotFigures";
 import type { SurfaceCounts, SurfaceKey } from "../utils/surfaceGrouping";
 
-// JSX chart components without TS prop declarations — cast to avoid forwardRef
-// inference issues when importing untyped JSX sources into a TS file.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-import WaterfallChartImport from "../../../charts/WaterfallChart";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-import CostBenefitChartImport from "../../../charts/CostBenefitChart";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const WaterfallChartView = WaterfallChartImport as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CostBenefitChartView = CostBenefitChartImport as any;
+import WaterfallChart from "../../../charts/WaterfallChart";
+import CostBenefitChart from "../../../charts/CostBenefitChart";
 
 // Maps backend snapshot_type values to i18n keys for the fallback heading
 // used when a snapshot has no user-provided title.
@@ -169,7 +161,7 @@ export const FiguresGrid = ({
             {showWaterfall && (
               <>
                 <Box sx={{ height: 380, mb: 1 }}>
-                  <WaterfallChartView data={waterfallData} animate={false} />
+                  <WaterfallChart data={waterfallData} animate={false} />
                 </Box>
                 {renderFigureCaption("print_caption_figure_waterfall")}
               </>
@@ -238,7 +230,7 @@ export const FiguresGrid = ({
         {showCostBenefit && costbenData && (
           <>
             <Box sx={{ height: 380, mb: 1 }}>
-              <CostBenefitChartView data={costbenData} animate={false} />
+              <CostBenefitChart data={costbenData} animate={false} />
             </Box>
             {renderFigureCaption("print_caption_figure_cost_benefit")}
 

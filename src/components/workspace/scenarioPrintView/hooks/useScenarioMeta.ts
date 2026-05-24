@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 
 import RiskWiseClient from "../../../../lib/RiskWiseClient";
-import type { WaterfallData } from "../utils/executiveSummary";
+import type { CostBenefitData, CostBenefitMeasure, WaterfallData } from "../../../charts/types";
+
+export type { CostBenefitData, CostBenefitMeasure };
 
 export interface ScenarioMeta {
   id: string;
@@ -23,20 +25,6 @@ export interface ScenarioMeta {
   country_config_sha256?: string | null;
   random_seed?: number | null;
   computed_at?: string | null;
-}
-
-export interface CostBenefitMeasure {
-  name: string;
-  cost: number;
-  benefit: number;
-  benefit_cost_ratio: number;
-}
-
-export interface CostBenefitData {
-  currency_unit: string;
-  present_year: number;
-  future_year: number;
-  measures: CostBenefitMeasure[];
 }
 
 export interface UseScenarioMetaResult {
