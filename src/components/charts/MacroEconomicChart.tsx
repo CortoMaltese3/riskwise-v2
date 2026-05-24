@@ -14,6 +14,8 @@ import {
   PointElement,
   Title,
   Tooltip,
+  type Chart,
+  type ChartOptions,
 } from "chart.js";
 
 import useResultsStore from "../../store/useResultsStore";
@@ -38,6 +40,20 @@ ChartJS.register(
   Filler
 );
 
+// react-chartjs-2's `Line` ref hands back `Chart<"line"> | undefined` on
+// unmount, so the handle type has to include `undefined` for assignability.
+type MacroChartHandle = Chart<"line"> | undefined;
+
+interface CredOutputRow {
+  country: string;
+  scenario: string;
+  economic_sector: string;
+  economic_indicator: string;
+  adpatation: number | string;
+  year: number;
+  proportion_change_from_baseline: number;
+}
+
 // Adaptation values render in a fixed order — None (no adaptation) is the
 // reference series; the adaptation tiers (0.25, 0.33, 0.5, 0.67, …) read as
 // successively-better outcomes. Mapped onto the categorical viz palette so
@@ -49,8 +65,8 @@ const MacroEconomicChart = () => {
   const locale = i18n.language;
   const rtl = isRtl(locale);
   const theme = useTheme();
-  const chartRef = useRef(null);
-  const vizCategorical = theme.palette.viz.categorical;
+  const chartRef = useRef<MacroChartHandle | null>(null);
+  const vizCategorical = theme.palette.viz.categorical as readonly string[];
   // Theme-aware axis / tooltip / gridline colours (issue #289).
   const chartThemeOptions = buildChartThemeOptions(theme);
 
@@ -63,17 +79,29 @@ const MacroEconomicChart = () => {
     if (!chart) return;
     chart.options.animation = false;
   }, []);
-  const colorForAdaptationKey = (key) => {
+  const colorForAdaptationKey = (key: string) => {
     const idx = ADAPTATION_KEY_ORDER.indexOf(key);
     // Unknown adaptation values fall through to the last categorical hue.
     return vizCategorical[idx >= 0 ? idx : vizCategorical.length - 1];
   };
-  const credOutputData = useResultsStore((s) => s.credOutputData);
-  const macroEconomicChartTitle = useResultsStore((s) => s.macroEconomicChartTitle);
-  const selectedMacroCountry = useWorkspaceStore((s) => s.selectedMacroCountry);
-  const selectedMacroScenario = useWorkspaceStore((s) => s.selectedMacroScenario);
-  const selectedMacroSector = useWorkspaceStore((s) => s.selectedMacroSector);
-  const selectedMacroVariable = useWorkspaceStore((s) => s.selectedMacroVariable);
+  const credOutputData = useResultsStore(
+    (s: { credOutputData: CredOutputRow[] }) => s.credOutputData
+  );
+  const macroEconomicChartTitle = useResultsStore(
+    (s: { macroEconomicChartTitle: string }) => s.macroEconomicChartTitle
+  );
+  const selectedMacroCountry = useWorkspaceStore(
+    (s: { selectedMacroCountry: string }) => s.selectedMacroCountry
+  );
+  const selectedMacroScenario = useWorkspaceStore(
+    (s: { selectedMacroScenario: string }) => s.selectedMacroScenario
+  );
+  const selectedMacroSector = useWorkspaceStore(
+    (s: { selectedMacroSector: string }) => s.selectedMacroSector
+  );
+  const selectedMacroVariable = useWorkspaceStore(
+    (s: { selectedMacroVariable: string }) => s.selectedMacroVariable
+  );
 
   // Filter data based on selected filters
   const filteredData = credOutputData.filter(
@@ -85,17 +113,20 @@ const MacroEconomicChart = () => {
   );
 
   // Group data by adaptation value
-  const groupedData = filteredData.reduce((acc, row) => {
-    const adaptationKey = row.adpatation === 0 ? "None" : row.adpatation;
+  const groupedData = filteredData.reduce<Record<string, { years: number[]; values: number[] }>>(
+    (acc, row) => {
+      const adaptationKey = row.adpatation === 0 ? "None" : String(row.adpatation);
 
-    if (!acc[adaptationKey]) {
-      acc[adaptationKey] = { years: [], values: [] };
-    }
-    acc[adaptationKey].years.push(row.year);
-    acc[adaptationKey].values.push(row.proportion_change_from_baseline);
+      if (!acc[adaptationKey]) {
+        acc[adaptationKey] = { years: [], values: [] };
+      }
+      acc[adaptationKey].years.push(row.year);
+      acc[adaptationKey].values.push(row.proportion_change_from_baseline);
 
-    return acc;
-  }, {});
+      return acc;
+    },
+    {}
+  );
 
   // Build sorted year labels
   const labels =
@@ -175,7 +206,7 @@ const MacroEconomicChart = () => {
         },
         ticks: {
           ...chartThemeOptions.scales.y.ticks,
-          callback: (val) =>
+          callback: (val: number | string) =>
             bidiIsolate(
               `${formatNumber(Number(val), locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,
               locale
@@ -190,7 +221,7 @@ const MacroEconomicChart = () => {
         rtl,
         ...chartThemeOptions.plugins.tooltip,
         callbacks: {
-          label: (ctx) =>
+          label: (ctx: { dataset: { label?: string }; parsed: { y: number } }) =>
             bidiIsolate(
               `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y, locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%`,
               locale
@@ -202,10 +233,10 @@ const MacroEconomicChart = () => {
 
   const hasData = filteredData.length > 0;
 
-  const tableHeaders = hasData
-    ? [t("macro_display_chart_x_axis_label"), ...datasets.map((d) => d.label)]
+  const tableHeaders: string[] = hasData
+    ? [t("macro_display_chart_x_axis_label"), ...datasets.map((d) => String(d.label))]
     : [];
-  const tableRows = hasData
+  const tableRows: Array<Array<string | number>> = hasData
     ? labels.map((year, i) => [
         year,
         ...datasets.map((d) =>
@@ -241,18 +272,22 @@ const MacroEconomicChart = () => {
         sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflowY: "auto" }}
       >
         {hasData && (
-          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", mb: 1 }}>
             <Typography variant="subtitle1" component="h3" sx={{ m: 0 }}>
               {macroEconomicChartTitle}
             </Typography>
-            <ChartInfoPopover titleKey="chart_info_macro_title" bodyKey="chart_info_macro_body" />
+            <ChartInfoPopover
+              titleKey="chart_info_macro_title"
+              bodyKey="chart_info_macro_body"
+              ariaLabelKey="chart_info_macro_title"
+            />
           </Stack>
         )}
         <Box sx={{ position: "relative", flex: 1, minHeight: 320, mb: 1 }}>
           <Line
             ref={chartRef}
             data={transformedData}
-            options={options}
+            options={options as ChartOptions<"line">}
             aria-label={ariaLabel}
             role="img"
           />

@@ -1,16 +1,6 @@
-export interface WaterfallCategory {
-  key: string;
-  label: string;
-  value: number;
-  base: number;
-}
+import type { WaterfallCategory, WaterfallData } from "../../../charts/types";
 
-export interface WaterfallData {
-  present_year: number;
-  future_year: number;
-  measurement_unit: string;
-  categories: WaterfallCategory[];
-}
+export type { WaterfallCategory, WaterfallData };
 
 export interface ExecutiveSummary {
   presentYear: number;
