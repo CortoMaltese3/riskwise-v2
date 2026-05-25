@@ -79,18 +79,28 @@ short-lived leaf certificates, so there is nothing to rotate manually.
 ## How activation flows through the codebase
 
 `package.json` does not carry the `build` block directly — electron-builder
-config lives in [electron-builder.js](../../electron-builder.js).
+config lives in [electron-builder.cjs](../../electron-builder.cjs).
 The config is a small conditional:
 
 ```js
 const azureSigningEnabled = Boolean(process.env.AZURE_CLIENT_ID);
+const publisherName = process.env.AZURE_PUBLISHER_NAME || undefined;
 // ...
 win: {
   // ...
-  publisherName,
+  ...(publisherName ? { publisherName } : {}),
   ...(azureSigningEnabled
-    ? { azureSignOptions: { publisherName, endpoint, certificateProfileName,
-        codeSigningAccountName, azureTenantId, azureClientId, azureClientSecret } }
+    ? {
+        azureSignOptions: {
+          publisherName,
+          endpoint: process.env.AZURE_ENDPOINT,
+          certificateProfileName: process.env.AZURE_CERT_PROFILE_NAME,
+          codeSigningAccountName: process.env.AZURE_CODE_SIGNING_ACCOUNT_NAME,
+          azureTenantId: process.env.AZURE_TENANT_ID,
+          azureClientId: process.env.AZURE_CLIENT_ID,
+          azureClientSecret: process.env.AZURE_CLIENT_SECRET,
+        },
+      }
     : {}),
 }
 ```
@@ -189,5 +199,5 @@ D17's fallback clause). That path is no longer wired in
 `.github/workflows/release.yml` — the `AZURE_CLIENT_ID` guard replaced it.
 If Azure Trusted Signing ever has to be rolled back to a PFX provider,
 restore the old `if [ -n "$CSC_LINK" ]` branch, revert
-`electron-builder.js`'s conditional to set `signtool` options, and
+`electron-builder.cjs`'s conditional to set `signtool` options, and
 repopulate `WINDOWS_CERTIFICATE` / `WINDOWS_CERTIFICATE_PASSWORD`.

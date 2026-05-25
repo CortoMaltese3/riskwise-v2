@@ -725,3 +725,35 @@ does not retract the runtime offline behavior.
 - [ui-design-spec.md](reference/ui-design-spec.md) — frozen layout / density / motion rules.
 
 ---
+
+## D29 — Signing config drift and restoration
+
+**Status**: Accepted
+**Date**: 2026-05-13
+
+**Decision**: Record the `azureSignOptions` drift episode in `electron-builder.cjs` — the block was inadvertently deleted in commit `309204a` and restored under work item 5 of umbrella [#414](https://github.com/CortoMaltese3/riskwise-v2/issues/414). Treat `docs/reference/signing.md` as a load-bearing reference that must be cross-checked whenever signing-adjacent code is deleted in a cleanup PR.
+
+**Why**:
+- The Azure Trusted Signing block was originally introduced under D17 in commit `1344d47` ("feat(ci): activate Azure Trusted Signing for installer, engine, and updates").
+- During the "defer offline installer" cleanup (commit `309204a`, "chore(ci): fix electron-builder config loading and defer offline installer"), the `azureSignOptions` block was removed as unintended fallout — the cleanup's stated intent was to fix config loading and strip the offline-installer branch, not to disable Authenticode signing.
+- For several weeks `docs/reference/signing.md` confidently stated "Azure Trusted Signing is the activated provider" while the actual `electron-builder.cjs` had no signing block. A reader following the doc would have assumed signing was live and would have missed the field-update breakage that would result on the next signed release.
+- The block was restored in commit `1696b0d` / PR [#484](https://github.com/CortoMaltese3/riskwise-v2/pull/484) under work item 5 of umbrella [#414](https://github.com/CortoMaltese3/riskwise-v2/issues/414).
+
+**Lesson learned**: Cross-cutting deletions during cleanup PRs must be reviewed against `docs/reference/signing.md` (and any other load-bearing reference doc) before merge. The longer-term safeguard is a round-trip test that fails when `AZURE_CLIENT_ID` is set but no signing options are emitted — tracked as work item 8 of [#414](https://github.com/CortoMaltese3/riskwise-v2/issues/414).
+
+**Rejected**:
+- **Treat as ordinary regression with no entry**: the drift went undetected for weeks because no test covered the contract between signing config and the docs that describe it. Recording the episode in DECISIONS.md is the canonical place to capture the "why we now do X" once the round-trip test (WI 8) lands.
+- **Move the lesson into `signing.md` itself**: DECISIONS.md is the project's decision/episode log; reference docs describe current state, not history. The two roles stay separate.
+
+**Consequence**:
+- `electron-builder.cjs` carries the `azureSignOptions` block again, guarded on `AZURE_CLIENT_ID`. Dev and fork builds without secrets still fall through to an unsigned artifact.
+- `docs/reference/signing.md` and `docs/ARCHITECTURE.md` Area 15 now describe the restored state accurately (this issue, [#425](https://github.com/CortoMaltese3/riskwise-v2/issues/425)).
+- A round-trip test for the signing config is tracked under work item 8 of [#414](https://github.com/CortoMaltese3/riskwise-v2/issues/414) so future cleanup PRs that remove `azureSignOptions` are caught by CI rather than by post-release SmartScreen warnings.
+
+**References**:
+- [D17 — Code signing provider: Azure Trusted Signing primary, SSL.com EV fallback](#d17--code-signing-provider-azure-trusted-signing-primary-sslcom-ev-fallback).
+- Commit `1344d47` — original introduction of the Azure signing block.
+- Commit `309204a` — accidental removal during cleanup.
+- Commit `1696b0d` / PR [#484](https://github.com/CortoMaltese3/riskwise-v2/pull/484) — restoration under WI 5 of [#414](https://github.com/CortoMaltese3/riskwise-v2/issues/414).
+
+---
