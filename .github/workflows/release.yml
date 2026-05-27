@@ -212,6 +212,7 @@ jobs:
     runs-on: windows-latest
     needs: build-engine
     if: ${{ needs.build-engine.outputs.engine_sha256 != '' }}
+    environment: release
     steps:
       - uses: actions/checkout@v6
 

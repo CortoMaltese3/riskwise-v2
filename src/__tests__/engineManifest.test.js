@@ -16,6 +16,8 @@ const {
   channelFromVersion,
   compareVersions,
   isEngineVersionCompatible,
+  parseMinisignPublicKey,
+  parseMinisignSignatureBlob,
   resolveReleaseChannel,
   verifyEngineManifest,
 } = requireCjs(modulePath);
@@ -127,6 +129,44 @@ describe("verifyEngineManifest", () => {
   it("rejects non-JSON input", () => {
     const kp = buildFakeKeypair();
     expect(() => verifyEngineManifest("not json", kp.pubKeyFile)).toThrow(/not valid JSON/);
+  });
+});
+
+describe("minisign blob parsers", () => {
+  it("parseMinisignPublicKey rejects an empty file", () => {
+    expect(() => parseMinisignPublicKey("untrusted comment: only\n")).toThrow(/empty/);
+  });
+
+  it("parseMinisignPublicKey rejects a wrong-length blob", () => {
+    const tooShort = Buffer.from("Ed", "ascii").toString("base64");
+    expect(() => parseMinisignPublicKey(tooShort)).toThrow(/Invalid minisign public key length/);
+  });
+
+  it("parseMinisignPublicKey rejects an unsupported algorithm tag", () => {
+    const blob = Buffer.concat([
+      Buffer.from("XX", "ascii"),
+      Buffer.alloc(8),
+      Buffer.alloc(32),
+    ]).toString("base64");
+    expect(() => parseMinisignPublicKey(blob)).toThrow(/Unsupported signature algorithm/);
+  });
+
+  it("parseMinisignSignatureBlob rejects an empty file", () => {
+    expect(() => parseMinisignSignatureBlob("untrusted comment: only\n")).toThrow(/empty/);
+  });
+
+  it("parseMinisignSignatureBlob rejects a wrong-length blob", () => {
+    const tooShort = Buffer.from("Ed", "ascii").toString("base64");
+    expect(() => parseMinisignSignatureBlob(tooShort)).toThrow(/Invalid minisign signature length/);
+  });
+
+  it("parseMinisignSignatureBlob rejects an unsupported algorithm tag", () => {
+    const blob = Buffer.concat([
+      Buffer.from("XX", "ascii"),
+      Buffer.alloc(8),
+      Buffer.alloc(64),
+    ]).toString("base64");
+    expect(() => parseMinisignSignatureBlob(blob)).toThrow(/Unsupported signature algorithm/);
   });
 });
 

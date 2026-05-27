@@ -127,10 +127,51 @@ const fetchGeoJson = async <T = unknown>(fileUrl: string): Promise<IpcResult<T>>
   }
 };
 
+// Pull a snapshot image as a Blob for callers that need the binary inline
+// (PDF/print embedding). The `<img src>` path stays on `snapshotImageUrl`
+// so the drawer keeps browser caching and lazy decode for free.
+const fetchSnapshotImage = async (snapshotId: string): Promise<IpcResult<Blob>> => {
+  const requestId = newRequestId();
+  try {
+    const baseUrl = (await http().getBaseUrl()) ?? "";
+    const response = await fetch(
+      `${baseUrl}/api/v1/snapshots/${encodeURIComponent(snapshotId)}/image`
+    );
+    if (!response.ok) {
+      return {
+        success: false,
+        error: {
+          code: "snapshot_image_http_error",
+          message: `HTTP error! status: ${response.status}`,
+          detail: null,
+          error_id: requestId,
+          request_id: requestId,
+        },
+      };
+    }
+    const blob = await response.blob();
+    return { success: true, result: blob };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      success: false,
+      error: {
+        code: "snapshot_image_fetch_error",
+        message,
+        detail: message,
+        error_id: requestId,
+        request_id: requestId,
+      },
+    };
+  }
+};
+
 const RiskWiseClient = {
   health: () => get<HealthResponse>("/api/v1/health"),
 
   fetchGeoJson,
+
+  fetchSnapshotImage,
 
   runScenario: (body: ScenarioRunRequest) => http().runScenario<unknown>(body, newRequestId()),
 

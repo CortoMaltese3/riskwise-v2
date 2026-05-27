@@ -32,10 +32,12 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "updates:check",
   "updates:install-on-next-restart",
   "updates:remind-later",
+  "updates:skip-version",
   "updates:get-status",
   "updates:set-channel",
   "updates:get-release-notes",
   "updates:downgrade",
+  "updates:quit-and-install-now",
   "engine:verify-manifest",
   "engine:check-blocked",
   "engine:download-update",
@@ -141,10 +143,12 @@ describe("preload bridge surface", () => {
     exposed.electron.updates.check();
     exposed.electron.updates.installOnNextRestart();
     exposed.electron.updates.remindLater();
+    exposed.electron.updates.skipVersion("2.3.4");
     exposed.electron.updates.getStatus();
     exposed.electron.updates.setChannel("beta");
     exposed.electron.updates.getReleaseNotes({ language: "en" });
     exposed.electron.updates.downgrade();
+    exposed.electron.updates.quitAndInstallNow();
     exposed.electron.engine.verifyManifest();
     exposed.electron.engine.checkBlocked();
     exposed.electron.engine.downloadUpdate();

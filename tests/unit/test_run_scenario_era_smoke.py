@@ -101,7 +101,8 @@ def _make_runner(entity, hazard):
     """Build a ``RunScenario`` without touching its heavy ``__init__``."""
     from backend.entity.entity_handler import EntityHandler
     from backend.impact.impact_handler import ImpactHandler
-    from backend.run_scenario import RequestData, RunScenario
+    from backend.scenario.request import RequestData
+    from backend.scenario.runner import RunScenario
 
     runner = RunScenario.__new__(RunScenario)
     runner.costben_handler = MagicMock()  # no measures → no real costben call
@@ -130,7 +131,7 @@ def _make_runner(entity, hazard):
     runner._resolve_hazard_intensity_unit = lambda _entity: "m"
     runner._get_average_annual_growth = lambda: 0.0
     # The geojson generators write to disk; bypass them for the smoke test.
-    runner._generate_geojsons_parallel = lambda *a, **kw: None
+    runner._geojson = SimpleNamespace(generate=lambda *a, **kw: None)
     return runner
 
 
@@ -140,9 +141,9 @@ def test_execute_runs_without_setting_error_status(
     # ``save_parquet_file`` is a module-level helper now (#246). The smoke
     # test does not exercise the parquet pipeline and the unit-test env
     # may not ship pyarrow, so swap it out for a no-op.
-    from backend import run_scenario
+    from backend.scenario import runner as runner_module
 
-    monkeypatch.setattr(run_scenario, "save_parquet_file", lambda *a, **k: None)
+    monkeypatch.setattr(runner_module, "save_parquet_file", lambda *a, **k: None)
     runner = _make_runner(_make_entity(), _make_hazard())
     strategy = _StubStrategy(_make_entity(), _make_hazard())
 

@@ -1,0 +1,202 @@
+import React from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { ThemeProvider } from "@mui/material/styles";
+
+import enLocale from "../../locales/en.json";
+import theme from "../../theme/theme";
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key) => enLocale[key] ?? key,
+    i18n: { language: "en", changeLanguage: vi.fn() },
+  }),
+  initReactI18next: { type: "3rdParty", init: vi.fn() },
+}));
+
+// Capture mocks shared across cases — declared here so the leaflet/react-leaflet
+// factories below can close over them.
+const circleMarkerInstance = {
+  bindPopup: vi.fn().mockReturnThis(),
+  addTo: vi.fn().mockReturnThis(),
+};
+const circleMarkerMock = vi.fn(() => circleMarkerInstance);
+const circleMock = vi.fn();
+const layerGroupMock = vi.fn(() => ({
+  addTo: vi.fn().mockReturnThis(),
+  clearLayers: vi.fn(),
+}));
+
+vi.mock("leaflet", () => ({
+  default: {
+    circleMarker: (...args) => circleMarkerMock(...args),
+    circle: (...args) => circleMock(...args),
+    layerGroup: (...args) => layerGroupMock(...args),
+  },
+}));
+vi.mock("leaflet-simple-map-screenshoter", () => ({}));
+
+vi.mock("react-leaflet", () => ({
+  MapContainer: ({ children }) => <div data-testid="map-container">{children}</div>,
+  TileLayer: () => null,
+  useMap: () => ({
+    invalidateSize: vi.fn(),
+  }),
+}));
+
+// Issue #477 moved the base TileLayer + scale bar inside MapControls.
+// RiskMap's test cares about impact markers, not the basemap chrome, so
+// stub MapControls out to keep this suite focused (MapControls has its
+// own dedicated test).
+vi.mock("./MapControls", () => ({
+  default: () => null,
+}));
+
+const fetchGeoJsonMock = vi.fn();
+vi.mock("../../lib/RiskWiseClient", () => ({
+  default: {
+    fetchGeoJson: (...args) => fetchGeoJsonMock(...args),
+  },
+}));
+
+const uiState = {
+  setActiveMapRef: vi.fn(),
+  setAlertMessage: vi.fn(),
+  setAlertSeverity: vi.fn(),
+  setAlertShowMessage: vi.fn(),
+  offlineMode: false,
+  offlineTilePort: null,
+};
+const workspaceState = {
+  selectedCountry: "egypt",
+  selectedHazard: "flood",
+};
+
+vi.mock("../../store/useUIStore", () => ({
+  default: (selector) => selector(uiState),
+}));
+vi.mock("../../store/useWorkspaceStore", () => ({
+  default: (selector) => selector(workspaceState),
+}));
+
+// Imported after mocks so the module under test picks up the stubs.
+import RiskMap from "./RiskMap";
+
+const geoJsonFixture = {
+  _metadata: {
+    return_periods: [10],
+    percentile_values: { rp10: [1000, 5_000_000, 9_000_000] },
+    unit: "USD",
+    radius: 100,
+  },
+  features: [
+    {
+      geometry: { type: "Point", coordinates: [30.0, 26.5] },
+      properties: {
+        country: "Egypt",
+        name: "Cairo",
+        rp10: 5_000_000,
+        rp10_level: 3,
+      },
+    },
+  ],
+};
+
+beforeEach(() => {
+  circleMarkerMock.mockClear();
+  circleMock.mockClear();
+  layerGroupMock.mockClear();
+  circleMarkerInstance.bindPopup.mockClear();
+  circleMarkerInstance.addTo.mockClear();
+  fetchGeoJsonMock.mockResolvedValue({ success: true, result: geoJsonFixture });
+});
+
+afterEach(() => {
+  cleanup();
+});
+
+const renderMap = () =>
+  render(
+    <ThemeProvider theme={theme}>
+      <RiskMap />
+    </ThemeProvider>
+  );
+
+describe("RiskMap impact markers", () => {
+  it("renders each feature as a fixed-pixel L.circleMarker (not L.circle)", async () => {
+    renderMap();
+
+    await waitFor(() => {
+      expect(circleMarkerMock).toHaveBeenCalled();
+    });
+
+    expect(circleMock).not.toHaveBeenCalled();
+
+    const [latLng, options] = circleMarkerMock.mock.calls[0];
+    expect(latLng).toEqual([26.5, 30.0]);
+    expect(options).toMatchObject({
+      radius: 7,
+      weight: 1.5,
+      fillOpacity: 0.7,
+      color: "#fff",
+    });
+    expect(typeof options.fillColor).toBe("string");
+  });
+
+  it("dims markers outside the active level filter when a legend level is clicked", async () => {
+    const multiFeatureGeoJson = {
+      _metadata: {
+        return_periods: [10],
+        percentile_values: { rp10: [1, 2, 3, 4, 5] },
+        unit: "USD",
+        radius: 100,
+      },
+      features: [
+        {
+          geometry: { type: "Point", coordinates: [30.0, 26.5] },
+          properties: { country: "Egypt", name: "Cairo", rp10: 5, rp10_level: 5 },
+        },
+        {
+          geometry: { type: "Point", coordinates: [31.0, 27.5] },
+          properties: { country: "Egypt", name: "Giza", rp10: 1, rp10_level: 1 },
+        },
+      ],
+    };
+    fetchGeoJsonMock.mockResolvedValue({ success: true, result: multiFeatureGeoJson });
+
+    renderMap();
+
+    await waitFor(() => {
+      expect(circleMarkerMock).toHaveBeenCalledTimes(2);
+    });
+
+    circleMarkerMock.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Level 5" }));
+
+    await waitFor(() => {
+      expect(circleMarkerMock).toHaveBeenCalledTimes(2);
+    });
+
+    const optionsByCall = circleMarkerMock.mock.calls.map(([, opts]) => opts);
+    const activeOptions = optionsByCall.find((o) => o.fillOpacity === 0.7);
+    const dimmedOptions = optionsByCall.find((o) => o.fillOpacity === 0.1);
+    expect(activeOptions).toMatchObject({ fillOpacity: 0.7, opacity: 1 });
+    expect(dimmedOptions).toMatchObject({ fillOpacity: 0.1, opacity: 0.2 });
+  });
+
+  it("binds a popup that includes the formatted impact value and unit", async () => {
+    renderMap();
+
+    await waitFor(() => {
+      expect(circleMarkerInstance.bindPopup).toHaveBeenCalled();
+    });
+
+    const popupHtml = circleMarkerInstance.bindPopup.mock.calls[0][0];
+    // Divisor is picked from the *max* nonzero percentile (9_000_000) so the
+    // top label stays readable — 5_000_000 / 1e6 renders as "5".
+    expect(popupHtml).toContain("Country: Egypt");
+    expect(popupHtml).toContain("Admin 2: Cairo");
+    expect(popupHtml).toContain("Level: 3");
+    expect(popupHtml).toContain("Impact: 5 USD");
+  });
+});

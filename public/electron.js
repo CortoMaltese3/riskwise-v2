@@ -25,14 +25,17 @@ const {
   resolveReleaseChannel,
   verifyEngineManifest,
 } = require("./engineManifest");
+const { shouldSuppressUpdate } = require("./appUpdates");
 const { scanAndImportPacks } = require("./dataPacks");
 const { startTileServer } = require("./tileServer");
 const { TILES_FILENAME } = require("./offlineConstants");
+const { TILES_PATH_PREFIX, resolveTileRequest, RESULT: TILE_RESULT } = require("./tileProxy");
 const {
   buildDiagnosticsZip,
   buildDiagnosticsBuffer,
   sanitizeScenarioRow,
 } = require("./diagnostics");
+const { createBreadcrumbTransport } = require("./sentryBreadcrumbs");
 const os = require("node:os");
 const treeKill = require("tree-kill");
 
@@ -194,6 +197,7 @@ const ENGINE_PUB_KEY_FILENAME = "engine-manifest.pub";
 // ``RiskWiseEngine`` so both apps can coexist on the same machine — wiping
 // or replacing the v2 engine binary must never touch v1's CPython install.
 const ENGINE_DIR_NAME = "RiskWiseEngineV2";
+const ENGINE_EXE_NAME = "riskwise-engine.exe";
 
 let updateCheckTimer = null;
 let updateStore = null;
@@ -423,17 +427,14 @@ const downloadAndInstallEngine = async (loaderWindow) => {
   }
 
   const enginePath = path.join(engineRoot, ENGINE_DIR_NAME);
-  const pythonExecutable = path.join(enginePath, "python.exe");
-  const archivePath = path.join(engineRoot, `${ENGINE_DIR_NAME}.zip`);
+  const engineExecutable = path.join(enginePath, ENGINE_EXE_NAME);
 
-  // Check if already installed
-  if (fs.existsSync(pythonExecutable)) {
-    log.info("[electron] Python engine already installed at:", enginePath);
-    return pythonExecutable;
+  if (fs.existsSync(engineExecutable)) {
+    log.info("[electron] RISK WISE Engine already installed at:", enginePath);
+    return engineExecutable;
   }
 
-  log.info("[electron] Python engine not found, downloading...");
-  log.info("[electron] Archive will be downloaded to:", archivePath);
+  log.info("[electron] RISK WISE Engine not found, downloading...");
 
   try {
     updateLoaderMessage("RISK WISE Engine is missing. Fetching manifest...");
@@ -442,162 +443,34 @@ const downloadAndInstallEngine = async (loaderWindow) => {
     // hardcoded fallback. `fetchVerifiedEngineManifest` verifies the
     // minisign signature before we trust any field inside.
     const manifest = await fetchVerifiedEngineManifest();
-    const engineUrl = manifest.download_url;
-    log.info(`[electron] Engine manifest resolved version=${manifest.version} url=${engineUrl}`);
-    updateLoaderMessage("Downloading RISK WISE Engine...");
+    log.info(
+      `[electron] Engine manifest resolved version=${manifest.version} url=${manifest.download_url}`
+    );
 
-    await new Promise((resolve, reject) => {
-      const request = net.request(engineUrl);
-      const file = fs.createWriteStream(archivePath);
-
-      request.on("response", (response) => {
-        const totalBytes = parseInt(response.headers["content-length"], 10);
-        let downloadedBytes = 0;
-
-        log.info(`[electron] Starting download, size: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
-
-        response.on("data", (chunk) => {
-          downloadedBytes += chunk.length;
-          file.write(chunk);
-
-          const percent = ((downloadedBytes / totalBytes) * 100).toFixed(1);
-
-          // Update UI every 10%
-          if (
-            Math.floor(percent / 10) >
-            Math.floor((((downloadedBytes - chunk.length) / totalBytes) * 100) / 10)
-          ) {
-            updateLoaderMessage(`Downloading engine... ${percent}%`);
-            log.info(`[electron] Downloaded: ${percent}%`);
-          }
-        });
-
-        response.on("end", () => {
-          file.end();
-          file.close();
-          log.info("[electron] Download complete, file size:", fs.statSync(archivePath).size);
-          resolve();
-        });
-
-        response.on("error", (err) => {
-          file.close();
-          if (fs.existsSync(archivePath)) {
-            fs.unlinkSync(archivePath);
-          }
-          reject(err);
-        });
-      });
-
-      request.on("error", (err) => {
-        file.close();
-        if (fs.existsSync(archivePath)) {
-          fs.unlinkSync(archivePath);
-        }
-        reject(err);
-      });
-
-      request.end();
-    });
-
-    // Verify download
-    if (!fs.existsSync(archivePath)) {
-      throw new Error("Archive file not found after download");
-    }
-
-    const archiveSize = fs.statSync(archivePath).size;
-    log.info(`[electron] Archive downloaded: ${(archiveSize / 1024 / 1024).toFixed(2)} MB`);
-
-    if (archiveSize < 10 * 1024 * 1024) {
-      throw new Error(
-        `Archive too small (${(archiveSize / 1024 / 1024).toFixed(2)} MB) - download failed`
-      );
-    }
-
-    // Defense-in-depth: the manifest signature was already verified above by
-    // `fetchVerifiedEngineManifest`, so `manifest.sha256` is trusted. Hashing
-    // the on-disk archive here closes the gap between "signed manifest" and
-    // "trusted bytes on disk" — a compromised CDN or TLS-inspecting proxy
-    // corrupting the download is caught before we shell out to `tar -xf`.
-    // Mirrors the resumable downloader's pattern (see `downloadEngineWithResume`).
-    updateLoaderMessage("Verifying engine archive integrity...");
-    const expectedSha256 = String(manifest.sha256 || "").toLowerCase();
-    const actualSha256 = (await sha256File(archivePath)).toLowerCase();
-    if (!expectedSha256 || actualSha256 !== expectedSha256) {
-      log.error(
-        `[electron] engine archive SHA-256 mismatch expected=${expectedSha256} actual=${actualSha256}`
-      );
-      try {
-        fs.unlinkSync(archivePath);
-      } catch (unlinkErr) {
-        log.warn(`[electron] failed to delete tampered archive: ${unlinkErr.message}`);
-      }
-      throw new Error("engine download integrity check failed");
-    }
-    log.info("[electron] engine archive SHA-256 matches manifest");
-
-    updateLoaderMessage("Extracting engine files...");
-    log.info("[electron] Starting extraction...");
-
-    // Extract archive
-    const { execSync } = require("child_process");
-
-    // Clean and create engine directory
-    if (fs.existsSync(enginePath)) {
-      log.info("[electron] Removing existing engine directory");
-      fs.rmSync(enginePath, { recursive: true, force: true });
-    }
     fs.mkdirSync(enginePath, { recursive: true });
 
-    // Extract using tar
-    log.info("[electron] Extracting to:", enginePath);
-    const extractCmd = `tar -xf "${archivePath}" -C "${enginePath}"`;
+    // Download to a temp sibling so a partial/aborted download isn't mistaken
+    // for an installed engine on the next launch. `downloadEngineWithResume`
+    // owns Range-resume, SHA-256 verification, and retry-from-zero on hash
+    // mismatch — we only need to atomic-rename on success.
+    const downloadPath = `${engineExecutable}.partial`;
 
-    execSync(extractCmd, { stdio: "pipe" });
+    updateLoaderMessage("Downloading RISK WISE Engine...");
+    await downloadEngineWithResume(manifest, downloadPath);
 
-    // Check extracted contents
-    const extracted = fs.readdirSync(enginePath);
-    log.info("[electron] Extracted top-level items:", extracted);
-
-    // If archive contains a single directory, flatten structure
-    if (extracted.length === 1 && fs.statSync(path.join(enginePath, extracted[0])).isDirectory()) {
-      const subDir = path.join(enginePath, extracted[0]);
-      log.info("[electron] Flattening nested directory:", subDir);
-
-      const items = fs.readdirSync(subDir);
-
-      for (const item of items) {
-        const srcPath = path.join(subDir, item);
-        const destPath = path.join(enginePath, item);
-        fs.renameSync(srcPath, destPath);
-      }
-
-      fs.rmdirSync(subDir);
-      log.info("[electron] Structure flattened");
-    }
-
-    // Clean up archive
-    if (fs.existsSync(archivePath)) {
-      fs.unlinkSync(archivePath);
-      log.info("[electron] Cleaned up archive file");
-    }
-
-    // Verify installation
-    if (!fs.existsSync(pythonExecutable)) {
-      const contents = fs.readdirSync(enginePath).slice(0, 10);
-      log.error("[electron] python.exe not found. Directory contains:", contents);
-      throw new Error(`Installation incomplete - python.exe not found at: ${pythonExecutable}`);
-    }
+    updateLoaderMessage("Installing engine...");
+    fs.renameSync(downloadPath, engineExecutable);
 
     updateLoaderMessage("Engine installed successfully!");
-    log.info("[electron] Python engine installed successfully");
+    log.info("[electron] RISK WISE Engine installed successfully");
 
-    return pythonExecutable;
+    return engineExecutable;
   } catch (error) {
-    log.error("[electron] Failed to download/install Python engine:", error);
+    log.error("[electron] Failed to download/install RISK WISE Engine:", error);
 
     dialog.showErrorBox(
       "Installation Error",
-      `Failed to install RISK WISE engine.\n\nError: ${error.message}\n\nPlease check:\n- Internet connection\n- Available disk space (~2 GB)\n- Antivirus not blocking download\n\nLogs: ${userLogDir}`
+      `Failed to install RISK WISE engine.\n\nError: ${error.message}\n\nPlease check:\n- Internet connection\n- Available disk space (~500 MB)\n- Antivirus not blocking download\n\nLogs: ${userLogDir}`
     );
 
     throw error;
@@ -661,16 +534,11 @@ app.whenReady().then(async () => {
   // request cannot escape the temp dir.
   const buildRoot = path.join(basePath, "build");
   const TEMP_PATH_PREFIX = "/__temp/";
-  // Carto tile proxy. The renderer cannot read tiles from
-  // ``basemaps.cartocdn.com`` via XHR/fetch because the response combines
-  // ``Access-Control-Allow-Origin: *`` with ``Access-Control-Allow-Credentials:
-  // true``, which Chromium rejects per spec — so ``dom-to-image-more`` (used
-  // by ``leaflet-simple-map-screenshoter``) silently drops every tile when it
-  // captures a map snapshot. Proxying through ``app://`` makes the tiles
-  // same-origin, which sidesteps CORS entirely.
-  const TILES_PATH_PREFIX = "/__tiles/";
-  const CARTO_TILE_BASE = "https://a.basemaps.cartocdn.com/rastertiles/voyager/";
-  const TILES_PATH_RE = /^\d+\/\d+\/\d+(?:@\dx)?\.png$/;
+  // Multi-provider tile proxy. The handler accepts both legacy
+  // `app://./__tiles/{z}/{x}/{y}.png` (defaults to Voyager for backward
+  // compatibility) and the keyed
+  // `app://./__tiles/{voyager|dark|satellite}/{z}/{x}/{y}.png` shape used
+  // by the basemap selector. Unknown keys / malformed paths return 4xx.
   protocol.handle("app", (request) => {
     const url = new URL(request.url);
     if (url.pathname.startsWith(TEMP_PATH_PREFIX)) {
@@ -684,12 +552,14 @@ app.whenReady().then(async () => {
       return net.fetch(`file://${resolved}`);
     }
     if (url.pathname.startsWith(TILES_PATH_PREFIX)) {
-      const requested = url.pathname.slice(TILES_PATH_PREFIX.length);
-      if (!TILES_PATH_RE.test(requested)) {
-        log.warn(`[electron] blocked app://./__tiles/ malformed path: ${requested}`);
+      const route = resolveTileRequest(url.pathname);
+      if (route.kind === TILE_RESULT.BAD_REQUEST) {
+        log.warn(`[electron] blocked app://./__tiles/ ${route.reason}: ${url.pathname}`);
         return new Response("Bad Request", { status: 400 });
       }
-      return net.fetch(`${CARTO_TILE_BASE}${requested}`);
+      if (route.kind === TILE_RESULT.OK) {
+        return net.fetch(route.url);
+      }
     }
     const filePath = path.join(buildRoot, url.pathname === "/" ? "index.html" : url.pathname);
     return net.fetch(`file://${filePath}`);
@@ -703,6 +573,22 @@ app.whenReady().then(async () => {
     fs.mkdirSync(userLogDir, { recursive: true });
     configureLogRotation(log, userLogDir);
     log.initialize();
+    // Forward electron-log lines (including renderer lines that flow through
+    // the ``log:renderer`` IPC handler below) into Sentry as breadcrumbs.
+    // The transport is a no-op until ``sentryInitialized`` flips true; #119
+    // forbids renderer-side Sentry, so this is the single bridge between
+    // logs and breadcrumbs.
+    log.transports.sentry = createBreadcrumbTransport({
+      isSentryInitialized: () => sentryInitialized,
+      getSentry: () => {
+        try {
+          return require("@sentry/electron/main");
+        } catch {
+          return null;
+        }
+      },
+      minLevel: process.env.SENTRY_BREADCRUMB_LEVEL,
+    });
     autoUpdater.logger = log;
     log.info(`Starting RISKWISE ${app.getVersion()}. Packaged: ${app.isPackaged}`);
   } catch (error) {
@@ -1231,17 +1117,10 @@ const restartBackendWithBackoff = async () => {
 
 // Create a long-running Python process.
 //
-// Two engine shapes are supported:
-//   1. Nuitka onefile bundle: a self-contained ``riskwise-engine.exe`` with
-//      ``backend.__main__`` baked in. Spawned with no args; backend package
-//      and shipped data resolve via ``NUITKA_ONEFILE_BINARY`` (see
-//      ``backend/constants.get_base_dir``).
-//   2. Stock CPython portable: ``python.exe -m backend`` against the repo's
-//      source tree at ``basePath``. This is the historical path that
-//      ``downloadAndInstallEngine`` provisions when neither shape is on disk.
-//
-// The Nuitka shape wins when present so a locally-built engine can be tested
-// against the real Electron client without ripping out the legacy path.
+// Packaged builds spawn the Nuitka onefile ``riskwise-engine.exe`` with no
+// args; backend package and shipped data resolve via ``NUITKA_ONEFILE_BINARY``
+// (see ``backend/constants.get_base_dir``). ``downloadAndInstallEngine``
+// provisions the binary into ``%LOCALAPPDATA%/RiskWiseEngineV2`` on first run.
 const createPythonProcess = async () => {
   let executable;
   let args;
@@ -1265,46 +1144,29 @@ const createPythonProcess = async () => {
     executable = devPython;
     args = ["-m", "backend"];
   } else {
-    const engineRoot = process.env.LOCALAPPDATA;
-    if (!engineRoot) {
-      throw new Error("Failed to resolve LOCALAPPDATA environment variable");
-    }
+    const engineExecutable = await downloadAndInstallEngine(loaderWindow);
+    applyDeferredEngineSwap(engineExecutable);
+    log.info("[electron] Using Nuitka engine bundle at:", engineExecutable);
+    executable = engineExecutable;
+    args = [];
+  }
 
-    const enginePath = path.join(engineRoot, ENGINE_DIR_NAME);
-    const nuitkaExecutable = path.join(enginePath, "riskwise-engine.exe");
-    let pythonExecutable = path.join(enginePath, "python.exe");
-
-    const useNuitkaBundle = fs.existsSync(nuitkaExecutable);
-
-    if (!useNuitkaBundle && !fs.existsSync(pythonExecutable)) {
-      log.info("[electron] Python engine not found, initiating download...");
-      pythonExecutable = await downloadAndInstallEngine(loaderWindow);
-    }
-
-    if (useNuitkaBundle) {
-      log.info("[electron] Using Nuitka engine bundle at:", nuitkaExecutable);
-      executable = nuitkaExecutable;
-      args = [];
-    } else {
-      const backendDir = path.join(basePath, "backend");
-      if (!fs.existsSync(backendDir)) {
-        throw new Error("Backend package not found at: " + backendDir);
-      }
-      log.info("[electron] Using CPython interpreter at:", pythonExecutable);
-      executable = pythonExecutable;
-      args = ["-m", "backend"];
-    }
+  // The Python backend only initializes its own Sentry SDK when SENTRY_DSN
+  // is in its environment. To match the Electron consent gate (privacy.md
+  // §"Continuous crash reporting"), strip SENTRY_DSN unless the user has
+  // opted in AND offline mode is off. A consent flip mid-session takes
+  // effect on the next app launch — the running Python process keeps the
+  // env it was spawned with, mirroring the Electron-side restart caveat.
+  const spawnEnv = { ...process.env, LOG_DIR: userLogDir, RISKWISE_USER_DATA: userDataDir };
+  if (!sentryAllowSends()) {
+    delete spawnEnv.SENTRY_DSN;
   }
 
   try {
     const py = spawn(executable, args, {
       cwd: basePath,
       stdio: ["pipe", "pipe", "pipe"],
-      env: {
-        ...process.env,
-        LOG_DIR: userLogDir,
-        RISKWISE_USER_DATA: userDataDir,
-      },
+      env: spawnEnv,
     });
 
     py.on("error", (error) => log.error("Python spawn error:", error.message));
@@ -2382,6 +2244,56 @@ const downloadEngineWithResume = async (manifest, destPath, { maxAttempts = 3 } 
   throw new Error(`engine download failed after ${maxAttempts} attempts`);
 };
 
+// On Windows the in-use exe is locked by the previous launch and rename
+// surfaces EBUSY/EPERM. Fall back to staging at `<exe>.new`, which
+// `applyDeferredEngineSwap` consumes on the next app launch before spawn.
+const installEngineBinary = (downloadPath, engineExecutable) => {
+  log.info(
+    `[electron] engine.install attempt mode=rename src=${downloadPath} dst=${engineExecutable}`
+  );
+  try {
+    fs.renameSync(downloadPath, engineExecutable);
+    log.info(`[electron] engine.install success mode=rename path=${engineExecutable}`);
+    return { mode: "rename" };
+  } catch (err) {
+    if (err.code !== "EBUSY" && err.code !== "EPERM") throw err;
+    const stagedPath = `${engineExecutable}.new`;
+    log.warn(
+      `[electron] engine.install rename failed code=${err.code} — staging at ${stagedPath}`
+    );
+    // Clear a stale `.new` from a prior failed attempt so the swap picks up the latest download.
+    try {
+      fs.unlinkSync(stagedPath);
+    } catch (unlinkErr) {
+      if (unlinkErr.code !== "ENOENT") {
+        log.warn(
+          `[electron] engine.install failed to clear stale staged binary: ${unlinkErr.message}`
+        );
+      }
+    }
+    fs.renameSync(downloadPath, stagedPath);
+    log.info(`[electron] engine.install success mode=deferred path=${stagedPath}`);
+    return { mode: "deferred" };
+  }
+};
+
+// Failures never block startup: warn and continue with the existing binary.
+const applyDeferredEngineSwap = (engineExecutable) => {
+  const stagedPath = `${engineExecutable}.new`;
+  if (!fs.existsSync(stagedPath)) return false;
+  log.info(`[electron] engine.deferred-swap detected staged=${stagedPath}`);
+  try {
+    fs.renameSync(stagedPath, engineExecutable);
+    log.info(`[electron] engine.deferred-swap success path=${engineExecutable}`);
+    return true;
+  } catch (err) {
+    log.warn(
+      `[electron] engine.deferred-swap failed code=${err.code || "?"} message=${err.message} — continuing with existing binary`
+    );
+    return false;
+  }
+};
+
 const isEngineBlocked = (manifest, cachedEngineVersion) => {
   if (!manifest) return false;
   if (!cachedEngineVersion) return true;
@@ -2438,6 +2350,16 @@ ipcMain.handle("updates:remind-later", async () => {
   return snoozeUpdateReminder();
 });
 
+// Persist a per-version skip (issue #424). The next `update-available`
+// for the same semver is suppressed; a higher semver clears the skip.
+ipcMain.handle("updates:skip-version", async (_evt, version) => {
+  const v = typeof version === "string" ? version.trim() : "";
+  if (!v) return { error: "version required" };
+  if (updateStore) updateStore.set("skippedVersion", v);
+  log.info(`[electron] updates: user skipped version=${v}`);
+  return { ok: true };
+});
+
 ipcMain.handle("updates:get-status", async () => {
   return {
     currentVersion: app.getVersion(),
@@ -2469,6 +2391,23 @@ ipcMain.handle("updates:downgrade", async () => {
     return { ok: true };
   } catch (err) {
     log.error("[electron] downgrade failed:", err.message);
+    return { error: err.message };
+  }
+});
+
+// "Restart now" branch of the post-download toast (issue #423). The binary
+// is already on disk from the install-on-quit flow, so this is a plain
+// quitAndInstall — distinct from `updates:install-on-next-restart`, which
+// triggers the download. Logged with a dedicated tag so field diagnostics
+// can tell "user accepted silent install on quit" apart from
+// "user explicitly restarted now from the toast".
+ipcMain.handle("updates:quit-and-install-now", async () => {
+  try {
+    log.info("[electron] updates: quit-and-install-now requested from renderer");
+    setImmediate(() => autoUpdater.quitAndInstall());
+    return { ok: true };
+  } catch (err) {
+    log.error("[electron] quit-and-install-now failed:", err.message);
     return { error: err.message };
   }
 });
@@ -2541,10 +2480,19 @@ ipcMain.handle("engine:download-update", async () => {
     const manifest = await fetchVerifiedEngineManifest();
     const engineRoot = process.env.LOCALAPPDATA;
     if (!engineRoot) throw new Error("LOCALAPPDATA is not defined");
-    const destPath = path.join(engineRoot, `${ENGINE_DIR_NAME}.download`);
-    await downloadEngineWithResume(manifest, destPath);
+    const engineDir = path.join(engineRoot, ENGINE_DIR_NAME);
+    const engineExecutable = path.join(engineDir, ENGINE_EXE_NAME);
+    // Stage inside the engine dir so the post-download rename stays on the
+    // same volume as the destination (atomic on Windows).
+    fs.mkdirSync(engineDir, { recursive: true });
+    const downloadPath = path.join(engineDir, `${ENGINE_EXE_NAME}.download`);
+    await downloadEngineWithResume(manifest, downloadPath);
+    log.info(
+      `[electron] engine.download complete version=${manifest.version} path=${downloadPath}`
+    );
+    const { mode } = installEngineBinary(downloadPath, engineExecutable);
     if (updateStore) updateStore.set("engine.version", manifest.version);
-    return { ok: true, version: manifest.version };
+    return { ok: true, version: manifest.version, mode };
   } catch (err) {
     log.error("[electron] engine download failed:", err.message);
     return { error: err.message };
@@ -2599,6 +2547,16 @@ autoUpdater.on("update-available", (info) => {
       );
       return;
     }
+    const skipped = updateStore.get("skippedVersion", null);
+    const { suppress, clearSkip } = shouldSuppressUpdate(version, skipped);
+    if (suppress) {
+      log.info(`[electron] update-available suppressed by user skip (version=${version})`);
+      return;
+    }
+    if (clearSkip) {
+      updateStore.set("skippedVersion", null);
+      log.info(`[electron] skip cleared: newer version available (${version} > ${skipped})`);
+    }
   }
   // Dispatch to renderer; the React dialog handles user consent. We never
   // auto-download — the user must click "Install on next restart" first.
@@ -2612,7 +2570,10 @@ autoUpdater.on("update-downloaded", (info) => {
   // Arm install-on-quit rather than prompting for a restart. Users who
   // clicked "Install on next restart" accept exactly that contract; an
   // immediate-restart prompt would violate the "never auto-restart" AC.
+  // The renderer-side toast (issue #423) surfaces an opt-in "Restart now"
+  // shortcut without changing this default.
   autoUpdater.autoInstallOnAppQuit = true;
+  log.info("[electron] updates: armed install-on-quit (autoInstallOnAppQuit=true)");
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("update:downloaded", { version: info?.version });
   }

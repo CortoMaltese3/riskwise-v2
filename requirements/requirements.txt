@@ -1,4 +1,4 @@
-numpy==2.4.4
+numpy==2.4.6
 pandas==3.0.3
 setuptools==82.0.1
 wheel==0.47.0
@@ -10,3 +10,8 @@ pylint==4.0.5
 # climate-lama-engine pin (DECISIONS.md D26): pyproject.toml is canonical;
 # this file must match. Hard-pinned per ADR §5.1 rule 5.
 climate-lama-engine==0.4.0
+
+# Sentry SDK for backend breadcrumb forwarding (issue #308). pyproject.toml
+# uses the same lower-bound range; this file mirrors it for the conda /
+# pip install path documented in CONTRIBUTING.md.
+sentry-sdk>=2,<3

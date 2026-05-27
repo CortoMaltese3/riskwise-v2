@@ -114,6 +114,13 @@ and no exported variable, Sentry is simply skipped — both diagnostics
 flows degrade gracefully and "Send to Support" disables itself with a
 "no DSN configured" hint.
 
+The companion `SENTRY_BREADCRUMB_LEVEL` env var (issue #308) sets the
+minimum log level forwarded to Sentry as breadcrumbs by both the
+electron-log transport in [`public/electron.js`](public/electron.js) and
+the Python `LoggingIntegration` configured in
+[`backend/sentry_init.py`](backend/sentry_init.py). Defaults to `INFO`;
+raise to `WARN` or `ERROR` if INFO becomes too chatty.
+
 ---
 
 ## Branch naming

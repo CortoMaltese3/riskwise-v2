@@ -21,10 +21,11 @@ import { createTheme } from "@mui/material/styles";
 //      regardless of scheme, so a white translucent hover is scheme-neutral
 //      and reads correctly in both modes.
 //   3. `src/components/map/{Legend,LegendLegacy}.css` — `box-shadow: 0 0 5px
-//      rgba(0,0,0,0.3)` on the map legend container. The legend sits on top
-//      of OpenStreetMap raster tiles, which stay light in both schemes (see
-//      "Maps" note in the #289 dark-mode audit), so a dark shadow remains
-//      the correct elevation cue on either app theme.
+//      rgba(0,0,0,0.3)` on the map legend container. The legend background
+//      and text now follow the theme via the `*Channel` palette variables
+//      (so it stays readable across the light / dark / satellite basemaps
+//      added in #482), but a dark drop shadow still reads as the correct
+//      elevation cue on either color scheme.
 
 // Light/dark color schemes (issue #288). Both schemes share the same custom
 // palette slots so component `sx={{ bgcolor: "primary.light" }}` keeps working

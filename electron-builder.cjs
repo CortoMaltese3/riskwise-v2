@@ -7,13 +7,16 @@
 // - `npm run dist`    → NSIS installer (.exe) for end-user distribution
 // - `npm run publish` → same as dist, plus uploads to GitHub Releases
 //
-// Code signing is currently disabled (no Azure Trusted Signing
-// credentials available). When that changes, restore the
-// `signtoolOptions` / `azureSignOptions` blocks; the activation pattern
-// is documented in docs/reference/signing.md.
+// Code signing is wired and activates automatically when AZURE_CLIENT_ID is
+// present in the environment. Dev and fork builds (no secrets) fall through
+// to an unsigned artifact — the `npm run pack` / PR-build path keeps working
+// unchanged. See docs/reference/signing.md for the full activation guide.
 //
 // Offline-installer variant (bundled tile pack, optional bundled engine)
 // is deferred — tracked in the GitHub issue linked from docs/reference/offline.md.
+
+const azureSigningEnabled = Boolean(process.env.AZURE_CLIENT_ID);
+const publisherName = process.env.AZURE_PUBLISHER_NAME || undefined;
 
 module.exports = {
   asar: false,
@@ -46,6 +49,20 @@ module.exports = {
     ],
     icon: "build/icon.ico",
     signAndEditExecutable: true,
+    ...(publisherName ? { publisherName } : {}),
+    ...(azureSigningEnabled
+      ? {
+          azureSignOptions: {
+            publisherName,
+            endpoint: process.env.AZURE_ENDPOINT,
+            certificateProfileName: process.env.AZURE_CERT_PROFILE_NAME,
+            codeSigningAccountName: process.env.AZURE_CODE_SIGNING_ACCOUNT_NAME,
+            azureTenantId: process.env.AZURE_TENANT_ID,
+            azureClientId: process.env.AZURE_CLIENT_ID,
+            azureClientSecret: process.env.AZURE_CLIENT_SECRET,
+          },
+        }
+      : {}),
   },
   nsis: {
     oneClick: false,

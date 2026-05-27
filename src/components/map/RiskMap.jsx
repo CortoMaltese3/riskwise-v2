@@ -6,25 +6,30 @@ import L from "leaflet";
 import "leaflet-simple-map-screenshoter";
 import { Box, Button } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { MapContainer, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, useMap } from "react-leaflet";
 
 import "leaflet/dist/leaflet.css";
 import { getScale } from "../../utils/colorScales";
+import { formatNumberDivisor } from "../../lib/formatNumber";
 import Legend from "./Legend";
+import MapControls from "./MapControls";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
-import useTileLayerUrl from "./useTileLayerUrl";
+
+// Pixel radius for impact-map markers — independent of geographic zoom so each
+// centroid stays visible and clickable at any zoom level.
+const IMPACT_MARKER_RADIUS_PX = 7;
 
 const RiskMap = () => {
-  const tileLayerUrl = useTileLayerUrl();
   const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
   const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
   const setActiveMapRef = useUIStore((s) => s.setActiveMapRef);
   const setAlertMessage = useUIStore((s) => s.setAlertMessage);
   const setAlertSeverity = useUIStore((s) => s.setAlertSeverity);
   const setAlertShowMessage = useUIStore((s) => s.setAlertShowMessage);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
   const mapRefSet = useRef(false);
   const theme = useTheme();
   const vizRamps = theme.palette.viz.ramps;
@@ -33,11 +38,12 @@ const RiskMap = () => {
   const [legendTitle, setLegendTitle] = useState("");
   const [mapInfo, setMapInfo] = useState({ geoJson: null, colorScale: null });
   const [percentileValues, setPercentileValues] = useState({});
-  const [radius, setRadius] = useState(0);
   const [returnPeriods, setReturnPeriods] = useState([]);
   const [unit, setUnit] = useState("");
   const [suffix, setSuffix] = useState("");
   const [divisor, setDivisor] = useState(1);
+  const [bucketCounts, setBucketCounts] = useState([]);
+  const [activeLevels, setActiveLevels] = useState(() => new Set());
 
   const getSuffixAndDivisor = (value) => {
     if (value >= 1e9) return { suffix: t("map_legend_title_billions_suffix"), divisor: 1e9 };
@@ -85,7 +91,6 @@ const RiskMap = () => {
           setActiveRPLayer(returnPeriods[0]);
         }
         setPercentileValues(data._metadata.percentile_values);
-        setRadius(data._metadata.radius);
         setUnit(data._metadata.unit);
 
         // On the very first render `activeRPLayer` is still ``null`` so the
@@ -99,12 +104,33 @@ const RiskMap = () => {
           const scale = getScale(selectedHazard, data._metadata.percentile_values[rpKey], vizRamps);
           setMapInfo({ geoJson: data, colorScale: scale });
 
-          // Calculate minimum non-zero value
+          // Pick the divisor from the *largest* non-zero magnitude so the top
+          // label is always readable. Picking from the min collapses every
+          // smaller bucket to "0" when the values span many orders of magnitude
+          // (e.g. `[0, 0, 0, 0, 5e9]` with `maximumFractionDigits: 2`).
           const values = data._metadata.percentile_values[rpKey];
-          const minAbsValue = Math.min(...values.filter((v) => v !== 0).map(Math.abs));
-          const { suffix, divisor } = getSuffixAndDivisor(minAbsValue);
+          const nonZero = values.filter((v) => v !== 0).map(Math.abs);
+          const maxAbsValue = nonZero.length > 0 ? Math.max(...nonZero) : 0;
+          const { suffix, divisor } = getSuffixAndDivisor(maxAbsValue);
           setDivisor(divisor);
           setSuffix(suffix);
+
+          // Per-bucket feature counts derived from `rp${rp}_level` on the same
+          // features the markers are drawn from. Levels are 1-indexed and match
+          // the percentile slots, so `counts[i]` is the count for level `i+1`.
+          const levelKey = `rp${effectiveRP}_level`;
+          const counts = new Array(values.length).fill(0);
+          (data.features || []).forEach((feature) => {
+            const level = feature?.properties?.[levelKey];
+            if (typeof level === "number" && level >= 1 && level <= counts.length) {
+              counts[level - 1] += 1;
+            }
+          });
+          setBucketCounts(counts);
+          // Bucket indices are dataset-specific; drop stale selections on
+          // reload. Same-reference return preserves React's bail-out when
+          // nothing was selected.
+          setActiveLevels((prev) => (prev.size === 0 ? prev : new Set()));
         } else {
           throw new Error("Percentile values are missing or incomplete.");
         }
@@ -125,6 +151,7 @@ const RiskMap = () => {
 
     useEffect(() => {
       const layerGroup = L.layerGroup().addTo(map);
+      const hasFilter = activeLevels.size > 0;
 
       data.features.forEach((feature) => {
         const { coordinates } = feature.geometry;
@@ -132,16 +159,21 @@ const RiskMap = () => {
         const level = feature.properties[`rp${activeRPLayer}_level`];
         const country = feature.properties["country"];
         const name = feature.properties["name"];
+        const formattedValue = formatNumberDivisor(value, divisor, locale);
+        const impactLine = unit ? `${formattedValue} ${unit}` : formattedValue;
+        const dim = hasFilter && !activeLevels.has(level);
 
-        L.circle([coordinates[1], coordinates[0]], {
-          color: colorScale(value),
+        L.circleMarker([coordinates[1], coordinates[0]], {
+          color: theme.palette.common.white,
           fillColor: colorScale(value),
-          fillOpacity: 0.3,
-          radius: radius,
+          fillOpacity: dim ? 0.1 : 0.7,
+          opacity: dim ? 0.2 : 1,
+          weight: 1.5,
+          radius: IMPACT_MARKER_RADIUS_PX,
         })
           .bindPopup(
             `${t("country")}: ${country}<br>${t("admin")} 2: ${name}<br>` +
-              `${t("level")}: ${level}`
+              `${t("level")}: ${level}<br>${t("map_impact_popup_impact")}: ${impactLine}`
           )
           .addTo(layerGroup);
       });
@@ -174,6 +206,28 @@ const RiskMap = () => {
     setActiveRPLayer(rp);
     await fetchGeoJson(rp);
   };
+
+  // Shift = additive toggle; plain click = single-select, with toggle-off
+  // when the clicked level is already the only active one.
+  const handleToggleLevel = useCallback((level, additive) => {
+    setActiveLevels((prev) => {
+      if (additive) {
+        const next = new Set(prev);
+        if (next.has(level)) next.delete(level);
+        else next.add(level);
+        return next;
+      }
+      if (prev.has(level) && prev.size === 1) {
+        return new Set();
+      }
+      return new Set([level]);
+    });
+  }, []);
+
+  const handleClearFilter = useCallback(
+    () => setActiveLevels((prev) => (prev.size === 0 ? prev : new Set())),
+    []
+  );
 
   const RPButtonStyle = (rp) => ({
     flex: "0 0 auto",
@@ -256,7 +310,7 @@ const RiskMap = () => {
       // to 0; switch to flex sizing on the main axis.
       style={{ position: "relative", flex: 1, minHeight: 0, width: "100%" }}
     >
-      <TileLayer url={tileLayerUrl} maxZoom={15} minZoom={5} />
+      <MapControls />
       <MapEvents />
       <Box sx={buttonContainerSx}>
         {returnPeriods.map((rp) => (
@@ -277,7 +331,6 @@ const RiskMap = () => {
           <CircleLayer
             data={mapInfo.geoJson}
             colorScale={mapInfo.colorScale}
-            radius={radius}
             activeRPLayer={activeRPLayer}
           />
           <Legend
@@ -285,6 +338,10 @@ const RiskMap = () => {
             percentileValues={percentileValues ? percentileValues[`rp${activeRPLayer}`] : []}
             title={legendTitle}
             divisor={divisor}
+            bucketCounts={bucketCounts}
+            activeLevels={activeLevels}
+            onToggleLevel={handleToggleLevel}
+            onClearFilter={handleClearFilter}
           />
         </>
       )}

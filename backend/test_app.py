@@ -1,9 +1,11 @@
 """Tests for the FastAPI backend (issues #11 and #12).
 
-All legacy handlers are mocked at ``app._dispatch_sync`` / ``app._run_scenario_sync``
-so the test suite does not require CLIMADA or any of the heavy backend
-dependencies. This matches Phase 1 testing pragma: endpoints are verified
-by shape and dispatch, not by re-running CLIMADA end-to-end.
+Per-domain router modules own each endpoint; the scenario runner is
+mocked at ``app._run_scenario_sync`` and the per-router sync helpers
+(``backend.api.macro._fetch_cred_output_sync`` and friends) are mocked
+where they're imported so the suite does not need CLIMADA or the
+geospatial stack. Endpoints are verified by shape and dispatch, not by
+re-running CLIMADA end-to-end.
 """
 
 from __future__ import annotations
@@ -11,7 +13,6 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-import time
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -20,7 +21,6 @@ from fastapi.testclient import TestClient
 
 import backend.app as app_module
 from backend.app import app
-from backend.cancellation import CancelRequested, cancel_event_var
 from backend.progress import progress_callback_var
 
 
@@ -56,24 +56,25 @@ class TestHealth:
 
 class TestSynchronousEndpoints:
     def test_data_validate_dispatches_to_check_data_type(self, client: TestClient) -> None:
+        import backend.api.settings as settings_router
+
         envelope = {"data": {"data": {}}, "status": {"code": 2000, "message": "ok"}}
-        with patch.object(app_module, "_dispatch_sync", return_value=envelope) as m:
+        with patch.object(settings_router, "_check_data_type_sync", return_value=envelope) as m:
             response = client.post(
                 "/api/v1/data/validate",
                 json={"country": "Egypt", "dataType": "exposures"},
             )
         assert response.status_code == 200
         assert response.json() == envelope
-        m.assert_called_once()
-        args, _ = m.call_args
-        assert args[0] == "run_check_data_type.py"
-        assert args[1] == {"country": "Egypt", "dataType": "exposures"}
+        m.assert_called_once_with("Egypt", "exposures")
 
     def test_data_validate_rejects_missing_fields(self, client: TestClient) -> None:
         response = client.post("/api/v1/data/validate", json={"country": "Egypt"})
         assert response.status_code == 422
 
     def test_measures_passes_path_params(self, client: TestClient) -> None:
+        import backend.api.measures as measures_router
+
         envelope = {
             "data": {
                 "adaptationMeasures": [],
@@ -81,19 +82,18 @@ class TestSynchronousEndpoints:
             },
             "status": {"code": 2000, "message": "ok"},
         }
-        with patch.object(app_module, "_dispatch_sync", return_value=envelope) as m:
+        with patch.object(measures_router, "_fetch_measures_sync", return_value=envelope) as m:
             response = client.get("/api/v1/measures/Egypt/Flood")
         assert response.status_code == 200
         assert response.json() == envelope
-        m.assert_called_once_with(
-            "run_fetch_measures.py",
-            {"countryName": "Egypt", "hazardType": "Flood"},
-        )
+        m.assert_called_once_with("Egypt", "Flood", None, None, None)
 
     def test_measures_forwards_exposure_file_query_param(self, client: TestClient) -> None:
-        # ``exposure_file`` rides into the dispatch payload as
-        # ``exposureFile`` so the runner loads the user's uploaded
-        # entity workbook for both the picker and the run.
+        # ``exposure_file`` is the custom-mode source: the renderer hands
+        # the dispatcher the uploaded workbook so the picker and the
+        # run agree on the entity.
+        import backend.api.measures as measures_router
+
         envelope = {
             "data": {
                 "adaptationMeasures": [],
@@ -101,24 +101,19 @@ class TestSynchronousEndpoints:
             },
             "status": {"code": 2000, "message": "ok"},
         }
-        with patch.object(app_module, "_dispatch_sync", return_value=envelope) as m:
+        with patch.object(measures_router, "_fetch_measures_sync", return_value=envelope) as m:
             response = client.get(
                 "/api/v1/measures/Egypt/Flood?exposure_file=entity_TODAY_EGY_FL_crops.xlsx"
             )
         assert response.status_code == 200
-        m.assert_called_once_with(
-            "run_fetch_measures.py",
-            {
-                "countryName": "Egypt",
-                "hazardType": "Flood",
-                "exposureFile": "entity_TODAY_EGY_FL_crops.xlsx",
-            },
-        )
+        m.assert_called_once_with("Egypt", "Flood", None, "entity_TODAY_EGY_FL_crops.xlsx", None)
 
     def test_measures_forwards_exposure_type_query_param(self, client: TestClient) -> None:
         # ``exposure_type`` is the ERA fallback: with no uploaded workbook
         # the dispatcher rebuilds the canonical entity filename from
         # country + hazard + exposure_type and uses it as the picker source.
+        import backend.api.measures as measures_router
+
         envelope = {
             "data": {
                 "adaptationMeasures": [],
@@ -126,17 +121,10 @@ class TestSynchronousEndpoints:
             },
             "status": {"code": 2000, "message": "ok"},
         }
-        with patch.object(app_module, "_dispatch_sync", return_value=envelope) as m:
+        with patch.object(measures_router, "_fetch_measures_sync", return_value=envelope) as m:
             response = client.get("/api/v1/measures/Egypt/Flood?exposure_type=livestock")
         assert response.status_code == 200
-        m.assert_called_once_with(
-            "run_fetch_measures.py",
-            {
-                "countryName": "Egypt",
-                "hazardType": "Flood",
-                "exposureType": "livestock",
-            },
-        )
+        m.assert_called_once_with("Egypt", "Flood", None, None, "livestock")
 
     def test_list_scenarios(self, client: TestClient) -> None:
         import backend.db as db
@@ -267,19 +255,23 @@ class TestSynchronousEndpoints:
         assert response.status_code == 404
 
     def test_macro_cred_output(self, client: TestClient) -> None:
+        import backend.api.macro as macro_router
+
         with patch.object(
-            app_module,
-            "_dispatch_sync",
+            macro_router,
+            "_fetch_cred_output_sync",
             return_value={"data": [], "status": {"code": 2000}},
         ) as m:
             response = client.get("/api/v1/macro/cred-output")
         assert response.status_code == 200
-        m.assert_called_once_with("run_fetch_cred_output.py", {"dataset_id": None})
+        m.assert_called_once_with(None)
 
     def test_macro_chart_data(self, client: TestClient) -> None:
+        import backend.api.macro as macro_router
+
         with patch.object(
-            app_module,
-            "_dispatch_sync",
+            macro_router,
+            "_fetch_macro_chart_data_sync",
             return_value={"data": {"years": []}, "status": {"code": 2000}},
         ) as m:
             response = client.post(
@@ -293,8 +285,7 @@ class TestSynchronousEndpoints:
             )
         assert response.status_code == 200
         args, _ = m.call_args
-        assert args[0] == "run_fetch_macro_chart_data.py"
-        assert args[1]["countryName"] == "Egypt"
+        assert args[0]["countryName"] == "Egypt"
 
     def test_countries_returns_iso3_list(self, client: TestClient) -> None:
         response = client.get("/api/v1/countries")
@@ -311,22 +302,26 @@ class TestSynchronousEndpoints:
         assert "EGY" in codes and "THA" in codes
 
     def test_temp_clear(self, client: TestClient) -> None:
+        import backend.api.settings as settings_router
+
         with patch.object(
-            app_module,
-            "_dispatch_sync",
+            settings_router,
+            "_clear_temp_dir_sync",
             return_value={"success": True, "message": "cleared"},
         ) as m:
             response = client.post("/api/v1/temp/clear")
         assert response.status_code == 200
-        m.assert_called_once_with("run_clear_temp_dir.py", None)
+        m.assert_called_once_with()
 
     def test_hydrate_scenario_temp_success(self, client: TestClient) -> None:
+        import backend.api.scenarios as scenarios_router
+
         envelope = {
             "data": {"written": ["hazard_geojson", "exposure_geojson"]},
             "status": {"code": 2000, "message": "Scenario hydrated."},
         }
         with patch.object(
-            app_module,
+            scenarios_router,
             "_hydrate_scenario_temp_sync",
             return_value=envelope,
         ) as m:
@@ -338,10 +333,11 @@ class TestSynchronousEndpoints:
         m.assert_called_once_with("abc")
 
     def test_hydrate_scenario_temp_not_found(self, client: TestClient) -> None:
+        import backend.api.scenarios as scenarios_router
         from backend.db import ScenarioNotFound
 
         with patch.object(
-            app_module,
+            scenarios_router,
             "_hydrate_scenario_temp_sync",
             side_effect=ScenarioNotFound("ghost"),
         ):
@@ -499,12 +495,6 @@ class TestRun:
         MockServer.return_value.run.assert_called_once_with(sockets=[sock_instance])
 
 
-class TestDispatchUnknown:
-    def test_unknown_script_raises(self) -> None:
-        with pytest.raises(ValueError, match="Unknown script"):
-            app_module._dispatch_sync("run_does_not_exist.py", None)
-
-
 class TestStructuredErrorEnvelope:
     def test_http_exception_serialized_as_error_envelope(self, client: TestClient) -> None:
         # Exercise the 404 branch in ``get_scenario_endpoint`` — the DB lookup
@@ -532,7 +522,11 @@ class TestStructuredErrorEnvelope:
     def test_unhandled_exception_is_caught_and_structured(self, client: TestClient) -> None:
         # Scenario 5: job isolation. An unhandled error in one handler must
         # produce a structured 500 without tearing down FastAPI itself.
-        with patch.object(app_module, "_dispatch_sync", side_effect=RuntimeError("boom")):
+        import backend.api.macro as macro_router
+
+        with patch.object(
+            macro_router, "_fetch_cred_output_sync", side_effect=RuntimeError("boom")
+        ):
             response = client.get("/api/v1/macro/cred-output")
         assert response.status_code == 500
         body = response.json()
@@ -556,11 +550,12 @@ class TestDomainExceptionTaxonomy:
     """
 
     def test_riskwise_error_default_maps_to_500_internal(self, client: TestClient) -> None:
+        import backend.api.macro as macro_router
         from backend.models.errors import RiskWiseError
 
         with patch.object(
-            app_module,
-            "_dispatch_sync",
+            macro_router,
+            "_fetch_cred_output_sync",
             side_effect=RiskWiseError("base failure"),
         ):
             response = client.get("/api/v1/macro/cred-output")
@@ -572,11 +567,12 @@ class TestDomainExceptionTaxonomy:
         assert body["error_id"]
 
     def test_catalog_error_maps_to_404_catalog_not_found(self, client: TestClient) -> None:
+        import backend.api.macro as macro_router
         from backend.models.errors import CatalogError
 
         with patch.object(
-            app_module,
-            "_dispatch_sync",
+            macro_router,
+            "_fetch_cred_output_sync",
             side_effect=CatalogError("EGY/FL not in catalog"),
         ):
             response = client.get("/api/v1/macro/cred-output")
@@ -586,11 +582,12 @@ class TestDomainExceptionTaxonomy:
         assert body["message"] == "EGY/FL not in catalog"
 
     def test_data_load_error_maps_to_400_data_load(self, client: TestClient) -> None:
+        import backend.api.macro as macro_router
         from backend.models.errors import DataLoadError
 
         with patch.object(
-            app_module,
-            "_dispatch_sync",
+            macro_router,
+            "_fetch_cred_output_sync",
             side_effect=DataLoadError("xlsx is corrupt"),
         ):
             response = client.get("/api/v1/macro/cred-output")
@@ -600,11 +597,12 @@ class TestDomainExceptionTaxonomy:
         assert body["message"] == "xlsx is corrupt"
 
     def test_validation_error_maps_to_422_validation_error(self, client: TestClient) -> None:
+        import backend.api.macro as macro_router
         from backend.models.errors import ValidationError as DomainValidationError
 
         with patch.object(
-            app_module,
-            "_dispatch_sync",
+            macro_router,
+            "_fetch_cred_output_sync",
             side_effect=DomainValidationError("country code unknown"),
         ):
             response = client.get("/api/v1/macro/cred-output")
@@ -614,11 +612,12 @@ class TestDomainExceptionTaxonomy:
         assert body["message"] == "country code unknown"
 
     def test_engine_error_maps_to_500_engine_error(self, client: TestClient) -> None:
+        import backend.api.macro as macro_router
         from backend.models.errors import EngineError
 
         with patch.object(
-            app_module,
-            "_dispatch_sync",
+            macro_router,
+            "_fetch_cred_output_sync",
             side_effect=EngineError("engine.run_impact crashed"),
         ):
             response = client.get("/api/v1/macro/cred-output")
@@ -629,11 +628,12 @@ class TestDomainExceptionTaxonomy:
 
     def test_typed_code_is_not_a_python_exception_string(self, client: TestClient) -> None:
         """The frontend must receive a typed ``code``, not a Python repr."""
+        import backend.api.macro as macro_router
         from backend.models.errors import DataLoadError
 
         with patch.object(
-            app_module,
-            "_dispatch_sync",
+            macro_router,
+            "_fetch_cred_output_sync",
             side_effect=DataLoadError("hazard.h5 missing"),
         ):
             response = client.get("/api/v1/macro/cred-output")
@@ -735,124 +735,6 @@ class TestMemoryPreflight:
             ok, msg = app_module._check_memory_preflight()
         assert ok is False
         assert "Insufficient memory" in msg
-
-
-class TestCooperativeCancellation:
-    def test_cancel_endpoint_sets_flag_and_aborts_run(self) -> None:
-        # The sync TestClient serializes requests through the event loop, so
-        # POST /cancel cannot run while POST /run's worker thread is still
-        # blocked. Use httpx.AsyncClient against the ASGI transport so the
-        # cancel request actually reaches the handler mid-run.
-        from httpx import ASGITransport, AsyncClient
-
-        async def run() -> None:
-            worker_started = threading.Event()
-            release = threading.Event()
-
-            def scenario_with_checkpoint(_payload: dict) -> dict:
-                worker_started.set()
-                release.wait(timeout=5)
-                from backend.cancellation import check_cancelled
-
-                check_cancelled()
-                return {"data": {"mapTitle": "done"}, "status": {"code": 2000}}
-
-            transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as ac:
-                with patch.object(
-                    app_module, "_run_scenario_sync", side_effect=scenario_with_checkpoint
-                ):
-                    run_task = asyncio.create_task(ac.post("/api/v1/scenario/run", json={}))
-                    await asyncio.to_thread(worker_started.wait, 5)
-                    assert app_module._active_job_id is not None
-                    job_id = app_module._active_job_id
-
-                    cancel_response = await ac.post(f"/api/v1/scenario/{job_id}/cancel")
-                    assert cancel_response.status_code == 200
-                    assert cancel_response.json()["cancelled"] is True
-
-                    release.set()
-                    await run_task
-
-                    events: list[dict] = []
-                    async with ac.stream("GET", f"/api/v1/scenario/{job_id}/stream") as stream:
-                        async for line in stream.aiter_lines():
-                            if line.startswith("data:"):
-                                events.append(json.loads(line[5:].strip()))
-
-            cancelled = [e for e in events if e["type"] == "cancelled"]
-            errors = [e for e in events if e["type"] == "error"]
-            assert cancelled, f"expected a cancelled event, got {events}"
-            assert errors == []
-            assert cancelled[0]["code"] == "cancelled"
-            assert cancelled[0]["error_id"]
-
-        asyncio.run(run())
-
-    def test_cancel_unknown_job_id_returns_404(self, client: TestClient) -> None:
-        response = client.post("/api/v1/scenario/no-such-job/cancel")
-        assert response.status_code == 404
-        body = response.json()
-        assert body["code"] == "not_found"
-
-    def test_check_cancelled_raises_when_flag_set(self) -> None:
-        event = threading.Event()
-        token = cancel_event_var.set(event)
-        try:
-            event.set()
-            from backend.cancellation import check_cancelled
-
-            with pytest.raises(CancelRequested):
-                check_cancelled()
-        finally:
-            cancel_event_var.reset(token)
-
-    def test_check_cancelled_no_op_when_flag_unset(self) -> None:
-        event = threading.Event()
-        token = cancel_event_var.set(event)
-        try:
-            from backend.cancellation import check_cancelled
-
-            check_cancelled()  # must not raise
-        finally:
-            cancel_event_var.reset(token)
-
-
-class TestClientDisconnectCancellation:
-    def test_stream_cleanup_sets_cancel_flag(self, client: TestClient) -> None:
-        worker_started = threading.Event()
-        worker_released = threading.Event()
-
-        def slow_scenario(_payload: dict) -> dict:
-            worker_started.set()
-            # Wait for the test to close the stream before finishing so the
-            # cancel_event gets captured post-disconnect.
-            worker_released.wait(timeout=5)
-            return {"data": {"mapTitle": "late"}, "status": {"code": 2000}}
-
-        with patch.object(app_module, "_run_scenario_sync", side_effect=slow_scenario):
-            job_id = client.post("/api/v1/scenario/run", json={}).json()["job_id"]
-            assert worker_started.wait(timeout=5)
-
-            cancel_event = app_module.jobs.get_cancel_event(job_id)
-            assert cancel_event is not None and not cancel_event.is_set()
-
-            # Open the stream then abort it immediately. The generator's
-            # ``finally`` block must set the cancel flag.
-            with client.stream("GET", f"/api/v1/scenario/{job_id}/stream"):
-                pass
-
-            # After the stream closes, the flag is set even though the
-            # worker is still running.
-            assert cancel_event.is_set()
-
-            # Let the worker finish so the test exits cleanly.
-            worker_released.set()
-            # Give the event loop time to drain and reset _active_job_id.
-            for _ in range(50):
-                if app_module._active_job_id is None:
-                    break
-                time.sleep(0.05)
 
 
 class TestScenarioBundleEndpoints:

@@ -1,4 +1,3 @@
-import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Box } from "@mui/material";
@@ -10,16 +9,20 @@ import { Box } from "@mui/material";
 // get a compact UI but the table itself stays in the DOM even when
 // collapsed — which is also why it shows in print/PDF exports.
 
-const ChartDataTable = ({ caption, headers, rows, summaryLabel }) => {
+export type ChartDataTableCell = string | number | null | undefined;
+
+export interface ChartDataTableProps {
+  caption?: string;
+  headers: ReadonlyArray<string>;
+  rows: ReadonlyArray<ReadonlyArray<ChartDataTableCell>>;
+  summaryLabel?: string;
+}
+
+const ChartDataTable = ({ caption, headers, rows, summaryLabel }: ChartDataTableProps) => {
   const { t } = useTranslation();
   const label = summaryLabel ?? t("chart_data_table_summary");
 
-  if (
-    !Array.isArray(rows) ||
-    rows.length === 0 ||
-    !Array.isArray(headers) ||
-    headers.length === 0
-  ) {
+  if (!rows || rows.length === 0 || !headers || headers.length === 0) {
     return null;
   }
 

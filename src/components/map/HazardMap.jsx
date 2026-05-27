@@ -6,18 +6,17 @@ import L from "leaflet";
 import "leaflet-simple-map-screenshoter";
 import { Box, Button } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { MapContainer, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, useMap } from "react-leaflet";
 
 import "leaflet/dist/leaflet.css";
 import { getScale } from "../../utils/colorScales";
 import Legend from "./Legend";
+import MapControls from "./MapControls";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
-import useTileLayerUrl from "./useTileLayerUrl";
 
 const HazardMap = () => {
-  const tileLayerUrl = useTileLayerUrl();
   const selectedCountry = useWorkspaceStore((s) => s.selectedCountry);
   const selectedHazard = useWorkspaceStore((s) => s.selectedHazard);
   const setActiveMapRef = useUIStore((s) => s.setActiveMapRef);
@@ -96,10 +95,14 @@ const HazardMap = () => {
           const scale = getScale(selectedHazard, data._metadata.percentile_values[rpKey], vizRamps);
           setMapInfo({ geoJson: data, colorScale: scale });
 
-          // Calculate minimum non-zero value
+          // Pick the divisor from the *largest* non-zero magnitude so the top
+          // label is always readable. Picking from the min collapses every
+          // smaller bucket to "0" when the values span many orders of magnitude
+          // (e.g. `[0, 0, 0, 0, 5e9]` with `maximumFractionDigits: 2`).
           const values = data._metadata.percentile_values[rpKey];
-          const minAbsValue = Math.min(...values.filter((v) => v !== 0).map(Math.abs));
-          const { suffix, divisor } = getSuffixAndDivisor(minAbsValue);
+          const nonZero = values.filter((v) => v !== 0).map(Math.abs);
+          const maxAbsValue = nonZero.length > 0 ? Math.max(...nonZero) : 0;
+          const { suffix, divisor } = getSuffixAndDivisor(maxAbsValue);
           setDivisor(divisor);
           setSuffix(suffix);
         } else {
@@ -254,7 +257,7 @@ const HazardMap = () => {
       // sizing — that gives the leaflet container the parent's actual height.
       style={{ position: "relative", flex: 1, minHeight: 0, width: "100%" }}
     >
-      <TileLayer url={tileLayerUrl} maxZoom={15} minZoom={5} />
+      <MapControls />
       <MapEvents />
       <Box sx={buttonContainerSx}>
         {returnPeriods.map((rp) => (
