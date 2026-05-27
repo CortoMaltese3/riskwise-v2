@@ -38,6 +38,8 @@ const sectionToTab = {
 };
 
 const RISK_LEFT_PANEL_WIDTH = 280;
+const RISK_LEFT_PANEL_MIN_WIDTH = 220;
+const RISK_LEFT_PANEL_MAX_WIDTH = 520;
 const RISK_RESULTS_PANEL_WIDTH = 260;
 const MACRO_LEFT_PANEL_WIDTH = 280;
 const ADAPTATION_RESULTS_PANEL_WIDTH = 260;
@@ -48,7 +50,12 @@ export const RiskAssessmentView = () => {
   const showRunButton = selectedTab === TABS.PARAMETERS || selectedTab === TABS.RISK;
   return (
     <HorizontalSplit>
-      <FixedColumn width={RISK_LEFT_PANEL_WIDTH}>
+      <FixedColumn
+        width={RISK_LEFT_PANEL_WIDTH}
+        resizable
+        minWidth={RISK_LEFT_PANEL_MIN_WIDTH}
+        maxWidth={RISK_LEFT_PANEL_MAX_WIDTH}
+      >
         <Box
           sx={{
             height: "100%",
