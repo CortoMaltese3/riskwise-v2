@@ -41,8 +41,12 @@ const RISK_LEFT_PANEL_WIDTH = 280;
 const RISK_LEFT_PANEL_MIN_WIDTH = 220;
 const RISK_LEFT_PANEL_MAX_WIDTH = 520;
 const RISK_RESULTS_PANEL_WIDTH = 260;
+const RISK_RESULTS_PANEL_MIN_WIDTH = 220;
+const RISK_RESULTS_PANEL_MAX_WIDTH = 520;
 const MACRO_LEFT_PANEL_WIDTH = 280;
 const ADAPTATION_RESULTS_PANEL_WIDTH = 260;
+const ADAPTATION_RESULTS_PANEL_MIN_WIDTH = 220;
+const ADAPTATION_RESULTS_PANEL_MAX_WIDTH = 520;
 
 export const RiskAssessmentView = () => {
   const { t } = useTranslation();
@@ -98,7 +102,12 @@ export const RiskAssessmentView = () => {
           <MainView />
         </Box>
       </ScrollableRegion>
-      <FixedColumn width={RISK_RESULTS_PANEL_WIDTH}>
+      <FixedColumn
+        width={RISK_RESULTS_PANEL_WIDTH}
+        resizable
+        minWidth={RISK_RESULTS_PANEL_MIN_WIDTH}
+        maxWidth={RISK_RESULTS_PANEL_MAX_WIDTH}
+      >
         <Box
           component="aside"
           role="complementary"
@@ -206,7 +215,12 @@ export const AdaptationView = () => {
           <MainView />
         </Box>
       </ScrollableRegion>
-      <FixedColumn width={ADAPTATION_RESULTS_PANEL_WIDTH}>
+      <FixedColumn
+        width={ADAPTATION_RESULTS_PANEL_WIDTH}
+        resizable
+        minWidth={ADAPTATION_RESULTS_PANEL_MIN_WIDTH}
+        maxWidth={ADAPTATION_RESULTS_PANEL_MAX_WIDTH}
+      >
         <Box
           component="aside"
           role="complementary"
