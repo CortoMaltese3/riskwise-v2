@@ -105,6 +105,7 @@ export const RiskAssessmentView = () => {
       <FixedColumn
         width={RISK_RESULTS_PANEL_WIDTH}
         resizable
+        handleSide="left"
         minWidth={RISK_RESULTS_PANEL_MIN_WIDTH}
         maxWidth={RISK_RESULTS_PANEL_MAX_WIDTH}
       >
@@ -218,6 +219,7 @@ export const AdaptationView = () => {
       <FixedColumn
         width={ADAPTATION_RESULTS_PANEL_WIDTH}
         resizable
+        handleSide="left"
         minWidth={ADAPTATION_RESULTS_PANEL_MIN_WIDTH}
         maxWidth={ADAPTATION_RESULTS_PANEL_MAX_WIDTH}
       >
