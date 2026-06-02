@@ -7,6 +7,10 @@ on:
 permissions:
   contents: write
   actions: read
+  # `verify-tests` calls GET /repos/{repo}/commits/{sha}/pulls to resolve the
+  # PR behind a release tag; that endpoint 403s ("Resource not accessible by
+  # integration") for the GITHUB_TOKEN without pull-requests: read. See #252.
+  pull-requests: read
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
