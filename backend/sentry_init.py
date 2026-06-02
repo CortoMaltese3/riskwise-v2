@@ -39,7 +39,7 @@ def _resolve_breadcrumb_level(raw: str | None) -> int:
         return logging.INFO
     if upper == "WARN":
         upper = "WARNING"
-    return logging.getLevelName(upper)  # type: ignore[return-value]
+    return logging.getLevelName(upper)
 
 
 def init_sentry() -> bool:

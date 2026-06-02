@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import cast
 
 from fastapi import APIRouter, HTTPException
 
@@ -31,7 +32,7 @@ async def workspace_export() -> dict:
     return {
         "data": {
             "export_path": str(output_path),
-            "scenario_count": int(manifest["scenario_count"]),
+            "scenario_count": int(cast(int, manifest["scenario_count"])),
             "export_date": str(manifest["export_date"]),
             "app_version": str(manifest["app_version"]),
         },

@@ -6,7 +6,7 @@ service handlers; the runner owns those and passes ``RequestData`` in.
 """
 
 from dataclasses import dataclass, field, is_dataclass, replace
-from typing import Any
+from typing import Any, cast
 
 from backend.hazard.hazard_handler import HazardHandler
 from backend.utils.country import get_iso3_country_code, sanitize_country_name
@@ -41,7 +41,7 @@ def _filter_entity_measures(
             "selected_measure_ids matched no measures on the entity; "
             "cost-benefit will be empty for this run."
         )
-    if is_dataclass(entity):
+    if is_dataclass(entity) and not isinstance(entity, type):
         return replace(entity, measures=filtered), skipped
     # Non-dataclass entities (test stubs / mocks) get the attribute mutated
     # in place; this avoids forcing every test fixture to be a dataclass.
@@ -105,7 +105,11 @@ class RequestData:
             adaptation_measures=request.get("adaptationMeasures", []),
             annual_growth=request.get("annualGrowth", 0),
             country_name=country_name,
-            country_code=get_iso3_country_code(country_name),
+            # ``get_iso3_country_code`` returns ``None`` on a lookup miss (it
+            # logs the failure). The runner has always treated this field as a
+            # plain ``str``; cast to preserve that contract without changing
+            # runtime behaviour. Hardening the miss path is tracked separately.
+            country_code=cast(str, get_iso3_country_code(country_name)),
             entity_filename=request.get("exposureFile", ""),
             exposure_type=request.get("exposureType") or "",
             asset_type=request.get("assetType") or "",

@@ -135,6 +135,14 @@ module = [
     "tests.unit.models.test_costbenefit_payload",
     "tests.unit.models.test_waterfall_payload",
     "tests.unit.test_request_data_is_plain_dataclass",
+    # Same rationale: type noise in test fixtures/stubs (engine handler
+    # stubs, **kwargs cache-key calls, sentry transport reference, generator
+    # fixture annotations) surfaced when CI's unpinned mypy drifted forward.
+    # The production code these exercise is type-checked above.
+    "tests.unit.test_run_scenario_measure_selection",
+    "tests.unit.test_run_scenario_skipped_measures",
+    "tests.unit.test_sentry_init",
+    "tests.unit.test_cancellation",
 ]
 ignore_errors = true
 
