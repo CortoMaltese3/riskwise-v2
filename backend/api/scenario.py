@@ -87,7 +87,7 @@ _STREAM_END = object()
 
 
 @router.post("/scenario/run", response_model=JobAcceptedResponse)
-async def scenario_run(payload: ScenarioRunRequest) -> dict:
+async def scenario_run(payload: ScenarioRunRequest) -> dict | JSONResponse:
     if _app._active_job_id is not None:
         raise HTTPException(
             status_code=409,

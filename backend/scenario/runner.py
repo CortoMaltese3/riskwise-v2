@@ -205,7 +205,7 @@ class RunScenario:
         # --- Exposure ---
         update_progress(20, strategy.exposure_progress_message)
         exposure_present = entity_present.exposures
-        exposure_future = entity_future.exposures if is_future else None
+        exposure_future = entity_future.exposures if entity_future is not None else None
 
         # --- Hazard ---
         update_progress(30, strategy.hazard_progress_message)
@@ -263,7 +263,7 @@ class RunScenario:
             exposure_present, hazard_present, entity_present.impfset_specs
         )
         impact_future = None
-        if is_future:
+        if is_future and entity_future is not None:
             impact_future = self.impact_handler.calculate_impact(
                 exposure_future, hazard_future, entity_future.impfset_specs
             )

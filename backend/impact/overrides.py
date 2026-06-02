@@ -75,7 +75,7 @@ def apply_impact_function_override(entity: Any, override: dict, logger: Any) -> 
         )
         patched_specs.append(new_spec)
 
-    if is_dataclass(entity):
+    if is_dataclass(entity) and not isinstance(entity, type):
         return replace(entity, impfset_specs=patched_specs)
     try:
         entity.impfset_specs = patched_specs
