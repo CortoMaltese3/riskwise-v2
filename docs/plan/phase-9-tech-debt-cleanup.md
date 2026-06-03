@@ -87,7 +87,7 @@ Each sub-phase corresponds to one parent epic. The label convention is `phase-9/
 | 9.4.9 — Wire `scripts/generate_manifest.py` into release | Regenerate `data/manifest.json` at release time. Remove `RISKWISE_SKIP_MANIFEST_VERIFY=1` override at `tests.yml:111`. | `.github/workflows/{release,tests}.yml`, `scripts/generate_manifest.py` | `phase-9/manifest-release` | none |
 | 9.4.10 — Monthly SBOM regeneration | Cron workflow: 1st of the month, regenerate `sbom.json` and `NOTICES.txt`, open a PR with the diff (or no-op). | `.github/workflows/sbom-refresh.yml` (new) | `phase-9/sbom-monthly` | none |
 | 9.4.11 — Documentation gap closures | One docs PR: `docs/errors.md` cataloguing the 1000–6999 error-code taxonomy, `SECURITY.md` "Known accepted risks" subsection covering `style-src 'unsafe-inline'`, `// TODO(D24)` comments at offline-mode enforcement points (`public/electron.js:456`, `:572–574`). | `docs/errors.md` (new), `SECURITY.md`, `public/electron.js` | `phase-9/docs-gaps` | none |
-| 9.4.12 — Repository cleanup | One cleanup PR: orphan deps in `requirements/requirements.txt` (docx2pdf, docxtpl, python-docx), delete `scripts/build_engine_pyinstaller.ps1`, delete `src/components/nav/Header.module.css` and migrate styling, delete `src/App.css`. | as listed | `phase-9/repo-cleanup` | none (Header.module.css overlaps with phase-8/cleanup; coordinate with whichever lands first) |
+| 9.4.12 — Repository cleanup | One cleanup PR: orphan deps in `requirements/requirements.txt` (docx2pdf, docxtpl, python-docx), delete `src/components/nav/Header.module.css` and migrate styling, delete `src/App.css`. (`scripts/build_engine_pyinstaller.ps1` already gone — PyInstaller fully retired, see adr-bundling.md §5 decision note 2026-06-03.) | as listed | `phase-9/repo-cleanup` | none (Header.module.css overlaps with phase-8/cleanup; coordinate with whichever lands first) |
 
 ### 9.5 — Auto-update pipeline activation (parent [#414](https://github.com/CortoMaltese3/riskwise-v2/issues/414))
 
@@ -184,7 +184,7 @@ Architecture closures (parent #233):
 - [ ] Release pipeline regenerates `data/manifest.json`; `RISKWISE_SKIP_MANIFEST_VERIFY` removed from `tests.yml`.
 - [ ] Monthly SBOM-refresh workflow exists and has produced at least one no-op or PR run.
 - [ ] `docs/errors.md` exists with the 1000–6999 taxonomy; `SECURITY.md` covers the `style-src 'unsafe-inline'` trade-off; `// TODO(D24)` comments in place.
-- [ ] Repo cleanup landed: orphan Python deps removed, `scripts/build_engine_pyinstaller.ps1` deleted, `Header.module.css` and `App.css` removed.
+- [ ] Repo cleanup landed: orphan Python deps removed, `Header.module.css` and `App.css` removed. (`scripts/build_engine_pyinstaller.ps1` already deleted.)
 
 Auto-update activation (parent #414):
 

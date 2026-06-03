@@ -91,5 +91,13 @@ tests/parity/_summary.md
 #certificates
 certs
 
+# Engine-manifest signing artefacts (issue #115). The private minisign key is
+# restored in CI from the ENGINE_MANIFEST_KEY secret and engine-manifest.json
+# is generated + signed fresh on every release (see .github/workflows/release.yml).
+# Never commit either: the .key is a secret, the .json is a build artefact.
+# (Commit 5243160 promised this ignore but only updated resources/engine-manifest.pub.)
+engine-manifest.key
+engine-manifest.json
+
 # claude code
 .claude/settings.json
