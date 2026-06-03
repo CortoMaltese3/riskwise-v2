@@ -9,7 +9,7 @@ Below the root, docs are grouped by lifecycle:
 
 | Folder | Lifecycle | What lives here |
 |---|---|---|
-| [`reference/`](reference/) | Current truth, long-lived | How features work today: `accessibility.md`, `benchmarks.md`, `extending.md`, `offline.md`, `signing.md`. Update these as the code evolves. |
+| [`reference/`](reference/) | Current truth, long-lived | How features work today: `accessibility.md`, `benchmarks.md`, `engine-distribution.md`, `extending.md`, `offline.md`, `signing.md`. Update these as the code evolves. |
 | [`audits/`](audits/) | Frozen baselines, dated snapshots | One-shot audits with a date in the header: `accessibility-baseline-v1.md`, `security-baseline-v1.md`. Treat as historical — do not mutate; supersede with a new `-v2` if a fresh audit is needed. |
 | [`spikes/`](spikes/) | Research, design-time | Per-spike findings produced during Phase 0: `adr-bundling.md`, `adr-fastapi-poc.md`, `adr-autoupdate-ux.md`, `mui-v7-spike-notes.md`, plus the engine-manifest JSON schema. Naming starts with `adr-` for legacy reasons; the actual ADRs live in `DECISIONS.md`. |
 | [`plan/`](plan/) | Phase plans | `phase-0-research-spikes.md` … `phase-5-optional.md`, plus `README.md`. Tracks the work, not the outcome — outcomes land in `reference/` or `DECISIONS.md`. |

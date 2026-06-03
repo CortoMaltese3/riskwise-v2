@@ -21,7 +21,9 @@ if (!app.isPackaged) {
   }
 }
 const {
+  engineManifestUrl,
   isEngineVersionCompatible,
+  resolveEngineReleaseTag,
   resolveReleaseChannel,
   verifyEngineManifest,
 } = require("./engineManifest");
@@ -191,7 +193,12 @@ const REMIND_SNOOZE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const RELEASE_NOTES_CACHE_MS = 60 * 60 * 1000; // 1 hour
 const RELEASE_OWNER = "CortoMaltese3";
 const RELEASE_REPO = "riskwise-v2";
-const ENGINE_MANIFEST_URL = `https://github.com/${RELEASE_OWNER}/${RELEASE_REPO}/releases/latest/download/engine-manifest.json`;
+// The engine lives on its own fixed, rolling release (issue #529), decoupled
+// from app tags. `ENGINE_RELEASE_TAG` is overridable via the
+// RISKWISE_ENGINE_RELEASE_TAG env var for testing; the manifest URL is
+// derived from it and is pinned to the tag — never `releases/latest`.
+const ENGINE_RELEASE_TAG = resolveEngineReleaseTag(process.env);
+const ENGINE_MANIFEST_URL = engineManifestUrl(RELEASE_OWNER, RELEASE_REPO, ENGINE_RELEASE_TAG);
 const GITHUB_RELEASE_API = `https://api.github.com/repos/${RELEASE_OWNER}/${RELEASE_REPO}/releases`;
 const ENGINE_PUB_KEY_FILENAME = "engine-manifest.pub";
 // Engine cache directory under %LOCALAPPDATA%. Distinct from v1's

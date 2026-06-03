@@ -1,0 +1,202 @@
+name: Release Engine
+
+# Dedicated engine pipeline (issue #529). The Python engine changes far less
+# often than the app, so it ships on its OWN rolling release (`engine-stable`)
+# instead of riding along on every app `v*` tag. Cutting an app release no
+# longer rebuilds or re-signs the engine, and the expensive Nuitka build only
+# runs when an `engine-v*` tag is pushed (or this workflow is dispatched
+# manually). The client reads the manifest from the fixed
+# `releases/download/engine-stable/engine-manifest.json` URL — see
+# `public/electron.js` (ENGINE_RELEASE_TAG) and docs/reference/engine-distribution.md.
+on:
+  push:
+    tags:
+      - "engine-v*"
+  workflow_dispatch:
+    inputs:
+      engine_version:
+        description: "Engine version embedded in the manifest (e.g. v2.0.0). Defaults to the engine-v* tag with the engine- prefix stripped."
+        required: false
+        default: ""
+      min_app_version:
+        description: "Minimum compatible app version (inclusive)."
+        required: false
+        default: ""
+      max_app_version:
+        description: "Maximum compatible app version (inclusive)."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Fixed engine release tag — must match ENGINE_RELEASE_TAG /
+  # DEFAULT_ENGINE_RELEASE_TAG in public/engineManifest.js.
+  ENGINE_RELEASE_TAG: engine-stable
+  # Documented default compatibility RANGE (not a single pinned version).
+  # The engine is forward-compatible across the 2.x app line; widen the max
+  # only when a future app version is known to need a newer engine. These are
+  # overridable per run via the workflow_dispatch inputs above.
+  DEFAULT_MIN_APP_VERSION: "2.0.0"
+  DEFAULT_MAX_APP_VERSION: "99.0.0"
+
+jobs:
+  # Bundle the Python engine with Nuitka and publish the .exe to the rolling
+  # engine-stable release (create-or-update). Mirrors the former build-engine
+  # job from release.yml, retargeted off the app tag.
+  build-engine:
+    name: Build Python engine (Nuitka)
+    runs-on: windows-latest
+    outputs:
+      engine_sha256: ${{ steps.engine_hash.outputs.sha256 }}
+      engine_version: ${{ steps.engine_hash.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install from lock file (with bundle extra)
+        run: uv sync --extra bundle --frozen
+
+      # build_engine.ps1 embeds a guarded Azure Trusted Signing step that
+      # only runs when AZURE_CLIENT_ID is set. Forked PRs without secrets
+      # produce an unsigned engine binary and skip signing cleanly.
+      - name: Build engine
+        shell: pwsh
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_CODE_SIGNING_ACCOUNT_NAME: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT_NAME }}
+          AZURE_CERT_PROFILE_NAME: ${{ secrets.AZURE_CERT_PROFILE_NAME }}
+          AZURE_ENDPOINT: ${{ secrets.AZURE_ENDPOINT }}
+        run: |
+          . .venv/Scripts/Activate.ps1
+          ./scripts/build_engine.ps1
+
+      # Engine version is the tag with the `engine-` prefix stripped
+      # (`engine-v2.0.0` → `v2.0.0`), or the workflow_dispatch override, or
+      # the raw ref as a last resort for manual branch runs.
+      - name: Compute engine SHA-256 and version
+        id: engine_hash
+        shell: pwsh
+        env:
+          INPUT_ENGINE_VERSION: ${{ github.event.inputs.engine_version }}
+        run: |
+          $hash = (Get-FileHash -Algorithm SHA256 dist/nuitka/riskwise-engine.exe).Hash.ToLower()
+          $ref = "${env:GITHUB_REF_NAME}"
+          if ($ref -like "engine-v*") {
+            $version = $ref -replace '^engine-', ''
+          } elseif (-not [string]::IsNullOrWhiteSpace($env:INPUT_ENGINE_VERSION)) {
+            $version = $env:INPUT_ENGINE_VERSION
+          } else {
+            $version = $ref
+          }
+          "sha256=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "engine sha256=$hash version=$version"
+
+      - name: Upload engine artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: riskwise-engine
+          path: dist/nuitka/riskwise-engine.exe
+          if-no-files-found: error
+
+      # Create the rolling engine-stable release if it does not exist yet,
+      # then attach the binary. `--latest=false` is critical: engine-stable
+      # must never become the repo's "latest" release, or it would hijack the
+      # app's electron-updater feed and the v2.0.0 demo's
+      # releases/latest/download path.
+      - name: Publish engine to engine-stable release
+        shell: bash
+        run: |
+          gh release view "$ENGINE_RELEASE_TAG" >/dev/null 2>&1 || \
+            gh release create "$ENGINE_RELEASE_TAG" \
+              --title "RISK WISE Engine (rolling)" \
+              --notes "Rolling engine release. Updated by engine-release.yml; do not delete." \
+              --latest=false
+          gh release upload "$ENGINE_RELEASE_TAG" dist/nuitka/riskwise-engine.exe --clobber
+
+  # Generate, sign (minisign), and publish engine-manifest.json to the same
+  # engine-stable release. The private key lives in `ENGINE_MANIFEST_KEY`
+  # (base64 of engine-manifest.key) plus `ENGINE_MANIFEST_KEY_PASSWORD`; the
+  # app bundles the matching public half in `resources/engine-manifest.pub`
+  # and refuses to trust the manifest SHA-256 until the signature verifies.
+  sign-engine-manifest:
+    name: Sign engine manifest (minisign)
+    runs-on: windows-latest
+    needs: build-engine
+    if: ${{ needs.build-engine.outputs.engine_sha256 != '' }}
+    environment: release
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Install minisign (scoop)
+        shell: pwsh
+        run: |
+          iwr -useb get.scoop.sh | iex
+          scoop install minisign
+
+      - name: Restore minisign private key
+        shell: pwsh
+        env:
+          ENGINE_MANIFEST_KEY: ${{ secrets.ENGINE_MANIFEST_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:ENGINE_MANIFEST_KEY)) {
+            throw "ENGINE_MANIFEST_KEY secret is not set — cannot sign engine manifest"
+          }
+          $bytes = [Convert]::FromBase64String($env:ENGINE_MANIFEST_KEY)
+          [IO.File]::WriteAllBytes("engine-manifest.key", $bytes)
+
+      # download_url is pinned to the fixed engine-stable release (NOT the
+      # engine-v* tag) so the client's fixed manifest URL and the binary it
+      # points at stay on the same rolling release. min/max_app_version are a
+      # configurable RANGE from the dispatch inputs, falling back to the
+      # documented defaults for tag-triggered runs.
+      - name: Generate engine manifest
+        shell: pwsh
+        env:
+          ENGINE_SHA256: ${{ needs.build-engine.outputs.engine_sha256 }}
+          ENGINE_VERSION: ${{ needs.build-engine.outputs.engine_version }}
+          MIN_APP_VERSION: ${{ github.event.inputs.min_app_version || env.DEFAULT_MIN_APP_VERSION }}
+          MAX_APP_VERSION: ${{ github.event.inputs.max_app_version || env.DEFAULT_MAX_APP_VERSION }}
+        run: |
+          $manifest = [ordered]@{
+            version          = $env:ENGINE_VERSION
+            sha256           = $env:ENGINE_SHA256
+            download_url     = "https://github.com/${{ github.repository }}/releases/download/$($env:ENGINE_RELEASE_TAG)/riskwise-engine.exe"
+            min_app_version  = $env:MIN_APP_VERSION
+            max_app_version  = $env:MAX_APP_VERSION
+            signature        = ""
+          }
+          $json = $manifest | ConvertTo-Json -Depth 5
+          Set-Content -Path "engine-manifest.json" -Value $json -Encoding UTF8
+          Write-Host "Generated engine-manifest.json:"
+          Get-Content engine-manifest.json
+
+      - name: Sign engine manifest
+        shell: pwsh
+        env:
+          ENGINE_MANIFEST_KEY_PASSWORD: ${{ secrets.ENGINE_MANIFEST_KEY_PASSWORD }}
+        run: |
+          ./scripts/sign_manifest.ps1 `
+            -Manifest engine-manifest.json `
+            -PrivateKey engine-manifest.key `
+            -Password $env:ENGINE_MANIFEST_KEY_PASSWORD
+          Remove-Item -Path engine-manifest.key -Force
+
+      - name: Attach signed manifest to engine-stable release
+        shell: bash
+        run: gh release upload "$ENGINE_RELEASE_TAG" engine-manifest.json --clobber
