@@ -27,6 +27,7 @@ const {
 } = require("./engineManifest");
 const { shouldSuppressUpdate } = require("./appUpdates");
 const { scanAndImportPacks } = require("./dataPacks");
+const { provisionEngineData } = require("./engineProvision");
 const { startTileServer } = require("./tileServer");
 const { TILES_FILENAME } = require("./offlineConstants");
 const { TILES_PATH_PREFIX, resolveTileRequest, RESULT: TILE_RESULT } = require("./tileProxy");
@@ -431,6 +432,14 @@ const downloadAndInstallEngine = async (loaderWindow) => {
 
   if (fs.existsSync(engineExecutable)) {
     log.info("[electron] RISK WISE Engine already installed at:", enginePath);
+    // Self-heal installs from before #527 (and engine-only updates) that have
+    // the exe but are missing one or more data trees. Idempotent, and a
+    // provisioning hiccup must not block an otherwise-working engine.
+    try {
+      provisionEngineData(basePath, enginePath, { logger: (m) => log.info(m) });
+    } catch (err) {
+      log.warn(`[electron] engine data provisioning (existing install) failed: ${err.message}`);
+    }
     return engineExecutable;
   }
 
@@ -460,6 +469,14 @@ const downloadAndInstallEngine = async (loaderWindow) => {
 
     updateLoaderMessage("Installing engine...");
     fs.renameSync(downloadPath, engineExecutable);
+
+    // The downloaded payload is only the exe; the Nuitka engine resolves its
+    // data/countries/requirements trees as siblings (backend/constants.py). Copy
+    // the trees the installer bundled next to the exe so a fresh-machine download
+    // can actually run scenarios. Mirrors scripts/stage_engine.ps1. A failure
+    // here means the engine cannot run, so let it surface via the catch below.
+    updateLoaderMessage("Provisioning engine data...");
+    provisionEngineData(basePath, enginePath, { logger: (m) => log.info(m) });
 
     updateLoaderMessage("Engine installed successfully!");
     log.info("[electron] RISK WISE Engine installed successfully");

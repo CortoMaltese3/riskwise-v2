@@ -24,7 +24,9 @@ module.exports = {
   afterPack: "scripts/apply-electron-fuses.js",
   appId: "com.giz.riskwise",
   productName: "RISK WISE",
-  files: ["build/**/*", "backend/**/*", "requirements/", "data/"],
+  // `countries/` ships so the app can provision it next to the downloaded
+  // engine (issue #527); the Nuitka engine resolves it as a BASE_DIR sibling.
+  files: ["build/**/*", "backend/**/*", "requirements/", "data/", "countries/"],
   icon: "build/icon.ico",
   directories: {
     output: "dist/${version}",
