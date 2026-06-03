@@ -47,6 +47,41 @@ def _collect_sse(response) -> list[dict]:
     ]
 
 
+def _run_scenario_and_collect_sse(fake_scenario, payload: dict | None = None) -> list[dict]:
+    """POST a scenario and collect its SSE events on a single event loop.
+
+    ``_execute_scenario`` is a detached ``asyncio.create_task`` that must
+    outlive the POST request to feed the stream. The synchronous
+    ``TestClient`` spins up a fresh event loop per request and tears it down
+    on completion; that teardown's ``_cancel_all_tasks`` can cancel the
+    background job before it emits the ``result`` event — a ~1% flake under
+    load that surfaced as an intermittent CI failure. The production server
+    runs a single persistent loop, so the job is never cancelled there.
+    Driving the POST and the stream through one ``httpx.AsyncClient`` on a
+    single ``asyncio.run`` loop reproduces that persistent-loop behaviour and
+    removes the race. Same approach as :class:`TestSingleJobInvariant`.
+    """
+    from httpx import ASGITransport, AsyncClient
+
+    async def run() -> list[dict]:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            with patch.object(app_module, "_run_scenario_sync", side_effect=fake_scenario):
+                response = await ac.post("/api/v1/scenario/run", json=payload or {})
+                assert response.status_code == 200
+                job_id = response.json()["job_id"]
+                events: list[dict] = []
+                async with ac.stream("GET", f"/api/v1/scenario/{job_id}/stream") as stream:
+                    assert stream.status_code == 200
+                    assert "text/event-stream" in stream.headers["content-type"]
+                    async for line in stream.aiter_lines():
+                        if line.startswith("data:"):
+                            events.append(json.loads(line[5:].strip()))
+                return events
+
+    return asyncio.run(run())
+
+
 class TestHealth:
     def test_health_returns_ok(self, client: TestClient) -> None:
         response = client.get("/api/v1/health")
@@ -359,7 +394,7 @@ class TestScenarioFlow:
             with client.stream("GET", f"/api/v1/scenario/{job_id}/stream") as stream:
                 _collect_sse(stream)
 
-    def test_scenario_stream_emits_progress_and_result(self, client: TestClient) -> None:
+    def test_scenario_stream_emits_progress_and_result(self) -> None:
         def fake_scenario(_payload: dict) -> dict:
             cb = progress_callback_var.get()
             assert cb is not None, "progress callback must propagate into the worker thread"
@@ -367,12 +402,7 @@ class TestScenarioFlow:
             cb({"type": "progress", "progress": 100, "message": "done"})
             return {"data": {"mapTitle": "T"}, "status": {"code": 2000}}
 
-        with patch.object(app_module, "_run_scenario_sync", side_effect=fake_scenario):
-            job_id = client.post("/api/v1/scenario/run", json={}).json()["job_id"]
-            with client.stream("GET", f"/api/v1/scenario/{job_id}/stream") as stream:
-                assert stream.status_code == 200
-                assert "text/event-stream" in stream.headers["content-type"]
-                events = _collect_sse(stream)
+        events = _run_scenario_and_collect_sse(fake_scenario)
 
         progress_events = [e for e in events if e["type"] == "progress"]
         result_events = [e for e in events if e["type"] == "result"]
@@ -382,14 +412,11 @@ class TestScenarioFlow:
         assert len(result_events) == 1
         assert result_events[0]["data"]["data"]["mapTitle"] == "T"
 
-    def test_scenario_stream_emits_error(self, client: TestClient) -> None:
+    def test_scenario_stream_emits_error(self) -> None:
         def failing_scenario(_payload: dict) -> dict:
             raise ValueError("boom")
 
-        with patch.object(app_module, "_run_scenario_sync", side_effect=failing_scenario):
-            job_id = client.post("/api/v1/scenario/run", json={}).json()["job_id"]
-            with client.stream("GET", f"/api/v1/scenario/{job_id}/stream") as stream:
-                events = _collect_sse(stream)
+        events = _run_scenario_and_collect_sse(failing_scenario)
 
         error_events = [e for e in events if e["type"] == "error"]
         assert len(error_events) == 1
@@ -419,9 +446,7 @@ class TestScenarioFlow:
 
         assert app_module.jobs.get_queue(job_id) is None
 
-    def test_scenario_stream_emits_partial_geojson_events_in_order(
-        self, client: TestClient
-    ) -> None:
+    def test_scenario_stream_emits_partial_geojson_events_in_order(self) -> None:
         """Parallel GeoJSON generation must surface as ``progress`` events
         carrying a ``step`` name (``exposure_ready`` / ``hazard_ready`` /
         ``impact_ready``) that precede the final ``result`` event."""
@@ -434,10 +459,7 @@ class TestScenarioFlow:
             cb({"type": "progress", "step": "impact_ready", "data": {"features": []}})
             return {"data": {"mapTitle": "T"}, "status": {"code": 2000}}
 
-        with patch.object(app_module, "_run_scenario_sync", side_effect=fake_scenario):
-            job_id = client.post("/api/v1/scenario/run", json={}).json()["job_id"]
-            with client.stream("GET", f"/api/v1/scenario/{job_id}/stream") as stream:
-                events = _collect_sse(stream)
+        events = _run_scenario_and_collect_sse(fake_scenario)
 
         steps = [e.get("step") for e in events if e.get("type") == "progress" and "step" in e]
         assert steps == ["exposure_ready", "hazard_ready", "impact_ready"]
