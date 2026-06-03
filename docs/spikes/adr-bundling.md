@@ -1,6 +1,6 @@
 # ADR — Python Bundling: Nuitka vs PyInstaller on Stripped CLIMADA Env (Spike, Phase 0)
 
-**Status:** Design accepted — engine-path measurements captured (issue #165); clean-env bundle re-measure deferred until engine-path consolidation.
+**Status:** Design accepted — engine-path measurements captured (issue #165); clean-env bundle re-measure deferred until engine-path consolidation. **PyInstaller fallback retired 2026-06-03** — the release pipeline ships Nuitka only and the `pyinstaller` dependency was removed from the `bundle` extra (see §5 decision note).
 **Date:** 2026-04-18
 **Issue:** #3
 **Depends on:** DECISIONS.md D05 (engine track A/B/C), D02 (FastAPI loopback), D09 (offline installer variants), D16 (FastAPI + uvicorn verified on Windows)
@@ -439,6 +439,22 @@ filled-in table row.
 "Runs end-to-end" is not a threshold — it is a precondition. A bundle that
 does not complete the Egypt flood scenario is not a row in the table; it is
 a build failure and goes in §7 (outstanding) with the exact error.
+
+> **Decision note (2026-06-03): PyInstaller fallback retired.** v2.0 shipped on
+> Track A with Nuitka passing all of §5 gates (1)–(4); the release pipeline
+> ([build_engine.ps1](../../scripts/build_engine.ps1), [release.yml](../../.github/workflows/release.yml))
+> invokes Nuitka exclusively and the dedicated `build_engine_pyinstaller.ps1`
+> was deleted. The unused `pyinstaller` dependency has now been removed from the
+> `bundle` extra in [pyproject.toml](../../pyproject.toml) so CI no longer
+> installs a bundler it never runs. The PyInstaller build command (§3.3),
+> measurements (§4 table), and fallback gates above are retained as the
+> historical comparison record. **To re-instate the fallback** if a future
+> dependency bump regresses Nuitka: re-add `pyinstaller>=6.6,<7` to the `bundle`
+> extra, relock, and restore a build script from the §3.3 command. The runtime
+> `sys.frozen` / onedir resolution branches in
+> [backend/constants.py](../../backend/constants.py) were kept untouched — they
+> are dependency-free and cheap, so the engine stays PyInstaller-loadable
+> without the build-time package.
 
 ---
 

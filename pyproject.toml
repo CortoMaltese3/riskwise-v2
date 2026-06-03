@@ -60,7 +60,10 @@ bundle = [
     # as an explicit bundle dep so a slim CI env does not fall back to
     # Nuitka's ``set``-based path that changes ordering across runs.
     "ordered-set>=4,<5",
-    "pyinstaller>=6.6,<7",
+    # PyInstaller was retained through Phase 0 as the fallback bundler /
+    # comparison baseline (see docs/spikes/adr-bundling.md §5). The release
+    # pipeline ships Nuitka only, so the dependency was dropped — the ADR
+    # records how to re-add it if Nuitka ever regresses on a dep bump.
 ]
 
 [tool.ruff]
