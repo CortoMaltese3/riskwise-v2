@@ -105,15 +105,20 @@ win: {
 }
 ```
 
-`.github/workflows/release.yml` routes the secrets into both jobs:
+The signing secrets are routed into two workflows:
 
-- The **`build`** job (Electron installer) sets the Azure env vars and runs
-  `npx electron-builder -w --publish always`. When `AZURE_CLIENT_ID` is
-  empty it falls back to `CSC_IDENTITY_AUTO_DISCOVERY=false` + unsigned.
-- The **`build-engine`** job (Nuitka) sets the same six Azure env vars
-  (minus `AZURE_PUBLISHER_NAME`, which the engine signer does not use) so
-  that [`scripts/build_engine.ps1`](../../scripts/build_engine.ps1) can invoke
-  `signtool` with `Azure.CodeSigning.Dlib.dll`.
+- The **`build`** job in `.github/workflows/release.yml` (Electron installer)
+  sets the Azure env vars and runs `npx electron-builder -w --publish always`.
+  When `AZURE_CLIENT_ID` is empty it falls back to
+  `CSC_IDENTITY_AUTO_DISCOVERY=false` + unsigned.
+- The **`build-engine`** job in
+  [`.github/workflows/engine-release.yml`](../../.github/workflows/engine-release.yml)
+  (Nuitka) sets the same six Azure env vars (minus `AZURE_PUBLISHER_NAME`,
+  which the engine signer does not use) so that
+  [`scripts/build_engine.ps1`](../../scripts/build_engine.ps1) can invoke
+  `signtool` with `Azure.CodeSigning.Dlib.dll`. As of issue #529 the engine
+  builds on its own `engine-v*`-tagged pipeline, not on app tags — see
+  [`engine-distribution.md`](engine-distribution.md).
 
 The Electron main process (`public/electron.js`, copied to
 `build/electron.js` at build time) enables update-payload signature

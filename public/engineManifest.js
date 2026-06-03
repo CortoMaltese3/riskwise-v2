@@ -194,16 +194,45 @@ const resolveReleaseChannel = (envChannel, appVersion) => {
   return channelFromVersion(appVersion);
 };
 
+// The engine ships on its own dedicated, rolling GitHub release (issue
+// #529) instead of riding along on every app tag. A *fixed* tag means app
+// releases never re-publish the engine and the manifest URL is stable —
+// crucially NOT `releases/latest`, which would change whenever any app tag
+// is cut. `engine-release.yml` publishes the engine + signed manifest here.
+const DEFAULT_ENGINE_RELEASE_TAG = "engine-stable";
+const ENGINE_RELEASE_TAG_ENV = "RISKWISE_ENGINE_RELEASE_TAG";
+
+// Resolve the engine release tag, honouring an env override so tests (and
+// staging builds) can point at an alternate engine release without code
+// changes. Blank/whitespace values fall back to the default.
+const resolveEngineReleaseTag = (env = {}) => {
+  const override = env[ENGINE_RELEASE_TAG_ENV];
+  if (typeof override === "string" && override.trim()) {
+    return override.trim();
+  }
+  return DEFAULT_ENGINE_RELEASE_TAG;
+};
+
+// Build the fixed engine-manifest URL for a given owner/repo/tag. Pinned to
+// `releases/download/<tag>/…` — never `latest` — so cutting an app tag does
+// not move where the client looks for the engine manifest.
+const engineManifestUrl = (owner, repo, tag) =>
+  `https://github.com/${owner}/${repo}/releases/download/${tag}/engine-manifest.json`;
+
 module.exports = {
   ALLOWED_CHANNELS,
+  DEFAULT_ENGINE_RELEASE_TAG,
   ED25519_SPKI_DER_PREFIX,
+  ENGINE_RELEASE_TAG_ENV,
   canonicalManifestBytes,
   channelFromVersion,
   compareVersions,
   ed25519PublicKeyFromRaw,
+  engineManifestUrl,
   isEngineVersionCompatible,
   parseMinisignPublicKey,
   parseMinisignSignatureBlob,
+  resolveEngineReleaseTag,
   resolveReleaseChannel,
   verifyEngineManifest,
   verifyMinisignSignature,
