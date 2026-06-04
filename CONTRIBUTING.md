@@ -236,23 +236,32 @@ release-please.
 
 `NOTICES.txt` is auto-generated from the project SBOM (`sbom.json`) by
 [`scripts/generate_notices.py`](scripts/generate_notices.py). The committed
-file is the source of truth for downstream attribution; CI fails the release
-job if the regenerated output does not match the checked-in copy.
+file is the source of truth for downstream attribution.
 
-After bumping a dependency or editing the static-asset table in the script:
+The `sbom` job in `release.yml` regenerates the SBOM on every tag and runs
+`--check` against the committed `NOTICES.txt`. As of issue #533 this check is
+**advisory, not release-blocking**: the release-time SBOM is resolved on the
+runner and cannot be reproduced byte-for-byte off-runner, so a hard gate only
+reds otherwise-good releases. The job always uploads the merged `sbom.json`
+(plus the per-ecosystem `sbom-npm.json` / `sbom-pip.json`) as a `sbom`
+workflow artifact and attaches `sbom.json` to the release, even when the
+check reports a diff.
+
+The authoritative way to refresh attribution is to regenerate from CI's own
+SBOM, which reflects the exact resolved npm + pip trees:
 
 ```bash
-# 1. (CI does this on every tag) regenerate the SBOM with cyclonedx-npm + cyclonedx-py
-#    Locally, you can either reuse a prior `sbom.json` or skip this step
-#    if you only changed the static-asset block in the script itself.
+# 1. Download the `sbom` artifact from the latest release run, e.g.:
+gh run download <run-id> -n sbom
 
-# 2. Regenerate NOTICES.txt and commit the result.
-python scripts/generate_notices.py
-git add NOTICES.txt
+# 2. Regenerate NOTICES.txt from that SBOM and commit the result.
+python scripts/generate_notices.py --sbom sbom.json
+git add NOTICES.txt sbom.json
 ```
 
-To verify locally that your committed copy matches the SBOM (the same check
-CI runs):
+If you only changed the static-asset table in the script itself, you can
+reuse the committed `sbom.json` and skip the download. To preview locally
+whether your committed copy matches a given SBOM (the same check CI runs):
 
 ```bash
 python scripts/generate_notices.py --check

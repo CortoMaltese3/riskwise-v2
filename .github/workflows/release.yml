@@ -172,6 +172,8 @@ jobs:
         with:
           python-version: "3.11"
 
+      - uses: astral-sh/setup-uv@v7
+
       - name: Install npm dependencies
         run: npm ci --legacy-peer-deps
 
@@ -181,11 +183,24 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install "cyclonedx-bom>=4.4,<6"
 
+      # Install the project's *runtime* Python dependency closure from
+      # uv.lock into `.venv` so the pip SBOM reflects the app's actual deps
+      # (issue #533). Without this, `cyclonedx-py environment` introspected
+      # the runner's generator env (cyclonedx-bom + setup-python) instead of
+      # the app. `--no-install-project` keeps the local `riskwise-backend`
+      # package out of the attribution, and the default group selection
+      # excludes the dev/bundle extras (test + build tooling).
+      - name: Install Python runtime dependencies
+        run: uv sync --frozen --no-install-project
+
       - name: Generate npm SBOM
         run: npx --yes @cyclonedx/cyclonedx-npm --spec-version 1.5 --output-format JSON --output-file sbom-npm.json
 
+      # Point the generator at the uv-managed `.venv` (not the active
+      # interpreter, which is where cyclonedx-bom itself lives) so only the
+      # app's runtime deps land in the SBOM (issue #533).
       - name: Generate pip SBOM
-        run: cyclonedx-py environment --spec-version 1.5 --outfile sbom-pip.json
+        run: cyclonedx-py environment --spec-version 1.5 --outfile sbom-pip.json .venv
 
       - name: Merge SBOMs
         shell: bash
@@ -214,8 +229,29 @@ jobs:
           print(f"merged sbom: {len(merged['components'])} components")
           PY
 
+      # Advisory, not release-blocking (issue #533). The release-time SBOM is
+      # resolved on the runner and cannot be reproduced byte-for-byte
+      # off-runner, so a hard gate here only reds otherwise-good releases.
+      # The authoritative regen path is to download the `sbom` artifact
+      # uploaded below and run
+      # `python scripts/generate_notices.py --sbom sbom.json`, then commit.
       - name: Verify NOTICES.txt is up to date
+        continue-on-error: true
         run: python scripts/generate_notices.py --sbom sbom.json --check
+
+      # Always publish the CI-merged SBOM as a workflow artifact, even when
+      # the drift check above reports a diff, so NOTICES.txt can be
+      # regenerated faithfully from CI's own output (issue #533).
+      - name: Upload SBOM artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            sbom.json
+            sbom-npm.json
+            sbom-pip.json
+          if-no-files-found: warn
 
       - name: Attach SBOM to release
         shell: bash
