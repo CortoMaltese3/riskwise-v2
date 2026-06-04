@@ -58,6 +58,20 @@ The Phase 6 ADR §7 target of ≤ 250 MB (re-baselined from the original
 "~50 MB Track B daydream" per [DECISIONS.md D26](docs/DECISIONS.md))
 is met on at least one Nuitka configuration.
 
+## [2.1.0](https://github.com/CortoMaltese3/riskwise-v2/compare/v2.0.0...v2.1.0) (2026-06-04)
+
+
+### Features
+
+* **ci:** decouple the engine onto a dedicated engine-stable release ([#530](https://github.com/CortoMaltese3/riskwise-v2/issues/530)) ([e9002ca](https://github.com/CortoMaltese3/riskwise-v2/commit/e9002ca573c0aea4ca24d14ad03d89ac223e74a9)), closes [#529](https://github.com/CortoMaltese3/riskwise-v2/issues/529)
+
+
+### Bug Fixes
+
+* **ci:** install minisign on PATH for the engine-manifest sign step ([#532](https://github.com/CortoMaltese3/riskwise-v2/issues/532)) ([481da08](https://github.com/CortoMaltese3/riskwise-v2/commit/481da087d5387253b8c8e6ccf76ae90365406c19)), closes [#529](https://github.com/CortoMaltese3/riskwise-v2/issues/529)
+* **ui:** provision engine data trees when the engine is downloaded ([#528](https://github.com/CortoMaltese3/riskwise-v2/issues/528)) ([b17779e](https://github.com/CortoMaltese3/riskwise-v2/commit/b17779ec9361c4542f5d4f8814ac3411c3f263b5)), closes [#527](https://github.com/CortoMaltese3/riskwise-v2/issues/527)
+* **ui:** replace CSS resize with a visible drag handle on both panels ([#525](https://github.com/CortoMaltese3/riskwise-v2/issues/525)) ([055252d](https://github.com/CortoMaltese3/riskwise-v2/commit/055252d76a6901991035db5584c5db5fcb154f8b))
+
 ## [2.0.0](https://github.com/CortoMaltese3/riskwise-v2/compare/v1.1.0...v2.0.0) (2026-06-02)
 
 
