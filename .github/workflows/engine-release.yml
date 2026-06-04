@@ -143,11 +143,25 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install minisign (scoop)
+      # Install minisign by downloading the pinned official release zip rather
+      # than via scoop. scoop only edits the *registry* PATH, which a later
+      # GitHub Actions step (a fresh process) never picks up — so `minisign`
+      # was "not recognized" in the signing step. Appending the binary's dir
+      # to $GITHUB_PATH is the documented way to expose a tool to later steps.
+      - name: Install minisign
         shell: pwsh
         run: |
-          iwr -useb get.scoop.sh | iex
-          scoop install minisign
+          $url = 'https://github.com/jedisct1/minisign/releases/download/0.12/minisign-0.12-win64.zip'
+          $zip = Join-Path $env:RUNNER_TEMP 'minisign.zip'
+          $dest = Join-Path $env:RUNNER_TEMP 'minisign'
+          Invoke-WebRequest -Uri $url -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $dest -Force
+          $dir = (Get-ChildItem -Path $dest -Recurse -Filter minisign.exe |
+            Where-Object { $_.FullName -match 'x86_64' } |
+            Select-Object -First 1).Directory.FullName
+          if (-not $dir) { throw "minisign.exe (x86_64) not found in $dest" }
+          Add-Content -Path $env:GITHUB_PATH -Value $dir
+          & (Join-Path $dir 'minisign.exe') -v
 
       - name: Restore minisign private key
         shell: pwsh
