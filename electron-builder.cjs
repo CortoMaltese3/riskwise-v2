@@ -43,7 +43,13 @@ module.exports = {
     },
   ],
   generateUpdatesFilesForAllChannels: true,
-  extraResources: [{ from: "resources", to: "." }],
+  // Copy `resources/` into the packaged resources root under a `resources/`
+  // subfolder (NOT flattened with `to: "."`) so it lands where the runtime
+  // looks: `readEnginePublicKey` probes `<resourcesPath>/resources/
+  // engine-manifest.pub` via `resolveBundledResource("resources", ...)`.
+  // A flattened copy left the key one level too high and bricked the engine
+  // install on every packaged launch (#536).
+  extraResources: [{ from: "resources", to: "resources" }],
   win: {
     target: [
       { target: "nsis", arch: ["x64"] },
