@@ -19,6 +19,7 @@ const {
   parseMinisignPublicKey,
   parseMinisignSignatureBlob,
   resolveReleaseChannel,
+  updaterChannelFor,
   verifyEngineManifest,
 } = requireCjs(modulePath);
 
@@ -204,5 +205,13 @@ describe("channel detection", () => {
     expect(resolveReleaseChannel("bogus", "2.0.1-beta.1")).toBe("beta");
     expect(resolveReleaseChannel("", "2.0.1")).toBe("stable");
     expect(resolveReleaseChannel(undefined, "2.0.1-internal.2")).toBe("internal");
+  });
+
+  it("updaterChannelFor maps stable → latest, identity otherwise", () => {
+    // electron-builder publishes the stable channel as `latest.yml`; asking
+    // for `stable.yml` 404s on every check (#537).
+    expect(updaterChannelFor("stable")).toBe("latest");
+    expect(updaterChannelFor("beta")).toBe("beta");
+    expect(updaterChannelFor("internal")).toBe("internal");
   });
 });

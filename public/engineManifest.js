@@ -194,6 +194,14 @@ const resolveReleaseChannel = (envChannel, appVersion) => {
   return channelFromVersion(appVersion);
 };
 
+// Map an app-facing channel to the update-metadata file electron-builder
+// actually publishes. electron-builder names the *stable* channel `latest`
+// (→ `latest.yml`), so a client whose `autoUpdater.channel` is `stable` asks
+// for `stable.yml` and 404s on every check. `beta`/`internal` already match
+// electron-builder's prerelease-tag channel files, so only `stable` needs
+// translating. See #537.
+const updaterChannelFor = (appChannel) => (appChannel === "stable" ? "latest" : appChannel);
+
 // The engine ships on its own dedicated, rolling GitHub release (issue
 // #529) instead of riding along on every app tag. A *fixed* tag means app
 // releases never re-publish the engine and the manifest URL is stable —
@@ -234,6 +242,7 @@ module.exports = {
   parseMinisignSignatureBlob,
   resolveEngineReleaseTag,
   resolveReleaseChannel,
+  updaterChannelFor,
   verifyEngineManifest,
   verifyMinisignSignature,
 };

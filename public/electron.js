@@ -25,6 +25,7 @@ const {
   isEngineVersionCompatible,
   resolveEngineReleaseTag,
   resolveReleaseChannel,
+  updaterChannelFor,
   verifyEngineManifest,
 } = require("./engineManifest");
 const { shouldSuppressUpdate } = require("./appUpdates");
@@ -650,7 +651,7 @@ app.whenReady().then(async () => {
       if (storedChannel && storedChannel !== releaseChannel) {
         releaseChannel = storedChannel;
       }
-      autoUpdater.channel = releaseChannel;
+      autoUpdater.channel = updaterChannelFor(releaseChannel);
       autoUpdater.allowPrerelease = releaseChannel !== "stable";
 
       autoUpdater.setFeedURL({
@@ -2101,7 +2102,7 @@ const setReleaseChannel = (channel) => {
   if (updateStore) updateStore.set("channel", channel);
   releaseChannel = channel;
   if (!isDevelopmentEnv()) {
-    autoUpdater.channel = channel;
+    autoUpdater.channel = updaterChannelFor(channel);
     autoUpdater.allowPrerelease = channel !== "stable";
   }
   log.info(`[electron] release channel set to ${channel}`);
