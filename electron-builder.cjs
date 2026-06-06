@@ -19,14 +19,23 @@ const azureSigningEnabled = Boolean(process.env.AZURE_CLIENT_ID);
 const publisherName = process.env.AZURE_PUBLISHER_NAME || undefined;
 
 module.exports = {
-  asar: false,
+  asar: true,
+  // Native addons (e.g. @mapbox/mbtiles → sqlite3's node_sqlite3.node) cannot be
+  // loaded from inside an asar archive — unpack them to app.asar.unpacked/ so the
+  // offline tile server's lazy `require` resolves a real file on disk (#538).
+  asarUnpack: ["**/*.node"],
   forceCodeSigning: false,
   afterPack: "scripts/apply-electron-fuses.js",
   appId: "com.giz.riskwise",
   productName: "RISK WISE",
-  // `countries/` ships so the app can provision it next to the downloaded
-  // engine (issue #527); the Nuitka engine resolves it as a BASE_DIR sibling.
-  files: ["build/**/*", "backend/**/*", "requirements/", "data/", "countries/"],
+  // The engine data trees (data/countries/requirements) are deliberately NOT
+  // listed here. With asar on they would be packed into app.asar, and
+  // `provisionEngineData`'s `fs.cpSync` cannot copy a directory tree out of an
+  // asar archive — it fails with ENOENT even when the tree is asarUnpack'd
+  // (empirically confirmed in #538). They ship as real dirs via `extraResources`
+  // below instead; the Nuitka engine still resolves the provisioned copies as
+  // BASE_DIR siblings of the exe (issue #527).
+  files: ["build/**/*", "backend/**/*"],
   icon: "build/icon.ico",
   directories: {
     output: "dist/${version}",
@@ -49,7 +58,19 @@ module.exports = {
   // engine-manifest.pub` via `resolveBundledResource("resources", ...)`.
   // A flattened copy left the key one level too high and bricked the engine
   // install on every packaged launch (#536).
-  extraResources: [{ from: "resources", to: "resources" }],
+  //
+  // data/countries/requirements ride alongside as real dirs under
+  // `process.resourcesPath` (NOT inside app.asar) so `provisionEngineData`'s
+  // `fs.cpSync` can copy them next to the downloaded engine, and so the offline
+  // tile pack's native sqlite can open `data/tiles/*.mbtiles` from a real path
+  // (#538). The packaged-launch provisioning root switches to
+  // `process.resourcesPath` in electron.js to match.
+  extraResources: [
+    { from: "resources", to: "resources" },
+    { from: "data", to: "data" },
+    { from: "countries", to: "countries" },
+    { from: "requirements", to: "requirements" },
+  ],
   win: {
     target: [
       { target: "nsis", arch: ["x64"] },

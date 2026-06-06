@@ -6,9 +6,14 @@
 // Runs once per packaged platform after electron-builder copies the
 // Electron binary into the app stage but before code signing.
 //
-// `OnlyLoadAppFromAsar` is intentionally NOT enabled because the build
-// sets `"asar": false` (see DECISIONS.md / package.json `"build"`); flipping
-// it on would brick startup. Re-enable when/if the asar bundle is restored.
+// The asar-integrity security fuses are intentionally OFF here while the
+// functional asar build (#538) is verified by a packaged smoke test:
+//   - `OnlyLoadAppFromAsar` is not enabled.
+//   - `EnableEmbeddedAsarIntegrityValidation` is set false (it would otherwise
+//     activate the moment `asar: true` landed).
+// Flipping both on is the FUS-2 hardening follow-up, landed in a separate commit
+// only after the functional build is confirmed green — so an integrity-
+// validation issue can never mask a functional one (#538).
 
 const path = require("node:path");
 const { flipFuses, FuseVersion, FuseV1Options } = require("@electron/fuses");
@@ -27,7 +32,7 @@ module.exports = async function applyFuses(context) {
     [FuseV1Options.RunAsNode]: false,
     [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
     [FuseV1Options.EnableNodeCliInspectArguments]: false,
-    [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
+    [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: false,
     [FuseV1Options.LoadBrowserProcessSpecificV8Snapshot]: false,
     [FuseV1Options.GrantFileProtocolExtraPrivileges]: false,
   });
