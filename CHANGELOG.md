@@ -58,6 +58,22 @@ The Phase 6 ADR §7 target of ≤ 250 MB (re-baselined from the original
 "~50 MB Track B daydream" per [DECISIONS.md D26](docs/DECISIONS.md))
 is met on at least one Nuitka configuration.
 
+## [2.1.2](https://github.com/CortoMaltese3/riskwise-v2/compare/v2.1.1...v2.1.2) (2026-06-06)
+
+
+### Bug Fixes
+
+* **ci:** enable asar packaging to cut install time and unblock FUS-2 ([#542](https://github.com/CortoMaltese3/riskwise-v2/issues/542)) ([cba0e6b](https://github.com/CortoMaltese3/riskwise-v2/commit/cba0e6b9c8efdea1dc1a7ba21520f3c87dd8a9e5)), closes [#538](https://github.com/CortoMaltese3/riskwise-v2/issues/538)
+* **ci:** place engine-manifest.pub where the runtime looks ([#539](https://github.com/CortoMaltese3/riskwise-v2/issues/539)) ([f2b361a](https://github.com/CortoMaltese3/riskwise-v2/commit/f2b361a3dc656923f94f30f77135cff25f0a501b)), closes [#536](https://github.com/CortoMaltese3/riskwise-v2/issues/536)
+* **ui:** map stable channel to latest.yml for the auto-updater ([#540](https://github.com/CortoMaltese3/riskwise-v2/issues/540)) ([7108dba](https://github.com/CortoMaltese3/riskwise-v2/commit/7108dbab1801c0ec99777fee7a3763187a8dbc4a)), closes [#537](https://github.com/CortoMaltese3/riskwise-v2/issues/537)
+* **ui:** render packaged splash and stop false engine-update prompt ([ba106d3](https://github.com/CortoMaltese3/riskwise-v2/commit/ba106d3372d05541d357ddab8eb5b26ae5cf8c59))
+* **ui:** verify prehashed engine manifests under Electron BoringSSL ([a70bb1d](https://github.com/CortoMaltese3/riskwise-v2/commit/a70bb1dc3a05c8e8e767335e468f66f4203b585f))
+
+
+### Tests
+
+* **ui:** de-flake snapshot drawer commit-on-blur tests ([58c907c](https://github.com/CortoMaltese3/riskwise-v2/commit/58c907c8ee44bedfe6e27627ff1fd0a734bc993a))
+
 ## [2.1.1](https://github.com/CortoMaltese3/riskwise-v2/compare/v2.1.0...v2.1.1) (2026-06-04)
 
 
