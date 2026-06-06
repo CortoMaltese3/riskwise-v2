@@ -1,0 +1,22 @@
+{
+  // Keep the build output out of VS Code's reach. electron-builder now emits a
+  // single `app.asar` per build (asar packaging, #542). When VS Code's file
+  // watcher/search/editor holds a handle on that archive, the next
+  // `npm run pack` / `npm run dist` fails on Windows with:
+  //   remove ...\win-unpacked\resources\app.asar:
+  //   The process cannot access the file because it is being used by another process.
+  // Excluding the output dir from the watcher releases those handles and stops
+  // them from being re-acquired, so packaging can replace the previous build.
+  "files.watcherExclude": {
+    "**/dist/**": true,
+    "**/node_modules/**": true
+  },
+  "search.exclude": {
+    "**/dist": true
+  },
+  // Hide asar archives from the Explorer so an accidental click can't open the
+  // archive (which is what grabs the handle in the first place).
+  "files.exclude": {
+    "**/*.asar": true
+  }
+}
