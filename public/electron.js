@@ -392,6 +392,17 @@ const getLoaderTheme = () => {
   return loaderThemeCache;
 };
 
+// Last phase pushed via `emitLoaderStatus`. `loader:status` events sent
+// before the splash renderer has attached its `ipcRenderer.on` listener are
+// dropped by Electron (no queueing). The first phase — `engine-starting`,
+// shown for the multi-second engine boot — is emitted ~100ms after the
+// window starts loading and almost always loses this race, leaving a blank
+// status line for the whole wait. `sendLoaderInit` (fired on
+// `did-finish-load`, which is always after the renderer subscribes on
+// `DOMContentLoaded`) replays this into `initialMessage` so the active phase
+// is shown regardless of when the renderer became ready.
+let lastLoaderStatus = null;
+
 const sendLoaderInit = () => {
   if (!loaderWindow || loaderWindow.isDestroyed()) return;
   const { themeName, manifest } = getLoaderTheme();
@@ -405,6 +416,7 @@ const sendLoaderInit = () => {
       assetUrl,
       assetAlt: (manifest && manifest.assetAlt) || "Loading",
       version: `v${app.getVersion()}`,
+      initialMessage: lastLoaderStatus ? lastLoaderStatus.message : "",
     });
   } catch (err) {
     log.error(`[loader] failed to send init: ${err.message}`);
@@ -427,6 +439,9 @@ const emitLoaderStatus = (phase, fallbackMessage) => {
   const { strings } = getLoaderTheme();
   const themed = strings && typeof strings[phase] === "string" ? strings[phase] : null;
   const message = themed || fallbackMessage;
+  // Remember the active phase so `sendLoaderInit` can seed it if the splash
+  // renderer subscribed after this event was sent (see `lastLoaderStatus`).
+  lastLoaderStatus = { phase, message };
   log.info(`[loader] ${phase}: ${fallbackMessage}`);
   if (loaderWindow && !loaderWindow.isDestroyed()) {
     try {
