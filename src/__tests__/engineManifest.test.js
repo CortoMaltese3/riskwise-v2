@@ -23,6 +23,8 @@ const {
   verifyEngineManifest,
 } = requireCjs(modulePath);
 
+const { blake2b512 } = requireCjs(path.resolve(here, "..", "..", "public", "blake2b.js"));
+
 // Re-read to make it explicit this test actually reads the source file.
 readFileSync(modulePath);
 
@@ -46,6 +48,17 @@ const buildFakeKeypair = () => {
       const sigBlob = Buffer.concat([Buffer.from("Ed", "ascii"), keyId, signature]);
       return sigBlob.toString("base64");
     },
+    // Prehashed (`ED`) minisign: sign the BLAKE2b-512 digest, not the raw
+    // bytes. Mirrors what real minisign produces by default and exercises the
+    // BoringSSL-incompatible path. The digest here is computed with Node's
+    // native blake2b512, giving an independent reference for the vendored impl
+    // the verifier uses.
+    signPrehashed: (message) => {
+      const digest = crypto.createHash("blake2b512").update(message).digest();
+      const signature = crypto.sign(null, digest, privateKey);
+      const sigBlob = Buffer.concat([Buffer.from("ED", "ascii"), keyId, signature]);
+      return sigBlob.toString("base64");
+    },
   };
 };
 
@@ -54,6 +67,12 @@ const signManifest = (manifest, keypair) => {
   const withoutSig = { ...rest, signature: "" };
   const canonical = canonicalManifestBytes(withoutSig);
   return { ...rest, signature: keypair.sign(canonical) };
+};
+
+const signManifestPrehashed = (manifest, keypair) => {
+  const { signature: _discard, ...rest } = manifest;
+  const canonical = canonicalManifestBytes({ ...rest, signature: "" });
+  return { ...rest, signature: keypair.signPrehashed(canonical) };
 };
 
 describe("canonicalManifestBytes", () => {
@@ -110,6 +129,27 @@ describe("verifyEngineManifest", () => {
     );
   });
 
+  // Regression for the first-launch "Digest method not supported" crash:
+  // production manifests are signed with prehashed minisign (`ED`), whose
+  // verification needs BLAKE2b-512. This exercises that path with the vendored
+  // hash — the path that runs in Electron's BoringSSL where the native
+  // blake2b512 is missing.
+  it("accepts a prehashed (ED) signed manifest", () => {
+    const kp = buildFakeKeypair();
+    const signed = signManifestPrehashed(baseManifest, kp);
+    const parsed = verifyEngineManifest(JSON.stringify(signed), kp.pubKeyFile);
+    expect(parsed.version).toBe("2.0.1");
+  });
+
+  it("rejects a prehashed (ED) manifest tampered after signing", () => {
+    const kp = buildFakeKeypair();
+    const signed = signManifestPrehashed(baseManifest, kp);
+    const tampered = { ...signed, download_url: "https://evil.example/engine.exe" };
+    expect(() => verifyEngineManifest(JSON.stringify(tampered), kp.pubKeyFile)).toThrow(
+      /signature did not verify/
+    );
+  });
+
   it("rejects a manifest signed with an unknown key", () => {
     const attacker = buildFakeKeypair();
     const trusted = buildFakeKeypair();
@@ -130,6 +170,33 @@ describe("verifyEngineManifest", () => {
   it("rejects non-JSON input", () => {
     const kp = buildFakeKeypair();
     expect(() => verifyEngineManifest("not json", kp.pubKeyFile)).toThrow(/not valid JSON/);
+  });
+});
+
+describe("blake2b512 (vendored, BoringSSL-safe)", () => {
+  // Official BLAKE2b-512 test vectors (RFC 7693 Appendix A / the BLAKE2 site).
+  it("matches the known digest for the empty input", () => {
+    expect(blake2b512(Buffer.alloc(0)).toString("hex")).toBe(
+      "786a02f742015903c6c6fd852552d272912f4740e15847618a86e217f71f5419" +
+        "d25e1031afee585313896444934eb04b903a685b1448b755d56f701afe9be2ce"
+    );
+  });
+
+  it('matches the known digest for "abc"', () => {
+    expect(blake2b512(Buffer.from("abc")).toString("hex")).toBe(
+      "ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d1" +
+        "7d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923"
+    );
+  });
+
+  it("agrees with the native blake2b512 across block boundaries", () => {
+    // Cover the < 128B, == 128B (one full block), and multi-block cases so a
+    // padding/counter bug can't hide behind small inputs.
+    for (const len of [0, 1, 64, 127, 128, 129, 256, 1000]) {
+      const data = crypto.randomBytes(len);
+      const native = crypto.createHash("blake2b512").update(data).digest("hex");
+      expect(blake2b512(data).toString("hex")).toBe(native);
+    }
   });
 });
 

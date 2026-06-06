@@ -11,6 +11,7 @@
 // from vitest without a full Electron harness.
 
 const crypto = require("node:crypto");
+const { blake2b512 } = require("./blake2b");
 
 const ED25519_SPKI_DER_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
 const MINISIGN_PUBKEY_LEN = 42; // 2-byte alg + 8-byte keyId + 32-byte pubkey
@@ -91,10 +92,11 @@ const verifyMinisignSignature = (messageBytes, sigText, publicKeyFileText) => {
   if (!sig.keyId.equals(pubKey.keyId)) {
     throw new Error("Signed with an unknown key");
   }
-  const toVerify =
-    sig.sigAlg === "Ed"
-      ? messageBytes
-      : crypto.createHash("blake2b512").update(messageBytes).digest();
+  // Prehashed minisign (`ED`) signs the BLAKE2b-512 digest, not the raw
+  // message. We hash with a vendored pure-JS BLAKE2b because Electron links
+  // BoringSSL, where `crypto.createHash("blake2b512")` throws "Digest method
+  // not supported" — see public/blake2b.js.
+  const toVerify = sig.sigAlg === "Ed" ? messageBytes : blake2b512(messageBytes);
   const keyObj = ed25519PublicKeyFromRaw(pubKey.publicKey);
   const ok = crypto.verify(null, toVerify, keyObj, sig.signature);
   if (!ok) {
