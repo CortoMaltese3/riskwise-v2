@@ -97,6 +97,14 @@ const LOG_FILENAME_PREFIX = "app";
 
 const basePath = app.getAppPath();
 
+// Root holding the shipped engine data trees (data/countries/requirements) that
+// `provisionEngineData` copies next to the downloaded engine. In dev they live
+// at the repo root (`basePath`). In a packaged asar build `basePath` points
+// inside `app.asar` — a virtual path `fs.cpSync` cannot read — so the trees ship
+// via electron-builder `extraResources` as real dirs under
+// `process.resourcesPath` (#538).
+const bundledDataRoot = app.isPackaged ? process.resourcesPath : basePath;
+
 // ---------------------------------------------------------------------------
 // Sentry early init — MUST run before app.whenReady() resolves.
 // `@sentry/electron` v5+ throws "Sentry SDK should be initialized before the
@@ -444,7 +452,7 @@ const downloadAndInstallEngine = async (loaderWindow) => {
     // the exe but are missing one or more data trees. Idempotent, and a
     // provisioning hiccup must not block an otherwise-working engine.
     try {
-      provisionEngineData(basePath, enginePath, { logger: (m) => log.info(m) });
+      provisionEngineData(bundledDataRoot, enginePath, { logger: (m) => log.info(m) });
     } catch (err) {
       log.warn(`[electron] engine data provisioning (existing install) failed: ${err.message}`);
     }
@@ -484,7 +492,7 @@ const downloadAndInstallEngine = async (loaderWindow) => {
     // can actually run scenarios. Mirrors scripts/stage_engine.ps1. A failure
     // here means the engine cannot run, so let it surface via the catch below.
     updateLoaderMessage("Provisioning engine data...");
-    provisionEngineData(basePath, enginePath, { logger: (m) => log.info(m) });
+    provisionEngineData(bundledDataRoot, enginePath, { logger: (m) => log.info(m) });
 
     updateLoaderMessage("Engine installed successfully!");
     log.info("[electron] RISK WISE Engine installed successfully");
@@ -1149,6 +1157,7 @@ const restartBackendWithBackoff = async () => {
 const createPythonProcess = async () => {
   let executable;
   let args;
+  let cwd;
 
   // Dev-mode opt-in: when ``RISKWISE_ENGINE_DEV_PYTHON`` points at a Python
   // interpreter (typically the repo's ``.venv``), spawn ``python -m backend``
@@ -1168,12 +1177,20 @@ const createPythonProcess = async () => {
     log.info(`[electron] DEV: spawning live backend via ${devPython} -m backend`);
     executable = devPython;
     args = ["-m", "backend"];
+    // `python -m backend` must run from the repo root so the `backend` package
+    // resolves on sys.path.
+    cwd = basePath;
   } else {
     const engineExecutable = await downloadAndInstallEngine(loaderWindow);
     applyDeferredEngineSwap(engineExecutable);
     log.info("[electron] Using Nuitka engine bundle at:", engineExecutable);
     executable = engineExecutable;
     args = [];
+    // The Nuitka engine resolves its data trees as siblings of the exe and must
+    // run from a real directory. Under asar `basePath` is a virtual path inside
+    // app.asar and chdir into it ENOENTs (#538); the engine install dir is real
+    // and holds the provisioned data trees.
+    cwd = path.dirname(engineExecutable);
   }
 
   // The Python backend only initializes its own Sentry SDK when SENTRY_DSN
@@ -1189,7 +1206,7 @@ const createPythonProcess = async () => {
 
   try {
     const py = spawn(executable, args, {
-      cwd: basePath,
+      cwd,
       stdio: ["pipe", "pipe", "pipe"],
       env: spawnEnv,
     });
