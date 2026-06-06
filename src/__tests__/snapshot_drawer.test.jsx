@@ -26,7 +26,7 @@ let SnapshotDrawer;
 
 beforeAll(async () => {
   ({ default: SnapshotDrawer } = await import("../components/workspace/SnapshotDrawer"));
-});
+}, 30000); // MUI-heavy import is slow on a cold cache; default hook timeout flaked in CI/local.
 
 beforeEach(() => {
   listSnapshotsMock.mockReset();
@@ -95,6 +95,9 @@ describe("SnapshotDrawer", () => {
     render(<SnapshotDrawer scenarioId="scen-1" />);
     const title = await screen.findByLabelText("title-snap-1");
     fireEvent.change(title, { target: { value: "Figure 1: Annual loss" } });
+    // Let the controlled input commit the typed value before blur, otherwise
+    // onBlur can read the unchanged value and the commit guard skips the PATCH.
+    await waitFor(() => expect(title).toHaveValue("Figure 1: Annual loss"));
     fireEvent.blur(title);
 
     await waitFor(() => expect(updateSnapshotMock).toHaveBeenCalledTimes(1));
@@ -117,6 +120,9 @@ describe("SnapshotDrawer", () => {
     render(<SnapshotDrawer scenarioId="scen-1" />);
     const caption = await screen.findByLabelText("caption-snap-1");
     fireEvent.change(caption, { target: { value: "renamed" } });
+    // Let the controlled input commit the typed value before blur, otherwise
+    // onBlur can read the unchanged value and the commit guard skips the PATCH.
+    await waitFor(() => expect(caption).toHaveValue("renamed"));
     fireEvent.blur(caption);
 
     await waitFor(() => expect(updateSnapshotMock).toHaveBeenCalledTimes(1));
