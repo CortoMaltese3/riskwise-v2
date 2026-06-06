@@ -494,6 +494,12 @@ const downloadAndInstallEngine = async (loaderWindow) => {
     updateLoaderMessage("Provisioning engine data...");
     provisionEngineData(bundledDataRoot, enginePath, { logger: (m) => log.info(m) });
 
+    // Record the installed version so the compatibility gate
+    // (`engine:check-blocked`) doesn't later read a null version and falsely
+    // report "Engine update required". The explicit update path persists this
+    // too; the first-launch installer must not skip it.
+    if (updateStore) updateStore.set("engine.version", manifest.version);
+
     updateLoaderMessage("Engine installed successfully!");
     log.info("[electron] RISK WISE Engine installed successfully");
 
@@ -806,9 +812,15 @@ const createLoaderWindow = () => {
     // Theme name is passed via the URL hash so `loader.js` can attach the
     // matching stylesheet to <head> synchronously, before the body paints.
     // IPC would arrive too late and cause a flash of unstyled content.
+    //
+    // Load through the `app://` protocol rather than `loadFile`/`file://`:
+    // the `GrantFileProtocolExtraPrivileges` fuse is OFF, which strips
+    // file://'s ability to read from inside the asar. With `asar: true` a
+    // `loadFile` of an asar path fails with ERR_FILE_NOT_FOUND (blank white
+    // splash). The main window already loads via app:// for this reason; the
+    // loader must too. The hash still rides along for synchronous theming.
     const { themeName } = getLoaderTheme();
-    const loaderPath = path.join(basePath, "build", "loader.html");
-    loaderWindow.loadFile(loaderPath, { hash: themeName });
+    loaderWindow.loadURL(`app://./loader.html#${themeName}`);
 
     loaderWindow.webContents.once("did-finish-load", () => {
       sendLoaderInit();
@@ -2336,6 +2348,15 @@ const applyDeferredEngineSwap = (engineExecutable) => {
   }
 };
 
+// True when the engine binary is present on disk, regardless of whether its
+// version was ever recorded in the update store. Used to self-heal a missing
+// `engine.version` record so a working install isn't flagged "update required".
+const isEngineInstalled = () => {
+  const engineRoot = process.env.LOCALAPPDATA;
+  if (!engineRoot) return false;
+  return fs.existsSync(path.join(engineRoot, ENGINE_DIR_NAME, ENGINE_EXE_NAME));
+};
+
 const isEngineBlocked = (manifest, cachedEngineVersion) => {
   if (!manifest) return false;
   if (!cachedEngineVersion) return true;
@@ -2474,7 +2495,16 @@ ipcMain.handle("engine:check-blocked", async () => {
   }
   try {
     const manifest = await fetchVerifiedEngineManifest();
-    const cachedEngineVersion = updateStore ? updateStore.get("engine.version", null) : null;
+    let cachedEngineVersion = updateStore ? updateStore.get("engine.version", null) : null;
+    // Self-heal a missing version record: the first-launch installer (and any
+    // install predating version tracking) can leave `engine.version` unset
+    // even though the engine is installed and running. Adopt the verified
+    // manifest version rather than reporting a false "update required" that
+    // the user could otherwise only clear with a needless full re-download.
+    if (!cachedEngineVersion && isEngineInstalled()) {
+      cachedEngineVersion = manifest.version;
+      if (updateStore) updateStore.set("engine.version", manifest.version);
+    }
     const blocked = isEngineBlocked(manifest, cachedEngineVersion);
     return { ok: true, blocked, manifestVersion: manifest.version, cachedEngineVersion };
   } catch (err) {
