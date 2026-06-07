@@ -61,6 +61,7 @@ const ALLOWED_LISTEN_CHANNELS = new Set([
   "copy-folder-reply",
   "update:available",
   "update:downloaded",
+  "update:download-progress",
   "offline:status-changed",
   "loader:init",
   "loader:status",

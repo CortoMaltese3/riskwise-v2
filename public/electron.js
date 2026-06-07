@@ -2620,6 +2620,13 @@ autoUpdater.on("update-not-available", () => {
 
 autoUpdater.on("download-progress", (p) => {
   log.info(`[electron] downloading ${p.percent.toFixed(1)}% (${p.transferred}/${p.total})`);
+  // Forward to the renderer so the update dialog can show progress and the
+  // user knows to keep the app open until the download completes (issue
+  // surfaced in field testing: users closed the app mid-download, which
+  // discards an incomplete download and installs nothing on quit).
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("update:download-progress", { percent: p.percent });
+  }
 });
 
 autoUpdater.on("update-available", (info) => {
