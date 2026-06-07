@@ -1,18 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Box,
-  Button,
-  CircularProgress,
-  Fade,
-  IconButton,
-  LinearProgress,
-  Paper,
-  Stack,
-  Typography,
-} from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
+import { Button, CircularProgress } from "@mui/material";
 
+import ProgressChip from "./ProgressChip";
 import RiskWiseClient from "../../lib/RiskWiseClient";
 import { enqueueToast } from "../../hooks/useToast";
 import useResultsStore from "../../store/useResultsStore";
@@ -182,89 +172,49 @@ const ScenarioProgressChip = () => {
   const hasNumericProgress = isNumericProgress(scenarioPhase, progress);
 
   return (
-    <Fade in={scenarioPhase !== null} timeout={300} unmountOnExit>
-      <Paper
-        role="status"
-        aria-label={t(titleKey)}
-        elevation={6}
-        sx={(theme) => ({
-          position: "fixed",
-          left: theme.spacing(2),
-          bottom: theme.spacing(2),
-          width: 360,
-          maxWidth: `calc(100vw - ${theme.spacing(4)})`,
-          p: 2,
-          borderRadius: 3,
-          zIndex: theme.zIndex.snackbar,
-        })}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-            {t(titleKey)}
-          </Typography>
-          {isTerminal && (
-            <IconButton
-              size="small"
-              onClick={handleClose}
-              aria-label={t("scenario_chip_close_aria")}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          )}
-        </Stack>
-        {summaryLine && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
-            {summaryLine}
-          </Typography>
-        )}
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ minHeight: 20, mb: showProgressBar ? 1 : 0 }}
-          aria-live="polite"
-          data-testid="progress-step-label"
+    <ProgressChip
+      open={scenarioPhase !== null}
+      anchor="left"
+      ariaLabel={t(titleKey)}
+      title={t(titleKey)}
+      summary={summaryLine || undefined}
+      message={modalMessage || (scenarioPhase === SCENARIO_PHASES.RUNNING ? "Starting…" : "")}
+      messageTestId="progress-step-label"
+      showProgressBar={showProgressBar}
+      determinate={hasNumericProgress}
+      value={progress}
+      onClose={isTerminal ? handleClose : undefined}
+      closeAriaLabel={t("scenario_chip_close_aria")}
+    >
+      {config?.action === "cancel" && (
+        <Button
+          size="small"
+          variant={confirmingCancel ? "contained" : "outlined"}
+          color="error"
+          onClick={handleCancelClick}
+          data-testid="scenario-chip-cancel"
         >
-          {modalMessage || (scenarioPhase === SCENARIO_PHASES.RUNNING ? "Starting…" : "")}
-        </Typography>
-        {showProgressBar && (
-          <LinearProgress
-            variant={hasNumericProgress ? "determinate" : "indeterminate"}
-            value={hasNumericProgress ? progress : undefined}
-            sx={{ height: 6, borderRadius: 4 }}
-          />
-        )}
-        <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1.5, minHeight: 32 }}>
-          {config?.action === "cancel" && (
-            <Button
-              size="small"
-              variant={confirmingCancel ? "contained" : "outlined"}
-              color="error"
-              onClick={handleCancelClick}
-              data-testid="scenario-chip-cancel"
-            >
-              {t(confirmingCancel ? "scenario_chip_cancel_confirm" : "scenario_chip_cancel")}
-            </Button>
-          )}
-          {config?.action === "spinner" && (
-            <CircularProgress
-              size={18}
-              aria-label={t("scenario_chip_cancelling_title")}
-              data-testid="scenario-chip-cancelling"
-            />
-          )}
-          {config?.action === "view-results" && (
-            <Button
-              size="small"
-              variant="text"
-              onClick={handleViewResults}
-              data-testid="scenario-chip-view-results"
-            >
-              {t("scenario_chip_view_results")}
-            </Button>
-          )}
-        </Box>
-      </Paper>
-    </Fade>
+          {t(confirmingCancel ? "scenario_chip_cancel_confirm" : "scenario_chip_cancel")}
+        </Button>
+      )}
+      {config?.action === "spinner" && (
+        <CircularProgress
+          size={18}
+          aria-label={t("scenario_chip_cancelling_title")}
+          data-testid="scenario-chip-cancelling"
+        />
+      )}
+      {config?.action === "view-results" && (
+        <Button
+          size="small"
+          variant="text"
+          onClick={handleViewResults}
+          data-testid="scenario-chip-view-results"
+        >
+          {t("scenario_chip_view_results")}
+        </Button>
+      )}
+    </ProgressChip>
   );
 };
 
