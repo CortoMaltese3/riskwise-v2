@@ -58,6 +58,20 @@ describe("UpdateProgressChip", () => {
     );
   });
 
+  it("animates indeterminately until the first progress byte arrives", async () => {
+    render(<UpdateProgressChip />);
+    act(() => useUpdateStore.getState().startDownloading("2.1.6"));
+    await waitFor(() => screen.getByRole("status"));
+
+    // No numeric value yet → indeterminate bar (no aria-valuenow).
+    expect(screen.getByRole("progressbar")).not.toHaveAttribute("aria-valuenow");
+
+    act(() => progressCallback({ percent: 30, transferred: 1, total: 3 }));
+    await waitFor(() =>
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "30")
+    );
+  });
+
   it("transitions to the ready state on update:downloaded and restarts on click", async () => {
     render(<UpdateProgressChip />);
     act(() => useUpdateStore.getState().startDownloading("2.1.5"));
