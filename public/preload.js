@@ -107,6 +107,7 @@ contextBridge.exposeInMainWorld("electron", {
     remindLater: () => ipcRenderer.invoke("updates:remind-later"),
     skipVersion: (version) => ipcRenderer.invoke("updates:skip-version", version),
     getStatus: () => ipcRenderer.invoke("updates:get-status"),
+    getPending: () => ipcRenderer.invoke("updates:get-pending"),
     setChannel: (channel) => ipcRenderer.invoke("updates:set-channel", channel),
     getReleaseNotes: (opts) => ipcRenderer.invoke("updates:get-release-notes", opts),
     downgrade: () => ipcRenderer.invoke("updates:downgrade"),

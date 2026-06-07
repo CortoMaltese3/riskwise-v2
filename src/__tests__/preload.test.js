@@ -34,6 +34,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "updates:remind-later",
   "updates:skip-version",
   "updates:get-status",
+  "updates:get-pending",
   "updates:set-channel",
   "updates:get-release-notes",
   "updates:downgrade",

@@ -55,6 +55,27 @@ const UpdateDialog = () => {
     };
   }, []);
 
+  // Pull any update that was already detected before this dialog mounted: the
+  // startup `update:available` push often fires before React has subscribed
+  // (the event is then dropped and no prompt shows until a manual check). Main
+  // returns the suppression-cleared version via updates:get-pending.
+  useEffect(() => {
+    const bridge = window.electron?.updates;
+    if (!bridge?.getPending) return undefined;
+    let cancelled = false;
+    bridge
+      .getPending()
+      .then((result) => {
+        if (cancelled || !result?.version) return;
+        setVersion(result.version);
+        setOpen(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     if (!open) return undefined;
     const bridge = window.electron?.updates;
