@@ -78,7 +78,16 @@ module.exports = {
     ],
     icon: "build/icon.ico",
     signAndEditExecutable: true,
-    ...(publisherName ? { publisherName } : {}),
+    // Only embed `publisherName` when we actually sign. electron-updater's
+    // signature check reads `publisherName` from the installed app's
+    // app-update.yml and, when present, rejects any update whose installer
+    // isn't Authenticode-signed by that publisher. Embedding it on an UNSIGNED
+    // build (AZURE_CLIENT_ID absent) therefore bricks auto-update: every
+    // downloaded installer is "not signed by the application owner" and is
+    // discarded. Gate it on `azureSigningEnabled` so unsigned builds omit it
+    // and electron-updater skips verification (verifySignature returns null
+    // when publisherName is null). See docs/reference/signing.md.
+    ...(azureSigningEnabled && publisherName ? { publisherName } : {}),
     ...(azureSigningEnabled
       ? {
           azureSignOptions: {

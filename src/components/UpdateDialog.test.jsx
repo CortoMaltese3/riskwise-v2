@@ -29,6 +29,7 @@ beforeEach(() => {
       installOnNextRestart: vi.fn().mockResolvedValue({ ok: true }),
       remindLater: vi.fn().mockResolvedValue({ ok: true }),
       skipVersion: vi.fn().mockResolvedValue({ ok: true }),
+      getPending: vi.fn().mockResolvedValue({ version: null }),
       getReleaseNotes: vi.fn(
         () =>
           new Promise((resolve) => {
@@ -56,6 +57,22 @@ describe("UpdateDialog", () => {
     availableCallback({ version: "2.3.4" });
     await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
     expect(screen.getByText(/2\.3\.4/)).toBeInTheDocument();
+  });
+
+  it("surfaces a pending update pulled on mount when the push was missed", async () => {
+    // No availableCallback fired — simulates the startup push racing the
+    // subscription. The dialog pulls the pending version from main instead.
+    window.electron.updates.getPending = vi.fn().mockResolvedValue({ version: "2.1.7" });
+    render(<UpdateDialog />);
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    expect(screen.getByText(/2\.1\.7/)).toBeInTheDocument();
+  });
+
+  it("stays hidden when there is no pending update on mount", async () => {
+    render(<UpdateDialog />);
+    // getPending resolves { version: null } by default.
+    await waitFor(() => expect(window.electron.updates.getPending).toHaveBeenCalled());
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("starts the download and closes when the user clicks install", async () => {

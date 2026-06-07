@@ -225,6 +225,13 @@ let releaseChannel = "stable";
 // the user's "Quit anyway" confirmation so the retried close goes through.
 let updateDownloadInProgress = false;
 let allowCloseDuringDownload = false;
+// The latest update version that passed suppression and was offered to the
+// renderer. `update:available` is pushed shortly after the window is created,
+// often before the React dialog has subscribed (the event is then dropped and
+// no prompt shows until a manual check). The renderer pulls this on mount via
+// `updates:get-pending` so a missed push still surfaces the prompt. Cleared
+// when the user acts (snooze / skip / install) so a reload doesn't re-pop.
+let pendingUpdateVersion = null;
 // In-memory cache keyed by tag. Persisting to disk isn't worth the risk of
 // shipping stale release notes after a bad write — 1 h in-memory TTL is
 // enough to survive panel re-mounts and window reloads.
@@ -696,14 +703,15 @@ app.whenReady().then(async () => {
         releaseType: "release",
       });
 
-      // Azure Trusted Signing produces a valid Authenticode chain, so we
-      // leave electron-updater's default `verifyUpdateCodeSignature`
-      // function in place — it calls `signtool verify /pa` against the
-      // configured `publisherName`. The previous NsisUpdater prototype
-      // monkey-patch that disabled verification is gone; do NOT replace
-      // it with a boolean (the property is function-typed and would
-      // throw at download time). Signature verification is now active.
-      log.info("[electron] update signature verification is enabled (Azure Trusted Signing)");
+      // We leave electron-updater's default `verifyUpdateCodeSignature`
+      // function in place (do NOT replace it with a boolean — the property is
+      // function-typed and would throw at download time). It is self-gating:
+      // `verifySignature` reads `publisherName` from the installed app's
+      // app-update.yml and returns null (skips) when it is absent. We only
+      // embed `publisherName` on signed builds (electron-builder.cjs gates it
+      // on AZURE_CLIENT_ID), so verification is active for signed releases and
+      // skipped for unsigned ones — instead of rejecting every unsigned update.
+      log.info("[electron] auto-updater signature verification follows the build's publisherName");
 
       log.info(
         `[electron] auto-updater configured channel=${releaseChannel} allowPrerelease=${autoUpdater.allowPrerelease}`
@@ -2156,6 +2164,8 @@ const beginUpdateDownload = async () => {
   // per-download "Quit anyway" override so each new download starts guarded.
   updateDownloadInProgress = true;
   allowCloseDuringDownload = false;
+  // User accepted — the offer is consumed; the progress chip takes over.
+  pendingUpdateVersion = null;
   try {
     await autoUpdater.downloadUpdate();
     return { ok: true };
@@ -2168,6 +2178,9 @@ const beginUpdateDownload = async () => {
 
 const snoozeUpdateReminder = () => {
   if (!updateStore) return { error: "update store not initialized" };
+  // User dismissed for now — drop the pending offer so a renderer reload during
+  // the snooze window doesn't re-pull and re-pop it.
+  pendingUpdateVersion = null;
   const remindAfter = Date.now() + REMIND_SNOOZE_MS;
   updateStore.set("remindAfter", remindAfter);
   log.info(`[electron] update reminder snoozed until ${new Date(remindAfter).toISOString()}`);
@@ -2469,9 +2482,15 @@ ipcMain.handle("updates:skip-version", async (_evt, version) => {
   const v = typeof version === "string" ? version.trim() : "";
   if (!v) return { error: "version required" };
   if (updateStore) updateStore.set("skippedVersion", v);
+  pendingUpdateVersion = null;
   log.info(`[electron] updates: user skipped version=${v}`);
   return { ok: true };
 });
+
+// Pull model for the update prompt: the renderer calls this on mount so an
+// `update:available` push that raced the dialog's subscription still surfaces
+// the prompt (returns the suppression-cleared version, or null).
+ipcMain.handle("updates:get-pending", async () => ({ version: pendingUpdateVersion }));
 
 ipcMain.handle("updates:get-status", async () => {
   return {
@@ -2691,8 +2710,11 @@ autoUpdater.on("update-available", (info) => {
       log.info(`[electron] skip cleared: newer version available (${version} > ${skipped})`);
     }
   }
+  // Remember the offered version so the renderer can pull it on mount if the
+  // push below raced its subscription (updates:get-pending).
+  pendingUpdateVersion = version;
   // Dispatch to renderer; the React dialog handles user consent. We never
-  // auto-download — the user must click "Install on next restart" first.
+  // auto-download — the user must click "Download & install on restart" first.
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("update:available", { version });
   }
