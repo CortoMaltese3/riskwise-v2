@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@mui/material";
 
@@ -23,6 +23,9 @@ const UpdateProgressChip = () => {
   const setProgress = useUpdateStore((s) => s.setProgress);
   const setReady = useUpdateStore((s) => s.setReady);
   const reset = useUpdateStore((s) => s.reset);
+  // Guards the terminal-phase actions so a double-click can't fire
+  // quitAndInstall (or a second download) twice.
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const bridge = window.electron?.updates;
@@ -39,11 +42,18 @@ const UpdateProgressChip = () => {
 
   const versionLabel = version || "?";
 
-  const handleRestart = () => {
-    window.electron?.updates?.quitAndInstallNow();
+  const handleRestart = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await window.electron?.updates?.quitAndInstallNow();
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleRetry = () => {
+    if (busy) return;
     requestUpdateDownload(version);
   };
 
@@ -107,6 +117,7 @@ const UpdateProgressChip = () => {
           size="small"
           variant="text"
           onClick={handleRestart}
+          disabled={busy}
           data-testid="update-progress-restart"
         >
           {t("update_progress_restart", { defaultValue: "Restart now" })}
@@ -133,6 +144,7 @@ const UpdateProgressChip = () => {
           size="small"
           variant="outlined"
           onClick={handleRetry}
+          disabled={busy}
           data-testid="update-progress-retry"
         >
           {t("update_progress_retry", { defaultValue: "Retry" })}

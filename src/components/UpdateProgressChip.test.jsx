@@ -82,6 +82,18 @@ describe("UpdateProgressChip", () => {
     expect(window.electron.updates.quitAndInstallNow).toHaveBeenCalledTimes(1);
   });
 
+  it("invokes quitAndInstallNow only once even if Restart is clicked twice", async () => {
+    render(<UpdateProgressChip />);
+    act(() => useUpdateStore.getState().setReady("2.1.5"));
+    await waitFor(() => screen.getByTestId("update-progress-restart"));
+
+    const button = screen.getByTestId("update-progress-restart");
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await waitFor(() => expect(window.electron.updates.quitAndInstallNow).toHaveBeenCalledTimes(1));
+  });
+
   it("shows a retry action on failure that re-triggers the download", async () => {
     render(<UpdateProgressChip />);
     act(() => useUpdateStore.getState().setFailed());
