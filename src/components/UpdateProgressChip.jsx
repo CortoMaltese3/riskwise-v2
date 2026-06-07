@@ -75,7 +75,9 @@ const UpdateProgressChip = () => {
         message={sizeLine}
         messageTestId="update-progress-message"
         showProgressBar
-        determinate
+        // Animate indeterminately until the first byte lands, so the bar never
+        // sits static at 0% looking frozen (matches ScenarioProgressChip).
+        determinate={percent > 0}
         value={percent}
       />
     );
