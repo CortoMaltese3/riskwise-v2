@@ -12,15 +12,21 @@ vi.mock("react-i18next", () => ({
 }));
 
 let availableCallback;
+let progressCallback;
 let releaseNotesResolver;
 
 beforeEach(() => {
   availableCallback = null;
+  progressCallback = null;
   releaseNotesResolver = null;
   window.electron = {
     updates: {
       onAvailable: vi.fn((cb) => {
         availableCallback = cb;
+        return vi.fn();
+      }),
+      onDownloadProgress: vi.fn((cb) => {
+        progressCallback = cb;
         return vi.fn();
       }),
       installOnNextRestart: vi.fn().mockResolvedValue({ ok: true }),
@@ -113,5 +119,76 @@ describe("UpdateDialog", () => {
     // Simulate no event coming in.
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(window.electron.updates.installOnNextRestart).not.toHaveBeenCalled();
+  });
+
+  it("closes without snoozing when dismissed via the backdrop", async () => {
+    render(<UpdateDialog />);
+    availableCallback({ version: "2.3.4" });
+    await waitFor(() => screen.getByRole("dialog"));
+
+    fireEvent.click(document.querySelector(".MuiBackdrop-root"));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    // The 24h snooze is reserved for the explicit "Remind me later" button.
+    expect(window.electron.updates.remindLater).not.toHaveBeenCalled();
+  });
+
+  it("blocks dismissal (and does not snooze) while a download is in progress", async () => {
+    // installOnNextRestart resolves only when the download finishes, so keep
+    // it pending to hold the dialog in its downloading state.
+    let resolveInstall;
+    window.electron.updates.installOnNextRestart = vi.fn(
+      () => new Promise((resolve) => (resolveInstall = resolve))
+    );
+
+    render(<UpdateDialog />);
+    availableCallback({ version: "2.3.4" });
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Install on next restart"));
+    await waitFor(() =>
+      expect(screen.getByTestId("update-dialog-downloading")).toBeInTheDocument()
+    );
+
+    fireEvent.click(document.querySelector(".MuiBackdrop-root"));
+
+    // Still open, still no snooze.
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(window.electron.updates.remindLater).not.toHaveBeenCalled();
+
+    resolveInstall({ ok: true });
+  });
+
+  it("shows download progress forwarded from the main process", async () => {
+    window.electron.updates.installOnNextRestart = vi.fn(() => new Promise(() => {}));
+
+    render(<UpdateDialog />);
+    availableCallback({ version: "2.3.4" });
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Install on next restart"));
+    await waitFor(() =>
+      expect(screen.getByTestId("update-dialog-downloading")).toBeInTheDocument()
+    );
+
+    progressCallback({ percent: 42.6 });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("update-dialog-downloading").textContent).toContain("43%")
+    );
+  });
+
+  it("surfaces an error and re-enables actions when the download fails", async () => {
+    window.electron.updates.installOnNextRestart = vi.fn().mockResolvedValue({ error: "network" });
+
+    render(<UpdateDialog />);
+    availableCallback({ version: "2.3.4" });
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Install on next restart"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("update-dialog-download-error")).toBeInTheDocument()
+    );
+    // Dialog stays open so the user can retry.
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Install on next restart")).not.toBeDisabled();
   });
 });

@@ -113,6 +113,7 @@ contextBridge.exposeInMainWorld("electron", {
     quitAndInstallNow: () => ipcRenderer.invoke("updates:quit-and-install-now"),
     onAvailable: (callback) => subscribe("update:available", callback),
     onDownloaded: (callback) => subscribe("update:downloaded", callback),
+    onDownloadProgress: (callback) => subscribe("update:download-progress", callback),
   },
   engine: {
     verifyManifest: () => ipcRenderer.invoke("engine:verify-manifest"),
