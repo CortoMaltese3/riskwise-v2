@@ -6,7 +6,7 @@ import path from "node:path";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const modulePath = path.resolve(here, "..", "..", "public", "appUpdates.js");
 const requireCjs = createRequire(import.meta.url);
-const { shouldSuppressUpdate } = requireCjs(modulePath);
+const { shouldSuppressUpdate, shouldBlockCloseForDownload } = requireCjs(modulePath);
 
 describe("shouldSuppressUpdate (issue #424)", () => {
   it("passes through when nothing is skipped", () => {
@@ -50,5 +50,19 @@ describe("shouldSuppressUpdate (issue #424)", () => {
       suppress: false,
       clearSkip: true,
     });
+  });
+});
+
+describe("shouldBlockCloseForDownload", () => {
+  it("does not block when no download is in progress", () => {
+    expect(shouldBlockCloseForDownload(false, false)).toBe(false);
+  });
+
+  it("blocks the first close while a download is in progress", () => {
+    expect(shouldBlockCloseForDownload(true, false)).toBe(true);
+  });
+
+  it("lets the close through once the user confirmed Quit anyway", () => {
+    expect(shouldBlockCloseForDownload(true, true)).toBe(false);
   });
 });

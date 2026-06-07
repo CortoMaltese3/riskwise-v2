@@ -28,7 +28,7 @@ const {
   updaterChannelFor,
   verifyEngineManifest,
 } = require("./engineManifest");
-const { shouldSuppressUpdate } = require("./appUpdates");
+const { shouldSuppressUpdate, shouldBlockCloseForDownload } = require("./appUpdates");
 const { scanAndImportPacks } = require("./dataPacks");
 const { provisionEngineData } = require("./engineProvision");
 const { startTileServer } = require("./tileServer");
@@ -219,6 +219,12 @@ const ENGINE_EXE_NAME = "riskwise-engine.exe";
 let updateCheckTimer = null;
 let updateStore = null;
 let releaseChannel = "stable";
+// True while an update installer is actively downloading. Closing the app
+// mid-download discards the partial download (nothing installs), so the main
+// window's close handler guards against it; `allowCloseDuringDownload` records
+// the user's "Quit anyway" confirmation so the retried close goes through.
+let updateDownloadInProgress = false;
+let allowCloseDuringDownload = false;
 // In-memory cache keyed by tag. Persisting to disk isn't worth the risk of
 // shipping stale release notes after a bad write — 1 h in-memory TTL is
 // enough to survive panel re-mounts and window reloads.
@@ -1055,6 +1061,30 @@ const createMainWindow = () => {
     mainWindow.show();
     mainWindow.maximize();
     mainWindow.loadURL("app://./index.html");
+
+    // Guard against quitting mid-download: an interrupted download is
+    // discarded, so the user ends up still on the old version (the exact
+    // failure that prompted the progress chip). Confirm first; "Quit anyway"
+    // sets the override so the retried close proceeds.
+    mainWindow.on("close", (event) => {
+      if (!shouldBlockCloseForDownload(updateDownloadInProgress, allowCloseDuringDownload)) return;
+      event.preventDefault();
+      const choice = dialog.showMessageBoxSync(mainWindow, {
+        type: "warning",
+        buttons: ["Keep downloading", "Quit anyway"],
+        defaultId: 0,
+        cancelId: 0,
+        title: "Update in progress",
+        message: "An update is still downloading.",
+        detail:
+          "If you quit now the download is cancelled and the update won't install. " +
+          "Wait for it to finish — it installs automatically when you close the app.",
+      });
+      if (choice === 1) {
+        allowCloseDuringDownload = true;
+        mainWindow.close();
+      }
+    });
 
     if (isDevelopmentEnv()) {
       mainWindow.webContents.openDevTools();
@@ -2122,10 +2152,15 @@ const startUpdateCheckTimer = () => {
 const beginUpdateDownload = async () => {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+  // Arm the close guard so quitting mid-download prompts first. Reset the
+  // per-download "Quit anyway" override so each new download starts guarded.
+  updateDownloadInProgress = true;
+  allowCloseDuringDownload = false;
   try {
     await autoUpdater.downloadUpdate();
     return { ok: true };
   } catch (err) {
+    updateDownloadInProgress = false;
     log.error("[electron] downloadUpdate failed:", err.message);
     return { error: err.message };
   }
@@ -2625,7 +2660,11 @@ autoUpdater.on("download-progress", (p) => {
   // surfaced in field testing: users closed the app mid-download, which
   // discards an incomplete download and installs nothing on quit).
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("update:download-progress", { percent: p.percent });
+    mainWindow.webContents.send("update:download-progress", {
+      percent: p.percent,
+      transferred: p.transferred,
+      total: p.total,
+    });
   }
 });
 
@@ -2661,10 +2700,12 @@ autoUpdater.on("update-available", (info) => {
 
 autoUpdater.on("update-downloaded", (info) => {
   log.info("[electron] update downloaded successfully:", info?.version);
+  // Download finished — the close guard can stand down (closing now installs).
+  updateDownloadInProgress = false;
   // Arm install-on-quit rather than prompting for a restart. Users who
-  // clicked "Install on next restart" accept exactly that contract; an
-  // immediate-restart prompt would violate the "never auto-restart" AC.
-  // The renderer-side toast (issue #423) surfaces an opt-in "Restart now"
+  // clicked "Download & install on restart" accept exactly that contract; an
+  // immediate-restart prompt would violate the "never auto-restart" AC. The
+  // renderer-side progress chip (issue #423) surfaces an opt-in "Restart now"
   // shortcut without changing this default.
   autoUpdater.autoInstallOnAppQuit = true;
   log.info("[electron] updates: armed install-on-quit (autoInstallOnAppQuit=true)");
@@ -2680,7 +2721,10 @@ app.on("activate", () => {
 });
 
 autoUpdater.on("error", (err) => {
-  // Don't show dialog to user - just log it
+  // Don't show dialog to user - just log it. If a download was in flight, the
+  // renderer surfaces the failure (the download IPC rejects → chip shows
+  // Retry); clear the close guard so the user isn't trapped.
+  updateDownloadInProgress = false;
   log.error("[electron] AutoUpdater error:", err);
 });
 

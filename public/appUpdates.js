@@ -20,4 +20,11 @@ const shouldSuppressUpdate = (infoVersion, skippedVersion) => {
   return { suppress: false, clearSkip: false };
 };
 
-module.exports = { shouldSuppressUpdate };
+// Decide whether to block an app/window close because an update download is
+// still in flight. Field testing showed users closing the app mid-download,
+// which discards the partial download so nothing installs. `userOverrode` is
+// set once the user confirms "Quit anyway" so the retried close goes through.
+const shouldBlockCloseForDownload = (downloadInProgress, userOverrode) =>
+  Boolean(downloadInProgress) && !userOverrode;
+
+module.exports = { shouldSuppressUpdate, shouldBlockCloseForDownload };
