@@ -128,11 +128,15 @@ describe("UpdatesPanel", () => {
     );
   });
 
-  it("persists a channel change through setChannel", async () => {
+  it("does not switch channels — the radios are presentation-only for now (#570)", async () => {
     render(<UpdatesPanel />);
     await waitFor(() => screen.getByText("Beta"));
     fireEvent.click(screen.getByRole("radio", { name: "Beta" }));
-    await waitFor(() => expect(window.electron.updates.setChannel).toHaveBeenCalledWith("beta"));
+    // Clicking must be inert: no channel change reaches the main process, so a
+    // user can't strand themselves on a channel with no published releases.
+    expect(window.electron.updates.setChannel).not.toHaveBeenCalled();
+    // Stable stays selected.
+    expect(screen.getByRole("radio", { name: "Stable" })).toBeChecked();
   });
 
   it("opens a confirmation dialog naming the target version before downgrading", async () => {

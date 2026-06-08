@@ -79,19 +79,14 @@ const UpdatesPanel = () => {
     loadNotes();
   }, [loadStatus, loadNotes]);
 
-  const handleChannelChange = async (event) => {
-    const channel = event.target.value;
-    setBusy(true);
-    // The previous channel's check result no longer applies.
-    setCheckResult(null);
-    try {
-      await window.electron?.updates?.setChannel(channel);
-      await loadStatus();
-      await loadNotes();
-    } finally {
-      setBusy(false);
-    }
-  };
+  // Channel switching is intentionally inert for now (#570). The Stable/Beta
+  // radios are kept for presentation, but clicking must NOT change the update
+  // channel: no beta release train exists yet, so actually switching to Beta
+  // would point electron-updater at a non-existent `beta.yml` and silently
+  // strand the user with no updates. A documented no-op (rather than removing
+  // `onChange`) also avoids React's controlled-without-handler warning. Proper,
+  // guarded wiring is tracked in #570.
+  const handleChannelChange = () => {};
 
   const handleCheckNow = async () => {
     setBusy(true);
