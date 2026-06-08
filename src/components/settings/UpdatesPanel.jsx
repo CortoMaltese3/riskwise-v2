@@ -34,6 +34,11 @@ const UpdatesPanel = () => {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [notesLoading, setNotesLoading] = useState(false);
+  // Outcome of an explicit "Check for updates" click, so the user gets clear
+  // feedback (error / up to date / update available) instead of a button that
+  // silently spins. Falls back to the last check the main process recorded
+  // (e.g. a failed startup check) when the user hasn't clicked yet.
+  const [checkResult, setCheckResult] = useState(null);
 
   const loadStatus = useCallback(async () => {
     const bridge = window.electron?.updates;
@@ -71,6 +76,8 @@ const UpdatesPanel = () => {
   const handleChannelChange = async (event) => {
     const channel = event.target.value;
     setBusy(true);
+    // The previous channel's check result no longer applies.
+    setCheckResult(null);
     try {
       await window.electron?.updates?.setChannel(channel);
       await loadStatus();
@@ -82,8 +89,10 @@ const UpdatesPanel = () => {
 
   const handleCheckNow = async () => {
     setBusy(true);
+    setCheckResult(null);
     try {
-      await window.electron?.updates?.check();
+      const result = await window.electron?.updates?.check();
+      setCheckResult(result || null);
       await loadStatus();
     } finally {
       setBusy(false);
@@ -103,6 +112,54 @@ const UpdatesPanel = () => {
   const channel = status?.channel || "stable";
   const currentVersion = status?.currentVersion || "—";
   const lastChecked = useMemo(() => formatTimestamp(status?.lastChecked), [status]);
+
+  // Prefer the result of an explicit click; otherwise show whatever the main
+  // process last recorded (covers a failed/clean startup check on mount).
+  const displayedCheck = checkResult ?? status?.lastCheck ?? null;
+
+  const renderCheckAlert = () => {
+    if (!displayedCheck) return null;
+    if (displayedCheck.skipped === "offline") {
+      return (
+        <Alert severity="info">
+          {t("settings_updates_check_offline", {
+            defaultValue: "Offline mode is on — update checks are paused.",
+          })}
+        </Alert>
+      );
+    }
+    if (displayedCheck.error) {
+      return (
+        <Alert severity="warning">
+          {t("settings_updates_check_error", {
+            error: displayedCheck.error,
+            defaultValue: "Couldn't check for updates: {{error}}",
+          })}
+        </Alert>
+      );
+    }
+    if (displayedCheck.status === "available") {
+      return (
+        <Alert severity="info">
+          {t("settings_updates_check_available", {
+            version: displayedCheck.version,
+            defaultValue: "Update available: v{{version}} — see the prompt to install.",
+          })}
+        </Alert>
+      );
+    }
+    if (displayedCheck.status === "not-available") {
+      return (
+        <Alert severity="success">
+          {t("settings_updates_check_up_to_date", {
+            version: displayedCheck.version || currentVersion,
+            defaultValue: "You're on the latest version (v{{version}}).",
+          })}
+        </Alert>
+      );
+    }
+    return null;
+  };
 
   return (
     <Stack spacing={3}>
@@ -170,6 +227,8 @@ const UpdatesPanel = () => {
           {t("settings_updates_downgrade", { defaultValue: "Downgrade to previous version" })}
         </Button>
       </Stack>
+
+      {renderCheckAlert()}
 
       <Box>
         <Typography variant="subtitle1" gutterBottom>

@@ -21,6 +21,7 @@ if (!app.isPackaged) {
   }
 }
 const {
+  compareVersions,
   engineManifestUrl,
   isEngineVersionCompatible,
   resolveEngineReleaseTag,
@@ -29,6 +30,7 @@ const {
   verifyEngineManifest,
 } = require("./engineManifest");
 const { shouldSuppressUpdate, shouldBlockCloseForDownload } = require("./appUpdates");
+const { resolveLatestRelease, withRetry } = require("./updateResolver");
 const { scanAndImportPacks } = require("./dataPacks");
 const { provisionEngineData } = require("./engineProvision");
 const { startTileServer } = require("./tileServer");
@@ -209,6 +211,13 @@ const RELEASE_REPO = "riskwise-v2";
 const ENGINE_RELEASE_TAG = resolveEngineReleaseTag(process.env);
 const ENGINE_MANIFEST_URL = engineManifestUrl(RELEASE_OWNER, RELEASE_REPO, ENGINE_RELEASE_TAG);
 const GITHUB_RELEASE_API = `https://api.github.com/repos/${RELEASE_OWNER}/${RELEASE_REPO}/releases`;
+// Direct, per-tag download base and the atom feed — both stay healthy when
+// `github.com/.../releases/latest` 504s (see updateResolver.js). The stable
+// channel resolves its tag via the API/atom and then drives electron-updater's
+// generic provider at `${RELEASE_DOWNLOAD_BASE}/<tag>/`, which serves
+// `latest.yml` + installers off this reliable path.
+const RELEASE_DOWNLOAD_BASE = `https://github.com/${RELEASE_OWNER}/${RELEASE_REPO}/releases/download`;
+const RELEASE_ATOM_URL = `https://github.com/${RELEASE_OWNER}/${RELEASE_REPO}/releases.atom`;
 const ENGINE_PUB_KEY_FILENAME = "engine-manifest.pub";
 // Engine cache directory under %LOCALAPPDATA%. Distinct from v1's
 // ``RiskWiseEngine`` so both apps can coexist on the same machine — wiping
@@ -232,6 +241,12 @@ let allowCloseDuringDownload = false;
 // `updates:get-pending` so a missed push still surfaces the prompt. Cleared
 // when the user acts (snooze / skip / install) so a reload doesn't re-pop.
 let pendingUpdateVersion = null;
+// Outcome of the most recent update check, so the Settings → Updates panel can
+// tell the user what happened instead of silently spinning. `status` is one of
+// `idle | checking | available | not-available | error`. The `update-available`
+// / `update-not-available` / `error` handlers and the stable up-to-date branch
+// all keep this current.
+let lastUpdateCheck = { status: "idle", version: null, latestVersion: null, error: null, at: null };
 // In-memory cache keyed by tag. Persisting to disk isn't worth the risk of
 // shipping stale release notes after a bad write — 1 h in-memory TTL is
 // enough to survive panel re-mounts and window reloads.
@@ -2124,6 +2139,21 @@ const exportDiagnostics = async () => {
   }
 };
 
+// Fetch a URL's body as text via the Electron `net` stack (system proxy + CA
+// store), with bounded retry on transient 5xx/socket errors. Used for our own
+// tag resolution on the stable channel.
+const fetchUpdateText = (url, headers = {}) =>
+  withRetry(
+    async () => {
+      const { body } = await fetchBuffer(url, {
+        "User-Agent": `RiskWise/${app.getVersion()}`,
+        ...headers,
+      });
+      return body.toString("utf8");
+    },
+    { retries: 2, baseDelayMs: 500 }
+  );
+
 const checkForAppUpdates = async (reason) => {
   if (isDevelopmentEnv()) {
     log.info(`[electron] update check skipped (dev env) reason=${reason}`);
@@ -2133,14 +2163,74 @@ const checkForAppUpdates = async (reason) => {
     log.info(`[electron] update check skipped (offline mode) reason=${reason}`);
     return { skipped: "offline" };
   }
+  const currentVersion = app.getVersion();
+  lastUpdateCheck = { status: "checking", version: null, latestVersion: null, error: null, at: Date.now() };
   try {
     log.info(`[electron] checking for app updates reason=${reason} channel=${releaseChannel}`);
-    await autoUpdater.checkForUpdates();
+
+    if (releaseChannel === "stable") {
+      // electron-updater pins the stable tag via `github.com/.../releases/latest`,
+      // which 504s persistently for this repo (see updateResolver.js). Resolve
+      // the tag ourselves via api.github.com / atom (both healthy) and point the
+      // generic provider at the tag's *direct* download path so check + download
+      // both use the reliable endpoint. Non-stable channels use allowPrerelease,
+      // which already reads the atom feed and never touches `releases/latest`.
+      const resolved = await resolveLatestRelease({
+        apiLatestUrl: `${GITHUB_RELEASE_API}/latest`,
+        atomUrl: RELEASE_ATOM_URL,
+        fetchText: fetchUpdateText,
+      });
+      if (!resolved) {
+        throw new Error("could not resolve the latest release (api.github.com and atom feed both failed)");
+      }
+      log.info(
+        `[electron] resolved latest stable release tag=${resolved.tag} version=${resolved.version} via=${resolved.source}`
+      );
+      if (compareVersions(resolved.version, currentVersion) <= 0) {
+        // Up to date — do NOT call checkForUpdates(); that would re-hit the
+        // 504-ing endpoint for no reason.
+        if (updateStore) updateStore.set("lastChecked", Date.now());
+        lastUpdateCheck = {
+          status: "not-available",
+          version: currentVersion,
+          latestVersion: resolved.version,
+          error: null,
+          at: Date.now(),
+        };
+        log.info(`[electron] no app update available (current=${currentVersion}, latest=${resolved.version})`);
+        return { ok: true, ...lastUpdateCheck, currentVersion };
+      }
+      autoUpdater.setFeedURL({
+        provider: "generic",
+        url: `${RELEASE_DOWNLOAD_BASE}/${resolved.tag}/`,
+        channel: updaterChannelFor(releaseChannel),
+      });
+    } else {
+      // Restore the GitHub provider for prerelease channels in case a previous
+      // stable check left the generic provider configured.
+      autoUpdater.setFeedURL({
+        provider: "github",
+        owner: RELEASE_OWNER,
+        repo: RELEASE_REPO,
+        releaseType: "release",
+      });
+    }
+
+    // The `update-available` / `update-not-available` handlers update
+    // `lastUpdateCheck` synchronously before this resolves.
+    await withRetry(() => autoUpdater.checkForUpdates(), { retries: 2, baseDelayMs: 1000 });
     if (updateStore) updateStore.set("lastChecked", Date.now());
-    return { ok: true };
+    return { ok: true, ...lastUpdateCheck, currentVersion };
   } catch (err) {
+    lastUpdateCheck = {
+      status: "error",
+      version: null,
+      latestVersion: null,
+      error: err.message,
+      at: Date.now(),
+    };
     log.error("[electron] update check failed:", err.message);
-    return { error: err.message };
+    return { error: err.message, currentVersion };
   }
 };
 
@@ -2499,6 +2589,7 @@ ipcMain.handle("updates:get-status", async () => {
     lastChecked: updateStore ? updateStore.get("lastChecked", null) : null,
     remindAfter: updateStore ? updateStore.get("remindAfter", 0) : 0,
     offlineMode: isOfflineMode(),
+    lastCheck: lastUpdateCheck,
   };
 });
 
@@ -2668,8 +2759,15 @@ ipcMain.on("reload", async () => {
 });
 
 // Auto-update event handlers
-autoUpdater.on("update-not-available", () => {
+autoUpdater.on("update-not-available", (info) => {
   log.info("[electron] no update available");
+  lastUpdateCheck = {
+    status: "not-available",
+    version: app.getVersion(),
+    latestVersion: info?.version ?? null,
+    error: null,
+    at: Date.now(),
+  };
 });
 
 autoUpdater.on("download-progress", (p) => {
@@ -2690,6 +2788,16 @@ autoUpdater.on("download-progress", (p) => {
 autoUpdater.on("update-available", (info) => {
   const version = info?.version ?? "unknown";
   log.info("[electron] update available:", version);
+  // Record the outcome up front, before any snooze/skip suppression — the
+  // Settings panel reports "an update exists" regardless of whether the modal
+  // prompt is currently suppressed.
+  lastUpdateCheck = {
+    status: "available",
+    version,
+    latestVersion: version,
+    error: null,
+    at: Date.now(),
+  };
   if (updateStore) {
     updateStore.set("lastChecked", Date.now());
     const remindAfter = Number(updateStore.get("remindAfter", 0)) || 0;
@@ -2747,6 +2855,13 @@ autoUpdater.on("error", (err) => {
   // renderer surfaces the failure (the download IPC rejects → chip shows
   // Retry); clear the close guard so the user isn't trapped.
   updateDownloadInProgress = false;
+  lastUpdateCheck = {
+    status: "error",
+    version: null,
+    latestVersion: null,
+    error: err?.message ?? String(err),
+    at: Date.now(),
+  };
   log.error("[electron] AutoUpdater error:", err);
 });
 
