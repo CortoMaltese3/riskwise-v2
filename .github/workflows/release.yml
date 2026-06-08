@@ -83,7 +83,10 @@ jobs:
 
   build:
     needs: verify-tests
-    runs-on: windows-latest
+    # Pinned to windows-2022 (VS 2022) across the VS 2026 runner rollout
+    # (2026-06-08 → 2026-06-15); electron-builder's node-gyp rebuild is
+    # VS-sensitive. See #410.
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v6
 
