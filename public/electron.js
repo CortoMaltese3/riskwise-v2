@@ -29,7 +29,11 @@ const {
   updaterChannelFor,
   verifyEngineManifest,
 } = require("./engineManifest");
-const { shouldSuppressUpdate, shouldBlockCloseForDownload } = require("./appUpdates");
+const {
+  shouldSuppressUpdate,
+  shouldBlockCloseForDownload,
+  resolveDowngradeTarget,
+} = require("./appUpdates");
 const { resolveLatestRelease, withRetry } = require("./updateResolver");
 const { scanAndImportPacks } = require("./dataPacks");
 const { provisionEngineData } = require("./engineProvision");
@@ -2582,7 +2586,77 @@ ipcMain.handle("updates:skip-version", async (_evt, version) => {
 // the prompt (returns the suppression-cleared version, or null).
 ipcMain.handle("updates:get-pending", async () => ({ version: pendingUpdateVersion }));
 
+// --- Downgrade support (issue #564) --------------------------------------
+// We keep a durable per-version copy of each NSIS installer that an in-app
+// update downloads, plus an append-style history file, so the user can roll
+// back to the immediately-previous version without re-downloading anything.
+// `autoUpdater.allowDowngrade` stays false and we never call quitAndInstall
+// for downgrades — we launch the cached installer directly.
+
+const INSTALLER_CACHE_DIR_NAME = "installer-cache";
+const UPDATE_HISTORY_FILE_NAME = "update-history.json";
+
+const getInstallerCacheDir = () =>
+  path.join(app.getPath("userData"), INSTALLER_CACHE_DIR_NAME);
+
+const getUpdateHistoryPath = () =>
+  path.join(app.getPath("userData"), UPDATE_HISTORY_FILE_NAME);
+
+// Tolerant read: a missing or corrupt history file is treated as empty so a
+// bad write never bricks the updater. Always returns an array.
+const readUpdateHistory = () => {
+  try {
+    const raw = fs.readFileSync(getUpdateHistoryPath(), "utf8");
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      log.warn(`[electron] updates: unreadable update-history.json (${err.message}) — treating as empty`);
+    }
+    return [];
+  }
+};
+
+// Append (or replace same-version) an entry, preserving existing history.
+const appendUpdateHistory = (entry) => {
+  const history = readUpdateHistory().filter((e) => e && e.version !== entry.version);
+  history.push(entry);
+  fs.writeFileSync(getUpdateHistoryPath(), JSON.stringify(history, null, 2), "utf8");
+  return history;
+};
+
+// Copy the just-downloaded installer into the durable cache and record it in
+// history. Best-effort: a failure here must not break the (already successful)
+// forward update, so callers log and continue rather than throw.
+const cacheDownloadedInstaller = (info) => {
+  const downloadedFile = info && info.downloadedFile;
+  const version = info && info.version;
+  if (!downloadedFile || !version) {
+    log.warn("[electron] updates: skipping installer cache — missing downloadedFile/version");
+    return;
+  }
+  if (!fs.existsSync(downloadedFile)) {
+    log.warn(`[electron] updates: downloaded installer not found at ${downloadedFile} — skipping cache`);
+    return;
+  }
+  const cacheDir = getInstallerCacheDir();
+  fs.mkdirSync(cacheDir, { recursive: true });
+  const ext = path.extname(downloadedFile) || ".exe";
+  const installerPath = path.join(cacheDir, `${version}${ext}`);
+  fs.copyFileSync(downloadedFile, installerPath);
+  appendUpdateHistory({
+    version,
+    installerPath,
+    channel: releaseChannel,
+    downloadedAt: new Date().toISOString(),
+  });
+  log.info(`[electron] updates: cached installer for v${version} at ${installerPath}`);
+};
+
 ipcMain.handle("updates:get-status", async () => {
+  const target = resolveDowngradeTarget(readUpdateHistory(), app.getVersion(), {
+    channel: releaseChannel,
+  });
   return {
     currentVersion: app.getVersion(),
     channel: releaseChannel,
@@ -2590,6 +2664,7 @@ ipcMain.handle("updates:get-status", async () => {
     remindAfter: updateStore ? updateStore.get("remindAfter", 0) : 0,
     offlineMode: isOfflineMode(),
     lastCheck: lastUpdateCheck,
+    previousVersion: target ? target.version : null,
   };
 });
 
@@ -2604,14 +2679,46 @@ ipcMain.handle("updates:get-release-notes", async (_evt, opts) => {
   }
 });
 
-// "Downgrade to previous version" reuses electron-updater's two-arg
-// quitAndInstall(isSilent, isForceRunAfter) — passing (true, false)
-// performs a silent install without relaunching, which is what the AC
-// requires so the user can hand-pick the previous installer after quit.
+// "Downgrade to previous version" (issue #564). We deliberately bypass
+// electron-updater — `quitAndInstall` only installs a *forward* update that
+// was already downloaded, and `allowDowngrade` stays false. Instead we resolve
+// the most-recent cached older installer, back up the DB as a safety net, then
+// launch that NSIS installer detached and quit so it can replace the binary.
 ipcMain.handle("updates:downgrade", async () => {
   try {
-    setImmediate(() => autoUpdater.quitAndInstall(true, false));
-    return { ok: true };
+    const target = resolveDowngradeTarget(readUpdateHistory(), app.getVersion(), {
+      channel: releaseChannel,
+    });
+    if (!target) {
+      return { error: "No previous version available on this machine." };
+    }
+    if (!fs.existsSync(target.installerPath)) {
+      log.warn(`[electron] downgrade: cached installer vanished at ${target.installerPath}`);
+      return { error: "No previous version available on this machine." };
+    }
+
+    // Safety net: a forward-migrated DB may not be readable by the older app,
+    // so snapshot riskwise.db to a timestamped copy before rolling back. This
+    // is a backup only — not an automatic restore (see issue #564 non-goals).
+    const dbPath = path.join(app.getPath("userData"), "riskwise.db");
+    if (fs.existsSync(dbPath)) {
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const backupPath = path.join(
+        app.getPath("userData"),
+        `riskwise.db.pre-downgrade-${app.getVersion()}-${stamp}.bak`
+      );
+      fs.copyFileSync(dbPath, backupPath);
+      log.info(`[electron] downgrade: backed up DB to ${backupPath}`);
+    }
+
+    log.info(
+      `[electron] downgrade: launching cached installer for v${target.version} (from v${app.getVersion()})`
+    );
+    const child = spawn(target.installerPath, [], { detached: true, stdio: "ignore" });
+    child.unref();
+
+    setImmediate(() => app.quit());
+    return { ok: true, version: target.version };
   } catch (err) {
     log.error("[electron] downgrade failed:", err.message);
     return { error: err.message };
@@ -2830,6 +2937,14 @@ autoUpdater.on("update-available", (info) => {
 
 autoUpdater.on("update-downloaded", (info) => {
   log.info("[electron] update downloaded successfully:", info?.version);
+  // Persist a durable copy of this installer + history so the user can later
+  // roll back to it (issue #564). Best-effort: never let a cache failure break
+  // the forward update that just succeeded.
+  try {
+    cacheDownloadedInstaller(info);
+  } catch (err) {
+    log.warn(`[electron] updates: failed to cache installer (${err.message}) — continuing`);
+  }
   // Download finished — the close guard can stand down (closing now installs).
   updateDownloadInProgress = false;
   // Arm install-on-quit rather than prompting for a restart. Users who
