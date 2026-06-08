@@ -158,7 +158,12 @@ jobs:
   # generators without dragging the Windows installer toolchain in.
   sbom:
     name: Generate SBOM and verify NOTICES.txt
-    needs: verify-tests
+    # Depend on `build`, not just `verify-tests`: the final step here uploads
+    # sbom.json to the GitHub release, which only exists once `build` has run
+    # `electron-builder --publish always`. With `needs: verify-tests` alone the
+    # two jobs ran in parallel and the SBOM upload raced ahead, failing the run
+    # with "release not found" even though the installer published fine.
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
