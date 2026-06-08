@@ -11,9 +11,12 @@ import {
   Radio,
   RadioGroup,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import ReactMarkdown from "react-markdown";
+
+import DowngradeConfirmDialog from "./DowngradeConfirmDialog";
 
 // In-app updates panel (issue #115, Area 13). Reads everything from the
 // main process via the preload bridge — no GitHub call goes through the
@@ -39,6 +42,9 @@ const UpdatesPanel = () => {
   // silently spins. Falls back to the last check the main process recorded
   // (e.g. a failed startup check) when the user hasn't clicked yet.
   const [checkResult, setCheckResult] = useState(null);
+  // Holds the target version while the downgrade confirmation dialog is open;
+  // null when closed. Opening it does not call downgrade — only confirming does.
+  const [downgradeTarget, setDowngradeTarget] = useState(null);
 
   const loadStatus = useCallback(async () => {
     const bridge = window.electron?.updates;
@@ -99,18 +105,23 @@ const UpdatesPanel = () => {
     }
   };
 
-  const handleDowngrade = async () => {
+  const handleConfirmDowngrade = async () => {
     setBusy(true);
     try {
       const result = await window.electron?.updates?.downgrade();
+      // On success the app quits and the installer takes over, so there's
+      // nothing more to render. We only surface an error if it comes back.
       if (result?.error) setError(result.error);
     } finally {
       setBusy(false);
+      setDowngradeTarget(null);
     }
   };
 
   const channel = status?.channel || "stable";
   const currentVersion = status?.currentVersion || "—";
+  const previousVersion = status?.previousVersion || null;
+  const downgradeDisabled = busy || !previousVersion;
   const lastChecked = useMemo(() => formatTimestamp(status?.lastChecked), [status]);
 
   // Prefer the result of an explicit click; otherwise show whatever the main
@@ -223,10 +234,37 @@ const UpdatesPanel = () => {
             t("settings_updates_check_now", { defaultValue: "Check for updates" })
           )}
         </Button>
-        <Button variant="outlined" color="warning" onClick={handleDowngrade} disabled={busy}>
-          {t("settings_updates_downgrade", { defaultValue: "Downgrade to previous version" })}
-        </Button>
+        <Tooltip
+          title={
+            previousVersion
+              ? ""
+              : t("settings_updates_downgrade_unavailable", {
+                  defaultValue: "No previous version available on this machine.",
+                })
+          }
+        >
+          {/* span keeps the tooltip reachable while the button is disabled */}
+          <span>
+            <Button
+              variant="outlined"
+              color="warning"
+              onClick={() => setDowngradeTarget(previousVersion)}
+              disabled={downgradeDisabled}
+            >
+              {t("settings_updates_downgrade", {
+                defaultValue: "Downgrade to previous version",
+              })}
+            </Button>
+          </span>
+        </Tooltip>
       </Stack>
+
+      <DowngradeConfirmDialog
+        version={downgradeTarget}
+        busy={busy}
+        onCancel={() => setDowngradeTarget(null)}
+        onConfirm={handleConfirmDowngrade}
+      />
 
       {renderCheckAlert()}
 

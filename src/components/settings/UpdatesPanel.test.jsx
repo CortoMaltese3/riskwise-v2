@@ -35,6 +35,7 @@ beforeEach(() => {
         lastChecked: 1745500000000,
         remindAfter: 0,
         offlineMode: false,
+        previousVersion: "2.0.0",
       }),
       getReleaseNotes: vi.fn().mockResolvedValue({
         tag: "v2.0.1",
@@ -134,10 +135,54 @@ describe("UpdatesPanel", () => {
     await waitFor(() => expect(window.electron.updates.setChannel).toHaveBeenCalledWith("beta"));
   });
 
-  it("calls downgrade when the user clicks Downgrade to previous version", async () => {
+  it("opens a confirmation dialog naming the target version before downgrading", async () => {
     render(<UpdatesPanel />);
     await waitFor(() => screen.getByText("Downgrade to previous version"));
     fireEvent.click(screen.getByText("Downgrade to previous version"));
+    // Dialog appears; downgrade is NOT called until confirmed.
+    await waitFor(() =>
+      expect(screen.getByTestId("settings-downgrade-confirm-dialog")).toBeInTheDocument()
+    );
+    expect(screen.getByText("Downgrade to v2.0.0?")).toBeInTheDocument();
+    expect(window.electron.updates.downgrade).not.toHaveBeenCalled();
+  });
+
+  it("calls downgrade only after the user confirms in the dialog", async () => {
+    render(<UpdatesPanel />);
+    await waitFor(() => screen.getByText("Downgrade to previous version"));
+    fireEvent.click(screen.getByText("Downgrade to previous version"));
+    await waitFor(() => screen.getByTestId("settings-downgrade-confirm-action"));
+    fireEvent.click(screen.getByTestId("settings-downgrade-confirm-action"));
     await waitFor(() => expect(window.electron.updates.downgrade).toHaveBeenCalled());
+  });
+
+  it("does not call downgrade when the user cancels the dialog", async () => {
+    render(<UpdatesPanel />);
+    await waitFor(() => screen.getByText("Downgrade to previous version"));
+    fireEvent.click(screen.getByText("Downgrade to previous version"));
+    await waitFor(() => screen.getByTestId("settings-downgrade-confirm-cancel"));
+    fireEvent.click(screen.getByTestId("settings-downgrade-confirm-cancel"));
+    await waitFor(() =>
+      expect(screen.queryByTestId("settings-downgrade-confirm-dialog")).not.toBeInTheDocument()
+    );
+    expect(window.electron.updates.downgrade).not.toHaveBeenCalled();
+  });
+
+  it("disables the downgrade button when no previous version is available", async () => {
+    window.electron.updates.getStatus.mockResolvedValue({
+      currentVersion: "2.0.1",
+      channel: "stable",
+      lastChecked: 1745500000000,
+      remindAfter: 0,
+      offlineMode: false,
+      previousVersion: null,
+    });
+    render(<UpdatesPanel />);
+    await waitFor(() =>
+      expect(screen.getByText("Downgrade to previous version").closest("button")).toBeDisabled()
+    );
+    // Clicking the disabled button must not open the dialog.
+    fireEvent.click(screen.getByText("Downgrade to previous version"));
+    expect(screen.queryByTestId("settings-downgrade-confirm-dialog")).not.toBeInTheDocument();
   });
 });
