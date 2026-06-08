@@ -30,7 +30,10 @@
     "format:check": "prettier --check .",
     "prepare": "husky",
     "gen:openapi": "python backend/generate_openapi.py",
-    "gen:api-types": "openapi-typescript backend/openapi.json -o src/lib/api-types.ts"
+    "gen:api-types": "openapi-typescript backend/openapi.json -o src/lib/api-types.ts",
+    "check:py": "uv run ruff check . && uv run python scripts/check_engine_imports.py && uv run python scripts/check_backend_imports.py && uv run ruff format --check . && uv run mypy && uv run pytest -q && cross-env RISKWISE_SKIP_MANIFEST_VERIFY=1 uv run pytest -q tests/determinism",
+    "check:web": "npm run lint && npm run format:check && npm run lint:contrast && npm run lint:locales && npm test",
+    "check:ci": "npm run check:py && npm run check:web"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
