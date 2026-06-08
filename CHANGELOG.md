@@ -58,6 +58,13 @@ The Phase 6 ADR §7 target of ≤ 250 MB (re-baselined from the original
 "~50 MB Track B daydream" per [DECISIONS.md D26](docs/DECISIONS.md))
 is met on at least one Nuitka configuration.
 
+## [2.3.1](https://github.com/CortoMaltese3/riskwise-v2/compare/v2.3.0...v2.3.1) (2026-06-08)
+
+
+### Bug Fixes
+
+* **ui:** make update-channel selector inert to avoid stranding users ([b548521](https://github.com/CortoMaltese3/riskwise-v2/commit/b548521f3aa21f13a6d598279abac3056589dfdd)), closes [#570](https://github.com/CortoMaltese3/riskwise-v2/issues/570)
+
 ## [2.3.0](https://github.com/CortoMaltese3/riskwise-v2/compare/v2.2.0...v2.3.0) (2026-06-08)
 
 
