@@ -53,7 +53,7 @@ jobs:
       engine_sha256: ${{ steps.engine_hash.outputs.sha256 }}
       engine_version: ${{ steps.engine_hash.outputs.version }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v6
         with:
@@ -137,7 +137,7 @@ jobs:
     if: ${{ needs.build-engine.outputs.engine_sha256 != '' }}
     environment: release
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
