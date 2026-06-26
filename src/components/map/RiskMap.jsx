@@ -159,8 +159,11 @@ const RiskMap = () => {
         const level = feature.properties[`rp${activeRPLayer}_level`];
         const country = feature.properties["country"];
         const name = feature.properties["name"];
+        const name3 = feature.properties["name3"];
         const formattedValue = formatNumberDivisor(value, divisor, locale);
         const impactLine = unit ? `${formattedValue} ${unit}` : formattedValue;
+        // Admin-3 (municipality) is only present for countries that ship it.
+        const admin3Line = name3 ? `${t("admin")} 3: ${name3}<br>` : "";
         const dim = hasFilter && !activeLevels.has(level);
 
         L.circleMarker([coordinates[1], coordinates[0]], {
@@ -173,6 +176,7 @@ const RiskMap = () => {
         })
           .bindPopup(
             `${t("country")}: ${country}<br>${t("admin")} 2: ${name}<br>` +
+              admin3Line +
               `${t("level")}: ${level}<br>${t("map_impact_popup_impact")}: ${impactLine}`
           )
           .addTo(layerGroup);
