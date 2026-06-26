@@ -88,23 +88,11 @@ const TopBar = () => {
             </IconButton>
           </Tooltip>
           <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              bgcolor: "primary.dark",
-              borderRadius: 1,
-              px: 1.5,
-              py: 0.5,
-              mx: 2,
-            }}
-          >
-            <Box
-              component="img"
-              src={sword_logo}
-              alt="SWORD"
-              sx={{ height: SWORD_LOGO_HEIGHT, width: "auto", display: "block" }}
-            />
-          </Box>
+            component="img"
+            src={sword_logo}
+            alt="SWORD"
+            sx={{ height: SWORD_LOGO_HEIGHT, width: "auto", my: 1, mx: 2 }}
+          />
         </Box>
         <Box
           sx={{
