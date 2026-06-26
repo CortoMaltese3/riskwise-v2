@@ -30,6 +30,11 @@ from backend.constants import DATA_TEMP_DIR
 from backend.logging_config import get_logger
 from backend.utils.admin import available_admin_levels, get_admin_data
 from backend.utils.country import get_iso3_country_code
+from backend.utils.reallocation import (
+    load_population_points,
+    population_raster_path,
+    reallocate_values_to_admin,
+)
 
 logger = get_logger("backend.exposure.exposure_handler")
 
@@ -132,9 +137,10 @@ class ExposureHandler:
         try:
             lat = np.asarray(exposure.lat, dtype=np.float64)
             lon = np.asarray(exposure.lon, dtype=np.float64)
+            vals = np.asarray(exposure.values, dtype=np.float64)
             exposure_gdf = gpd.GeoDataFrame(
                 {
-                    "value": np.asarray(exposure.values, dtype=np.float64),
+                    "value": vals,
                     "value_unit": exposure.value_unit,
                     "latitude": lat,
                     "longitude": lon,
@@ -145,13 +151,34 @@ class ExposureHandler:
             layers = available_admin_levels(country_iso3) or [0, 1, 2]
             all_layers_geojson = {"type": "FeatureCollection", "features": []}
 
+            # When a country ships a WorldPop raster, reallocate the coarse
+            # LitPop grid onto admin units mass-conservingly (population-weighted)
+            # so units smaller than the grid are not spuriously zero. Loaded once
+            # and reused across admin levels; absence keeps the legacy sum.
+            raster_path = population_raster_path(country_iso3)
+            pop_points = None
+            if raster_path is not None:
+                try:
+                    pop_points = load_population_points(raster_path)
+                except (OSError, ValueError, ImportError) as exc:
+                    logger.error(f"Could not load population raster {raster_path}: {exc}")
+                    raster_path = None
+
             for layer in layers:
                 try:
                     admin_gdf = get_admin_data(country_iso3, layer)
-                    joined_gdf = gpd.sjoin(exposure_gdf, admin_gdf, how="left", predicate="within")
-                    aggregated_values = joined_gdf.groupby("id")["value"].sum().reset_index()
-                    admin_gdf = admin_gdf.merge(aggregated_values, on="id", how="left")
-                    admin_gdf["value"] = admin_gdf["value"].round(2).fillna(0)
+                    if raster_path is not None:
+                        admin_gdf = admin_gdf.reset_index(drop=True)
+                        admin_gdf["value"] = np.round(
+                            reallocate_values_to_admin(lat, lon, vals, admin_gdf, pop_points), 2
+                        )
+                    else:
+                        joined_gdf = gpd.sjoin(
+                            exposure_gdf, admin_gdf, how="left", predicate="within"
+                        )
+                        aggregated_values = joined_gdf.groupby("id")["value"].sum().reset_index()
+                        admin_gdf = admin_gdf.merge(aggregated_values, on="id", how="left")
+                        admin_gdf["value"] = admin_gdf["value"].round(2).fillna(0)
 
                     # Convert each layer to a GeoJSON Feature and add it to the collection
                     layer_features = admin_gdf.__geo_interface__["features"]
