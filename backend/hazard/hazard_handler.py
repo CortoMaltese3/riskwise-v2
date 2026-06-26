@@ -243,9 +243,15 @@ class HazardHandler:
 
             hazard_df = pd.DataFrame(data, columns=columns)
 
-            # Round the hazard rp values to 2 decimal places. Update is vectorized and efficient
-            # for large datasets
-            hazard_df.update(hazard_df[[f"rp{rp}" for rp in return_periods]].round(1))
+            # Round the hazard rp values. Flood depths can be sub-decimetre for
+            # frequent return periods (a 2-year river flood here peaks at a few
+            # cm), so 1 decimal would floor them to 0 and the map/legend would
+            # read "0 m" everywhere; flood uses 2 decimals to keep those depths.
+            # Update is vectorized and efficient for large datasets.
+            depth_decimals = 2 if hazard.haz_type == "FL" else 1
+            hazard_df.update(
+                hazard_df[[f"rp{rp}" for rp in return_periods]].round(depth_decimals)
+            )
             hazard_gdf = gpd.GeoDataFrame(
                 hazard_df,
                 geometry=gpd.points_from_xy(
@@ -263,21 +269,48 @@ class HazardHandler:
             percentiles = (20, 40, 60, 80)
             for rp in return_periods:
                 rp_data = hazard_gdf[f"rp{rp}"]
-                percentile_values[f"rp{rp}"] = np.percentile(rp_data, percentiles).round(1).tolist()
                 if hazard.haz_type == "D":
+                    percentile_values[f"rp{rp}"] = (
+                        np.percentile(rp_data, percentiles).round(1).tolist()
+                    )
                     percentile_values[f"rp{rp}"].reverse()
                     percentile_values[f"rp{rp}"].append(-4)
                 else:
-                    percentile_values[f"rp{rp}"].insert(0, 0)
+                    # Depth/intensity layers are zero-inflated (most centroids are
+                    # dry), so percentiles over the full column collapse to 0 and
+                    # the legend reads "0" in every band. Take percentiles over the
+                    # wet (> 0) cells so the bands reflect real flood depths; fall
+                    # back to the full column when nothing is positive.
+                    positive = rp_data[rp_data > 0]
+                    basis = positive if not positive.empty else rp_data
+                    values = np.percentile(basis, percentiles).round(depth_decimals).tolist()
+                    values.insert(0, 0)
+                    percentile_values[f"rp{rp}"] = values
 
             # Assign levels based on the percentile values
             hazard_gdf = assign_levels(hazard_gdf, percentile_values)
 
-            # Spatial join with administrative area
+            # Spatial join with administrative area (admin level 2 → region name)
             joined_gdf = gpd.sjoin(hazard_gdf, admin_gdf, how="left", predicate="within")
             # Remove points outside of the country
             joined_gdf = joined_gdf[~joined_gdf["country"].isna()]
-            joined_gdf = joined_gdf.drop(columns=["latitude", "longitude", "index_right"])
+            joined_gdf = joined_gdf.drop(columns=["index_right"])
+
+            # Attach the finer admin-3 unit name when the country ships it, so the
+            # popup can name the municipality in addition to the region.
+            if 3 in available_admin_levels(country_iso3):
+                admin3_gdf = get_admin_data(country_iso3, 3)
+                if admin3_gdf is not None:
+                    admin3_gdf = admin3_gdf[["name", "geometry"]].rename(
+                        columns={"name": "name3"}
+                    )
+                    joined_gdf = gpd.sjoin(
+                        joined_gdf, admin3_gdf, how="left", predicate="within"
+                    )
+                    joined_gdf = joined_gdf[~joined_gdf.index.duplicated(keep="first")]
+                    joined_gdf = joined_gdf.drop(columns=["index_right"])
+
+            joined_gdf = joined_gdf.drop(columns=["latitude", "longitude"])
             joined_gdf = joined_gdf.reset_index(drop=True)
 
             radius = self.get_circle_radius(hazard.haz_type)
