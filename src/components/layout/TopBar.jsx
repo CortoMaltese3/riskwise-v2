@@ -18,18 +18,14 @@ import ShutdownButton from "../nav/ShutdownButton";
 import ThemeModeButton from "../nav/ThemeModeButton";
 import ModeSwitchConfirmDialog from "../alerts/ModeSwitchConfirmDialog";
 
-import giz_logo from "../../assets/giz_logo.png";
-import unu_ehs_logo from "../../assets/unu_ehs_logo.png";
+import sword_logo from "../../assets/sword_logo.png";
 import useResultsStore from "../../store/useResultsStore";
 import useUIStore from "../../store/useUIStore";
 import useWorkspaceStore from "../../store/useWorkspaceStore";
 import { switchAppMode } from "../../store/orchestrators";
 import { TOP_BAR_HEIGHT } from "./Sidebar";
 
-const GIZ_LOGO_WIDTH = 140;
-const GIZ_LOGO_HEIGHT = 40;
-const UNU_LOGO_WIDTH = 95;
-const UNU_LOGO_HEIGHT = 40;
+const SWORD_LOGO_HEIGHT = 38;
 
 const TopBar = () => {
   const { t } = useTranslation();
@@ -92,17 +88,23 @@ const TopBar = () => {
             </IconButton>
           </Tooltip>
           <Box
-            component="img"
-            src={giz_logo}
-            alt="giz_logo"
-            sx={{ width: GIZ_LOGO_WIDTH, height: GIZ_LOGO_HEIGHT, my: 1, mx: 2 }}
-          />
-          <Box
-            component="img"
-            src={unu_ehs_logo}
-            alt="unu_ehs_logo"
-            sx={{ width: UNU_LOGO_WIDTH, height: UNU_LOGO_HEIGHT, my: 1, mx: 2 }}
-          />
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              bgcolor: "primary.dark",
+              borderRadius: 1,
+              px: 1.5,
+              py: 0.5,
+              mx: 2,
+            }}
+          >
+            <Box
+              component="img"
+              src={sword_logo}
+              alt="SWORD"
+              sx={{ height: SWORD_LOGO_HEIGHT, width: "auto", display: "block" }}
+            />
+          </Box>
         </Box>
         <Box
           sx={{
@@ -116,10 +118,9 @@ const TopBar = () => {
             noWrap
             component="div"
             sx={{
-              fontSize: "1rem",
+              fontSize: "1.05rem",
               fontWeight: 600,
-              letterSpacing: "0.2rem",
-              textTransform: "uppercase",
+              letterSpacing: "0.04rem",
               lineHeight: 1,
             }}
           >
