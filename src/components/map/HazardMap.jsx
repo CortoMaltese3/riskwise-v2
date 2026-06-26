@@ -132,6 +132,10 @@ const HazardMap = () => {
         const level = feature.properties[`rp${activeRPLayer}_level`];
         const country = feature.properties["country"];
         const name = feature.properties["name"];
+        const name3 = feature.properties["name3"];
+        const valueLine = unit ? `${value} ${unit}` : `${value}`;
+        // Admin-3 (municipality) is only present for countries that ship it.
+        const admin3Line = name3 ? `${t("admin")} 3: ${name3}<br>` : "";
 
         L.circle([coordinates[1], coordinates[0]], {
           color: colorScale(value),
@@ -141,6 +145,8 @@ const HazardMap = () => {
         })
           .bindPopup(
             `${t("country")}: ${country}<br>${t("admin")} 2: ${name}<br>` +
+              admin3Line +
+              `${t("map_exposure_popup_value")}: ${valueLine}<br>` +
               `${t("level")}: ${level}`
           )
           .addTo(layerGroup);
