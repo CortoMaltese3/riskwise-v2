@@ -341,9 +341,20 @@ class ImpactHandler:
             # Assign levels based on the percentile values
             impact_gdf = assign_levels(impact_gdf, percentile_values)
 
-            # Spatial join with administrative areas
+            # Spatial join with administrative areas (admin level 2 → region name)
             joined_gdf = gpd.sjoin(impact_gdf, admin_gdf, how="left", predicate="within")
             joined_gdf = joined_gdf[~joined_gdf["country"].isna()]
+            joined_gdf = joined_gdf.drop(columns=["index_right"])
+
+            # Attach the finer admin-3 unit name when the country ships it, so the
+            # popup can name the municipality in addition to the region.
+            if 3 in available_admin_levels(country_iso3):
+                admin3_gdf = get_admin_data(country_iso3, 3)
+                if admin3_gdf is not None:
+                    admin3_gdf = admin3_gdf[["name", "geometry"]].rename(columns={"name": "name3"})
+                    joined_gdf = gpd.sjoin(joined_gdf, admin3_gdf, how="left", predicate="within")
+                    joined_gdf = joined_gdf[~joined_gdf.index.duplicated(keep="first")]
+                    joined_gdf = joined_gdf.drop(columns=["index_right"])
 
             radius = self.get_circle_radius(impact.haz_type, country_iso3, exposure_type)
             # Convert to GeoJSON for this layer and add to all_layers_geojson
