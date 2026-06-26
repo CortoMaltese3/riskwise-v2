@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 from backend.constants import DATA_TEMP_DIR
 from backend.logging_config import get_logger
-from backend.utils.admin import get_admin_data
+from backend.utils.admin import available_admin_levels, get_admin_data
 from backend.utils.country import get_iso3_country_code
 
 logger = get_logger("backend.exposure.exposure_handler")
@@ -142,7 +142,7 @@ class ExposureHandler:
                 geometry=gpd.points_from_xy(lon, lat, crs="EPSG:4326"),
             )
             country_iso3 = get_iso3_country_code(country_name)
-            layers = [0, 1, 2]
+            layers = available_admin_levels(country_iso3) or [0, 1, 2]
             all_layers_geojson = {"type": "FeatureCollection", "features": []}
 
             for layer in layers:
@@ -214,13 +214,19 @@ class ExposureHandler:
 
             # Retrieve the ISO3 country code
             country_iso3 = get_iso3_country_code(country_name)
-            layers = [1, 2]
+            # Admin levels are data-driven: a country reports whatever admin
+            # layers it ships (>= 1), so Greece adds ADM3 municipalities while
+            # ADM0-2 countries are unaffected.
+            layers = [lvl for lvl in available_admin_levels(country_iso3) if lvl >= 1] or [1, 2]
 
             # Copy the exposure_gdf to avoid modifying the original DataFrame
             final_gdf = exposure_gdf.copy()
 
             # Iterate through each administrative layer
             for layer in layers:
+                # Ensure the column exists even if the join below fails, so the
+                # final column selection never KeyErrors on a missing level.
+                final_gdf[f"admin{layer}"] = None
                 try:
                     # Retrieve the admin_gdf for the current layer
                     admin_gdf = get_admin_data(country_iso3, layer)
@@ -237,19 +243,19 @@ class ExposureHandler:
                     continue
 
             # Keep only the necessary columns for the final report
-            final_df = final_gdf[
-                ["admin1", "admin2", "latitude", "longitude", "value", "value_unit"]
-            ]
+            admin_cols = [f"admin{lvl}" for lvl in layers]
+            final_df = final_gdf[admin_cols + ["latitude", "longitude", "value", "value_unit"]]
 
             # Rename the columns
-            column_mapping = {
-                "admin1": "Admin 1",
-                "admin2": "Admin 2",
-                "latitude": "Latitude",
-                "longitude": "Longitude",
-                "value": "Asset Value",
-                "value_unit": "Asset UoM",
-            }
+            column_mapping = {f"admin{lvl}": f"Admin {lvl}" for lvl in layers}
+            column_mapping.update(
+                {
+                    "latitude": "Latitude",
+                    "longitude": "Longitude",
+                    "value": "Asset Value",
+                    "value_unit": "Asset UoM",
+                }
+            )
             # Apply the renaming
             final_df = final_df.rename(columns=column_mapping)
 

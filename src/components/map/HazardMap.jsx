@@ -208,6 +208,7 @@ const HazardMap = () => {
   const countryCoordinates = {
     egypt: [26.8206, 30.8025],
     thailand: [15.87, 100.9925],
+    greece: [39.0742, 23.0],
   };
 
   const MapEvents = () => {

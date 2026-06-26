@@ -16,6 +16,22 @@ from backend.logging_config import get_logger
 logger = get_logger("backend.utils.admin")
 
 
+def available_admin_levels(country_code: str, max_level: int = 5) -> list[int]:
+    """Return the admin levels (0..``max_level``) that ship a GADM file for ``country_code``.
+
+    Admin-level support is data-driven: a country exposes whatever
+    ``gadm{level}_{ISO3}.geojson`` files are present under the requirements
+    bundle. This lets a country pack add finer levels (e.g. Greece ships
+    ADM3 municipalities) without the handlers hardcoding a fixed level set,
+    and degrades gracefully for countries that only ship ADM0–2.
+    """
+    return [
+        level
+        for level in range(max_level + 1)
+        if (REQUIREMENTS_DIR / f"gadm{level}_{country_code}.geojson").is_file()
+    ]
+
+
 def get_admin_data(country_code: str, admin_level: int) -> gpd.GeoDataFrame | None:
     """Return the normalized admin GeoDataFrame, or ``None`` on failure."""
     try:

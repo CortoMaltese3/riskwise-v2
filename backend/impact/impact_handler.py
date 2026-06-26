@@ -35,7 +35,7 @@ import pandas as pd
 from backend.constants import DATA_TEMP_DIR
 from backend.impact.registry import ImpactFunctionRegistry, load_country_registry, load_registry_from_paths
 from backend.logging_config import get_logger
-from backend.utils.admin import get_admin_data
+from backend.utils.admin import available_admin_levels, get_admin_data
 from backend.utils.country import get_iso3_country_code
 from backend.utils.levels import assign_levels
 
@@ -420,13 +420,17 @@ class ImpactHandler:
                 (impact_gdf[[f"rp{rp}" for rp in return_periods]] > 0).any(axis=1)
             ]
 
-            # Retrieve the admin_gdf and perform spatial join
+            # Retrieve the admin_gdf and perform spatial join. Admin levels are
+            # data-driven (>= 1), so Greece adds ADM3 municipalities while
+            # ADM0-2 countries keep their existing two-level report.
             country_iso3 = get_iso3_country_code(country_name)
-            layers = [1, 2]
+            layers = [lvl for lvl in available_admin_levels(country_iso3) if lvl >= 1] or [1, 2]
             final_gdf = impact_gdf.copy()
 
             # Iterate through each administrative layer
             for layer in layers:
+                # Ensure the column exists even if the join below fails.
+                final_gdf[f"admin{layer}"] = None
                 try:
                     # Retrieve the admin_gdf for the current layer
                     admin_gdf = get_admin_data(country_iso3, layer)
@@ -442,21 +446,18 @@ class ImpactHandler:
                     continue
 
             # Keep only the necessary columns for the final report
+            admin_cols = [f"admin{lvl}" for lvl in layers]
             final_df = final_gdf[
-                ["admin1", "admin2", "latitude", "longitude"] + [f"rp{rp}" for rp in return_periods]
+                admin_cols + ["latitude", "longitude"] + [f"rp{rp}" for rp in return_periods]
             ]
 
             # Clean up the DataFrame
-            final_df = final_df.dropna(subset=["admin1", "admin2"], how="all")
+            final_df = final_df.dropna(subset=admin_cols, how="all")
             final_df = final_df.reset_index(drop=True)
 
             # Rename the columns
-            column_mapping = {
-                "admin1": "Admin 1",
-                "admin2": "Admin 2",
-                "latitude": "Latitude",
-                "longitude": "Longitude",
-            }
+            column_mapping = {f"admin{lvl}": f"Admin {lvl}" for lvl in layers}
+            column_mapping.update({"latitude": "Latitude", "longitude": "Longitude"})
             # Add dynamic RP column renaming to the mapping
             column_mapping.update({f"rp{rp}": f"RP{rp}" for rp in return_periods})
 

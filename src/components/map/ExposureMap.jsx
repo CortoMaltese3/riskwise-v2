@@ -29,6 +29,9 @@ const ExposureMap = () => {
   const vizRamps = theme.palette.viz.ramps;
 
   const [activeAdminLayer, setActiveAdminLayer] = useState(0);
+  // Admin levels are data-driven: the buttons reflect whichever layers the
+  // backend ships for the country (Greece adds ADM3), defaulting to 0-2.
+  const [availableLayers, setAvailableLayers] = useState(adminLayers);
   const [mapInfo, setMapInfo] = useState({ geoJson: null, colorScale: null });
   const [maxValue, setMaxValue] = useState(null);
   const [minValue, setMinValue] = useState(null);
@@ -46,6 +49,12 @@ const ExposureMap = () => {
     try {
       const data = res.result;
       setUnit(data._metadata.unit);
+      const present = [...new Set(data.features.map((f) => f.properties.layer))]
+        .filter((l) => l !== undefined && l !== null)
+        .sort((a, b) => a - b);
+      if (present.length) {
+        setAvailableLayers(present);
+      }
       const filteredFeatures = data.features.filter(
         (feature) => feature.properties.layer === layer
       );
@@ -113,6 +122,7 @@ const ExposureMap = () => {
   const countryCoordinates = {
     egypt: [26.8206, 30.8025],
     thailand: [15.87, 100.9925],
+    greece: [39.0742, 23.0],
   };
 
   const onEachFeature = (feature, layer) => {
@@ -186,7 +196,7 @@ const ExposureMap = () => {
       <MapControls />
       <MapEvents />
       <Box sx={buttonContainerSx}>
-        {adminLayers.map((layer) => (
+        {availableLayers.map((layer) => (
           <Button
             key={`admin-${layer}`}
             size="small"
