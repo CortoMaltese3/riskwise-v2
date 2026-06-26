@@ -3,6 +3,7 @@ import useWorkspaceStore from "../store/useWorkspaceStore";
 const countryCodes = {
   egypt: "EGY",
   thailand: "THA",
+  greece: "GRC",
 };
 
 const hazardCodes = {

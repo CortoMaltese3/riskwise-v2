@@ -45,6 +45,43 @@ const DRIFT_ALLOWLIST = new Set([
   // acceptance criterion; other map_controls_* strings are short enough
   // to fall below DRIFT_MIN_LENGTH and don't need allowlisting.
   "map_controls_basemap_offline_tooltip",
+  // Greece custom country pack (river-flood demo). English text is shipped to
+  // th/ar as explicit placeholders pending translation, consistent with the
+  // other pending-translation blocks above.
+  "input_exposure_economic_residential_buildings",
+  "input_exposure_economic_commercial_buildings",
+  "input_exposure_economic_industrial_buildings",
+  "input_exposure_non_economic_affected_people",
+  "results_era_greece_flood_residential_buildings_1_0_display_map_hazard",
+  "results_era_greece_flood_residential_buildings_1_0_display_map_exposure",
+  "results_era_greece_flood_residential_buildings_1_0_display_map_impact",
+  "results_era_greece_flood_residential_buildings_1_0_display_chart_hazard",
+  "results_era_greece_flood_residential_buildings_1_0_display_chart_exposure",
+  "results_era_greece_flood_residential_buildings_1_0_display_chart_impact",
+  "results_era_greece_flood_commercial_buildings_1_0_display_map_hazard",
+  "results_era_greece_flood_commercial_buildings_1_0_display_map_exposure",
+  "results_era_greece_flood_commercial_buildings_1_0_display_map_impact",
+  "results_era_greece_flood_commercial_buildings_1_0_display_chart_hazard",
+  "results_era_greece_flood_commercial_buildings_1_0_display_chart_exposure",
+  "results_era_greece_flood_commercial_buildings_1_0_display_chart_impact",
+  "results_era_greece_flood_industrial_buildings_1_0_display_map_hazard",
+  "results_era_greece_flood_industrial_buildings_1_0_display_map_exposure",
+  "results_era_greece_flood_industrial_buildings_1_0_display_map_impact",
+  "results_era_greece_flood_industrial_buildings_1_0_display_chart_hazard",
+  "results_era_greece_flood_industrial_buildings_1_0_display_chart_exposure",
+  "results_era_greece_flood_industrial_buildings_1_0_display_chart_impact",
+  "results_era_greece_flood_road_network_1_0_display_map_hazard",
+  "results_era_greece_flood_road_network_1_0_display_map_exposure",
+  "results_era_greece_flood_road_network_1_0_display_map_impact",
+  "results_era_greece_flood_road_network_1_0_display_chart_hazard",
+  "results_era_greece_flood_road_network_1_0_display_chart_exposure",
+  "results_era_greece_flood_road_network_1_0_display_chart_impact",
+  "results_era_greece_flood_affected_people_1_0_display_map_hazard",
+  "results_era_greece_flood_affected_people_1_0_display_map_exposure",
+  "results_era_greece_flood_affected_people_1_0_display_map_impact",
+  "results_era_greece_flood_affected_people_1_0_display_chart_hazard",
+  "results_era_greece_flood_affected_people_1_0_display_chart_exposure",
+  "results_era_greece_flood_affected_people_1_0_display_chart_impact",
 ]);
 
 const DRIFT_MIN_LENGTH = 15;

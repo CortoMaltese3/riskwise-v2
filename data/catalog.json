@@ -15,7 +15,10 @@
     {"country": "THA", "hazard": "FL", "scenario": "rcp85", "path": "data/hazards/hazard_FL_THA_rcp85.tif"},
     {"country": "THA", "hazard": "HW", "scenario": "historical", "path": "data/hazards/hazard_HW_THA_historical.h5"},
     {"country": "THA", "hazard": "HW", "scenario": "rcp45", "path": "data/hazards/hazard_HW_THA_rcp45.h5"},
-    {"country": "THA", "hazard": "HW", "scenario": "rcp85", "path": "data/hazards/hazard_HW_THA_rcp85.h5"}
+    {"country": "THA", "hazard": "HW", "scenario": "rcp85", "path": "data/hazards/hazard_HW_THA_rcp85.h5"},
+    {"country": "GRC", "hazard": "FL", "scenario": "historical", "path": "data/hazards/hazard_FL_GRC_historical.tif"},
+    {"country": "GRC", "hazard": "FL", "scenario": "rcp26", "path": "data/hazards/hazard_FL_GRC_rcp26.tif"},
+    {"country": "GRC", "hazard": "FL", "scenario": "rcp85", "path": "data/hazards/hazard_FL_GRC_rcp85.tif"}
   ],
   "entities": [
     {"country": "EGY", "hazard": "FL", "exposure_type": "crops", "path": "data/entities/entity_TODAY_EGY_FL_crops.xlsx"},
@@ -46,7 +49,12 @@
     {"country": "THA", "hazard": "FL", "exposure_type": "tree_crops_farmers", "path": "data/entities/entity_TODAY_THA_FL_tree_crops_farmers.xlsx"},
     {"country": "THA", "hazard": "FL", "exposure_type": "wet_markets", "path": "data/entities/entity_TODAY_THA_FL_wet_markets.xlsx"},
     {"country": "THA", "hazard": "HW", "exposure_type": "buddhist_monks", "path": "data/entities/entity_TODAY_THA_HW_buddhist_monks.xlsx"},
-    {"country": "THA", "hazard": "HW", "exposure_type": "students", "path": "data/entities/entity_TODAY_THA_HW_students.xlsx"}
+    {"country": "THA", "hazard": "HW", "exposure_type": "students", "path": "data/entities/entity_TODAY_THA_HW_students.xlsx"},
+    {"country": "GRC", "hazard": "FL", "exposure_type": "residential_buildings", "path": "data/entities/entity_TODAY_GRC_FL_residential_buildings.xlsx"},
+    {"country": "GRC", "hazard": "FL", "exposure_type": "commercial_buildings", "path": "data/entities/entity_TODAY_GRC_FL_commercial_buildings.xlsx"},
+    {"country": "GRC", "hazard": "FL", "exposure_type": "industrial_buildings", "path": "data/entities/entity_TODAY_GRC_FL_industrial_buildings.xlsx"},
+    {"country": "GRC", "hazard": "FL", "exposure_type": "road_network", "path": "data/entities/entity_TODAY_GRC_FL_road_network.xlsx"},
+    {"country": "GRC", "hazard": "FL", "exposure_type": "affected_people", "path": "data/entities/entity_TODAY_GRC_FL_affected_people.xlsx"}
   ],
   "measures": [
     {"path": "requirements/adaptation_measures.json", "scope": "all"}

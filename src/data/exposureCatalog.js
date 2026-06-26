@@ -13,7 +13,13 @@ export const exposureCategoryMap = {
   grass_crops: "economic",
   wet_markets: "economic",
   litpop: "economic",
+  // Greece (custom country pack) — LitPop-derived asset exposures
+  residential_buildings: "economic",
+  commercial_buildings: "economic",
+  industrial_buildings: "economic",
+  road_network: "economic",
   // Non-economic
+  affected_people: "non_economic",
   tree_crops_farmers: "non_economic",
   grass_crops_farmers: "non_economic",
   buddhist_monks: "non_economic",
@@ -60,6 +66,15 @@ export const exposureByCountryHazard = {
       "roads",
     ],
     heatwaves: ["crops", "livestock", "hotels", "hospitalised_people", "students"],
+  },
+  greece: {
+    flood: [
+      "residential_buildings",
+      "commercial_buildings",
+      "industrial_buildings",
+      "road_network",
+      "affected_people",
+    ],
   },
 };
 

@@ -24,6 +24,7 @@ import { layoutTransition } from "../../theme/theme";
 const hazardDict = {
   thailand: ["flood", "drought", "heatwaves"],
   egypt: ["flood", "heatwaves"],
+  greece: ["flood"],
 };
 
 const HazardCard = () => {
