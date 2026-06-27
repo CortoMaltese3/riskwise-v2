@@ -1,4 +1,7 @@
 version: 2
+# All npm deps resolve from the public registry; see ../.npmrc, which pins
+# registry.npmjs.org so Dependabot's automatic-github-packages-auth experiment
+# doesn't abort file fetching with private_registry_config_not_found.
 updates:
   # NPM dependencies (root package.json) — weekly per project security policy
   # so CVEs in the renderer stack get a PR within ~7 days of disclosure.
