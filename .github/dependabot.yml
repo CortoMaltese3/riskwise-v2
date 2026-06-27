@@ -2,6 +2,9 @@ version: 2
 updates:
   # NPM dependencies (root package.json) — weekly per project security policy
   # so CVEs in the renderer stack get a PR within ~7 days of disclosure.
+  # The group is scoped to minor/patch so the weekly PR stays green; major
+  # bumps (e.g. eslint 10, typescript 6, electron-store 11) arrive as their own
+  # PRs and get reviewed/E2E-tested individually instead of breaking the bundle.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -11,6 +14,9 @@ updates:
       everything:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # Python dependencies (pyproject.toml + requirements/) — weekly so CLIMADA
   # transitive CVEs reach a PR before the next release cut.
