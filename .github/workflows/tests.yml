@@ -18,7 +18,7 @@ jobs:
     name: Backend (ruff + mypy + pytest)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v6
         with:
@@ -117,7 +117,7 @@ jobs:
     name: Frontend (eslint + prettier + vitest)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
@@ -159,7 +159,7 @@ jobs:
     # if: github.actor != 'dependabot[bot]'
     needs: [frontend]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
