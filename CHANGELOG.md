@@ -58,6 +58,13 @@ The Phase 6 ADR §7 target of ≤ 250 MB (re-baselined from the original
 "~50 MB Track B daydream" per [DECISIONS.md D26](docs/DECISIONS.md))
 is met on at least one Nuitka configuration.
 
+## [2.3.3](https://github.com/CortoMaltese3/riskwise-v2/compare/v2.3.2...v2.3.3) (2026-07-17)
+
+
+### Documentation
+
+* **ci:** note public-registry .npmrc in dependabot config ([29db283](https://github.com/CortoMaltese3/riskwise-v2/commit/29db283382ceb059030d5fe798d2951900ee38b8))
+
 ## [2.3.2](https://github.com/CortoMaltese3/riskwise-v2/compare/v2.3.1...v2.3.2) (2026-06-08)
 
 
