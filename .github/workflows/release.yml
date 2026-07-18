@@ -15,21 +15,47 @@ env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  # Issue #252 — gate every release artifact on a green `tests.yml` run for
-  # the PR that produced the tagged commit. Without this, `git push --tags`
-  # on a known-failing main commit would still publish a signed installer.
+  # Issue #252 — gate every release artifact on a green `tests.yml` run.
+  # Without this, `git push --tags` on a known-failing main commit would
+  # still publish a signed installer.
   #
-  # `tests.yml` only runs on `pull_request` events (see CI minutes budget),
-  # so its run is keyed by the PR's head SHA — not the merge commit on main
-  # the tag points at. We resolve the PR for the tag commit, then verify
-  # the PR's tests.yml run concluded green. Direct pushes to main (no PR)
-  # have no associated run and will fail this gate by design.
+  # On-demand CI model: `tests.yml` runs via `workflow_dispatch` (the normal
+  # pre-tag path — dispatch it on the exact commit you will tag) or via the
+  # `ci` PR label. So we FIRST look for a completed green tests.yml run on
+  # the tag commit SHA itself; only when none exists do we fall back to the
+  # legacy path of resolving the merged PR behind the tag commit and
+  # checking its head SHA's run.
   # See CONTRIBUTING.md § Release gating.
   verify-tests:
-    name: Verify tests.yml passed for tag's PR
+    name: Verify tests.yml passed for tagged commit
     runs-on: ubuntu-latest
     steps:
+      # New normal path: a `workflow_dispatch` run of tests.yml made on the
+      # release commit itself is keyed by the commit's own SHA — check that
+      # first and pass immediately if it's green.
+      - name: Check tests.yml run on the tag commit itself
+        id: direct
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          echo "Looking up tests.yml runs for tag commit $TAG_SHA"
+          green=$(gh api \
+            "repos/${REPO}/actions/workflows/tests.yml/runs?head_sha=${TAG_SHA}" \
+            --jq '[.workflow_runs[] | select(.status == "completed" and .conclusion == "success")] | length')
+          if [ "$green" -gt 0 ]; then
+            echo "Found $green completed green tests.yml run(s) on tag commit $TAG_SHA — release may proceed."
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No completed green tests.yml run on tag commit $TAG_SHA — falling back to PR-head-SHA resolution."
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Resolve PR head SHA for tag commit
+        if: steps.direct.outputs.passed != 'true'
         id: resolve
         shell: bash
         env:
@@ -42,7 +68,7 @@ jobs:
           pr=$(gh api "repos/${REPO}/commits/${TAG_SHA}/pulls" \
             --jq '[.[] | select(.merged_at != null) | {number, head_sha: .head.sha, merged_at}] | sort_by(.merged_at) | reverse | .[0] // empty')
           if [ -z "$pr" ] || [ "$pr" = "null" ]; then
-            echo "::error::No merged PR found for tag commit $TAG_SHA. Refusing to release a commit that did not pass tests.yml via a PR."
+            echo "::error::No merged PR found for tag commit $TAG_SHA and no green dispatched tests.yml run on it. Dispatch tests.yml on this exact commit first (gh workflow run tests.yml --ref main), wait for green, then tag."
             exit 1
           fi
           pr_number=$(echo "$pr" | jq -r '.number')
@@ -51,6 +77,7 @@ jobs:
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
 
       - name: Check tests.yml conclusion for PR head SHA
+        if: steps.direct.outputs.passed != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -68,7 +95,7 @@ jobs:
           conclusion=$(echo "$payload" | jq -r '.conclusion')
           url=$(echo "$payload" | jq -r '.url')
           if [ "$count" = "0" ]; then
-            echo "::error::No tests.yml run found for PR head SHA $SHA. Refusing to release an untested commit."
+            echo "::error::No tests.yml run found for PR head SHA $SHA. Dispatch tests.yml on this exact commit first (gh workflow run tests.yml --ref main), wait for green, then tag."
             exit 1
           fi
           if [ "$status" != "completed" ]; then
@@ -76,7 +103,7 @@ jobs:
             exit 1
           fi
           if [ "$conclusion" != "success" ]; then
-            echo "::error::tests.yml run for $SHA concluded '$conclusion' (expected 'success'). Refusing to release. Run: $url"
+            echo "::error::tests.yml run for $SHA concluded '$conclusion' (expected 'success'). Refusing to release. Dispatch tests.yml on this exact commit (gh workflow run tests.yml --ref main), wait for green, then tag. Run: $url"
             exit 1
           fi
           echo "tests.yml passed for $SHA — release may proceed."

@@ -1,13 +1,19 @@
+# On-demand CI — this workflow no longer runs automatically on every PR.
+# GitHub Actions minutes bill per-job with a 1-minute floor, so run
+# *frequency* is the cost driver; runs are now rare and deliberate.
+# Two ways to run it:
+#   1. Dispatch: `gh workflow run tests.yml --ref main` — the phase gate and
+#      the mandatory pre-tag gate (run it on the exact commit you will tag).
+#   2. Per-PR opt-in: add the `ci` label to the PR. Adding any OTHER label
+#      also fires the trigger, but every job's guard skips it — a skipped
+#      run costs 0 billed minutes.
 name: Tests
 
 on:
+  workflow_dispatch:
   pull_request:
+    types: [labeled]
     branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - "CHANGELOG.md"
-      - "LICENSE"
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -17,6 +23,7 @@ jobs:
   backend:
     name: Backend (ruff + mypy + pytest)
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ci'
     steps:
       - uses: actions/checkout@v7
 
@@ -116,6 +123,7 @@ jobs:
   frontend:
     name: Frontend (eslint + prettier + vitest)
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ci'
     steps:
       - uses: actions/checkout@v7
 

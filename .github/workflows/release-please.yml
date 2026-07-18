@@ -1,8 +1,12 @@
 name: Release Please
 
+# Dispatch-only: the `push: branches: [main]` trigger was retired because it
+# spent ~1 billed runner-minute on every commit that landed on main (minutes
+# bill per-job with a 1-minute floor). The release machinery is now invoked
+# manually when a release is actually being prepared:
+#   gh workflow run release-please.yml --ref main
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
