@@ -1,11 +1,11 @@
 numpy==2.4.6
-pandas==3.0.3
-setuptools==82.0.1
+pandas==3.0.5
+setuptools==84.0.0
 wheel==0.47.0
 geopandas==1.1.4
 shapely==2.1.2
 pycountry==26.2.16
-pylint==4.0.6
+pylint==4.0.7
 
 # climate-lama-engine pin (DECISIONS.md D26): pyproject.toml is canonical;
 # this file must match. Hard-pinned per ADR §5.1 rule 5.
